@@ -1,11 +1,12 @@
 #pragma once
 #include <CatBaseVisitor.h>
-
+#include "Constraint.h"
 class CatInferVisitor : CatBaseVisitor {
 public:
     CatInferVisitor() {};
     ~CatInferVisitor() {};
 
+    ConstraintSet parse(string filePath);
     antlrcpp::Any visitMcm(CatParser::McmContext *ctx);
     antlrcpp::Any visitLetDefinition(CatParser::LetDefinitionContext *ctx);
     antlrcpp::Any visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx);

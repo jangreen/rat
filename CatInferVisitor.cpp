@@ -1,9 +1,28 @@
 #include <unordered_map>
+#include <iostream>
+#include <antlr4-runtime.h>
+#include <CatParser.h>
+#include <CatLexer.h>
 #include "CatInferVisitor.h"
 #include "Relation.h"
 #include "Constraint.h"
 
 using namespace std;
+using namespace antlr4;
+
+ConstraintSet CatInferVisitor::parse(string filePath)
+{
+    ifstream stream;
+    stream.open(filePath);
+    ANTLRInputStream input(stream);
+
+    CatLexer lexer(&input);
+    CommonTokenStream tokens(&lexer);
+    CatParser parser(&tokens);
+
+    CatParser::McmContext* scContext = parser.mcm();
+    return any_cast<ConstraintSet>(this->visitMcm(scContext));
+}
 
 antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
 {
