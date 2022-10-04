@@ -21,6 +21,7 @@ public:
     ConstraintType type;
     Relation *relation;
 
+    Constraint emptyNormalForm();
 };
 
 typedef unordered_map<string, Constraint> ConstraintSet;

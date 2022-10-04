@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include <iostream>
+#include <memory>
 #include <antlr4-runtime.h>
 #include <CatParser.h>
 #include <CatLexer.h>
@@ -20,13 +21,12 @@ ConstraintSet CatInferVisitor::parse(string filePath)
     CommonTokenStream tokens(&lexer);
     CatParser parser(&tokens);
 
-    CatParser::McmContext* scContext = parser.mcm();
-    return any_cast<ConstraintSet>(this->visitMcm(scContext));
+    CatParser::McmContext* ctx = parser.mcm();
+    return any_cast<ConstraintSet>(this->visitMcm(ctx));
 }
 
 antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
 {
-    cout << "Parse " << ctx->NAME()->getText() << endl;
     unordered_map<string, Constraint> constraints;
 
     for (auto definitionContext : ctx->definition())
@@ -76,21 +76,30 @@ antlrcpp::Any CatInferVisitor::visitAxiomDefinition(CatParser::AxiomDefinitionCo
 antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx)
 {
     string name = ctx->NAME()->getText();
+    cout << "Let Definiton: " + name << endl;
     Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
     Relation::add(name, derivedRelation);
+    std::cout << "added " + name + ": " + derivedRelation.description() << std::endl;
     return derivedRelation;
 }
 
 antlrcpp::Any CatInferVisitor::visitExpr(CatParser::ExprContext *ctx)
 {
     // process: (e)
-    return ctx->e->accept(this);
+    Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
+    std::cout << "processed: " + derivedRelation.description() << std::endl;
+    return derivedRelation;
 }
 
 antlrcpp::Any CatInferVisitor::visitExprCartesian(CatParser::ExprCartesianContext *ctx)
 {
-    cout << "TODO: visitExprCartesian: " << ctx->getText() << endl;
-    return nullptr;
+    // TODO: currently we consider cartesian product as binary base relation
+    string r1 = ctx->e1->getText();
+    string r2 = ctx->e2->getText();
+    string name = r1 + "*" + r2;
+    Relation baseRelation = Relation(name);
+    Relation::add(name, baseRelation);
+    return baseRelation;
 }
 antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdentityContext *ctx)
 {
@@ -100,42 +109,54 @@ antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdenti
 antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
     string name = ctx->NAME()->getText();
-    Relation baseRelation = Relation(name);
-    Relation::add(name, baseRelation);
+    if (Relation::defined(name)) {
+        return Relation::get(name);
+    }
+    unique_ptr<Relation> baseRelation = make_unique<Relation>(name);
+    Relation::add(name, baseRelation); // TODO is adding of local object okay?
+    std::cout << "visit Basic: " + name + ", " + baseRelation.description() << std::endl;
     return baseRelation;
 }
 antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+    std::cout << "visit setminus: " << std::endl;
     return Relation("", Operator::setminus, &r1, &r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprUnion(CatParser::ExprUnionContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-    return Relation("", Operator::cup, &r1, &r2);
+    Relation unionRel = Relation("", Operator::cup, &r1, &r2);
+    std::cout << "visit union1: " + r1.description() + ",," + r2.name << std::endl;
+    std::cout << "visit union2: " + unionRel.name + ", " + unionRel.description() << std::endl;
+    return unionRel;
 }
 antlrcpp::Any CatInferVisitor::visitExprComposition(CatParser::ExprCompositionContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+    std::cout << "visit composition: " << std::endl;
     return Relation("", Operator::composition, &r1, &r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprIntersection(CatParser::ExprIntersectionContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+    std::cout << "visit intersection: " << std::endl;
     return Relation("", Operator::cap, &r1, &r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprTransitive(CatParser::ExprTransitiveContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+    std::cout << "visit transitive: " << std::endl;
     return Relation("", Operator::transitive, &r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprComplement(CatParser::ExprComplementContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+    std::cout << "visit complement: " << std::endl;
     return Relation("", Operator::complement, &r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprInverse(CatParser::ExprInverseContext *ctx)

@@ -18,6 +18,11 @@ set(ANTLR4_WITH_STATIC_CRT OFF) # using /MD flag for antlr4_runtime (for Visual 
 include(ExternalAntlr4Cpp) # Add external build for antlrcpp runtime
 include_directories(${ANTLR4_INCLUDE_DIRS}) # add antrl4cpp artifacts to project environment
 
-#TODO: include all src folder
-add_executable(${PROJECT_NAME} main.cpp CatInferVisitor.cpp Relation.cpp Constraint.cpp ${ANTLR_CatParser_CXX_OUTPUTS})
+file(GLOB CatInfer_SRC # do not need to add CatInferVisitor.cpp Relation.cpp Constraint.cpp manually anymore
+    "*.h"
+    "*.cpp"
+)
+
+# TODO: include all src folder
+add_executable(${PROJECT_NAME} main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS})
 target_link_libraries(${PROJECT_NAME} antlr4_static)
