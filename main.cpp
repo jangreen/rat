@@ -1,12 +1,14 @@
+#include <memory>
 #include "CatInferVisitor.h"
 #include "Constraint.h"
-#include "ProofObligation.h"
+#include "ProofNode.h"
+#include "Solver.h"
 
 using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    ProofObligation goal;
+    shared_ptr<ProofNode> goal = make_shared<ProofNode>();
     CatInferVisitor visitor;
 
     // SC <= TSO
@@ -15,7 +17,7 @@ int main(int argc, const char *argv[])
     for (auto &[name, constraint] : sc)
     {
         constraint.toEmptyNormalForm();
-        goal.right.insert(constraint.relation);
+        goal->right.insert(constraint.relation);
     }
 
     // second program
@@ -23,6 +25,10 @@ int main(int argc, const char *argv[])
     for (auto &[name, constraint] : tso)
     {
         constraint.toEmptyNormalForm();
-        goal.left.insert(constraint.relation);
+        goal->left.insert(constraint.relation);
     }
+
+    Solver solver;
+    solver.goals.push(goal);
+    solver.solve();
 }

@@ -62,19 +62,3 @@ bool Relation::operator==(const Relation &other) const
     }
 }
 
-size_t Relation::HashFunction::operator()(const shared_ptr<Relation> relation) const
-{
-    if (relation->op == Operator::none){
-        return hash<string>()(relation->alias);
-    }
-    else
-    {
-        // Compute individual hash values for first,
-        // second and third and combine them using XOR
-        // and bit shifting:
-        size_t leftHash = HashFunction::operator()(relation->left);
-        size_t rightHash = HashFunction::operator()(relation->right);
-        size_t opHash = static_cast<std::size_t>(relation->op);
-        return (leftHash ^ (rightHash << 1) >> 1) ^ (opHash << 1);
-    }
-};

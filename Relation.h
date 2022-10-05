@@ -39,11 +39,6 @@ public:
     static shared_ptr<Relation> get(const string &name);
 
     bool operator==(const Relation &other) const;
-
-    struct HashFunction
-    {
-        size_t operator()(const shared_ptr<Relation> relation) const;
-    };
 };
 
 typedef unordered_set<shared_ptr<Relation>> RelationSet;
