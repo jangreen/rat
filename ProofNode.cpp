@@ -5,7 +5,8 @@
 
 using namespace std;
 
-string getId(ProofNode &node) {
+string getId(ProofNode &node)
+{
     // TODO better approach?
     const void *address = static_cast<const void *>(&node);
     stringstream ss;
@@ -33,7 +34,8 @@ string ProofNode::toDotFormat()
 
     string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\", color=" + (closed ? "green" : "red") + "];\n";
     output += nodeDesc;
-    if (leftNode != nullptr) {
+    if (leftNode != nullptr)
+    {
         output += leftNode->toDotFormat();
         output += "\"" + getId(*this) + "\" -> \"" + getId(*leftNode) + "\";\n";
     }

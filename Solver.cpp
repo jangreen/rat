@@ -31,9 +31,12 @@ bool Solver::axiomEqual(shared_ptr<ProofNode> node)
     //     node->closed = true;
     //     return true;
     // }
-    for (auto r1 : node->left) {
-        for (auto r2: node->right) {
-            if (*r1 == *r2) {
+    for (auto r1 : node->left)
+    {
+        for (auto r2 : node->right)
+        {
+            if (*r1 == *r2)
+            {
                 node->appliedRule = "axiomEqual";
                 node->closed = true;
                 return true;
@@ -43,11 +46,12 @@ bool Solver::axiomEqual(shared_ptr<ProofNode> node)
     return false;
 }
 
-    bool Solver::andLeftRule(shared_ptr<ProofNode> node)
+bool Solver::andLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto relation : node->left)
     {
-        if (relation->op == Operator::cap) {
+        if (relation->op == Operator::cap)
+        {
             shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
             newNode->left.erase(relation);
             newNode->left.insert(relation->left);
@@ -144,13 +148,14 @@ void Solver::solve()
         done = !done ? orRightRule(currentGoal) : done;
         done = !done ? andRightRule(currentGoal) : done;
 
-        if (!done) {
+        if (!done)
+        {
             cout << "No Rule applicable." << endl;
             ofstream dotFile;
             dotFile.open("build/proof.dot");
             dotFile << toDotFormat(root);
             dotFile.close();
-            return; 
+            return;
         }
     }
 }

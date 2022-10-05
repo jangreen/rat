@@ -13,7 +13,8 @@ shared_ptr<Relation> Relation::FULL = make_shared<Relation>("1");
 
 shared_ptr<Relation> Relation::get(const string &name)
 {
-    if (!relations.contains(name)) {
+    if (!relations.contains(name))
+    {
         shared_ptr<Relation> baseRelation = make_shared<Relation>(name);
         relations[name] = baseRelation;
     }
@@ -25,7 +26,7 @@ string Relation::toString()
     switch (op)
     {
     case Operator::cap:
-        return "(" + left->toString()+ " & " + right->toString() + ")";
+        return "(" + left->toString() + " & " + right->toString() + ")";
     case Operator::complement:
         return "-" + left->toString();
     case Operator::composition:
@@ -61,4 +62,3 @@ bool Relation::operator==(const Relation &other) const
         return left == other.left && right == other.right;
     }
 }
-
