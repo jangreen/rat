@@ -79,10 +79,8 @@ antlrcpp::Any CatInferVisitor::visitAxiomDefinition(CatParser::AxiomDefinitionCo
 antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx)
 {
     string name = ctx->NAME()->getText();
-    // TODO remove: cout << "Let Definiton: " + name << endl;
     shared_ptr<Relation> derivedRelation = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
     Relation::relations[name] = derivedRelation;
-    // TODO remove: std::cout << "added " + name + ": " + derivedRelation->description() << std::endl;
     return derivedRelation;
 }
 
@@ -90,7 +88,6 @@ antlrcpp::Any CatInferVisitor::visitExpr(CatParser::ExprContext *ctx)
 {
     // process: (e)
     shared_ptr<Relation> derivedRelation = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    // TODO remove: std::cout << "processed: " + derivedRelation->description() << std::endl;
     return derivedRelation;
 }
 
@@ -109,49 +106,40 @@ antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdenti
 antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
     string name = ctx->NAME()->getText();
-    // TODO remove: std::cout << "visit Basic: " + name << std::endl;
     return Relation::get(name);
 }
 antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    // TODO remove: std::cout << "visit setminus: " << std::endl;
     return make_shared<Relation>(Operator::setminus, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprUnion(CatParser::ExprUnionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    shared_ptr<Relation> unionRel = make_shared<Relation>(Operator::cup, r1, r2);
-    // TODO remove: //std::cout << "visit union1: " + r1->description() << std::endl;
-    // TODO remove: // std::cout << "visit union2: " + unionRel.name + ", " + unionRel->description() << std::endl;
-    return unionRel;
+    return make_shared<Relation>(Operator::cup, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprComposition(CatParser::ExprCompositionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    // TODO remove: std::cout << "visit composition: " << std::endl;
     return make_shared<Relation>(Operator::composition, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprIntersection(CatParser::ExprIntersectionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    // TODO remove: std::cout << "visit intersection: " << std::endl;
     return make_shared<Relation>(Operator::cap, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprTransitive(CatParser::ExprTransitiveContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    // TODO remove: std::cout << "visit transitive: " << std::endl;
     return make_shared<Relation>(Operator::transitive, r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprComplement(CatParser::ExprComplementContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    // TODO remove: std::cout << "visit complement: " << std::endl;
     return make_shared<Relation>(Operator::complement, r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprInverse(CatParser::ExprInverseContext *ctx)

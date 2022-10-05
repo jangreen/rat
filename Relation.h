@@ -46,4 +46,4 @@ public:
     };
 };
 
-typedef unordered_set<shared_ptr<Relation>> RelationSet; // TODO remove: , Relation::HashFunction
+typedef unordered_set<shared_ptr<Relation>> RelationSet;

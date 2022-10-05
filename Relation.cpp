@@ -3,7 +3,6 @@
 
 using namespace std;
 
-// TODO remove: const string &alias
 Relation::Relation(const string &alias) : alias(alias), op(Operator::none), left(nullptr), right(nullptr) {}
 Relation::Relation(const Operator &op, shared_ptr<Relation> left, shared_ptr<Relation> right) : alias("-"), op(op), left(left), right(right) {}
 Relation::~Relation() {}
