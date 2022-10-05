@@ -4,7 +4,7 @@
 
 using namespace std;
 
-class ProofObligation 
+class ProofObligation
 {
 public:
     ProofObligation();
@@ -13,5 +13,3 @@ public:
     RelationSet left;
     RelationSet right;
 };
-
-
