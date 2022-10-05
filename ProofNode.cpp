@@ -31,7 +31,7 @@ string ProofNode::toDotFormat()
         rightSide += relation->toString() + ",";
     }
 
-    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\"];\n";
+    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\", color=" + (closed ? "green" : "red") + "];\n";
     output += nodeDesc;
     if (leftNode != nullptr) {
         output += leftNode->toDotFormat();

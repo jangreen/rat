@@ -14,7 +14,6 @@ Solver::~Solver() {}
 
 bool Solver::axiomEqual(shared_ptr<ProofNode> node)
 {
-    cout << node->toDotFormat() << endl;
     // TODO: more efficient way to apply axiom1?
     // RelationSet intersection = {};
     // set_intersection(
@@ -35,6 +34,8 @@ bool Solver::axiomEqual(shared_ptr<ProofNode> node)
     for (auto r1 : node->left) {
         for (auto r2: node->right) {
             if (*r1 == *r2) {
+                node->appliedRule = "axiomEqual";
+                node->closed = true;
                 return true;
             }
         }
@@ -96,6 +97,29 @@ bool Solver::orRightRule(shared_ptr<ProofNode> node)
             node->leftNode = newNode;
             goals.push(newNode);
             node->appliedRule = "orRight";
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Solver::orLeftRule(shared_ptr<ProofNode> node)
+{
+    for (auto relation : node->left)
+    {
+        if (relation->op == Operator::cup)
+        {
+            shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>(*node);
+            shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>(*node);
+            newNode1->right.erase(relation);
+            newNode2->right.erase(relation);
+            newNode1->right.insert(relation->left);
+            newNode2->right.insert(relation->right);
+            node->leftNode = newNode1;
+            node->rightNode = newNode2;
+            goals.push(newNode1);
+            goals.push(newNode2);
+            node->appliedRule = "orLeft";
             return true;
         }
     }
