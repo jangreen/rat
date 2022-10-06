@@ -6,6 +6,8 @@
 #include <string>
 #include "Solver.h"
 #include "ProofNode.h"
+#include "CatInferVisitor.h"
+#include "Constraint.h"
 
 using namespace std;
 
@@ -183,9 +185,60 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
     return false;
 }
 
-void Solver::solve()
+bool Solver::unrollRule(shared_ptr<ProofNode> node)
 {
-    cout << "Start Solving." << endl;
+    for (auto r : node->right)
+    {
+        if (r->op == Operator::transitive)
+        {
+            shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
+            newNode->right.erase(r);
+            newNode->right.insert(r->left);
+            node->leftNode = newNode;
+            node->appliedRule = "unrollRule";
+            goals.push(newNode);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Solver::load(string model1, string model2)
+{
+    shared_ptr<ProofNode> goal = make_shared<ProofNode>();
+    CatInferVisitor visitor;
+
+    // first program
+    ConstraintSet sc = visitor.parse(model1);
+    for (auto &[name, constraint] : sc)
+    {
+        constraint.toEmptyNormalForm();
+        goal->right.insert(constraint.relation);
+    }
+
+    // second program
+    ConstraintSet tso = visitor.parse(model2);
+    shared_ptr<Relation> r = nullptr;
+    for (auto &[name, constraint] : tso)
+    {
+        constraint.toEmptyNormalForm();
+        if (r == nullptr)
+        {
+            r = constraint.relation;
+            continue;
+        }
+        r = make_shared<Relation>(Operator::cup, r, constraint.relation);
+    }
+    goal->left.insert(r);
+    goals.push(goal);
+}
+
+void Solver::solve(string model1, string model2)
+{
+    // load models
+    load(model1, model2);
+
+    cout << "Start Solving..." << endl;
     shared_ptr<ProofNode> root = goals.top();
     while (!goals.empty())
     {
@@ -225,6 +278,7 @@ void Solver::solve()
         done = !done ? andRightRule(currentGoal) : done;
         done = !done ? orLeftRule(currentGoal) : done;
         done = !done ? transitiveClosureRule(currentGoal) : done;
+        done = !done ? unrollRule(currentGoal) : done;
 
         if (!done)
         {
