@@ -15,15 +15,19 @@ public:
     Theory theory;                      // inequalities that are true
 
     void load(string model1, string model2);
-    void solve(string model1, string model2);
+    bool solve(); // models alread< loaded
+    bool solve(string model1, string model2);
 
     bool axiom(shared_ptr<ProofNode> node);
     bool andLeftRule(shared_ptr<ProofNode> node);
     bool andRightRule(shared_ptr<ProofNode> node);
     bool orLeftRule(shared_ptr<ProofNode> node);
     bool orRightRule(shared_ptr<ProofNode> node);
+    bool seqLeftRule(shared_ptr<ProofNode> node);
     bool transitiveClosureRule(shared_ptr<ProofNode> node);
     bool unrollRule(shared_ptr<ProofNode> node); // TODO: bounded
+    bool cutRule(shared_ptr<ProofNode> node);
+    bool loopRule(shared_ptr<ProofNode> node);
 
     string toDotFormat(shared_ptr<ProofNode> node);
 };

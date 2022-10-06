@@ -6,10 +6,11 @@ using namespace std;
 Relation::Relation(const string &alias) : alias(alias), op(Operator::none), left(nullptr), right(nullptr) {}
 Relation::Relation(const Operator &op, shared_ptr<Relation> left, shared_ptr<Relation> right) : alias("-"), op(op), left(left), right(right) {}
 Relation::~Relation() {}
-unordered_map<string, shared_ptr<Relation>> Relation::relations = {{"0", Relation::EMPTY}, {"1", Relation::FULL}, {"id", Relation::ID}};
+
 shared_ptr<Relation> Relation::ID = make_shared<Relation>("id");
 shared_ptr<Relation> Relation::EMPTY = make_shared<Relation>("0");
 shared_ptr<Relation> Relation::FULL = make_shared<Relation>("1");
+unordered_map<string, shared_ptr<Relation>> Relation::relations = {{"0", Relation::EMPTY}, {"1", Relation::FULL}, {"id", Relation::ID}};
 
 shared_ptr<Relation> Relation::get(const string &name)
 {
@@ -46,6 +47,7 @@ string Relation::toString()
     }
 }
 
+// TODO: remove?
 // compares two relation syntactically
 bool Relation::operator==(const Relation &other) const
 {

@@ -163,6 +163,43 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
+{
+    for (auto r1 : node->left)
+    {
+        if (r1->op == Operator::composition)
+        {
+            // try different splits
+            for (auto r2 : node->right)
+            {
+                if (r2->op != Operator::composition) // TODO make splits over arbitrary
+                {
+                    continue;
+                }
+                Solver seqSolver;
+                seqSolver.theory = theory;
+                shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>();
+                shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>();
+                newNode1->left.insert(r1->left);
+                newNode1->right.insert(r2->left);
+                newNode2->left.insert(r1->right);
+                newNode2->right.insert(r2->right);
+                seqSolver.goals.push(newNode1);
+                seqSolver.goals.push(newNode2);
+                if (seqSolver.solve())
+                {
+                    // successful split
+                    node->leftNode = newNode1;
+                    node->rightNode = newNode2;
+                    node->appliedRule = "seqLeftRule";
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
 {
     for (auto r1 : node->left)
@@ -203,6 +240,39 @@ bool Solver::unrollRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+bool Solver::loopRule(shared_ptr<ProofNode> node)
+{
+    for (auto r1 : node->left)
+    {
+        for (auto r2 : node->right)
+        {
+            if (*r1 == *Relation::ID && r2->op == Operator::composition)
+            {
+                shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>();
+                shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>();
+                newNode1->left = node->left;
+                newNode1->right.insert(r2->left);
+                newNode2->left = node->left;
+                newNode2->right.insert(r2->right);
+
+                Solver loopSolver;
+                loopSolver.theory = theory;
+                loopSolver.goals.push(newNode1);
+                loopSolver.goals.push(newNode2);
+                if (loopSolver.solve())
+                {
+                    // successful split
+                    node->leftNode = newNode1;
+                    node->rightNode = newNode2;
+                    node->appliedRule = "loopRule";
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void Solver::load(string model1, string model2)
 {
     shared_ptr<ProofNode> goal = make_shared<ProofNode>();
@@ -233,12 +303,8 @@ void Solver::load(string model1, string model2)
     goals.push(goal);
 }
 
-void Solver::solve(string model1, string model2)
+bool Solver::solve()
 {
-    // load models
-    load(model1, model2);
-
-    cout << "Start Solving..." << endl;
     shared_ptr<ProofNode> root = goals.top();
     while (!goals.empty())
     {
@@ -277,8 +343,10 @@ void Solver::solve(string model1, string model2)
         done = !done ? orRightRule(currentGoal) : done;
         done = !done ? andRightRule(currentGoal) : done;
         done = !done ? orLeftRule(currentGoal) : done;
+        done = !done ? seqLeftRule(currentGoal) : done;
         done = !done ? transitiveClosureRule(currentGoal) : done;
         done = !done ? unrollRule(currentGoal) : done;
+        done = !done ? loopRule(currentGoal) : done;
 
         if (!done)
         {
@@ -294,6 +362,15 @@ void Solver::solve(string model1, string model2)
     dotFile.open("build/proof.dot");
     dotFile << toDotFormat(root);
     dotFile.close();
+
+    return root->status == ProofNodeStatus::closed;
+}
+
+bool Solver::solve(string model1, string model2)
+{
+    // load models
+    load(model1, model2);
+    return solve();
 }
 
 string Solver::toDotFormat(shared_ptr<ProofNode> node)

@@ -98,11 +98,6 @@ antlrcpp::Any CatInferVisitor::visitExprCartesian(CatParser::ExprCartesianContex
     string r2 = ctx->e2->getText();
     return Relation::get(r1 + "*" + r2);
 }
-antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdentityContext *ctx)
-{
-    cout << "TODO: visitExprRangeIdentity: " << ctx->getText() << endl;
-    return nullptr;
-}
 antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
     string name = ctx->NAME()->getText();
@@ -154,7 +149,22 @@ antlrcpp::Any CatInferVisitor::visitExprDomainIdentity(CatParser::ExprDomainIden
 }
 antlrcpp::Any CatInferVisitor::visitExprIdentity(CatParser::ExprIdentityContext *ctx)
 {
-    cout << "TODO: visitExprIdentity: " << ctx->getText() << endl;
+    if (ctx->TOID() == nullptr)
+    {
+        // TODO: dont use basic realtion cap id
+        // use text cap id
+        string set = ctx->e->getText();
+        return make_shared<Relation>(Operator::cap, Relation::get(set + "*" + set), Relation::ID);
+    }
+    else
+    {
+        cout << "TODO: visitExprIdentity TOID: " << ctx->getText() << endl;
+        return nullptr;
+    }
+}
+antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdentityContext *ctx)
+{
+    cout << "TODO: visitExprRangeIdentity: " << ctx->getText() << endl;
     return nullptr;
 }
 antlrcpp::Any CatInferVisitor::visitExprTransRef(CatParser::ExprTransRefContext *ctx)
