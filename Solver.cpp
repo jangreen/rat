@@ -12,7 +12,7 @@ using namespace std;
 Solver::Solver() {}
 Solver::~Solver() {}
 
-bool Solver::axiomEqual(shared_ptr<ProofNode> node)
+bool Solver::axiom(shared_ptr<ProofNode> node)
 {
     // TODO: more efficient way to apply axiom1?
     // RelationSet intersection = {};
@@ -33,13 +33,44 @@ bool Solver::axiomEqual(shared_ptr<ProofNode> node)
     // }
     for (auto r1 : node->left)
     {
+        if (*r1 == *Relation::EMPTY)
+        {
+            node->appliedRule = "axiomEmpty";
+            node->status = ProofNodeStatus::closed;
+            return true;
+        }
+
         for (auto r2 : node->right)
         {
+            if (*r2 == *Relation::FULL)
+            {
+                node->appliedRule = "axiomFull";
+                node->status = ProofNodeStatus::closed;
+                return true;
+            }
+
             if (*r1 == *r2)
             {
                 node->appliedRule = "axiomEqual";
-                node->closed = true;
+                node->status = ProofNodeStatus::closed;
                 return true;
+            }
+
+            for (auto inequality : theory) // support only for simple theories
+            {
+                for (auto l1 : inequality->left)
+                {
+                    for (auto l2 : inequality->right)
+                    {
+                        if (*l1 == *r1 && *l2 == *r2) // check theory
+                        {
+                            node->appliedRule = "axiomTheory";
+                            node->status = ProofNodeStatus::closed;
+                            goals.pop();
+                            return true;
+                        }
+                    }
+                }
             }
         }
     }
@@ -95,9 +126,9 @@ bool Solver::orRightRule(shared_ptr<ProofNode> node)
         if (relation->op == Operator::cup)
         {
             shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
-            newNode->left.erase(relation);
-            newNode->left.insert(relation->left);
-            newNode->left.insert(relation->right);
+            newNode->right.erase(relation);
+            newNode->right.insert(relation->left);
+            newNode->right.insert(relation->right);
             node->leftNode = newNode;
             goals.push(newNode);
             node->appliedRule = "orRight";
@@ -115,16 +146,38 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
         {
             shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>(*node);
             shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>(*node);
-            newNode1->right.erase(relation);
-            newNode2->right.erase(relation);
-            newNode1->right.insert(relation->left);
-            newNode2->right.insert(relation->right);
+            newNode1->left.erase(relation);
+            newNode2->left.erase(relation);
+            newNode1->left.insert(relation->left);
+            newNode2->left.insert(relation->right);
             node->leftNode = newNode1;
             node->rightNode = newNode2;
             goals.push(newNode1);
             goals.push(newNode2);
             node->appliedRule = "orLeft";
             return true;
+        }
+    }
+    return false;
+}
+
+bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
+{
+    for (auto r1 : node->left)
+    {
+        for (auto r2 : node->right)
+        {
+            // simple case both have transitive closure
+            if (r1->op == Operator::transitive && r2->op == Operator::transitive)
+            {
+                shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
+                newNode->left.insert(r1->left);
+                newNode->right.insert(r2->left);
+                node->leftNode = newNode;
+                node->appliedRule = "transitiveClosureRule";
+                goals.push(newNode);
+                return true;
+            }
         }
     }
     return false;
@@ -137,27 +190,56 @@ void Solver::solve()
     while (!goals.empty())
     {
         shared_ptr<ProofNode> currentGoal = goals.top();
-        cout << "Current goal: " << currentGoal << endl;
-        goals.pop();
-        assert(!currentGoal->closed);
+
+        if (currentGoal->status != ProofNodeStatus::none)
+        {
+            // node is other closed or open (failed), go on
+            goals.pop();
+            continue;
+        }
+        if (!currentGoal->appliedRule.empty()) // TODO: refactor
+        {
+            bool leftClosed = currentGoal->leftNode == nullptr || currentGoal->leftNode->status == ProofNodeStatus::closed;
+            bool leftOpen = currentGoal->leftNode == nullptr || currentGoal->leftNode->status == ProofNodeStatus::open;
+            bool rightClosed = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::closed;
+            bool rightOpen = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::open;
+            if (leftClosed && rightClosed)
+            {
+                currentGoal->status = ProofNodeStatus::closed;
+                goals.pop();
+                continue;
+            }
+            else if (leftOpen || rightOpen)
+            {
+                currentGoal->status = ProofNodeStatus::open;
+                goals.pop();
+                continue;
+            }
+        }
 
         // one rule application
         bool done;
-        done = axiomEqual(currentGoal);
+        done = axiom(currentGoal);
         done = !done ? andLeftRule(currentGoal) : done;
         done = !done ? orRightRule(currentGoal) : done;
         done = !done ? andRightRule(currentGoal) : done;
+        done = !done ? orLeftRule(currentGoal) : done;
+        done = !done ? transitiveClosureRule(currentGoal) : done;
 
         if (!done)
         {
-            cout << "No Rule applicable." << endl;
-            ofstream dotFile;
-            dotFile.open("build/proof.dot");
-            dotFile << toDotFormat(root);
-            dotFile.close();
-            return;
+            // No Rule applicable: pop goal on go on
+            cout << "Open goal: " << currentGoal->toDotFormat() << endl;
+            currentGoal->status = ProofNodeStatus::open;
+            goals.pop();
         }
     }
+
+    // export proof
+    ofstream dotFile;
+    dotFile.open("build/proof.dot");
+    dotFile << toDotFormat(root);
+    dotFile.close();
 }
 
 string Solver::toDotFormat(shared_ptr<ProofNode> node)

@@ -22,13 +22,27 @@ int main(int argc, const char *argv[])
 
     // second program
     ConstraintSet tso = visitor.parse("cat/tso.cat");
+    shared_ptr<Relation> r = nullptr;
     for (auto &[name, constraint] : tso)
     {
         constraint.toEmptyNormalForm();
-        goal->left.insert(constraint.relation);
+        if (r == nullptr)
+        {
+            r = constraint.relation;
+            continue;
+        }
+        r = make_shared<Relation>(Operator::cup, r, constraint.relation);
     }
+    goal->left.insert(r);
 
     Solver solver;
+    shared_ptr<ProofNode> poloc = make_shared<ProofNode>();
+    poloc->left = {Relation::get("po-loc")};
+    poloc->right = {Relation::get("po")};
+    shared_ptr<ProofNode> rfe = make_shared<ProofNode>();
+    rfe->left = {Relation::get("rfe")};
+    rfe->right = {Relation::get("rf")};
+    solver.theory = {poloc, rfe};
     solver.goals.push(goal);
     solver.solve();
 }

@@ -14,7 +14,7 @@ string getId(ProofNode &node)
     return ss.str();
 }
 
-ProofNode::ProofNode() : closed(false) {}
+ProofNode::ProofNode() : status(ProofNodeStatus::none), appliedRule("") {}
 ProofNode::~ProofNode() {}
 
 string ProofNode::toDotFormat()
@@ -32,7 +32,7 @@ string ProofNode::toDotFormat()
         rightSide += relation->toString() + ",";
     }
 
-    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\", color=" + (closed ? "green" : "red") + "];\n";
+    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\", color=" + (status == ProofNodeStatus::closed ? "green" : "red") + "];\n";
     output += nodeDesc;
     if (leftNode != nullptr)
     {
