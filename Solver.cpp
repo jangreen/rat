@@ -163,6 +163,50 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+bool Solver::inverseRule(shared_ptr<ProofNode> node)
+{
+    for (auto r1 : node->left)
+    {
+        if (r1->op == Operator::inverse)
+        {
+            if (r1->left->op == Operator::inverse)
+            {
+                shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
+                newNode->left.erase(r1);
+                newNode->left.insert(r1->left->left);
+                node->leftNode = newNode;
+                goals.push(newNode);
+                node->appliedRule = "inverseRule";
+                return true;
+            }
+            else
+            {
+                for (auto r2 : node->right)
+                {
+                    if (r2->op == Operator::inverse)
+                    {
+                        if (r2->left->op == Operator::inverse)
+                        {
+                            shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
+                            newNode->right.erase(r2);
+                            newNode->right.insert(r2->left->left);
+                            node->leftNode = newNode;
+                            goals.push(newNode);
+                            node->appliedRule = "inverseRule";
+                            return true;
+                        }
+                        else
+                        {
+                            // TODO try inverse (need to remove rest knowledge)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto r1 : node->left)
@@ -212,10 +256,17 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
                 shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
                 newNode->left.insert(r1->left);
                 newNode->right.insert(r2->left);
-                node->leftNode = newNode;
-                node->appliedRule = "transitiveClosureRule";
-                goals.push(newNode);
-                return true;
+
+                Solver tcSolver;
+                tcSolver.theory = theory;
+                tcSolver.goals.push(newNode);
+                if (tcSolver.solve())
+                {
+                    // successful tc
+                    node->leftNode = newNode;
+                    node->appliedRule = "transitiveClosureRule";
+                    return true;
+                }
             }
         }
     }
@@ -233,6 +284,95 @@ bool Solver::unrollRule(shared_ptr<ProofNode> node)
             newNode->right.insert(r->left);
             node->leftNode = newNode;
             node->appliedRule = "unrollRule";
+            goals.push(newNode);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Solver::cutRule(shared_ptr<ProofNode> node)
+{
+    for (auto const &[_, r] : Relation::relations)
+    {
+        bool isIn = false; // TODO refactor: improve performance
+        for (auto l : node->left)
+        {
+            if (*r == *l)
+            {
+                isIn = true;
+            }
+        }
+        for (auto l : node->right)
+        {
+            if (*r == *l)
+            {
+                isIn = true;
+            }
+        }
+        // TODO: save elemts in sets not pointers to allow membership checks like: && node->left.find(r) == node->left.end()
+        if (r->op == Operator::none && !isIn) // try only basic cuts
+        {
+            shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>(*node);
+            shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>(*node);
+            newNode1->left.insert(r);
+            newNode2->right.insert(r);
+
+            cout << newNode1->toDotFormat() << endl;
+            cout << newNode2->toDotFormat() << endl;
+
+            Solver cutSolver;
+            cutSolver.theory = theory;
+            cutSolver.goals.push(newNode1);
+            cutSolver.goals.push(newNode2);
+            if (cutSolver.solve())
+            {
+                // successful tc
+                node->leftNode = newNode1;
+                node->rightNode = newNode2;
+                node->appliedRule = "cutRule";
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+bool Solver::consRule(shared_ptr<ProofNode> node)
+{
+    for (auto inequality : theory)
+    {
+        bool satisfied = true;
+        for (auto r2 : inequality->left)
+        {
+            bool found = false;
+            for (auto r1 : node->left)
+            {
+                if (*r1 == *r2)
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                satisfied = false;
+            }
+        }
+        if (satisfied)
+        {
+            shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
+            auto oldCount = newNode->left.size();
+            for (auto n : inequality->right)
+            { // TODO: wrong -> do case split
+                newNode->left.insert(n);
+            }
+            if (oldCount == newNode->left.size())
+            {
+                continue; // no additional knowledge
+            }
+            node->leftNode = newNode;
+            node->appliedRule = "consRule";
             goals.push(newNode);
             return true;
         }
@@ -343,15 +483,17 @@ bool Solver::solve()
         done = !done ? orRightRule(currentGoal) : done;
         done = !done ? andRightRule(currentGoal) : done;
         done = !done ? orLeftRule(currentGoal) : done;
+        done = !done ? inverseRule(currentGoal) : done;
         done = !done ? seqLeftRule(currentGoal) : done;
         done = !done ? transitiveClosureRule(currentGoal) : done;
+        // done = !done ? cutRule(currentGoal) : done;
         done = !done ? unrollRule(currentGoal) : done;
         done = !done ? loopRule(currentGoal) : done;
+        done = !done ? consRule(currentGoal) : done;
 
         if (!done)
         {
             // No Rule applicable: pop goal on go on
-            cout << "Open goal: " << currentGoal->toDotFormat() << endl;
             currentGoal->status = ProofNodeStatus::open;
             goals.pop();
         }
