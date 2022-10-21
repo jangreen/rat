@@ -19,4 +19,5 @@ void Constraint::toEmptyNormalForm()
         shared_ptr<Relation> tc = make_shared<Relation>(Operator::transitive, relation);
         relation = make_shared<Relation>(Operator::cap, tc, Relation::ID);
     }
+    type = ConstraintType::empty;
 }

@@ -1,6 +1,5 @@
 #include <memory>
 #include <iostream>
-#include "ProofNode.h"
 #include "Solver.h"
 
 using namespace std;
@@ -40,6 +39,10 @@ int main(int argc, const char *argv[])
     shared_ptr<ProofNode> rfe = make_shared<ProofNode>();
     rfe->left = {Relation::get("rfe")};
     rfe->right = {Relation::get("rf")};
+    shared_ptr<ProofNode> rfsplit = make_shared<ProofNode>();
+    rfsplit->left = {Relation::get("rf")};
+    shared_ptr<Relation> rfie = make_shared<Relation>(Operator::cup, Relation::get("rfi"), Relation::get("rfe"));
+    rfsplit->right = {rfie};
     shared_ptr<ProofNode> rmw = make_shared<ProofNode>(); // rmw <= po & RW
     rmw->left = {Relation::get("rmw")};
     rmw->right = {Relation::get("po")};
@@ -64,17 +67,39 @@ int main(int argc, const char *argv[])
     shared_ptr<ProofNode> ctrl2 = make_shared<ProofNode>();
     ctrl2->left = {Relation::get("ctrl")};
     ctrl2->right = {Relation::get("R*M")};
-    solver.theory = {poloc, rf, rf2, rfe, rmw, mfence, data1, addr1, ctrl1, data2, addr2, ctrl2};
+    shared_ptr<ProofNode> scrmw = make_shared<ProofNode>(); // in our sc model rmw is empty, if rmw are allowed then rmw constraint is needed
+    scrmw->left = {Relation::get("rmw")};
+    scrmw->right = {Relation::get("0")};
+    // po | po-1 | id <= int
+    shared_ptr<ProofNode> po_int = make_shared<ProofNode>();
+    po_int->left = {Relation::get("po")};
+    po_int->right = {Relation::get("int")};
+    shared_ptr<ProofNode> po1_int = make_shared<ProofNode>();
+    po1_int->left = {Relation::get("po^-1")}; // atomar inverses
+    po1_int->right = {Relation::get("int")};
+    shared_ptr<ProofNode> id_int = make_shared<ProofNode>();
+    id_int->left = {Relation::get("id")};
+    id_int->right = {Relation::get("int")};
+    shared_ptr<ProofNode> int_popo1id = make_shared<ProofNode>();
+    int_popo1id->left = {Relation::get("int")};
+    shared_ptr<Relation> po1 = make_shared<Relation>(Operator::inverse, Relation::get("po"));
+    shared_ptr<Relation> po1id = make_shared<Relation>(Operator::cup, po1, Relation::get("id"));
+    shared_ptr<Relation> popo1id = make_shared<Relation>(Operator::cup, po1id, Relation::get("po"));
+    int_popo1id->right = {popo1id};
+    solver.theory = {poloc, rf, rf2, rfe, rmw, mfence, data1, addr1, ctrl1, data2, addr2, ctrl2, scrmw, po_int, po1_int, id_int, int_popo1id};
 
     cout << "Start Solving..." << endl;
+    solver.stepwise = true;
     // solver.solve("cat/sc.cat", "cat/tso.cat");
-
-    solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
+    // solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
     // solver.solve("cat/sc.cat", "cat/oota.cat");
-    // solver.solve("cat/tso.cat", "cat/oota.cat");
+
+    solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
+
+    // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
 
     // TODO: solver.solve("cat/tso.cat", "cat/aarch64-modified.cat");
-    // TODO: solver.solve("cat/sc.cat", "cat/aarch64-modified.cat");
+    // solver.solve("cat/sc.cat", "cat/aarch64-modified.cat");
 
     // tests();
     string name = "d";

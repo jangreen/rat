@@ -1,0 +1,18 @@
+digraph { 
+node [shape=record];
+"0x7f8fa2804d68"[label="{{(((data \| addr) \| ctrl) \| rf), | (((po & (R*M \| W*W)) \| mfence) \| ((co \| fr) \| rfe)),} | orRight}", color=gray];
+"0x7f8fa28052c8"[label="{{(((data \| addr) \| ctrl) \| rf), | ((co \| fr) \| rfe),((po & (R*M \| W*W)) \| mfence),} | orRight}", color=gray];
+"0x7f8fa2805368"[label="{{(((data \| addr) \| ctrl) \| rf), | rfe,(co \| fr),((po & (R*M \| W*W)) \| mfence),} | orRight}", color=gray];
+"0x7f8fa1f2f3a8"[label="{{(((data \| addr) \| ctrl) \| rf), | fr,co,((po & (R*M \| W*W)) \| mfence),rfe,} | orRight}", color=gray];
+"0x7f8fa1f38e78"[label="{{(((data \| addr) \| ctrl) \| rf), | mfence,(po & (R*M \| W*W)),rfe,co,fr,} | andRight}", color=gray];
+"0x7f8fa2805498"[label="{{(((data \| addr) \| ctrl) \| rf), | fr,co,rfe,po,mfence,} | none}", color=gray];
+"0x7f8fa1f38e78" -> "0x7f8fa2805498";
+"0x7f8fa28055d8"[label="{{(((data \| addr) \| ctrl) \| rf), | fr,co,(R*M \| W*W),rfe,mfence,} | orRight}", color=gray];
+"0x7f8fa28057c8"[label="{{(((data \| addr) \| ctrl) \| rf), | fr,mfence,rfe,W*W,R*M,co,} | none}", color=gray];
+"0x7f8fa28055d8" -> "0x7f8fa28057c8";
+"0x7f8fa1f38e78" -> "0x7f8fa28055d8";
+"0x7f8fa1f2f3a8" -> "0x7f8fa1f38e78";
+"0x7f8fa2805368" -> "0x7f8fa1f2f3a8";
+"0x7f8fa28052c8" -> "0x7f8fa2805368";
+"0x7f8fa2804d68" -> "0x7f8fa28052c8";
+}

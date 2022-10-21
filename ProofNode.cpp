@@ -1,10 +1,12 @@
-#include "ProofNode.h"
 #include <sstream>
 #include <string>
 #include <regex>
+#include "ProofNode.h"
+#include "Solver.h"
 
 using namespace std;
 
+// helper functions
 string getId(ProofNode &node)
 {
     // TODO better approach?
@@ -14,7 +16,20 @@ string getId(ProofNode &node)
     return ss.str();
 }
 
-ProofNode::ProofNode() : status(ProofNodeStatus::none), appliedRule("") {}
+string nodeStatusColor(ProofNodeStatus status)
+{
+    switch (status)
+    {
+    case ProofNodeStatus::closed:
+        return "green";
+    case ProofNodeStatus::none:
+        return "gray";
+    case ProofNodeStatus::open:
+        return "red";
+    }
+}
+
+ProofNode::ProofNode() : status(ProofNodeStatus::none), appliedRule(ProofRule::none) {}
 ProofNode::~ProofNode() {}
 
 string ProofNode::toDotFormat()
@@ -32,7 +47,7 @@ string ProofNode::toDotFormat()
         rightSide += relation->toString() + ",";
     }
 
-    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule + "}\", color=" + (status == ProofNodeStatus::closed ? "green" : "red") + "];\n";
+    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule.toString() + "}\", color=" + nodeStatusColor(status) + "];\n";
     output += nodeDesc;
     if (leftNode != nullptr)
     {
@@ -46,4 +61,9 @@ string ProofNode::toDotFormat()
         output += "\"" + getId(*this) + "\" -> \"" + getId(*rightNode) + "\";\n";
     }
     return output;
+}
+
+bool ProofNode::operator==(const ProofNode &other) const
+{
+    return left == other.left && right == other.right;
 }
