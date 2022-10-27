@@ -65,5 +65,67 @@ string ProofNode::toDotFormat()
 
 bool ProofNode::operator==(const ProofNode &other) const
 {
+    // TODO
     return left == other.left && right == other.right;
+    /*for (auto l : left)
+    {
+        bool found = false;
+        for (auto r : other.left)
+        {
+            if (*r == *l)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            return false;
+        }
+    }
+    for (auto l : other.left)
+    {
+        bool found = false;
+        for (auto r : left)
+        {
+            if (*r == *l)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            return false;
+        }
+    }
+    for (auto l : right)
+    {
+        bool found = false;
+        for (auto r : other.right)
+        {
+            if (*r == *l)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            return false;
+        }
+    }
+    for (auto l : other.right)
+    {
+        bool found = false;
+        for (auto r : right)
+        {
+            if (*r == *l)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            return false;
+        }
+    }
+    return true;*/
 }

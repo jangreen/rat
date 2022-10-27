@@ -16,6 +16,7 @@ public:
         orRight,
         inverse,
         seqLeft,
+        simplifyTc,
         transitiveClosure,
         unroll,
         cut,

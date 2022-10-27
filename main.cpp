@@ -89,12 +89,12 @@ int main(int argc, const char *argv[])
     solver.theory = {poloc, rf, rf2, rfe, rmw, mfence, data1, addr1, ctrl1, data2, addr2, ctrl2, scrmw, po_int, po1_int, id_int, int_popo1id};
 
     cout << "Start Solving..." << endl;
-    solver.stepwise = true;
+    // solver.stepwise = true;
     // solver.solve("cat/sc.cat", "cat/tso.cat");
-    // solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
+    solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
     // solver.solve("cat/sc.cat", "cat/oota.cat");
 
-    solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
+    // solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
 
     // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
 

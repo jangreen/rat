@@ -14,6 +14,7 @@ public:
     stack<shared_ptr<ProofNode>> goals; // goals on stack that are not closed yet
     Theory theory;                      // inequalities that are true
     set<shared_ptr<ProofNode>> unprovable;
+    set<shared_ptr<ProofNode>> proved;
     bool stepwise;
 
     void load(string model1, string model2);
@@ -34,6 +35,7 @@ public:
     bool orRightRule(shared_ptr<ProofNode> node);
     bool inverseRule(shared_ptr<ProofNode> node);
     bool seqLeftRule(shared_ptr<ProofNode> node);
+    bool simplifyTcRule(shared_ptr<ProofNode> node);
     bool transitiveClosureRule(shared_ptr<ProofNode> node);
     bool unrollRule(shared_ptr<ProofNode> node); // TODO: bounded
     bool cutRule(shared_ptr<ProofNode> node);

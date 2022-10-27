@@ -379,6 +379,40 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+bool Solver::simplifyTcRule(shared_ptr<ProofNode> node)
+{
+    // TODO: rename unroll left
+    // int unrollBound = 2;
+    for (auto r : node->left)
+    {
+        if (r->op == Operator::transitive)
+        {
+            shared_ptr<ProofNode> newNode1 = childProofNode(node);
+            shared_ptr<ProofNode> newNode2 = childProofNode(node);
+            newNode1->left.erase(r);
+            newNode2->left.erase(r);
+
+            shared_ptr<Relation> unrolledR = r->left;
+            shared_ptr<Relation> unrolledR2 = make_shared<Relation>(Operator::composition, unrolledR, unrolledR);
+            shared_ptr<Relation> unrolledR2Tc = make_shared<Relation>(Operator::transitive, unrolledR2);
+            shared_ptr<Relation> unrolledRCompTc = make_shared<Relation>(Operator::composition, unrolledR, unrolledR2Tc);
+            newNode1->left.insert(unrolledRCompTc);
+            newNode2->left.insert(unrolledR2Tc);
+
+            if (!isCycle(newNode1) && !isCycle(newNode2))
+            {
+                node->leftNode = newNode1;
+                node->rightNode = newNode2;
+                node->appliedRule = ProofRule::simplifyTc;
+                goals.push(newNode1);
+                goals.push(newNode2);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
 {
     for (auto r1 : node->left)
@@ -778,6 +812,9 @@ bool Solver::solve()
         {
             // 1) node is closed
             cout << "Popped closed goal." << endl;
+            shared_ptr<ProofNode> provenRule = make_shared<ProofNode>(*currentGoal);
+            provenRule->parent = nullptr;
+            proved.insert(provenRule);
             goals.pop();
             continue;
         }
@@ -798,6 +835,17 @@ bool Solver::solve()
             if (*failed == *currentGoal)
             {
                 cout << "Known unprovable goal popped." << endl;
+                goals.pop();
+                continue;
+            }
+        }
+        // check if proven
+        for (auto good : proved)
+        {
+            if (*good == *currentGoal)
+            {
+                cout << "proven goal popped." << endl;
+                currentGoal = good;
                 goals.pop();
                 continue;
             }
@@ -851,6 +899,8 @@ bool Solver::solve()
         case ProofRule::seqLeft:
             done = !done ? transitiveClosureRule(currentGoal) : done;
         case ProofRule::transitiveClosure:
+            done = !done ? simplifyTcRule(currentGoal) : done;
+        case ProofRule::simplifyTc:
             // done = !done ? cutRule(currentGoal) : done;
         case ProofRule::cut:
             done = !done ? unrollRule(currentGoal) : done;
