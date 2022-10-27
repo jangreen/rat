@@ -48,8 +48,8 @@ int main(int argc, const char *argv[])
 {
     Solver solver;
     loadTheory(solver);
-    // solver.stepwise = true;
-    //  solver.silent = true;
+    solver.stepwise = true;
+    // solver.silent = true;
 
     cout << "Start Solving..." << endl;
     // solver.solve("cat/sc.cat", "cat/tso.cat");

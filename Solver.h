@@ -13,14 +13,15 @@ public:
 
     stack<shared_ptr<ProofNode>> goals; // goals on stack that are not closed yet
     Theory theory;                      // inequalities that are true
-    set<shared_ptr<ProofNode>> unprovable;
-    set<shared_ptr<ProofNode>> proved;
+    static set<shared_ptr<ProofNode>> unprovable;
+    static set<shared_ptr<ProofNode>> proved;
     bool stepwise;
     bool silent;
 
     void load(string model1, string model2);
     bool solve(); // models alread< loaded
     bool solve(string model1, string model2);
+    bool solve(initializer_list<shared_ptr<ProofNode>> goals);
 
     bool isCycle(shared_ptr<ProofNode> node);
     shared_ptr<ProofNode> childProofNode(shared_ptr<ProofNode> node);
@@ -48,7 +49,8 @@ public:
     bool idseqEmptyRule(shared_ptr<ProofNode> node);
 
     string toDotFormat(shared_ptr<ProofNode> node);
-    void exportProof(shared_ptr<ProofNode> root);
+    static shared_ptr<ProofNode> root;
+    void exportProof(shared_ptr<ProofNode> root = Solver::root);
 };
 
 // TODO remove: typedef void (*ProofRule)(ProofNode &);

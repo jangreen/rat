@@ -68,6 +68,11 @@ string ProofNode::toDotFormat()
         output += rightNode->toDotFormat();
         output += "\"" + getId(*this) + "\" -> \"" + getId(*rightNode) + "\";\n";
     }
+
+    if (parent != nullptr)
+    {
+        output += "\"" + getId(*this) + "\" -> \"" + getId(*parent) + "\"[color = grey];\n";
+    }
     return output;
 }
 

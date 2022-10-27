@@ -25,6 +25,8 @@ public:
     shared_ptr<ProofNode> rightNode;
     shared_ptr<ProofNode> parent;
 
+    shared_ptr<ProofNode> consInequality; // TODO remove
+
     RelationSet left;
     RelationSet right;
 

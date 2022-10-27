@@ -13,6 +13,10 @@ using namespace std;
 Solver::Solver() : stepwise(false) {}
 Solver::~Solver() {}
 
+set<shared_ptr<ProofNode>> Solver::unprovable;
+set<shared_ptr<ProofNode>> Solver::proved;
+shared_ptr<ProofNode> Solver::root;
+
 // TODO: add node function
 bool Solver::isCycle(shared_ptr<ProofNode> node)
 {
@@ -31,6 +35,10 @@ bool Solver::isCycle(shared_ptr<ProofNode> node)
         {
             return true;
         }
+        if (node->consInequality != nullptr && currentNode->consInequality == node->consInequality)
+        {
+            return true; // dont use same cons twice // TODO should be possible?
+        }
         currentNode = currentNode->parent;
     }
     return false;
@@ -44,6 +52,7 @@ shared_ptr<ProofNode> Solver::childProofNode(shared_ptr<ProofNode> node)
     newNode->parent = node;
     newNode->appliedRule = ProofRule::none;
     newNode->status = ProofNodeStatus::none;
+    newNode->consInequality = nullptr; // TODO: remove
     // left and right stay the same child pointer must be set later
     return newNode;
 }
@@ -139,6 +148,8 @@ bool Solver::andLeftRule(shared_ptr<ProofNode> node)
             else
             { // TODO: must rules buggy
                 // must rule: if this leads to cycle stop
+                cout << "AAAAAAA" << endl;
+                node->appliedRule = ProofRule::empty;
                 goals.pop();
                 return true;
             }
@@ -310,25 +321,18 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 {
                     continue;
                 }
-                Solver seqSolver;
-                seqSolver.theory = theory;
-                seqSolver.stepwise = stepwise;
-                seqSolver.silent = silent;
-                shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>();
-                shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>();
-                newNode1->left.insert(r1->left);
-                newNode1->right.insert(r2->left);
-                newNode2->left.insert(r1->right);
-                newNode2->right.insert(r2->right);
-                seqSolver.goals.push(newNode1);
-                seqSolver.goals.push(newNode2);
-                if (seqSolver.solve())
+                shared_ptr<ProofNode> newNode1 = childProofNode(node);
+                shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                newNode1->left = {r1->left};
+                newNode1->right = {r2->left};
+                newNode2->left = {r1->right};
+                newNode2->right = {r2->right};
+                node->leftNode = newNode1;
+                node->rightNode = newNode2;
+                node->appliedRule = ProofRule::seqLeft;
+
+                if (solve({newNode1, newNode2}))
                 {
-                    // successful split
-                    node->leftNode = newNode1;
-                    newNode1->parent = node;
-                    node->rightNode = newNode2;
-                    node->appliedRule = ProofRule::seqLeft;
                     return true;
                 }
             }
@@ -400,21 +404,15 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
             // simple case both have transitive closure
             if (r1->op == Operator::transitive && r2->op == Operator::transitive)
             {
-                shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
-                newNode->left.insert(r1->left);
-                newNode->right.insert(r2->left);
+                shared_ptr<ProofNode> newNode = childProofNode(node);
+                newNode->left = {r1->left};
+                newNode->right = {r2->left};
+                node->leftNode = newNode;
+                node->rightNode = nullptr;
+                node->appliedRule = ProofRule::transitiveClosure;
 
-                Solver tcSolver;
-                tcSolver.theory = theory;
-                tcSolver.stepwise = stepwise;
-                tcSolver.silent = silent;
-                tcSolver.goals.push(newNode);
-                if (tcSolver.solve())
+                if (solve({newNode}))
                 {
-                    // successful tc
-                    node->leftNode = newNode;
-                    node->rightNode = nullptr;
-                    node->appliedRule = ProofRule::transitiveClosure;
                     return true;
                 }
             }
@@ -563,6 +561,7 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
     for (auto iequ = sorted.begin(); iequ != sorted.end(); iequ++)
     {
         Inequality inequality = *iequ;
+        cout << inequality->relationString() << endl;
         if (heuristicVal(node, inequality) > 0)
         {
             shared_ptr<ProofNode> newNode1 = childProofNode(node);
@@ -589,9 +588,13 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
                 node->leftNode = newNode1;
                 node->rightNode = newNode2;
                 node->appliedRule = ProofRule::cons;
-                goals.push(newNode1);
-                goals.push(newNode2);
-                return true;
+                node->consInequality = inequality;
+
+                if (solve({newNode1, newNode2})) // TODO use
+                {
+                    cout << "AAAA" << endl;
+                    return true;
+                }
             }
         }
     }
@@ -715,14 +718,17 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
         shared_ptr<Relation> rComp = make_shared<Relation>(Operator::composition, r0, r1);
         newNode->left.insert(rComp);
         newNode->left.insert(Relation::get("id"));
+        newNode->parent = node;
 
-        node->leftNode = newNode;
-        node->rightNode = nullptr;
-        node->appliedRule = ProofRule::empty;
-        goals.push(newNode);
-        return true;
+        if (!isCycle(newNode))
+        {
+            node->leftNode = newNode;
+            node->rightNode = nullptr;
+            node->appliedRule = ProofRule::empty;
+            goals.push(newNode);
+            return true;
+        }
     }
-
     return false;
 }
 
@@ -741,12 +747,16 @@ bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
                     shared_ptr<Relation> linv = make_shared<Relation>(Operator::inverse, r2->left);
                     newNode->left.insert(linv);
                     newNode->left.insert(r2->right);
+                    newNode->parent = node;
 
-                    node->leftNode = newNode;
-                    node->rightNode = nullptr;
-                    node->appliedRule = ProofRule::empty;
-                    goals.push(newNode);
-                    return true;
+                    if (!isCycle(newNode))
+                    {
+                        node->leftNode = newNode;
+                        node->rightNode = nullptr;
+                        node->appliedRule = ProofRule::empty;
+                        goals.push(newNode);
+                        return true;
+                    }
                 }
             }
         }
@@ -796,6 +806,10 @@ void Solver::load(string model1, string model2)
 bool Solver::solve()
 {
     shared_ptr<ProofNode> root = goals.top();
+    if (Solver::root == nullptr)
+    {
+        Solver::root = root;
+    }
     while (!goals.empty())
     {
         shared_ptr<ProofNode> currentGoal = goals.top();
@@ -805,7 +819,7 @@ bool Solver::solve()
         // step wise proof
         if (stepwise)
         {
-            exportProof(root);
+            exportProof();
             cin.ignore();
         }
 
@@ -816,7 +830,7 @@ bool Solver::solve()
                 cout << "  pop closed." << endl;
             shared_ptr<ProofNode> provenRule = make_shared<ProofNode>(*currentGoal);
             provenRule->parent = nullptr;
-            proved.insert(provenRule);
+            Solver::proved.insert(provenRule);
             goals.pop();
             continue;
         }
@@ -828,14 +842,14 @@ bool Solver::solve()
             currentGoal->leftNode = nullptr;
             currentGoal->rightNode = nullptr;
             currentGoal->appliedRule = ProofRule::none;
-            unprovable.insert(currentGoal);
+            Solver::unprovable.insert(currentGoal);
             goals.pop();
             continue;
         }
 
         bool skipGoal = false;
         // check if is unprovable
-        for (auto failed : unprovable)
+        for (auto failed : Solver::unprovable)
         {
             if (*failed == *currentGoal)
             {
@@ -847,7 +861,7 @@ bool Solver::solve()
             }
         }
         // check if proven
-        for (auto good : proved)
+        for (auto good : Solver::proved)
         {
             if (*good == *currentGoal)
             {
@@ -864,6 +878,7 @@ bool Solver::solve()
                         currentGoal->parent->rightNode = good;
                     }
                 }
+                currentGoal->status = ProofNodeStatus::closed;
                 goals.pop();
                 skipGoal = true;
             }
@@ -889,14 +904,32 @@ bool Solver::solve()
             }
             else if (leftOpen || rightOpen)
             {
+                // must do rules, do not try other rule // TODO
+                if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::orRight))
+                {
+                    goals.pop();
+                    continue;
+                }
                 if (!silent)
                     cout << "  try another rule" << endl;
                 // try / apply next possible rule for current node
             }
             else
             {
+                // must do rules, do not try other rule // TODO
+                if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
+                    currentGoal->appliedRule == ProofRule(ProofRule::orRight))
+                {
+                    goals.pop();
+                    continue;
+                }
                 if (!silent)
-                    cout << "TODO: does this happen?" << endl;
+                    cout << "TODO:" << endl;
             }
         }
         // 4) apply rule to node
@@ -929,12 +962,12 @@ bool Solver::solve()
         case ProofRule::simplifyTc:
             // done = !done ? cutRule(currentGoal) : done;
         case ProofRule::cut:
+            done = !done ? unrollRule(currentGoal) : done;
+        case ProofRule::unroll:
             done = !done ? loopRule(currentGoal) : done;
         case ProofRule::loop:
             done = !done ? consRule(currentGoal) : done;
         case ProofRule::cons:
-            done = !done ? unrollRule(currentGoal) : done;
-        case ProofRule::unroll:
             // done = !done ? weakRightRule(currentGoal) : done;
         case ProofRule::weakRight:
             // done = !done ? weakLeftRule(currentGoal) : done;
@@ -970,7 +1003,7 @@ bool Solver::solve()
         }
     }
 
-    exportProof(root);
+    exportProof();
 
     return root->status == ProofNodeStatus::closed;
 }
@@ -980,6 +1013,23 @@ bool Solver::solve(string model1, string model2)
     // load models
     load(model1, model2);
     return solve();
+}
+
+bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
+{
+    for (auto goal : goals)
+    {
+        Solver subSolver;
+        subSolver.theory = theory;
+        subSolver.stepwise = stepwise;
+        subSolver.silent = silent;
+        subSolver.goals.push(goal);
+        if (!subSolver.solve())
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 string Solver::toDotFormat(shared_ptr<ProofNode> node)
