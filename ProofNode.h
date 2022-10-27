@@ -16,6 +16,7 @@ class ProofNode
 {
 public:
     ProofNode();
+    ProofNode(const string &leftExpr, const string &rightExpr);
     ~ProofNode();
 
     ProofNodeStatus status;
@@ -28,8 +29,10 @@ public:
     RelationSet right;
 
     string toDotFormat();
+    string relationString();
 
     bool operator==(const ProofNode &other) const;
 };
 
 typedef unordered_set<shared_ptr<ProofNode>> Theory;
+typedef shared_ptr<ProofNode> Inequality;

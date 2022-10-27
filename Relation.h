@@ -37,6 +37,7 @@ public:
     static shared_ptr<Relation> FULL;
     static unordered_map<string, shared_ptr<Relation>> relations;
     static shared_ptr<Relation> get(const string &name);
+    static shared_ptr<Relation> parse(const string &expression);
 
     bool operator==(const Relation &other) const;
 };

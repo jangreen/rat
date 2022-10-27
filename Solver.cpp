@@ -13,14 +13,17 @@ using namespace std;
 Solver::Solver() : stepwise(false) {}
 Solver::~Solver() {}
 
+// TODO: add node function
 bool Solver::isCycle(shared_ptr<ProofNode> node)
 {
     // TODO hack: misuse this function to abort too long proof obligatins
     if (node->toDotFormat().length() > 400)
     {
-        cout << "TOO COMPLEX NODE." << endl;
+        if (!silent)
+            cout << "TOO COMPLEX NODE." << endl;
         return true;
     }
+    // check if cyclic
     shared_ptr<ProofNode> currentNode = node->parent;
     while (currentNode != nullptr)
     {
@@ -45,7 +48,42 @@ shared_ptr<ProofNode> Solver::childProofNode(shared_ptr<ProofNode> node)
     return newNode;
 }
 
-bool Solver::axiom(shared_ptr<ProofNode> node)
+bool Solver::axiomEmpty(shared_ptr<ProofNode> node)
+{
+    /*TODO: also in other functions
+    if (node->left.find(Relation::get("0")) != node->left.end())
+    {
+        node->appliedRule = ProofRule::axiomEmpty;
+        node->status = ProofNodeStatus::closed;
+        return true;
+    }*/
+    for (auto r1 : node->left)
+    {
+        if (*r1 == *Relation::EMPTY)
+        {
+            node->appliedRule = ProofRule::axiomEmpty;
+            node->status = ProofNodeStatus::closed;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Solver::axiomFull(shared_ptr<ProofNode> node)
+{
+    for (auto r1 : node->right)
+    {
+        if (*r1 == *Relation::FULL)
+        {
+            node->appliedRule = ProofRule::axiomFull;
+            node->status = ProofNodeStatus::closed;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Solver::axiomEqual(shared_ptr<ProofNode> node)
 {
     // TODO: more efficient way to apply axiom1?
     // RelationSet intersection = {};
@@ -64,75 +102,15 @@ bool Solver::axiom(shared_ptr<ProofNode> node)
     //     node->closed = true;
     //     return true;
     // }
-    //------------------------------------
-    /*if (node->left.find(Relation::get("0")) != node->left.end())
-    {
-        node->appliedRule = ProofRule::axiomEmpty;
-        node->status = ProofNodeStatus::closed;
-        return true;
-    }
-    if (node->right.find(Relation::get("1")) != node->left.end())
-    {
-        node->appliedRule = ProofRule::axiomFull;
-        node->status = ProofNodeStatus::closed;
-        return true;
-    }
-    if (node->left.size() == 1 && node->left == node->right)
-    {
-        node->appliedRule = ProofRule::axiomEqual;
-        node->status = ProofNodeStatus::closed;
-        return true;
-    }
-    for (auto inequality : theory)
-    {
-        if (node->left == inequality->left && node->right == inequality->right)
-        {
-            node->appliedRule = ProofRule::axiomTheory;
-            node->status = ProofNodeStatus::closed;
-            return true;
-        }
-    }
-    return false;*/
-    //---------------------------------------
     for (auto r1 : node->left)
     {
-        if (*r1 == *Relation::EMPTY)
-        {
-            node->appliedRule = ProofRule::axiomEmpty;
-            node->status = ProofNodeStatus::closed;
-            return true;
-        }
-
         for (auto r2 : node->right)
         {
-            if (*r2 == *Relation::FULL)
-            {
-                node->appliedRule = ProofRule::axiomFull;
-                node->status = ProofNodeStatus::closed;
-                return true;
-            }
-
             if (*r1 == *r2)
             {
                 node->appliedRule = ProofRule::axiomEqual;
                 node->status = ProofNodeStatus::closed;
                 return true;
-            }
-
-            for (auto inequality : theory) // support only for simple theories
-            {
-                for (auto l1 : inequality->left)
-                {
-                    for (auto l2 : inequality->right)
-                    {
-                        if (*l1 == *r1 && *l2 == *r2) // check theory
-                        {
-                            node->appliedRule = ProofRule::axiomTheory;
-                            node->status = ProofNodeStatus::closed;
-                            return true;
-                        }
-                    }
-                }
             }
         }
     }
@@ -159,9 +137,9 @@ bool Solver::andLeftRule(shared_ptr<ProofNode> node)
                 return true;
             }
             else
-            { // TODO: must rules
+            { // TODO: must rules buggy
                 // must rule: if this leads to cycle stop
-                node->status = ProofNodeStatus::open;
+                goals.pop();
                 return true;
             }
         }
@@ -192,9 +170,9 @@ bool Solver::andRightRule(shared_ptr<ProofNode> node)
                 return true;
             }
             else
-            { // TODO: must rules
-                // must rule: if this leads to cycle stop
-                node->status = ProofNodeStatus::open;
+            { // TODO: must rules buggy
+              // must rule: if this leads to cycle stop
+                goals.pop();
                 return true;
             }
         }
@@ -222,9 +200,9 @@ bool Solver::orRightRule(shared_ptr<ProofNode> node)
                 return true;
             }
             else
-            { // TODO: must rules
-                // must rule: if this leads to cycle stop
-                node->status = ProofNodeStatus::open;
+            { // TODO: must rules buggy
+              // must rule: if this leads to cycle stop
+                goals.pop();
                 return true;
             }
         }
@@ -255,9 +233,9 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
                 return true;
             }
             else
-            { // TODO: must rules
-                // must rule: if this leads to cycle stop
-                node->status = ProofNodeStatus::open;
+            { // TODO: must rules buggy
+              // must rule: if this leads to cycle stop
+                goals.pop();
                 return true;
             }
         }
@@ -335,6 +313,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 Solver seqSolver;
                 seqSolver.theory = theory;
                 seqSolver.stepwise = stepwise;
+                seqSolver.silent = silent;
                 shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>();
                 shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>();
                 newNode1->left.insert(r1->left);
@@ -360,8 +339,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
     {
         Solver seqSolver;
         seqSolver.theory = theory;
-        seqSolver.stepwise = stepwise;
-        shared_ptr<ProofNode> newNode = childProofNode(node);
+        seqSolver.stepwise = stepwise;Solver.silent = silent;        shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->left.clear();
         shared_ptr<Relation> nr = make_shared<Relation>(Operator::composition, r1, Relation::get("id"));
         newNode->left.insert(nr);
@@ -429,6 +407,7 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
                 Solver tcSolver;
                 tcSolver.theory = theory;
                 tcSolver.stepwise = stepwise;
+                tcSolver.silent = silent;
                 tcSolver.goals.push(newNode);
                 if (tcSolver.solve())
                 {
@@ -506,6 +485,7 @@ bool Solver::cutRule(shared_ptr<ProofNode> node)
             Solver cutSolver;
             cutSolver.theory = theory;
             cutSolver.stepwise = stepwise;
+            cutSolver.silent = silent;
             cutSolver.goals.push(newNode1);
             cutSolver.goals.push(newNode2);
             if (cutSolver.solve())
@@ -523,107 +503,97 @@ bool Solver::cutRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+int heuristicVal(shared_ptr<ProofNode> node, Inequality inequality)
+{
+    bool satisfiedLeft = true;
+    for (auto r2 : inequality->left)
+    {
+        bool found = false;
+        for (auto r1 : node->left)
+        {
+            if (*r1 == *r2)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            satisfiedLeft = false;
+        }
+    }
+    bool satisfiedRight = true;
+    for (auto r2 : inequality->right)
+    {
+        bool found = false;
+        for (auto r1 : node->right)
+        {
+            if (*r1 == *r2)
+            {
+                found = true;
+            }
+        }
+        if (!found)
+        {
+            satisfiedRight = false;
+        }
+    }
+    if (satisfiedLeft && satisfiedRight)
+    {
+        return 2;
+    }
+    else if (satisfiedLeft || satisfiedRight)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+vector<Inequality> consHeuristic(shared_ptr<ProofNode> node, Theory &theory)
+{
+    vector<Inequality> arr(theory.begin(), theory.end());
+    sort(arr.begin(), arr.end(), [node](Inequality a, Inequality b)
+         { return heuristicVal(node, a) > heuristicVal(node, b); });
+    return arr;
+}
+
 bool Solver::consRule(shared_ptr<ProofNode> node)
 {
-    for (auto inequality : theory)
+    vector<Inequality> sorted = consHeuristic(node, theory);
+
+    for (auto iequ = sorted.begin(); iequ != sorted.end(); iequ++)
     {
-        // old cons checks if applicable
-        bool satisfiedLeft = true;
-        for (auto r2 : inequality->left)
+        Inequality inequality = *iequ;
+        if (heuristicVal(node, inequality) > 0)
         {
-            bool found = false;
-            for (auto r1 : node->left)
+            shared_ptr<ProofNode> newNode1 = childProofNode(node);
+            shared_ptr<ProofNode> newNode2 = childProofNode(node);
+            if (inequality->right.empty())
             {
-                if (*r1 == *r2)
-                {
-                    found = true;
-                }
+                newNode1->left.insert(Relation::get("0"));
             }
-            if (!found)
+            if (inequality->left.empty())
             {
-                satisfiedLeft = false;
+                newNode1->right.insert(Relation::get("1"));
             }
-        }
-        if (satisfiedLeft)
-        {
-            shared_ptr<ProofNode> newNode = childProofNode(node);
             for (auto n : inequality->right)
-            { // TODO: wrong -> do case split
-                newNode->left.insert(n);
-            }
-
-            /*Solver consSolver;
-            consSolver.theory = theory;
-            consSolver.stepwise = stepwise;
-            consSolver.goals.push(newNode);*/
-            if (!isCycle(newNode)) //! isCycle(newNode)
             {
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
-                node->appliedRule = ProofRule::cons;
-                goals.push(newNode);
-                return true;
+                newNode1->left.insert(n);
             }
-        }
-        // old cons checks if applicable
-        bool satisfiedRight = true;
-        for (auto r2 : inequality->right)
-        {
-            bool found = false;
-            for (auto r1 : node->right)
-            {
-                if (*r1 == *r2)
-                {
-                    found = true;
-                }
-            }
-            if (!found)
-            {
-                satisfiedRight = false;
-            }
-        }
-        if (satisfiedRight)
-        {
-            shared_ptr<ProofNode> newNode = childProofNode(node);
             for (auto n : inequality->left)
-            { // TODO: wrong -> do case split
-                newNode->right.insert(n);
+            {
+                newNode2->right.insert(n);
             }
 
-            /*Solver consSolver;
-            consSolver.theory = theory;
-            consSolver.stepwise = stepwise;
-            consSolver.goals.push(newNode);*/
-            if (!isCycle(newNode)) // consolver.solve() // TODO which is better?
+            if (!isCycle(newNode1) && !isCycle(newNode2))
             {
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
+                node->leftNode = newNode1;
+                node->rightNode = newNode2;
                 node->appliedRule = ProofRule::cons;
-                goals.push(newNode);
+                goals.push(newNode1);
+                goals.push(newNode2);
                 return true;
             }
         }
-        /* new cons does not check, maybe use old as heuristic?
-        shared_ptr<ProofNode> newNode1 = childProofNode(node);
-        shared_ptr<ProofNode> newNode2 = childProofNode(node);
-        for (auto n : inequality->right)
-        {
-            newNode1->left.insert(n);
-        }
-        for (auto n : inequality->left)
-        {
-            newNode2->right.insert(n);
-        }
-
-        if (!isCycle(newNode1) && !isCycle(newNode2))
-        {
-            node->leftNode = newNode1;
-            node->rightNode = newNode2;
-            node->appliedRule = ProofRule::cons;
-            goals.push(newNode1);
-            goals.push(newNode2);
-            return true;
-        }*/
     }
     return false;
 }
@@ -635,7 +605,7 @@ bool Solver::weakRightRule(shared_ptr<ProofNode> node)
         Solver weakRightSolver;
         weakRightSolver.theory = theory;
         weakRightSolver.stepwise = stepwise;
-
+        weakRightSolver.silent = silent;
         shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->right.erase(r);
         weakRightSolver.goals.push(newNode);
@@ -658,7 +628,7 @@ bool Solver::weakLeftRule(shared_ptr<ProofNode> node)
         Solver weakLeftSolver;
         weakLeftSolver.theory = theory;
         weakLeftSolver.stepwise = stepwise;
-
+        weakLeftSolver.silent = silent;
         shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->left.erase(r);
         weakLeftSolver.goals.push(newNode);
@@ -692,6 +662,7 @@ bool Solver::loopRule(shared_ptr<ProofNode> node)
                 Solver loopSolver;
                 loopSolver.theory = theory;
                 loopSolver.stepwise = stepwise;
+                loopSolver.silent = silent;
                 loopSolver.goals.push(newNode1);
                 loopSolver.goals.push(newNode2);
                 if (loopSolver.solve())
@@ -755,6 +726,34 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
     return false;
 }
 
+bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
+{
+    bool hasId = false;
+    for (auto r1 : node->left)
+    {
+        if (*r1 == *Relation::get("id"))
+        {
+            for (auto r2 : node->left)
+            {
+                if (r2->op == Operator::composition)
+                {
+                    shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
+                    shared_ptr<Relation> linv = make_shared<Relation>(Operator::inverse, r2->left);
+                    newNode->left.insert(linv);
+                    newNode->left.insert(r2->right);
+
+                    node->leftNode = newNode;
+                    node->rightNode = nullptr;
+                    node->appliedRule = ProofRule::empty;
+                    goals.push(newNode);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void Solver::load(string model1, string model2)
 {
     shared_ptr<ProofNode> goal = make_shared<ProofNode>();
@@ -800,18 +799,21 @@ bool Solver::solve()
     while (!goals.empty())
     {
         shared_ptr<ProofNode> currentGoal = goals.top();
+        if (!silent)
+            cout << "* " << currentGoal->relationString() << " | " << currentGoal->appliedRule.toString() << endl;
 
         // step wise proof
         if (stepwise)
         {
             exportProof(root);
-            cin.get();
+            cin.ignore();
         }
 
         if (currentGoal->status == ProofNodeStatus::closed)
         {
             // 1) node is closed
-            cout << "Popped closed goal." << endl;
+            if (!silent)
+                cout << "  pop closed." << endl;
             shared_ptr<ProofNode> provenRule = make_shared<ProofNode>(*currentGoal);
             provenRule->parent = nullptr;
             proved.insert(provenRule);
@@ -821,7 +823,8 @@ bool Solver::solve()
         if (currentGoal->status == ProofNodeStatus::open)
         {
             // 2) node is open (failed): discard node and go on
-            cout << "Popped failed goal." << endl;
+            if (!silent)
+                cout << "  pop failed." << endl;
             currentGoal->leftNode = nullptr;
             currentGoal->rightNode = nullptr;
             currentGoal->appliedRule = ProofRule::none;
@@ -829,14 +832,18 @@ bool Solver::solve()
             goals.pop();
             continue;
         }
+
+        bool skipGoal = false;
         // check if is unprovable
         for (auto failed : unprovable)
         {
             if (*failed == *currentGoal)
             {
-                cout << "Known unprovable goal popped." << endl;
+                if (!silent)
+                    cout << "Known unprovable goal." << endl;
+                currentGoal->status = ProofNodeStatus::open;
                 goals.pop();
-                continue;
+                skipGoal = true;
             }
         }
         // check if proven
@@ -844,11 +851,26 @@ bool Solver::solve()
         {
             if (*good == *currentGoal)
             {
-                cout << "proven goal popped." << endl;
-                currentGoal = good;
+                if (!silent)
+                    cout << "Kown proven goal." << endl;
+                if (currentGoal->parent != nullptr)
+                {
+                    if (currentGoal->parent->leftNode == currentGoal)
+                    {
+                        currentGoal->parent->leftNode = good;
+                    }
+                    else
+                    {
+                        currentGoal->parent->rightNode = good;
+                    }
+                }
                 goals.pop();
-                continue;
+                skipGoal = true;
             }
+        }
+        if (skipGoal)
+        {
+            continue;
         }
 
         // 3) node has already applied a rule
@@ -860,18 +882,21 @@ bool Solver::solve()
             bool rightOpen = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::open;
             if (leftClosed && rightClosed)
             {
-                cout << "Closed parent goal." << endl;
+                if (!silent)
+                    cout << "  closed parent" << endl;
                 currentGoal->status = ProofNodeStatus::closed;
                 continue;
             }
             else if (leftOpen || rightOpen)
             {
-                cout << "Try another rule" << endl;
+                if (!silent)
+                    cout << "  try another rule" << endl;
                 // try / apply next possible rule for current node
             }
             else
             {
-                cout << "TODO: does this happen?" << endl;
+                if (!silent)
+                    cout << "TODO: does this happen?" << endl;
             }
         }
         // 4) apply rule to node
@@ -880,11 +905,12 @@ bool Solver::solve()
         switch (currentGoal->appliedRule)
         {
         case ProofRule::none:
-            done = axiom(currentGoal);
+            done = axiomEmpty(currentGoal);
         case ProofRule::axiomEmpty:
+            done = !done ? axiomFull(currentGoal) : done;
         case ProofRule::axiomFull:
+            done = !done ? axiomEqual(currentGoal) : done;
         case ProofRule::axiomEqual:
-        case ProofRule::axiomTheory:
             done = !done ? andLeftRule(currentGoal) : done;
         case ProofRule::andLeft:
             done = !done ? orRightRule(currentGoal) : done;
@@ -903,17 +929,18 @@ bool Solver::solve()
         case ProofRule::simplifyTc:
             // done = !done ? cutRule(currentGoal) : done;
         case ProofRule::cut:
-            done = !done ? unrollRule(currentGoal) : done;
-        case ProofRule::unroll:
             done = !done ? loopRule(currentGoal) : done;
         case ProofRule::loop:
             done = !done ? consRule(currentGoal) : done;
         case ProofRule::cons:
+            done = !done ? unrollRule(currentGoal) : done;
+        case ProofRule::unroll:
             // done = !done ? weakRightRule(currentGoal) : done;
         case ProofRule::weakRight:
             // done = !done ? weakLeftRule(currentGoal) : done;
         case ProofRule::weakLeft:
             done = !done ? invcapEmptyRule(currentGoal) : done;
+            done = !done ? idseqEmptyRule(currentGoal) : done;
         case ProofRule::empty:
             break;
         default:
@@ -923,17 +950,22 @@ bool Solver::solve()
 
         if (!done)
         {
+            if (!silent)
+                cout << "  done." << endl;
             // No Rule applicable anymore:
             currentGoal->status = ProofNodeStatus::open;
             // remove unvisited siblings, since solving them does not help
             // TODO: temp mark them as open, if open goals are saved during the proof do not use this
-            if (currentGoal->parent->leftNode != nullptr && currentGoal->parent->leftNode->status == ProofNodeStatus::none)
+            if (currentGoal->parent != nullptr)
             {
-                currentGoal->parent->leftNode->status = ProofNodeStatus::open;
-            }
-            if (currentGoal->parent->rightNode != nullptr && currentGoal->parent->rightNode->status == ProofNodeStatus::none)
-            {
-                currentGoal->parent->rightNode->status = ProofNodeStatus::open;
+                if (currentGoal->parent->leftNode != nullptr && currentGoal->parent->leftNode->status == ProofNodeStatus::none)
+                {
+                    currentGoal->parent->leftNode->status = ProofNodeStatus::open;
+                }
+                if (currentGoal->parent->rightNode != nullptr && currentGoal->parent->rightNode->status == ProofNodeStatus::none)
+                {
+                    currentGoal->parent->rightNode->status = ProofNodeStatus::open;
+                }
             }
         }
     }

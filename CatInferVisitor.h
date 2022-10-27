@@ -1,6 +1,7 @@
 #pragma once
 #include <CatBaseVisitor.h>
 #include "Constraint.h"
+#include "Relation.h"
 class CatInferVisitor : CatBaseVisitor
 {
 public:
@@ -8,6 +9,7 @@ public:
     ~CatInferVisitor(){};
 
     ConstraintSet parse(string filePath);
+    shared_ptr<Relation> parseRelation(string r);
     antlrcpp::Any visitMcm(CatParser::McmContext *ctx);
     antlrcpp::Any visitLetDefinition(CatParser::LetDefinitionContext *ctx);
     antlrcpp::Any visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx);

@@ -9,7 +9,6 @@ public:
         axiomEmpty,
         axiomFull,
         axiomEqual,
-        axiomTheory,
         andLeft,
         andRight,
         orLeft,
@@ -46,8 +45,6 @@ public:
             return "axiomFull";
         case Rule::axiomEqual:
             return "axiomEqual";
-        case Rule::axiomTheory:
-            return "axiomTheory";
         case Rule::andLeft:
             return "andLeft";
         case Rule::andRight:

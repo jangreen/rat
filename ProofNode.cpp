@@ -29,7 +29,15 @@ string nodeStatusColor(ProofNodeStatus status)
     }
 }
 
-ProofNode::ProofNode() : status(ProofNodeStatus::none), appliedRule(ProofRule::none) {}
+ProofNode::ProofNode()
+    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr) {}
+
+ProofNode::ProofNode(const string &leftExpr, const string &rightExpr)
+    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr)
+{
+    this->left.insert(Relation::parse(leftExpr));
+    this->right.insert(Relation::parse(rightExpr));
+}
 ProofNode::~ProofNode() {}
 
 string ProofNode::toDotFormat()
@@ -63,11 +71,27 @@ string ProofNode::toDotFormat()
     return output;
 }
 
+string ProofNode::relationString()
+{
+    string leftSide = "";
+    for (auto relation : left)
+    {
+        leftSide += relation->toString() + ",";
+    }
+
+    string rightSide = "";
+    for (auto relation : right)
+    {
+        rightSide += relation->toString() + ",";
+    }
+    return leftSide + " <= " + rightSide;
+}
+
 bool ProofNode::operator==(const ProofNode &other) const
 {
-    // TODO
-    return left == other.left && right == other.right;
-    /*for (auto l : left)
+    // TODO improve performance
+    // old: return left == other.left && right == other.right;
+    for (auto l : left)
     {
         bool found = false;
         for (auto r : other.left)
@@ -127,5 +151,5 @@ bool ProofNode::operator==(const ProofNode &other) const
             return false;
         }
     }
-    return true;*/
+    return true;
 }

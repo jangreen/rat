@@ -25,6 +25,17 @@ ConstraintSet CatInferVisitor::parse(string filePath)
     return any_cast<ConstraintSet>(this->visitMcm(ctx));
 }
 
+shared_ptr<Relation> CatInferVisitor::parseRelation(string r)
+{
+    ANTLRInputStream input(r);
+    CatLexer lexer(&input);
+    CommonTokenStream tokens(&lexer);
+    CatParser parser(&tokens);
+
+    CatParser::ExpressionContext *ctx = parser.expression(); // expect expression
+    return any_cast<shared_ptr<Relation>>(this->visit(ctx));
+}
+
 antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
 {
     unordered_map<string, Constraint> constraints;
@@ -154,7 +165,8 @@ antlrcpp::Any CatInferVisitor::visitExprIdentity(CatParser::ExprIdentityContext 
         // TODO: dont use basic realtion cap id
         // use text cap id
         string set = ctx->e->getText();
-        return make_shared<Relation>(Operator::cap, Relation::get(set + "*" + set), Relation::ID);
+        // TODO: fix return make_shared<Relation>(Operator::cap, Relation::get(set + "*" + set), Relation::ID);
+        return nullptr;
     }
     else
     {

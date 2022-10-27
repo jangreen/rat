@@ -1,5 +1,6 @@
 #include <iostream>
 #include "Relation.h"
+#include "CatInferVisitor.h"
 
 using namespace std;
 
@@ -16,10 +17,15 @@ shared_ptr<Relation> Relation::get(const string &name)
 {
     if (!relations.contains(name))
     {
-        shared_ptr<Relation> baseRelation = make_shared<Relation>(name);
-        relations[name] = baseRelation;
+        relations[name] = make_shared<Relation>(name);
     }
     return relations[name];
+}
+
+shared_ptr<Relation> Relation::parse(const string &expression)
+{
+    CatInferVisitor visitor;
+    return visitor.parseRelation(expression);
 }
 
 string Relation::toString()

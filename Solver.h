@@ -16,6 +16,7 @@ public:
     set<shared_ptr<ProofNode>> unprovable;
     set<shared_ptr<ProofNode>> proved;
     bool stepwise;
+    bool silent;
 
     void load(string model1, string model2);
     bool solve(); // models alread< loaded
@@ -24,7 +25,6 @@ public:
     bool isCycle(shared_ptr<ProofNode> node);
     shared_ptr<ProofNode> childProofNode(shared_ptr<ProofNode> node);
 
-    bool axiom(shared_ptr<ProofNode> node); // TODO: remove
     bool axiomEmpty(shared_ptr<ProofNode> node);
     bool axiomFull(shared_ptr<ProofNode> node);
     bool axiomEqual(shared_ptr<ProofNode> node);
@@ -45,6 +45,7 @@ public:
     bool loopRule(shared_ptr<ProofNode> node);
 
     bool invcapEmptyRule(shared_ptr<ProofNode> node);
+    bool idseqEmptyRule(shared_ptr<ProofNode> node);
 
     string toDotFormat(shared_ptr<ProofNode> node);
     void exportProof(shared_ptr<ProofNode> root);
