@@ -1,5 +1,3 @@
-cd build
-make
-echo "---------- Compilation done. ----------"
+./compile.sh
 cd ..
 ./build/CatInfer
