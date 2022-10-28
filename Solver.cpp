@@ -10,6 +10,22 @@
 
 using namespace std;
 
+// helper
+void dismissSiblings(shared_ptr<ProofNode> node)
+{
+    if (node->parent != nullptr)
+    {
+        if (node->parent->leftNode != nullptr && node->parent->leftNode->status == ProofNodeStatus::none)
+        {
+            node->parent->leftNode->status = ProofNodeStatus::dismiss;
+        }
+        if (node->parent->rightNode != nullptr && node->parent->rightNode->status == ProofNodeStatus::none)
+        {
+            node->parent->rightNode->status = ProofNodeStatus::dismiss;
+        }
+    }
+}
+
 Solver::Solver() : stepwise(false) {}
 Solver::~Solver() {}
 
@@ -21,10 +37,9 @@ shared_ptr<ProofNode> Solver::root;
 bool Solver::isCycle(shared_ptr<ProofNode> node)
 {
     // TODO hack: misuse this function to abort too long proof obligatins
-    if (node->relationString().length() > 400)
+    if (node->relationString().length() > 200)
     {
-        if (!silent)
-            cout << "TOO COMPLEX NODE." << endl;
+        cout << "TOO COMPLEX NODE." << endl;
         return true;
     }
     // check if cyclic
@@ -333,15 +348,9 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                     node->rightNode = newNode2;
                     node->appliedRule = ProofRule::seqLeft;
 
-                    cout << "TRY" << newNode1->relationString() << " ++ " << newNode2->relationString() << endl;
                     if (solve({newNode1, newNode2}))
                     {
-                        cout << "DONE" << endl;
                         return true;
-                    }
-                    else
-                    {
-                        cout << "DONE FAIL" << endl;
                     }
                 }
             }
@@ -350,9 +359,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
     /*/ TODO: append id
     for (auto r1 : node->left)
     {
-        Solver seqSolver;
-        seqSolver.theory = theory;
-        seqSolver.stepwise = stepwise;Solver.silent = silent;        shared_ptr<ProofNode> newNode = childProofNode(node);
+        shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->left.clear();
         shared_ptr<Relation> nr = make_shared<Relation>(Operator::composition, r1, Relation::get("id"));
         newNode->left.insert(nr);
@@ -486,22 +493,17 @@ bool Solver::cutRule(shared_ptr<ProofNode> node)
             newNode1->left.insert(r);
             newNode2->right.insert(r);
 
-            Solver cutSolver;
-            cutSolver.theory = theory;
-            cutSolver.stepwise = stepwise;
-            cutSolver.silent = silent;
-            cutSolver.goals.push(newNode1);
-            cutSolver.goals.push(newNode2);
-            if (cutSolver.solve())
+            if (!isCycle(newNode1) && !isCycle(newNode2))
             {
-                // successful cut
                 node->leftNode = newNode1;
-                newNode1->parent = node;
                 node->rightNode = newNode2;
                 node->appliedRule = ProofRule::cut;
-                return true;
+                if (solve({newNode1, newNode2}))
+                {
+                    return true;
+                }
+                break;
             }
-            break;
         }
     }
     return false;
@@ -512,6 +514,7 @@ int heuristicVal(shared_ptr<ProofNode> node, Inequality inequality)
     bool satisfiedLeft = true;
     for (auto r2 : inequality->left)
     {
+        inequality->right.erase(Relation::get("1")); // TODO: where handle this? empty side equals full
         bool found = false;
         for (auto r1 : node->left)
         {
@@ -528,6 +531,7 @@ int heuristicVal(shared_ptr<ProofNode> node, Inequality inequality)
     bool satisfiedRight = true;
     for (auto r2 : inequality->right)
     {
+        inequality->right.erase(Relation::get("0")); // TODO: where handle this? empty side equals empty
         bool found = false;
         for (auto r1 : node->right)
         {
@@ -609,20 +613,18 @@ bool Solver::weakRightRule(shared_ptr<ProofNode> node)
 {
     for (auto r : node->right)
     {
-        Solver weakRightSolver;
-        weakRightSolver.theory = theory;
-        weakRightSolver.stepwise = stepwise;
-        weakRightSolver.silent = silent;
         shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->right.erase(r);
-        weakRightSolver.goals.push(newNode);
-        if (weakRightSolver.solve())
+
+        if (!isCycle(newNode))
         {
-            // successful weakening
             node->leftNode = newNode;
             node->rightNode = nullptr;
             node->appliedRule = ProofRule::weakRight;
-            return true;
+            if (solve({newNode}))
+            {
+                return true;
+            }
         }
     }
     return false;
@@ -632,20 +634,17 @@ bool Solver::weakLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto r : node->left)
     {
-        Solver weakLeftSolver;
-        weakLeftSolver.theory = theory;
-        weakLeftSolver.stepwise = stepwise;
-        weakLeftSolver.silent = silent;
         shared_ptr<ProofNode> newNode = childProofNode(node);
         newNode->left.erase(r);
-        weakLeftSolver.goals.push(newNode);
-        if (weakLeftSolver.solve())
+        if (!isCycle(newNode))
         {
-            // successful weakening
             node->leftNode = newNode;
             node->rightNode = nullptr;
             node->appliedRule = ProofRule::weakLeft;
-            return true;
+            if (solve({newNode}))
+            {
+                return true;
+            }
         }
     }
     return false;
@@ -659,26 +658,20 @@ bool Solver::loopRule(shared_ptr<ProofNode> node)
         {
             if (*r1 == *Relation::ID && r2->op == Operator::composition)
             {
-                shared_ptr<ProofNode> newNode1 = make_shared<ProofNode>();
-                shared_ptr<ProofNode> newNode2 = make_shared<ProofNode>();
-                newNode1->left = node->left;
-                newNode1->right.insert(r2->left);
-                newNode2->left = node->left;
-                newNode2->right.insert(r2->right);
+                shared_ptr<ProofNode> newNode1 = childProofNode(node);
+                shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                newNode1->right = {r2->left};
+                newNode2->right = {r2->right};
 
-                Solver loopSolver;
-                loopSolver.theory = theory;
-                loopSolver.stepwise = stepwise;
-                loopSolver.silent = silent;
-                loopSolver.goals.push(newNode1);
-                loopSolver.goals.push(newNode2);
-                if (loopSolver.solve())
+                if (!isCycle(newNode1) && !isCycle(newNode2))
                 {
-                    // successful split
                     node->leftNode = newNode1;
                     node->rightNode = newNode2;
                     node->appliedRule = ProofRule::loop;
-                    return true;
+                    if (solve({newNode1, newNode2}))
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -718,11 +711,10 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
 
     if (r0 != nullptr && r1 != nullptr)
     {
-        shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
+        shared_ptr<ProofNode> newNode = childProofNode(node);
         shared_ptr<Relation> rComp = make_shared<Relation>(Operator::composition, r0, r1);
-        newNode->left.insert(rComp);
-        newNode->left.insert(Relation::get("id"));
-        newNode->parent = node;
+        newNode->left = {rComp, Relation::get("id")};
+        newNode->right.clear();
 
         if (!isCycle(newNode))
         {
@@ -747,11 +739,10 @@ bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
             {
                 if (r2->op == Operator::composition)
                 {
-                    shared_ptr<ProofNode> newNode = make_shared<ProofNode>();
+                    shared_ptr<ProofNode> newNode = childProofNode(node);
                     shared_ptr<Relation> linv = make_shared<Relation>(Operator::inverse, r2->left);
-                    newNode->left.insert(linv);
-                    newNode->left.insert(r2->right);
-                    newNode->parent = node;
+                    newNode->left = {linv, r2->right};
+                    newNode->right.clear();
 
                     if (!isCycle(newNode))
                     {
@@ -865,6 +856,7 @@ bool Solver::solve()
                 if (!silent)
                     cout << "Known unprovable goal." << endl;
                 currentGoal->status = ProofNodeStatus::open;
+                dismissSiblings(currentGoal);
                 goals.pop();
                 skipGoal = true;
             }
@@ -920,6 +912,7 @@ bool Solver::solve()
                     currentGoal->appliedRule == ProofRule(ProofRule::orRight))
                 {
                     currentGoal->status = ProofNodeStatus::open;
+                    dismissSiblings(currentGoal);
                     continue;
                 }
                 if (!silent)
@@ -973,10 +966,10 @@ bool Solver::solve()
         case ProofRule::cut:
             done = !done ? unrollRule(currentGoal) : done;
         case ProofRule::unroll:
-            done = !done ? loopRule(currentGoal) : done;
-        case ProofRule::loop:
             done = !done ? consRule(currentGoal) : done;
         case ProofRule::cons:
+            done = !done ? loopRule(currentGoal) : done;
+        case ProofRule::loop:
             // done = !done ? weakRightRule(currentGoal) : done;
         case ProofRule::weakRight:
             // done = !done ? weakLeftRule(currentGoal) : done;
@@ -997,17 +990,7 @@ bool Solver::solve()
             // No Rule applicable anymore:
             currentGoal->status = ProofNodeStatus::open;
             // remove unvisited siblings, since solving them does not help
-            if (currentGoal->parent != nullptr)
-            {
-                if (currentGoal->parent->leftNode != nullptr && currentGoal->parent->leftNode->status == ProofNodeStatus::none)
-                {
-                    currentGoal->parent->leftNode->status = ProofNodeStatus::dismiss;
-                }
-                if (currentGoal->parent->rightNode != nullptr && currentGoal->parent->rightNode->status == ProofNodeStatus::none)
-                {
-                    currentGoal->parent->rightNode->status = ProofNodeStatus::dismiss;
-                }
-            }
+            dismissSiblings(currentGoal);
         }
     }
 

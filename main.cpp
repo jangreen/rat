@@ -25,6 +25,7 @@ void tests()
 
 void loadTheory(Solver &solver)
 {
+    // TODO: make shared <Ineq>
     Inequality popo = make_shared<ProofNode>("po;po", "po");
     Inequality poloc1 = make_shared<ProofNode>("po-loc", "po & loc");
     Inequality poloc2 = make_shared<ProofNode>("po & loc", "po-loc");
@@ -33,6 +34,8 @@ void loadTheory(Solver &solver)
     Inequality coe = make_shared<ProofNode>("coe", "co & ext");
     Inequality locloc = make_shared<ProofNode>("loc;loc", "loc");
     Inequality idloc = make_shared<ProofNode>("id", "loc");
+    Inequality locinv = make_shared<ProofNode>("loc", "loc^-1");
+    Inequality invloc = make_shared<ProofNode>("loc^-1", "loc");
     Inequality intext = make_shared<ProofNode>("1", "int | ext");
     Inequality int1 = make_shared<ProofNode>("int", "po | po^-1 | id");
     Inequality int2 = make_shared<ProofNode>("po | po^-1 | id", "int");
@@ -42,7 +45,7 @@ void loadTheory(Solver &solver)
     Inequality ctrl = make_shared<ProofNode>("ctrl", "po & R*M");
     Inequality addr = make_shared<ProofNode>("addr", "po & R*M");
     Inequality scRmw = make_shared<ProofNode>("rmw", "0");
-    solver.theory = {popo, poloc1, poloc2, rf, rfe, coe, locloc, idloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
+    solver.theory = {popo, poloc1, poloc2, rf, rfe, coe, locloc, idloc, locinv, invloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
 }
 
 int main(int argc, const char *argv[])
@@ -53,13 +56,18 @@ int main(int argc, const char *argv[])
     solver.silent = true;
 
     cout << "Start Solving..." << endl;
-    // solver.solve("cat/sc.cat", "cat/tso.cat");
-    // solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
     // solver.solve("cat/sc.cat", "cat/oota.cat");
+    // solver.solve("cat/sc.cat", "cat/tso.cat");
+    /*solver.load("test/uniproc1.cat", "test/uniproc2.cat");
+    loadTheory(solver);
+    Inequality uniproc = make_shared<ProofNode>("(po-loc | co | fr | rf)^+ & id", "0");
+    solver.theory.insert(uniproc);
+    solver.solve(); // */
+    // solver.solve("test/uniproc1.cat", "test/uniproc2.cat"); // model is easier than '<= po under uniproc'
 
     // solver.solve("test/uniproc121.cat", "test/uniproc221.cat");
-    solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
-    // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
+    // solver.solve("test/uniproc12.cat", "test/uniproc22.cat"); //+
+    solver.solve("cat/tso-modified.cat", "cat/oota.cat");
 
     // TODO: solver.solve("cat/tso.cat", "cat/aarch64-modified.cat");
     // solver.solve("cat/sc.cat", "cat/aarch64-modified.cat");
