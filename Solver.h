@@ -48,7 +48,7 @@ public:
     bool invcapEmptyRule(shared_ptr<ProofNode> node);
     bool idseqEmptyRule(shared_ptr<ProofNode> node);
 
-    string toDotFormat(shared_ptr<ProofNode> node);
+    string toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal);
     static shared_ptr<ProofNode> root;
     void exportProof(shared_ptr<ProofNode> root = Solver::root);
 };

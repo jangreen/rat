@@ -26,6 +26,8 @@ string nodeStatusColor(ProofNodeStatus status)
         return "gray";
     case ProofNodeStatus::open:
         return "red";
+    case ProofNodeStatus::dismiss:
+        return "yellow";
     }
 }
 
@@ -40,7 +42,7 @@ ProofNode::ProofNode(const string &leftExpr, const string &rightExpr)
 }
 ProofNode::~ProofNode() {}
 
-string ProofNode::toDotFormat()
+string ProofNode::toDotFormat(shared_ptr<ProofNode> currentGoal)
 {
     string output = "";
     string leftSide = "";
@@ -55,17 +57,18 @@ string ProofNode::toDotFormat()
         rightSide += relation->toString() + ",";
     }
 
-    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule.toString() + "}\", color=" + nodeStatusColor(status) + "];\n";
+    bool isCurrentGoal = (&*currentGoal == this);
+    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule.toString() + "}\", color=" + nodeStatusColor(status) + ", fontcolor=" + (isCurrentGoal ? "blue" : "black") + "];\n";
     output += nodeDesc;
     if (leftNode != nullptr)
     {
-        output += leftNode->toDotFormat();
+        output += leftNode->toDotFormat(currentGoal);
         output += "\"" + getId(*this) + "\" -> \"" + getId(*leftNode) + "\";\n";
     }
 
     if (rightNode != nullptr)
     {
-        output += rightNode->toDotFormat();
+        output += rightNode->toDotFormat(currentGoal);
         output += "\"" + getId(*this) + "\" -> \"" + getId(*rightNode) + "\";\n";
     }
 

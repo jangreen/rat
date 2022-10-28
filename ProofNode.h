@@ -9,7 +9,8 @@ enum class ProofNodeStatus
 {
     none,
     closed,
-    open
+    open,
+    dismiss
 };
 
 class ProofNode
@@ -30,7 +31,7 @@ public:
     RelationSet left;
     RelationSet right;
 
-    string toDotFormat();
+    string toDotFormat(shared_ptr<ProofNode> CurrentGoal);
     string relationString();
 
     bool operator==(const ProofNode &other) const;

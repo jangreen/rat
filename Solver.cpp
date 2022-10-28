@@ -21,7 +21,7 @@ shared_ptr<ProofNode> Solver::root;
 bool Solver::isCycle(shared_ptr<ProofNode> node)
 {
     // TODO hack: misuse this function to abort too long proof obligatins
-    if (node->toDotFormat().length() > 400)
+    if (node->relationString().length() > 400)
     {
         if (!silent)
             cout << "TOO COMPLEX NODE." << endl;
@@ -148,7 +148,6 @@ bool Solver::andLeftRule(shared_ptr<ProofNode> node)
             else
             { // TODO: must rules buggy
                 // must rule: if this leads to cycle stop
-                cout << "AAAAAAA" << endl;
                 node->appliedRule = ProofRule::empty;
                 goals.pop();
                 return true;
@@ -327,13 +326,23 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 newNode1->right = {r2->left};
                 newNode2->left = {r1->right};
                 newNode2->right = {r2->right};
-                node->leftNode = newNode1;
-                node->rightNode = newNode2;
-                node->appliedRule = ProofRule::seqLeft;
 
-                if (solve({newNode1, newNode2}))
+                if (!isCycle(newNode1) && !isCycle(newNode2))
                 {
-                    return true;
+                    node->leftNode = newNode1;
+                    node->rightNode = newNode2;
+                    node->appliedRule = ProofRule::seqLeft;
+
+                    cout << "TRY" << newNode1->relationString() << " ++ " << newNode2->relationString() << endl;
+                    if (solve({newNode1, newNode2}))
+                    {
+                        cout << "DONE" << endl;
+                        return true;
+                    }
+                    else
+                    {
+                        cout << "DONE FAIL" << endl;
+                    }
                 }
             }
         }
@@ -477,9 +486,6 @@ bool Solver::cutRule(shared_ptr<ProofNode> node)
             newNode1->left.insert(r);
             newNode2->right.insert(r);
 
-            cout << newNode1->toDotFormat() << endl;
-            cout << newNode2->toDotFormat() << endl;
-
             Solver cutSolver;
             cutSolver.theory = theory;
             cutSolver.stepwise = stepwise;
@@ -561,7 +567,6 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
     for (auto iequ = sorted.begin(); iequ != sorted.end(); iequ++)
     {
         Inequality inequality = *iequ;
-        cout << inequality->relationString() << endl;
         if (heuristicVal(node, inequality) > 0)
         {
             shared_ptr<ProofNode> newNode1 = childProofNode(node);
@@ -592,7 +597,6 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
 
                 if (solve({newNode1, newNode2})) // TODO use
                 {
-                    cout << "AAAA" << endl;
                     return true;
                 }
             }
@@ -819,7 +823,7 @@ bool Solver::solve()
         // step wise proof
         if (stepwise)
         {
-            exportProof();
+            exportProof(currentGoal);
             cin.ignore();
         }
 
@@ -848,6 +852,11 @@ bool Solver::solve()
         }
 
         bool skipGoal = false;
+        if (currentGoal->status == ProofNodeStatus::dismiss) // TODO: remove dismiss?
+        {
+            goals.pop();
+            continue;
+        }
         // check if is unprovable
         for (auto failed : Solver::unprovable)
         {
@@ -910,7 +919,7 @@ bool Solver::solve()
                     currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
                     currentGoal->appliedRule == ProofRule(ProofRule::orRight))
                 {
-                    goals.pop();
+                    currentGoal->status = ProofNodeStatus::open;
                     continue;
                 }
                 if (!silent)
@@ -988,16 +997,15 @@ bool Solver::solve()
             // No Rule applicable anymore:
             currentGoal->status = ProofNodeStatus::open;
             // remove unvisited siblings, since solving them does not help
-            // TODO: temp mark them as open, if open goals are saved during the proof do not use this
             if (currentGoal->parent != nullptr)
             {
                 if (currentGoal->parent->leftNode != nullptr && currentGoal->parent->leftNode->status == ProofNodeStatus::none)
                 {
-                    currentGoal->parent->leftNode->status = ProofNodeStatus::open;
+                    currentGoal->parent->leftNode->status = ProofNodeStatus::dismiss;
                 }
                 if (currentGoal->parent->rightNode != nullptr && currentGoal->parent->rightNode->status == ProofNodeStatus::none)
                 {
-                    currentGoal->parent->rightNode->status = ProofNodeStatus::open;
+                    currentGoal->parent->rightNode->status = ProofNodeStatus::dismiss;
                 }
             }
         }
@@ -1032,16 +1040,16 @@ bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
     return true;
 }
 
-string Solver::toDotFormat(shared_ptr<ProofNode> node)
+string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal)
 {
-    return "digraph { \nnode [shape=record];\n" + node->toDotFormat() + "}";
+    return "digraph { \nnode [shape=record];\n" + node->toDotFormat(currentGoal) + "}";
 }
 
-void Solver::exportProof(shared_ptr<ProofNode> root)
+void Solver::exportProof(shared_ptr<ProofNode> currentGoal)
 {
     // export proof
     ofstream dotFile;
     dotFile.open("build/proof.dot");
-    dotFile << toDotFormat(root);
+    dotFile << toDotFormat(root, currentGoal);
     dotFile.close();
 }

@@ -32,6 +32,7 @@ void loadTheory(Solver &solver)
     Inequality rfe = make_shared<ProofNode>("rfe", "rf & ext");
     Inequality coe = make_shared<ProofNode>("coe", "co & ext");
     Inequality locloc = make_shared<ProofNode>("loc;loc", "loc");
+    Inequality idloc = make_shared<ProofNode>("id", "loc");
     Inequality intext = make_shared<ProofNode>("1", "int | ext");
     Inequality int1 = make_shared<ProofNode>("int", "po | po^-1 | id");
     Inequality int2 = make_shared<ProofNode>("po | po^-1 | id", "int");
@@ -41,24 +42,23 @@ void loadTheory(Solver &solver)
     Inequality ctrl = make_shared<ProofNode>("ctrl", "po & R*M");
     Inequality addr = make_shared<ProofNode>("addr", "po & R*M");
     Inequality scRmw = make_shared<ProofNode>("rmw", "0");
-    solver.theory = {popo, poloc1, poloc2, rf, rfe, coe, locloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
+    solver.theory = {popo, poloc1, poloc2, rf, rfe, coe, locloc, idloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
 }
 
 int main(int argc, const char *argv[])
 {
     Solver solver;
     loadTheory(solver);
-    solver.stepwise = true;
-    // solver.silent = true;
+    // solver.stepwise = true;
+    solver.silent = true;
 
     cout << "Start Solving..." << endl;
     // solver.solve("cat/sc.cat", "cat/tso.cat");
     // solver.solve("test/uniproc1.cat", "test/uniproc2.cat");
     // solver.solve("cat/sc.cat", "cat/oota.cat");
 
-    solver.solve("test/uniproc121.cat", "test/uniproc221.cat");
-    // solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
-
+    // solver.solve("test/uniproc121.cat", "test/uniproc221.cat");
+    solver.solve("test/uniproc12.cat", "test/uniproc22.cat");
     // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
 
     // TODO: solver.solve("cat/tso.cat", "cat/aarch64-modified.cat");
