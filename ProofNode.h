@@ -25,8 +25,8 @@ public:
     shared_ptr<ProofNode> leftNode; // left and rigth children in proof tree
     shared_ptr<ProofNode> rightNode;
     shared_ptr<ProofNode> parent;
-
-    shared_ptr<ProofNode> consInequality; // TODO remove
+    // TODO: rename to allowed remaining cons application
+    int currentConsDepth; // ierative deepening starting with zero then increase
 
     RelationSet left;
     RelationSet right;

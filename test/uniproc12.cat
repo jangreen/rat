@@ -1,5 +1,0 @@
-(* All communication relations *)
-let com = (co | fr | rf)
-
-(* Uniproc *)
-acyclic (po-loc | com) as uniproc

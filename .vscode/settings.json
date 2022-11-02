@@ -78,8 +78,11 @@
         "__functional_base": "cpp",
         "iterator": "cpp",
         "utility": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "future": "cpp",
+        "thread": "cpp",
+        "queue": "cpp"
     },
     "editor.formatOnSave": true,
-    "graphviz-interactive-preview.debouncingInterval": 500,
+    "graphviz-interactive-preview.debouncingInterval": 1000,
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <stack>
 #include <set>
+#include <map>
 #include "ProofNode.h"
 
 using namespace std;
@@ -11,12 +12,12 @@ public:
     Solver();
     ~Solver();
 
-    stack<shared_ptr<ProofNode>> goals; // goals on stack that are not closed yet
-    Theory theory;                      // inequalities that are true
-    static set<shared_ptr<ProofNode>> unprovable;
+    stack<shared_ptr<ProofNode>> goals;                     // goals on stack that are not closed yet
+    Theory theory;                                          // inequalities that are true
+    static map<int, set<shared_ptr<ProofNode>>> unprovable; // relative complete: unprovable under given bounds
     static set<shared_ptr<ProofNode>> proved;
     bool stepwise;
-    bool silent;
+    bool silent = true;
 
     void load(string model1, string model2);
     bool solve(); // models alread< loaded
@@ -48,6 +49,7 @@ public:
     bool invcapEmptyRule(shared_ptr<ProofNode> node);
     bool idseqEmptyRule(shared_ptr<ProofNode> node);
 
+    void log(string message);
     string toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal);
     static shared_ptr<ProofNode> root;
     void exportProof(shared_ptr<ProofNode> root = Solver::root);

@@ -32,10 +32,10 @@ string nodeStatusColor(ProofNodeStatus status)
 }
 
 ProofNode::ProofNode()
-    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr) {}
+    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr), currentConsDepth(0) {}
 
 ProofNode::ProofNode(const string &leftExpr, const string &rightExpr)
-    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr)
+    : status(ProofNodeStatus::none), appliedRule(ProofRule::none), leftNode(nullptr), rightNode(nullptr), parent(nullptr), currentConsDepth(0)
 {
     this->left.insert(Relation::parse(leftExpr));
     this->right.insert(Relation::parse(rightExpr));
