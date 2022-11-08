@@ -1,5 +1,3 @@
-
-
 class ProofRule
 {
 public:
@@ -18,7 +16,6 @@ public:
         simplifyTc,
         transitiveClosure,
         unroll,
-        cut,
         cons,
         weakRight,
         weakLeft,

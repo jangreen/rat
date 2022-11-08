@@ -51,9 +51,7 @@ vector<shared_ptr<Relation>> getSpan(shared_ptr<Relation> relation, Operator op)
     return span;
 }
 
-Solver::Solver() : stepwise(false)
-{
-}
+Solver::Solver() : stepwise(false) {}
 Solver::~Solver() {}
 
 map<int, set<shared_ptr<ProofNode>>> Solver::unprovable;
@@ -68,35 +66,35 @@ void Solver::log(string message)
     }
 }
 
-// TODO: add node function
-bool Solver::isCycle(shared_ptr<ProofNode> node)
+bool Solver::appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, shared_ptr<ProofNode> rightNode = nullptr)
 {
-    // TODO hack: misuse this function to abort too long proof obligatins
-    if (node->relationString().length() > 200)
+    // check if nodes should be appended
+    for (auto node : {leftNode, rightNode})
     {
-        log("COMPLEX NODE.");
-        return true;
-    }
-    // bounded cons depth
-    if (node->currentConsDepth < 0)
-    {
-        log("CONS DEPTH"); // iterative cons deepening
-        return true;
-    }
-    // check if cyclic
-    shared_ptr<ProofNode> currentNode = node->parent;
-    while (currentNode != nullptr)
-    {
-        if (*currentNode.get() == *node.get())
-        {
-            return true;
+        if (node->relationString().length() > 200 || node->currentConsDepth < 0)
+        { // dismiss too complex nodes & bound consRule depth
+            return false;
         }
-        currentNode = currentNode->parent;
+        // check if cyclic
+        shared_ptr<ProofNode> currentNode = node->parent;
+        while (currentNode != nullptr)
+        {
+            if (*currentNode == *node)
+            {
+                return false;
+            }
+            currentNode = currentNode->parent;
+        }
     }
-    return false;
-}
 
-shared_ptr<ProofNode> Solver::childProofNode(shared_ptr<ProofNode> node)
+    // append nodes
+    shared_ptr<ProofNode> parentNode = leftNode->parent;
+    parentNode->leftNode = leftNode;
+    parentNode->rightNode = rightNode;
+    parentNode->appliedRule = rule;
+    return true;
+}
+shared_ptr<ProofNode> Solver::newChildProofNode(shared_ptr<ProofNode> node)
 {
     shared_ptr<ProofNode> newNode = make_shared<ProofNode>(*node);
     newNode->leftNode = nullptr;
@@ -104,201 +102,141 @@ shared_ptr<ProofNode> Solver::childProofNode(shared_ptr<ProofNode> node)
     newNode->parent = node;
     newNode->appliedRule = ProofRule::none;
     newNode->status = ProofNodeStatus::none;
-    // left and right stay the same child pointer must be set later
+    // left and right relation pointer remain untouched -> update in caller
     return newNode;
 }
 
 bool Solver::axiomEmpty(shared_ptr<ProofNode> node)
 {
-    /*TODO: also in other functions
     if (node->left.find(Relation::get("0")) != node->left.end())
     {
         node->appliedRule = ProofRule::axiomEmpty;
         node->status = ProofNodeStatus::closed;
         return true;
-    }*/
-    for (auto r1 : node->left)
-    {
-        if (*r1 == *Relation::EMPTY)
-        {
-            node->appliedRule = ProofRule::axiomEmpty;
-            node->status = ProofNodeStatus::closed;
-            return true;
-        }
     }
     return false;
 }
-
 bool Solver::axiomFull(shared_ptr<ProofNode> node)
 {
-    for (auto r1 : node->right)
+    if (node->left.find(Relation::get("1")) != node->left.end())
     {
-        if (*r1 == *Relation::FULL)
+        node->appliedRule = ProofRule::axiomFull;
+        node->status = ProofNodeStatus::closed;
+        return true;
+    }
+    return false;
+}
+bool Solver::axiomEqual(shared_ptr<ProofNode> node)
+{
+    for (auto r1 = node->left.begin(); r1 != node->left.end(); r1++)
+    {
+        if (node->right.find(*r1) != node->right.end())
         {
-            node->appliedRule = ProofRule::axiomFull;
+            node->appliedRule = ProofRule::axiomEqual;
             node->status = ProofNodeStatus::closed;
             return true;
         }
     }
     return false;
 }
-
-bool Solver::axiomEqual(shared_ptr<ProofNode> node)
-{
-    // TODO: more efficient way to apply axiom1?
-    // RelationSet intersection = {};
-    // set_intersection(
-    //     node->left.begin(),
-    //     node->left.end(),
-    //     node->right.begin(),
-    //     node->right.end(),
-    //     inserter(intersection, intersection.begin()),
-    //     [](shared_ptr<Relation> r1, shared_ptr<Relation> r2)
-    //     {
-    //         return r1->op == r2->op ? lexicographical_compare(r1->alias,, r2->alias) : r1->op < r2->op;
-    //     });
-    // if (!intersection.empty()) {
-    //     node->appliedRule = "axiomEqual";
-    //     node->closed = true;
-    //     return true;
-    // }
-    for (auto r1 : node->left)
-    {
-        for (auto r2 : node->right)
-        {
-            if (*r1 == *r2)
-            {
-                node->appliedRule = ProofRule::axiomEqual;
-                node->status = ProofNodeStatus::closed;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 bool Solver::andLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto relation : node->left)
     {
         if (relation->op == Operator::cap)
         {
-            shared_ptr<ProofNode> newNode = childProofNode(node);
+            shared_ptr<ProofNode> newNode = newChildProofNode(node);
             newNode->left.erase(relation);
             newNode->left.insert(relation->left);
             newNode->left.insert(relation->right);
 
-            if (!isCycle(newNode))
+            if (appendProofNodes(ProofRule::andLeft, newNode))
             {
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
-                node->appliedRule = ProofRule::andLeft;
                 goals.push(newNode);
-                return true;
             }
             else
-            { // TODO: must rules buggy
-                // must rule: if this leads to cycle stop
-                node->appliedRule = ProofRule::empty;
-                goals.pop();
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool Solver::andRightRule(shared_ptr<ProofNode> node)
-{
-    for (auto relation : node->right)
-    {
-        if (relation->op == Operator::cap)
-        {
-            shared_ptr<ProofNode> newNode1 = childProofNode(node);
-            shared_ptr<ProofNode> newNode2 = childProofNode(node);
-            newNode1->right.erase(relation);
-            newNode2->right.erase(relation);
-            newNode1->right.insert(relation->left);
-            newNode2->right.insert(relation->right);
-
-            if (!isCycle(newNode1) && !isCycle(newNode2))
             {
-                node->leftNode = newNode1;
-                node->rightNode = newNode2;
-                node->appliedRule = ProofRule::andRight;
-                goals.push(newNode1);
-                goals.push(newNode2);
-                return true;
+                node->status == ProofNodeStatus::dismiss;
             }
-            else
-            { // TODO: must rules buggy
-              // must rule: if this leads to cycle stop
-                goals.pop();
-                return true;
-            }
+            return true;
         }
     }
     return false;
 }
-
 bool Solver::orRightRule(shared_ptr<ProofNode> node)
 {
     for (auto relation : node->right)
     {
         if (relation->op == Operator::cup)
         {
-            shared_ptr<ProofNode> newNode = childProofNode(node);
+            shared_ptr<ProofNode> newNode = newChildProofNode(node);
             newNode->right.erase(relation);
             newNode->right.insert(relation->left);
             newNode->right.insert(relation->right);
 
-            if (!isCycle(newNode))
+            if (appendProofNodes(ProofRule::orRight, newNode))
             {
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
-                node->appliedRule = ProofRule::orRight;
                 goals.push(newNode);
-                return true;
             }
             else
-            { // TODO: must rules buggy
-              // must rule: if this leads to cycle stop
-                goals.pop();
-                return true;
+            {
+                node->status == ProofNodeStatus::dismiss;
             }
+            return true;
         }
     }
     return false;
 }
+bool Solver::andRightRule(shared_ptr<ProofNode> node)
+{
+    for (auto relation : node->right)
+    {
+        if (relation->op == Operator::cap)
+        {
+            shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+            shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
+            newNode1->right.erase(relation);
+            newNode2->right.erase(relation);
+            newNode1->right.insert(relation->left);
+            newNode2->right.insert(relation->right);
 
+            if (appendProofNodes(ProofRule::andRight, newNode1, newNode2))
+            {
+                goals.push(newNode1);
+                goals.push(newNode2);
+            }
+            else
+            {
+                node->status == ProofNodeStatus::dismiss;
+            }
+            return true;
+        }
+    }
+    return false;
+}
 bool Solver::orLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto relation : node->left)
     {
         if (relation->op == Operator::cup)
         {
-            shared_ptr<ProofNode> newNode1 = childProofNode(node);
-            shared_ptr<ProofNode> newNode2 = childProofNode(node);
+            shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+            shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
             newNode1->left.erase(relation);
             newNode2->left.erase(relation);
             newNode1->left.insert(relation->left);
             newNode2->left.insert(relation->right);
 
-            if (!isCycle(newNode1) && !isCycle(newNode2)) // TODO make function
+            if (!appendProofNodes(ProofRule::orLeft, newNode1, newNode2))
             {
-                node->leftNode = newNode1;
-                node->rightNode = newNode2;
-                node->appliedRule = ProofRule::orLeft;
                 goals.push(newNode1);
                 goals.push(newNode2);
-                return true;
             }
             else
-            { // TODO: must rules buggy
-              // must rule: if this leads to cycle stop
-                goals.pop();
-                return true;
+            {
+                node->status == ProofNodeStatus::dismiss;
             }
+            return true;
         }
     }
     return false;
@@ -306,21 +244,19 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
 
 bool Solver::inverseRule(shared_ptr<ProofNode> node)
 {
+    // TODO split in single rules
     for (auto r1 : node->left)
     {
         if (r1->op == Operator::inverse)
         {
             if (r1->left->op == Operator::inverse)
             {
-                shared_ptr<ProofNode> newNode = childProofNode(node);
+                shared_ptr<ProofNode> newNode = newChildProofNode(node);
                 newNode->left.erase(r1);
                 newNode->left.insert(r1->left->left);
 
-                if (!isCycle(newNode))
+                if (appendProofNodes(ProofRule::inverse, newNode))
                 {
-                    node->leftNode = newNode;
-                    node->rightNode = nullptr;
-                    node->appliedRule = ProofRule::inverse;
                     goals.push(newNode);
                     return true;
                 }
@@ -333,15 +269,12 @@ bool Solver::inverseRule(shared_ptr<ProofNode> node)
                     {
                         if (r2->left->op == Operator::inverse)
                         {
-                            shared_ptr<ProofNode> newNode = childProofNode(node);
+                            shared_ptr<ProofNode> newNode = newChildProofNode(node);
                             newNode->right.erase(r2);
                             newNode->right.insert(r2->left->left);
 
-                            if (!isCycle(newNode))
+                            if (appendProofNodes(ProofRule::inverse, newNode))
                             {
-                                node->leftNode = newNode;
-                                node->rightNode = nullptr;
-                                node->appliedRule = ProofRule::inverse;
                                 goals.push(newNode);
                                 return true;
                             }
@@ -357,7 +290,6 @@ bool Solver::inverseRule(shared_ptr<ProofNode> node)
     }
     return false;
 }
-
 bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
 {
     // distributive
@@ -372,7 +304,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 shared_ptr<Relation> curr = r->get();
                 if (curr->left->op == Operator::cup)
                 {
-                    shared_ptr<ProofNode> newNode = childProofNode(node);
+                    shared_ptr<ProofNode> newNode = newChildProofNode(node);
                     shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
                     shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
                     r1Copy1->left = r1->left->left;
@@ -393,7 +325,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
             }*/
             if (r1->left->op == Operator::cup)
             {
-                shared_ptr<ProofNode> newNode = childProofNode(node);
+                shared_ptr<ProofNode> newNode = newChildProofNode(node);
                 shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
                 shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
                 r1Copy1->left = r1->left->left;
@@ -402,18 +334,15 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 newNode->left.insert(r1Copy1);
                 newNode->left.insert(r1Copy2);
 
-                if (!isCycle(newNode))
+                if (appendProofNodes(ProofRule::seqLeft, newNode))
                 {
-                    node->leftNode = newNode;
-                    node->rightNode = nullptr;
-                    // TODO: node->appliedRule = ProofRule::seqLeft;
                     goals.push(newNode);
                     return true;
                 }
             }
             if (r1->right->op == Operator::cup)
             {
-                shared_ptr<ProofNode> newNode = childProofNode(node);
+                shared_ptr<ProofNode> newNode = newChildProofNode(node);
                 shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
                 shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
                 r1Copy1->right = r1->right->left;
@@ -422,11 +351,8 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 newNode->left.insert(r1Copy1);
                 newNode->left.insert(r1Copy2);
 
-                if (!isCycle(newNode))
+                if (appendProofNodes(ProofRule::seqLeft, newNode))
                 {
-                    node->leftNode = newNode;
-                    node->rightNode = nullptr;
-                    // TODO: node->appliedRule = ProofRule::seqLeft;
                     goals.push(newNode);
                     return true;
                 }
@@ -445,23 +371,16 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
                 {
                     continue;
                 }
-                shared_ptr<ProofNode> newNode1 = childProofNode(node);
-                shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
                 newNode1->left = {r1->left};
                 newNode1->right = {r2->left};
                 newNode2->left = {r1->right};
                 newNode2->right = {r2->right};
 
-                if (!isCycle(newNode1) && !isCycle(newNode2))
+                if (appendProofNodes(ProofRule::seqLeft, newNode1, newNode2) && solve({newNode1, newNode2}))
                 {
-                    node->leftNode = newNode1;
-                    node->rightNode = newNode2;
-                    node->appliedRule = ProofRule::seqLeft;
-
-                    if (solve({newNode1, newNode2}))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
@@ -469,7 +388,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
     /*/ TODO: append id
     for (auto r1 : node->left)
     {
-        shared_ptr<ProofNode> newNode = childProofNode(node);
+        shared_ptr<ProofNode> newNode = newChildProofNode(node);
         newNode->left.clear();
         shared_ptr<Relation> nr = make_shared<Relation>(Operator::composition, r1, Relation::get("id"));
         newNode->left.insert(nr);
@@ -486,9 +405,7 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
     }*/
     return false;
 }
-
-/// current:  aa=0, (a|b)+ -> (a|id)(bab|b)+(a|id)
-bool Solver::simplifyTcRule(shared_ptr<ProofNode> node)
+bool Solver::simplifyTcRule(shared_ptr<ProofNode> node) // current:  aa=0, (a|b)+ -> (a|id)(bab|b)+(a|id)
 {
     // TODO: rename unroll left
     // int unrollBound = 2;
@@ -518,19 +435,15 @@ bool Solver::simplifyTcRule(shared_ptr<ProofNode> node)
             {
                 // TODO: for (auto r2 : node->left)
                 //{
-                shared_ptr<ProofNode> newNode = childProofNode(node);
+                shared_ptr<ProofNode> newNode = newChildProofNode(node);
                 shared_ptr<Relation> comp = make_shared<Relation>(Operator::composition, r1, r1);
                 newNode->left = {comp};
                 newNode->right.clear();
 
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
-                node->appliedRule = ProofRule::simplifyTc;
-
-                if (solve({newNode}))
+                if (appendProofNodes(ProofRule::simplifyTc, newNode) && solve({newNode}))
                 {
                     underlying.erase(r1);
-                    shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                    shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
                     node->rightNode = newNode2;
 
                     shared_ptr<Relation> unionR = Relation::get("0");
@@ -562,8 +475,8 @@ bool Solver::simplifyTcRule(shared_ptr<ProofNode> node)
     {
         if (r->op == Operator::transitive)
         {
-            shared_ptr<ProofNode> newNode1 = childProofNode(node);
-            shared_ptr<ProofNode> newNode2 = childProofNode(node);
+            shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+            shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
             newNode1->left.erase(r);
             newNode2->left.erase(r);
 
@@ -599,31 +512,25 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
                 if (r2->op == Operator::transitive)
                 {
                     // simple case
-                    shared_ptr<ProofNode> newNode1 = childProofNode(node);
+                    shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
                     newNode1->left = {r1->left};
                     newNode1->right = {r2};
-                    node->leftNode = newNode1;
-                    node->rightNode = nullptr;
-                    node->appliedRule = ProofRule::transitiveClosure;
 
-                    if (solve({newNode1}))
+                    if (appendProofNodes(ProofRule::transitiveClosure, newNode1) && solve({newNode1}))
                     {
                         return true;
                     }
                 }
                 else
                 {
-                    shared_ptr<ProofNode> newNode1 = childProofNode(node);
-                    shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                    shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                    shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
                     newNode1->left = {r1->left};
                     newNode1->right = {r2};
                     newNode2->left = {make_shared<Relation>(Operator::composition, r2, r2)};
                     newNode2->right = {r2};
-                    node->leftNode = newNode1;
-                    node->rightNode = newNode2;
-                    node->appliedRule = ProofRule::transitiveClosure;
 
-                    if (solve({newNode1, newNode2}))
+                    if (appendProofNodes(ProofRule::transitiveClosure, newNode1, newNode2) && solve({newNode1, newNode2}))
                     {
                         return true;
                     }
@@ -641,7 +548,7 @@ bool Solver::unrollRule(shared_ptr<ProofNode> node)
     {
         if (r->op == Operator::transitive)
         {
-            shared_ptr<ProofNode> newNode = childProofNode(node);
+            shared_ptr<ProofNode> newNode = newChildProofNode(node);
             newNode->right.erase(r);
             shared_ptr<Relation> unrolledR = r->left;
             for (auto i = 0; i < unrollBound; i++)
@@ -650,56 +557,10 @@ bool Solver::unrollRule(shared_ptr<ProofNode> node)
                 unrolledR = make_shared<Relation>(Operator::composition, unrolledR, r->left);
             }
 
-            if (!isCycle(newNode))
+            if (appendProofNodes(ProofRule::unroll, newNode))
             {
-                node->leftNode = newNode;
-                node->rightNode = nullptr;
-                node->appliedRule = ProofRule::unroll;
                 goals.push(newNode);
                 return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool Solver::cutRule(shared_ptr<ProofNode> node)
-{
-    for (auto const &[_, r] : Relation::relations)
-    {
-        bool isIn = false; // TODO refactor: improve performance
-        for (auto l : node->left)
-        {
-            if (*r == *l)
-            {
-                isIn = true;
-            }
-        }
-        for (auto l : node->right)
-        {
-            if (*r == *l)
-            {
-                isIn = true;
-            }
-        }
-        // TODO: save elemts in sets not pointers to allow membership checks like: && node->left.find(r) == node->left.end()
-        if (r->op == Operator::none && !isIn) // try only basic cuts
-        {
-            shared_ptr<ProofNode> newNode1 = childProofNode(node);
-            shared_ptr<ProofNode> newNode2 = childProofNode(node);
-            newNode1->left.insert(r);
-            newNode2->right.insert(r);
-
-            if (!isCycle(newNode1) && !isCycle(newNode2))
-            {
-                node->leftNode = newNode1;
-                node->rightNode = newNode2;
-                node->appliedRule = ProofRule::cut;
-                if (solve({newNode1, newNode2}))
-                {
-                    return true;
-                }
-                break;
             }
         }
     }
@@ -775,8 +636,8 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
         Inequality inequality = *iequ;
         if (heuristicVal(node, inequality) > 0)
         {
-            shared_ptr<ProofNode> newNode1 = childProofNode(node);
-            shared_ptr<ProofNode> newNode2 = childProofNode(node);
+            shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+            shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
             if (inequality->right.empty())
             {
                 newNode1->left.insert(Relation::get("0"));
@@ -797,16 +658,9 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
             newNode1->currentConsDepth--;
             newNode2->currentConsDepth--;
 
-            if (!isCycle(newNode1) && !isCycle(newNode2))
+            if (appendProofNodes(ProofRule::cons, newNode1, newNode2) && solve({newNode1, newNode2}))
             {
-                node->leftNode = newNode1;
-                node->rightNode = newNode2;
-                node->appliedRule = ProofRule::cons;
-
-                if (solve({newNode1, newNode2})) // TODO use
-                {
-                    return true;
-                }
+                return true;
             }
         }
     }
@@ -817,38 +671,25 @@ bool Solver::weakRightRule(shared_ptr<ProofNode> node)
 {
     for (auto r : node->right)
     {
-        shared_ptr<ProofNode> newNode = childProofNode(node);
+        shared_ptr<ProofNode> newNode = newChildProofNode(node);
         newNode->right.erase(r);
 
-        if (!isCycle(newNode))
+        if (appendProofNodes(ProofRule::weakRight, newNode) && solve({newNode}))
         {
-            node->leftNode = newNode;
-            node->rightNode = nullptr;
-            node->appliedRule = ProofRule::weakRight;
-            if (solve({newNode}))
-            {
-                return true;
-            }
+            return true;
         }
     }
     return false;
 }
-
 bool Solver::weakLeftRule(shared_ptr<ProofNode> node)
 {
     for (auto r : node->left)
     {
-        shared_ptr<ProofNode> newNode = childProofNode(node);
+        shared_ptr<ProofNode> newNode = newChildProofNode(node);
         newNode->left.erase(r);
-        if (!isCycle(newNode))
+        if (appendProofNodes(ProofRule::weakLeft, newNode) && solve({newNode}))
         {
-            node->leftNode = newNode;
-            node->rightNode = nullptr;
-            node->appliedRule = ProofRule::weakLeft;
-            if (solve({newNode}))
-            {
-                return true;
-            }
+            return true;
         }
     }
     return false;
@@ -862,20 +703,14 @@ bool Solver::loopRule(shared_ptr<ProofNode> node)
         {
             if (*r1 == *Relation::ID && r2->op == Operator::composition)
             {
-                shared_ptr<ProofNode> newNode1 = childProofNode(node);
-                shared_ptr<ProofNode> newNode2 = childProofNode(node);
+                shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
                 newNode1->right = {r2->left};
                 newNode2->right = {r2->right};
 
-                if (!isCycle(newNode1) && !isCycle(newNode2))
+                if (appendProofNodes(ProofRule::loop, newNode1, newNode2) && solve({newNode1, newNode2}))
                 {
-                    node->leftNode = newNode1;
-                    node->rightNode = newNode2;
-                    node->appliedRule = ProofRule::loop;
-                    if (solve({newNode1, newNode2}))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
@@ -915,16 +750,13 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
 
     if (r0 != nullptr && r1 != nullptr)
     {
-        shared_ptr<ProofNode> newNode = childProofNode(node);
+        shared_ptr<ProofNode> newNode = newChildProofNode(node);
         shared_ptr<Relation> rComp = make_shared<Relation>(Operator::composition, r0, r1);
         newNode->left = {rComp, Relation::get("id")};
         newNode->right.clear();
 
-        if (!isCycle(newNode))
+        if (appendProofNodes(ProofRule::empty, newNode))
         {
-            node->leftNode = newNode;
-            node->rightNode = nullptr;
-            node->appliedRule = ProofRule::empty;
             goals.push(newNode);
             return true;
         }
@@ -943,16 +775,13 @@ bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
             {
                 if (r2->op == Operator::composition)
                 {
-                    shared_ptr<ProofNode> newNode = childProofNode(node);
+                    shared_ptr<ProofNode> newNode = newChildProofNode(node);
                     shared_ptr<Relation> linv = make_shared<Relation>(Operator::inverse, r2->left);
                     newNode->left = {linv, r2->right};
                     newNode->right.clear();
 
-                    if (!isCycle(newNode))
+                    if (appendProofNodes(ProofRule::empty, newNode))
                     {
-                        node->leftNode = newNode;
-                        node->rightNode = nullptr;
-                        node->appliedRule = ProofRule::empty;
                         goals.push(newNode);
                         return true;
                     }
@@ -1165,11 +994,8 @@ bool Solver::solve()
         case ProofRule::inverse:
             done = !done ? seqLeftRule(currentGoal) : done;
         case ProofRule::seqLeft:
-
             done = !done ? transitiveClosureRule(currentGoal) : done;
         case ProofRule::transitiveClosure:
-            // done = !done ? cutRule(currentGoal) : done;
-        case ProofRule::cut:
             done = !done ? unrollRule(currentGoal) : done;
         case ProofRule::unroll:
             done = !done ? simplifyTcRule(currentGoal) : done;
@@ -1221,16 +1047,15 @@ bool Solver::solve()
     return root->status == ProofNodeStatus::closed;
 }
 
+// helper functions
 bool Solver::solve(string model1, string model2)
 {
-    // load models
     load(model1, model2);
     return solve();
 }
-
 bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
 {
-    /*future<bool> future = async(launch::async, [goals, this]() -> bool
+    /* TODO: future<bool> future = async(launch::async, [goals, this]() -> bool
                                 {
 
     future_status status;
@@ -1259,13 +1084,11 @@ bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
     }
     return true;
 }
-
 string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal)
 {
     // hack: concentrate merges double edges when reusing proof nodes, but also merges parent edge
     return "digraph { \nconcentrate=true\nnode [shape=record];\n" + node->toDotFormat(currentGoal) + "}";
 }
-
 void Solver::exportProof(shared_ptr<ProofNode> currentGoal)
 {
     // export proof

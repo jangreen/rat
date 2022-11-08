@@ -24,8 +24,8 @@ public:
     bool solve(string model1, string model2);
     bool solve(initializer_list<shared_ptr<ProofNode>> goals);
 
-    bool isCycle(shared_ptr<ProofNode> node);
-    shared_ptr<ProofNode> childProofNode(shared_ptr<ProofNode> node);
+    bool appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, shared_ptr<ProofNode> rightNode);
+    shared_ptr<ProofNode> newChildProofNode(shared_ptr<ProofNode> node);
 
     bool axiomEmpty(shared_ptr<ProofNode> node);
     bool axiomFull(shared_ptr<ProofNode> node);
@@ -40,7 +40,6 @@ public:
     bool simplifyTcRule(shared_ptr<ProofNode> node);
     bool transitiveClosureRule(shared_ptr<ProofNode> node);
     bool unrollRule(shared_ptr<ProofNode> node); // TODO: bounded
-    bool cutRule(shared_ptr<ProofNode> node);
     bool consRule(shared_ptr<ProofNode> node);
     bool weakRightRule(shared_ptr<ProofNode> node);
     bool weakLeftRule(shared_ptr<ProofNode> node);

@@ -64,11 +64,11 @@ int main(int argc, const char *argv[])
     // solver.stepwise = true;
 
     cout << "Start Solving..." << endl;
-    /*cout << "* SC <= OOTA:\n"
+    /* cout << "* SC <= OOTA:\n"
          << solver.solve("cat/sc.cat", "cat/oota.cat") << endl; // */
-    /* cout << " * SC <= TSO:\n"
+    cout << " * SC <= TSO:\n"
          << solver.solve("cat/sc.cat", "cat/tso.cat") << endl; // */
-    solver.theory.insert(uniproc);
+    /*solver.theory.insert(uniproc);
     solver.solve({make_shared<ProofNode>("rf & int", "po-loc")}); // */
     // solver.solve("test/uniproc1.cat", "test/uniproc2.cat"); // model is easier than '<= po under uniproc'
 
