@@ -71,10 +71,10 @@ int main(int argc, const char *argv[])
     // solver.exportProof("SC<=OOTA");
     // solver.solve("cat/sc.cat", "cat/tso.cat");
     // solver.exportProof("SC<=TSO");
-    uniprocSolver.stepwise = true;
+    // uniprocSolver.stepwise = true;
     uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po-loc"));
     uniprocSolver.exportProof("rfi<=po-loc+Uniproc");
     cout << Solver::iterations << " iter" << endl;
-    solver.solve("cat/tso-modified.cat", "cat/oota.cat");
-    solver.exportProof("TSO<=OOTA");
+    // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
+    // solver.exportProof("TSO<=OOTA");
 }
