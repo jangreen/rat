@@ -17,12 +17,14 @@ public:
     static map<int, set<shared_ptr<ProofNode>>> unprovable; // relative complete: unprovable under given bounds
     static set<shared_ptr<ProofNode>> proved;               // TODO: rename: closedGoals
     bool stepwise;
-    bool silent = true;
+    int logLevel = 0; // 0 nothing 1 only important 2 all
 
     void load(string model1, string model2);
-    bool solve(); // models alread< loaded
-    bool solve(string model1, string model2);
+    bool solve(); // models alread< loaded, main logic
     bool solve(initializer_list<shared_ptr<ProofNode>> goals);
+    bool solve(Inequality goal);
+    bool solve(string model1, string model2);
+    void reset();
 
     bool appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, shared_ptr<ProofNode> rightNode);
     shared_ptr<ProofNode> newChildProofNode(shared_ptr<ProofNode> node);
@@ -50,11 +52,11 @@ public:
     bool invcapEmptyRule(shared_ptr<ProofNode> node);
     bool idseqEmptyRule(shared_ptr<ProofNode> node);
 
-    void log(string message);
+    void log(string message, int requiredLevel);
     string toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal);
     static shared_ptr<ProofNode> root;
     static shared_ptr<Solver> rootSolver;
-    void exportProof(shared_ptr<ProofNode> root = Solver::root);
+    void exportProof(string filename, shared_ptr<ProofNode> root = Solver::root);
 };
 
 // TODO remove: typedef void (*ProofRule)(ProofNode &);

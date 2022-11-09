@@ -58,50 +58,22 @@ void loadTheory(Solver &solver)
 
 int main(int argc, const char *argv[])
 {
-    Inequality uniproc = make_shared<ProofNode>("(po-loc | co | fr | rf)^+ & id", "0");
+    // setup solvers
     Solver solver;
     loadTheory(solver);
-    // solver.stepwise = true;
-    // solver.silent = false;
+    Inequality uniproc = make_shared<ProofNode>("(po-loc | co | fr | rf)^+ & id", "0");
+    Solver uniprocSolver;
+    loadTheory(uniprocSolver);
+    uniprocSolver.theory.insert(uniproc);
+    uniprocSolver.logLevel = 1;
 
-    cout << "Start Solving..." << endl;
-    /* cout << "* SC <= OOTA:\n"
-         << solver.solve("cat/sc.cat", "cat/oota.cat") << endl; // */
-    cout << " * SC <= TSO:\n"
-         << solver.solve("cat/sc.cat", "cat/tso.cat") << endl; // */
-    /*solver.theory.insert(uniproc);
-    solver.solve({make_shared<ProofNode>("rf & int", "po-loc")}); // */
-    // solver.solve("test/uniproc1.cat", "test/uniproc2.cat"); // model is easier than '<= po under uniproc'
-
-    /* cout << "* Split reads-from:\n"
-         << solver.solve("test/split1.cat", "test/split2.cat") << endl; // */
-    // solver.solve("test/uniproc121.cat", "test/uniproc221.cat");
-    // solver.solve({make_shared<ProofNode>("(po-loc;data) & id", "po-loc")});
-    /* solver.theory.insert(uniproc);
-    solver.solve({make_shared<ProofNode>("((rf & int);data) & id", "0")}); //+ // */
-    /* cout << "* rf+ <= rf:\n"
-         << solver.solve({make_shared<ProofNode>("rf+", "rf")}) << endl; // */
-    // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
-
-    // solver.solve({make_shared<ProofNode>("po-loc;po-loc", "po-loc")});
-
-    // TODO: solver.solve("cat/tso.cat", "cat/aarch64-modified.cat");
-    // solver.solve("cat/sc.cat", "cat/aarch64-modified.cat");
-
-    // TODO: refactor: tests();
-    /*string name = "d";
-    Solver testSolver;
-    shared_ptr<ProofNode> ab = make_shared<ProofNode>();
-    ab->left = {Relation::get("a")};
-    ab->right = {Relation::get("b")};
-    shared_ptr<ProofNode> bc = make_shared<ProofNode>();
-    bc->left = {Relation::get("b")};
-    bc->right = {Relation::get("c")};
-    testSolver.theory = {ab, bc};*/
-
-    // test(testSolver, name);
-
-    // solver.solve("test/lemma1.cat", "test/lemma2.cat");
-    /*solver.solve("test/unlemma1.cat", "test/unlemma2.cat");
-    solver.solve("test/unlemma1.cat", "test/unlemma2.cat");*/
+    // solver.solve("cat/sc.cat", "cat/oota.cat");
+    // solver.exportProof("SC<=OOTA");
+    // solver.solve("cat/sc.cat", "cat/tso.cat");
+    // solver.exportProof("SC<=TSO");
+    // uniprocSolver.stepwise = true;
+    uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po-loc"));
+    uniprocSolver.exportProof("rfi<=po-loc+Uniproc");
+    solver.solve("cat/tso-modified.cat", "cat/oota.cat");
+    solver.exportProof("TSO<=OOTA");
 }

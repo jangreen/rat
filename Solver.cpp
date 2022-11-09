@@ -60,9 +60,9 @@ set<shared_ptr<ProofNode>> Solver::proved;
 shared_ptr<ProofNode> Solver::root;
 shared_ptr<Solver> Solver::rootSolver;
 
-void Solver::log(string message)
+void Solver::log(string message, int requiredLevel = 2)
 {
-    if (!silent)
+    if (logLevel >= requiredLevel)
     {
         cout << message << endl;
     }
@@ -872,21 +872,14 @@ bool Solver::solve()
         log("|= " + currentGoal->relationString());
         if (stepwise)
         {
-            exportProof(currentGoal);
+            exportProof("proof", currentGoal);
             cin.ignore();
         }
 
-        // TODO cant happen: assert(currentGoal->status != ProofNodeStatus::closed)
-        if (currentGoal->status == ProofNodeStatus::closed)
-        {
-            log("Current goal is closed.");
-            learnGoal(currentGoal);
-            goals.pop();
-            continue;
-        }
+        assert(currentGoal->status != ProofNodeStatus::closed);
         if (currentGoal->status == ProofNodeStatus::dismiss)
         {
-            log("Dismiss current goal.");
+            log("Current goal has been marked to dismiss.");
             goals.pop();
             continue;
         }
@@ -897,7 +890,7 @@ bool Solver::solve()
         {
             if (*failed == *currentGoal)
             {
-                log("Goal is probably not provable.");
+                log("Goal is probably not provable.", 1);
                 currentGoal->status = ProofNodeStatus::dismiss;
                 dismissSiblings(currentGoal);
                 goals.pop();
@@ -1000,8 +993,6 @@ bool Solver::solve()
         }
     }
 
-    exportProof();
-
     if (Solver::root == root && root->status != ProofNodeStatus::closed)
     {
         // ierative deepening on root Solver
@@ -1011,7 +1002,7 @@ bool Solver::solve()
         root->leftNode = nullptr;
         root->rightNode = nullptr;
         root->currentConsDepth++;
-        cout << "# Increase consRule depth bound to " << root->currentConsDepth << endl;
+        log("# Increase consRule depth bound to " + to_string(root->currentConsDepth), 1);
         solve();
     }
 
@@ -1019,10 +1010,28 @@ bool Solver::solve()
 }
 
 // helper functions
+void Solver::reset()
+{
+    // clear goals and push new goal
+    while (!goals.empty())
+    {
+        goals.pop();
+    }
+}
 bool Solver::solve(string model1, string model2)
 {
+    reset();
     load(model1, model2);
-    return solve();
+    bool solved = solve();
+    cout << model1 << "<=" << model2 << ": " << solved << endl;
+    return solved;
+}
+bool Solver::solve(Inequality goal)
+{
+    reset();
+    bool solved = solve({goal});
+    cout << goal->relationString() << ": " << solved << endl;
+    return solved;
 }
 bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
 {
@@ -1046,7 +1055,7 @@ bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
         Solver subSolver;
         subSolver.theory = theory;
         subSolver.stepwise = stepwise;
-        subSolver.silent = silent;
+        subSolver.logLevel = logLevel;
         subSolver.goals.push(goal);
         if (!subSolver.solve())
         {
@@ -1060,7 +1069,7 @@ string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> cur
 {
     // TODO: function: used
     string rootStackString;
-    if (!silent)
+    if (logLevel > 1)
     {
         stack<shared_ptr<ProofNode>> goalsCopy = stack<shared_ptr<ProofNode>>(rootSolver->goals);
         while (goalsCopy.size() > 1)
@@ -1075,7 +1084,7 @@ string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> cur
     string stackString;
     if (&*rootSolver != this)
     {
-        if (!silent)
+        if (logLevel > 1)
         {
             stack<shared_ptr<ProofNode>> goalsCopy = stack<shared_ptr<ProofNode>>(goals);
             while (goalsCopy.size() > 1)
@@ -1091,11 +1100,11 @@ string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> cur
     // hack: concentrate merges double edges when reusing proof nodes, but also merges parent edge
     return "digraph { \nconcentrate=true\nnode [shape=plain];\n\n" + node->toDotFormat(currentGoal) + rootStackString + stackString + "\n}";
 }
-void Solver::exportProof(shared_ptr<ProofNode> currentGoal)
+void Solver::exportProof(string filename, shared_ptr<ProofNode> currentGoal)
 {
     // export proof
     ofstream dotFile;
-    dotFile.open("build/proof.dot");
+    dotFile.open("build/" + filename + ".dot");
     dotFile << toDotFormat(root, currentGoal);
     dotFile.close();
 }
