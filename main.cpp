@@ -62,6 +62,7 @@ int main(int argc, const char *argv[])
     Solver solver;
     loadTheory(solver);
     // solver.stepwise = true;
+    // solver.silent = false;
 
     cout << "Start Solving..." << endl;
     /* cout << "* SC <= OOTA:\n"
@@ -87,8 +88,8 @@ int main(int argc, const char *argv[])
     // TODO: solver.solve("cat/tso.cat", "cat/aarch64-modified.cat");
     // solver.solve("cat/sc.cat", "cat/aarch64-modified.cat");
 
-    // tests();
-    string name = "d";
+    // TODO: refactor: tests();
+    /*string name = "d";
     Solver testSolver;
     shared_ptr<ProofNode> ab = make_shared<ProofNode>();
     ab->left = {Relation::get("a")};
@@ -96,7 +97,7 @@ int main(int argc, const char *argv[])
     shared_ptr<ProofNode> bc = make_shared<ProofNode>();
     bc->left = {Relation::get("b")};
     bc->right = {Relation::get("c")};
-    testSolver.theory = {ab, bc};
+    testSolver.theory = {ab, bc};*/
 
     // test(testSolver, name);
 

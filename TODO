@@ -1,1 +1,6 @@
 - benchmark
+
+GRAPHVIZ nor record shapes
+Record-based Nodes
+
+NOTE: Please see the note about record-based nodes. Also note that there are problems using non-trivial edges (edges with ports or labels) between adjacent nodes on the same rank if one or both nodes has a record shape.

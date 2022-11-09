@@ -15,7 +15,7 @@ public:
     stack<shared_ptr<ProofNode>> goals;                     // goals on stack that are not closed yet
     Theory theory;                                          // inequalities that are true
     static map<int, set<shared_ptr<ProofNode>>> unprovable; // relative complete: unprovable under given bounds
-    static set<shared_ptr<ProofNode>> proved;
+    static set<shared_ptr<ProofNode>> proved;               // TODO: rename: closedGoals
     bool stepwise;
     bool silent = true;
 
@@ -26,6 +26,8 @@ public:
 
     bool appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, shared_ptr<ProofNode> rightNode);
     shared_ptr<ProofNode> newChildProofNode(shared_ptr<ProofNode> node);
+    void learnGoal(shared_ptr<ProofNode> node);
+    void closeCurrentGoal();
 
     bool axiomEmpty(shared_ptr<ProofNode> node);
     bool axiomFull(shared_ptr<ProofNode> node);
@@ -51,6 +53,7 @@ public:
     void log(string message);
     string toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal);
     static shared_ptr<ProofNode> root;
+    static shared_ptr<Solver> rootSolver;
     void exportProof(shared_ptr<ProofNode> root = Solver::root);
 };
 

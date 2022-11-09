@@ -58,8 +58,6 @@ public:
             return "transitiveClosure";
         case Rule::unroll:
             return "unroll";
-        case Rule::cut:
-            return "cut";
         case Rule::cons:
             return "cons";
         case Rule::weakRight:

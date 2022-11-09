@@ -7,6 +7,7 @@
 #include <string>
 #include <future>
 #include <queue>
+#include <stack>
 #include "CatInferVisitor.h"
 #include "Constraint.h"
 
@@ -57,6 +58,7 @@ Solver::~Solver() {}
 map<int, set<shared_ptr<ProofNode>>> Solver::unprovable;
 set<shared_ptr<ProofNode>> Solver::proved;
 shared_ptr<ProofNode> Solver::root;
+shared_ptr<Solver> Solver::rootSolver;
 
 void Solver::log(string message)
 {
@@ -71,6 +73,10 @@ bool Solver::appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, sh
     // check if nodes should be appended
     for (auto node : {leftNode, rightNode})
     {
+        if (node == nullptr)
+        {
+            continue;
+        }
         if (node->relationString().length() > 200 || node->currentConsDepth < 0)
         { // dismiss too complex nodes & bound consRule depth
             return false;
@@ -112,6 +118,7 @@ bool Solver::axiomEmpty(shared_ptr<ProofNode> node)
     {
         node->appliedRule = ProofRule::axiomEmpty;
         node->status = ProofNodeStatus::closed;
+        goals.pop();
         return true;
     }
     return false;
@@ -122,6 +129,7 @@ bool Solver::axiomFull(shared_ptr<ProofNode> node)
     {
         node->appliedRule = ProofRule::axiomFull;
         node->status = ProofNodeStatus::closed;
+        goals.pop();
         return true;
     }
     return false;
@@ -134,6 +142,7 @@ bool Solver::axiomEqual(shared_ptr<ProofNode> node)
         {
             node->appliedRule = ProofRule::axiomEqual;
             node->status = ProofNodeStatus::closed;
+            goals.pop();
             return true;
         }
     }
@@ -156,7 +165,7 @@ bool Solver::andLeftRule(shared_ptr<ProofNode> node)
             }
             else
             {
-                node->status == ProofNodeStatus::dismiss;
+                node->status = ProofNodeStatus::dismiss;
             }
             return true;
         }
@@ -180,7 +189,7 @@ bool Solver::orRightRule(shared_ptr<ProofNode> node)
             }
             else
             {
-                node->status == ProofNodeStatus::dismiss;
+                node->status = ProofNodeStatus::dismiss;
             }
             return true;
         }
@@ -207,7 +216,7 @@ bool Solver::andRightRule(shared_ptr<ProofNode> node)
             }
             else
             {
-                node->status == ProofNodeStatus::dismiss;
+                node->status = ProofNodeStatus::dismiss;
             }
             return true;
         }
@@ -227,14 +236,14 @@ bool Solver::orLeftRule(shared_ptr<ProofNode> node)
             newNode1->left.insert(relation->left);
             newNode2->left.insert(relation->right);
 
-            if (!appendProofNodes(ProofRule::orLeft, newNode1, newNode2))
+            if (appendProofNodes(ProofRule::orLeft, newNode1, newNode2))
             {
                 goals.push(newNode1);
                 goals.push(newNode2);
             }
             else
             {
-                node->status == ProofNodeStatus::dismiss;
+                node->status = ProofNodeStatus::dismiss;
             }
             return true;
         }
@@ -831,63 +840,64 @@ void Solver::load(string model1, string model2)
     goals.push(goal);
 }
 
+void Solver::learnGoal(shared_ptr<ProofNode> node)
+{
+    shared_ptr<ProofNode> provenRule = make_shared<ProofNode>(*node);
+    provenRule->parent = nullptr;
+    Solver::proved.insert(provenRule);
+}
+
+void Solver::closeCurrentGoal()
+{
+    shared_ptr<ProofNode> currentGoal = goals.top();
+    currentGoal->status = ProofNodeStatus::closed;
+    learnGoal(currentGoal);
+    goals.pop();
+}
+
 bool Solver::solve()
 {
-    shared_ptr<ProofNode> root = goals.top();
+    shared_ptr<ProofNode> root = goals.top(); // needed check if rootSolver
     if (Solver::root == nullptr)
     {
         Solver::root = root;
     }
+    if (Solver::rootSolver == nullptr)
+    {
+        Solver::rootSolver = shared_ptr<Solver>(this);
+    }
     while (!goals.empty())
     {
         shared_ptr<ProofNode> currentGoal = goals.top();
-        if (!silent)
-            cout << "* " << currentGoal->relationString() << " | " << currentGoal->appliedRule.toString() << endl;
-
-        // step wise proof
+        log("|= " + currentGoal->relationString());
         if (stepwise)
         {
             exportProof(currentGoal);
             cin.ignore();
         }
 
+        // TODO cant happen: assert(currentGoal->status != ProofNodeStatus::closed)
         if (currentGoal->status == ProofNodeStatus::closed)
         {
-            // 1) node is closed
-            if (!silent)
-                cout << "  pop closed." << endl;
-            shared_ptr<ProofNode> provenRule = make_shared<ProofNode>(*currentGoal);
-            provenRule->parent = nullptr;
-            Solver::proved.insert(provenRule);
+            log("Current goal is closed.");
+            learnGoal(currentGoal);
             goals.pop();
             continue;
         }
-        if (currentGoal->status == ProofNodeStatus::open)
+        if (currentGoal->status == ProofNodeStatus::dismiss)
         {
-            // 2) node is open (failed): discard node and go on
-            if (!silent)
-                cout << "  pop failed." << endl;
-            currentGoal->leftNode = nullptr;
-            currentGoal->rightNode = nullptr;
-            currentGoal->appliedRule = ProofRule::none;
-            unprovable[currentGoal->currentConsDepth].insert(currentGoal);
+            log("Dismiss current goal.");
             goals.pop();
             continue;
         }
 
         bool skipGoal = false;
-        if (currentGoal->status == ProofNodeStatus::dismiss) // TODO: remove dismiss?
-        {
-            goals.pop();
-            continue;
-        }
-        // check if is unprovable
+        // check if currentGoal is relative unprovable
         for (auto failed : unprovable[currentGoal->currentConsDepth])
         {
             if (*failed == *currentGoal)
             {
-                if (!silent)
-                    cout << "Known unprovable goal." << endl;
+                log("Goal is probably not provable.");
                 currentGoal->status = ProofNodeStatus::dismiss;
                 dismissSiblings(currentGoal);
                 goals.pop();
@@ -899,8 +909,7 @@ bool Solver::solve()
         {
             if (*good == *currentGoal)
             {
-                if (!silent)
-                    cout << "Kown proven goal." << endl;
+                log("Goal is known closed goal.");
                 if (currentGoal->parent != nullptr)
                 {
                     if (currentGoal->parent->leftNode == currentGoal)
@@ -922,55 +931,19 @@ bool Solver::solve()
             continue;
         }
 
-        // 3) node has already applied a rule
-        if (currentGoal->appliedRule != ProofRule(ProofRule::none))
+        // nodes children are closed
+        bool hasRuleApplied = currentGoal->appliedRule != ProofRule(ProofRule::none);
+        bool leftClosed = currentGoal->leftNode == nullptr || currentGoal->leftNode->status == ProofNodeStatus::closed;
+        bool rightClosed = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::closed;
+        if (hasRuleApplied && leftClosed && rightClosed)
         {
-            bool leftClosed = currentGoal->leftNode == nullptr || currentGoal->leftNode->status == ProofNodeStatus::closed;
-            bool leftOpen = currentGoal->leftNode != nullptr && currentGoal->leftNode->status == ProofNodeStatus::open;
-            bool rightClosed = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::closed;
-            bool rightOpen = currentGoal->rightNode != nullptr && currentGoal->rightNode->status == ProofNodeStatus::open;
-            if (leftClosed && rightClosed)
-            {
-                if (!silent)
-                    cout << "  closed parent" << endl;
-                currentGoal->status = ProofNodeStatus::closed;
-                continue;
-            }
-            else if (leftOpen || rightOpen)
-            {
-                // must do rules, do not try other rule // TODO
-                if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::orRight))
-                {
-                    if (!silent)
-                        cout << "  failed parent rule had to be applicable" << endl;
-                    currentGoal->status = ProofNodeStatus::open;
-                    dismissSiblings(currentGoal);
-                    continue;
-                }
-                if (!silent)
-                    cout << "  try another rule" << endl;
-                // try / apply next possible rule for current node
-            }
-            else
-            {
-                // must do rules, do not try other rule // TODO
-                if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
-                    currentGoal->appliedRule == ProofRule(ProofRule::orRight))
-                {
-                    goals.pop();
-                    continue;
-                }
-                if (!silent)
-                    cout << "TODO:" << endl;
-            }
+            log("Close goal since all childrens are closed.");
+            closeCurrentGoal();
+            continue;
         }
-        // 4) apply rule to node
-        // if node has rule applied take next one
+
+        // apply next rule
+        log("Apply next rule.");
         bool done = false;
         switch (currentGoal->appliedRule)
         {
@@ -989,7 +962,6 @@ bool Solver::solve()
         case ProofRule::orLeft:
             done = !done ? andRightRule(currentGoal) : done;
         case ProofRule::andRight:
-
             done = !done ? inverseRule(currentGoal) : done;
         case ProofRule::inverse:
             done = !done ? seqLeftRule(currentGoal) : done;
@@ -1020,14 +992,11 @@ bool Solver::solve()
 
         if (!done)
         {
-            if (!silent)
-                cout << "  done." << endl;
-            // No Rule applicable anymore:
+            log("No rule is applicable anymore.");
             unprovable[currentGoal->currentConsDepth].insert(currentGoal);
-            // TODO old remove: currentGoal->status = ProofNodeStatus::open;
-            currentGoal->status = ProofNodeStatus::dismiss; // TODO: remove dismiss?
-            // remove unvisited siblings, since solving them does not help
-            dismissSiblings(currentGoal);
+            currentGoal->status = ProofNodeStatus::dismiss;
+            goals.pop();
+            dismissSiblings(currentGoal); // TODO create two functions: dissmissGoal / closeGoal
         }
     }
 
@@ -1039,8 +1008,10 @@ bool Solver::solve()
         goals.push(root);
         root->appliedRule = ProofRule::none;
         root->status = ProofNodeStatus::none;
+        root->leftNode = nullptr;
+        root->rightNode = nullptr;
         root->currentConsDepth++;
-        cout << "Increase cons bound to " << root->currentConsDepth << endl;
+        cout << "# Increase consRule depth bound to " << root->currentConsDepth << endl;
         solve();
     }
 
@@ -1084,10 +1055,41 @@ bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
     }
     return true;
 }
+
 string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> currentGoal)
 {
+    // TODO: function: used
+    string rootStackString;
+    if (!silent)
+    {
+        stack<shared_ptr<ProofNode>> goalsCopy = stack<shared_ptr<ProofNode>>(rootSolver->goals);
+        while (goalsCopy.size() > 1)
+        {
+            shared_ptr<ProofNode> tos = goalsCopy.top();
+            goalsCopy.pop();
+            shared_ptr<ProofNode> secondTos = goalsCopy.top();
+            rootStackString.append("\"" + ProofNode::getId(*secondTos) + "\" -> \"" + ProofNode::getId(*tos) + "\" [label=\"stack\", color=blue, constraint=false];\n");
+        }
+    }
+
+    string stackString;
+    if (&*rootSolver != this)
+    {
+        if (!silent)
+        {
+            stack<shared_ptr<ProofNode>> goalsCopy = stack<shared_ptr<ProofNode>>(goals);
+            while (goalsCopy.size() > 1)
+            {
+                shared_ptr<ProofNode> tos = goalsCopy.top();
+                goalsCopy.pop();
+                shared_ptr<ProofNode> secondTos = goalsCopy.top();
+                stackString.append("\"" + ProofNode::getId(*secondTos) + "\" -> \"" + ProofNode::getId(*tos) + "\" [label=\"stack\", color=blue, constraint=false];\n");
+            }
+        }
+    }
+
     // hack: concentrate merges double edges when reusing proof nodes, but also merges parent edge
-    return "digraph { \nconcentrate=true\nnode [shape=record];\n" + node->toDotFormat(currentGoal) + "}";
+    return "digraph { \nconcentrate=true\nnode [shape=plain];\n\n" + node->toDotFormat(currentGoal) + rootStackString + stackString + "\n}";
 }
 void Solver::exportProof(shared_ptr<ProofNode> currentGoal)
 {

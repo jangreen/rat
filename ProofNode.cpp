@@ -7,7 +7,7 @@
 using namespace std;
 
 // helper functions
-string getId(ProofNode &node)
+string ProofNode::getId(ProofNode &node)
 {
     // TODO better approach?
     const void *address = static_cast<const void *>(&node);
@@ -24,10 +24,8 @@ string nodeStatusColor(ProofNodeStatus status)
         return "green";
     case ProofNodeStatus::none:
         return "gray";
-    case ProofNodeStatus::open:
-        return "red";
     case ProofNodeStatus::dismiss:
-        return "yellow";
+        return "red";
     }
 }
 
@@ -44,21 +42,24 @@ ProofNode::~ProofNode() {}
 
 string ProofNode::toDotFormat(shared_ptr<ProofNode> currentGoal)
 {
-    string output = "";
-    string leftSide = "";
+    string output;
+    string leftSide;
     for (auto relation : left)
     {
         leftSide += relation->toString() + ",";
     }
 
-    string rightSide = "";
+    string rightSide;
     for (auto relation : right)
     {
         rightSide += relation->toString() + ",";
     }
 
     bool isCurrentGoal = (&*currentGoal == this);
-    string nodeDesc = "\"" + getId(*this) + "\"[label=\"{{" + regex_replace(leftSide, regex("\\|"), "\\|") + " | " + regex_replace(rightSide, regex("\\|"), "\\|") + "} | " + appliedRule.toString() + "}\", color=" + nodeStatusColor(status) + ", fontcolor=" + (isCurrentGoal ? "blue" : "black") + "];\n";
+    // non record based layout:
+    string table = "<<table border='0' cellborder='1' cellspacing='0'><tr><td>" + regex_replace(leftSide, regex("\\&"), "&amp;") + "</td><td>" + regex_replace(rightSide, regex("\\&"), "&amp;") + "</td></tr><tr><td colspan='2'>" + appliedRule.toString() + "</td></tr></table>>";
+    string nodeAttributes = "[label=" + table + ", color=" + nodeStatusColor(status) + ", fontcolor=" + (isCurrentGoal ? "blue" : "black") + "]";
+    string nodeDesc = "\"" + getId(*this) + "\" " + nodeAttributes;
     output += nodeDesc;
     if (leftNode != nullptr)
     {
@@ -74,7 +75,7 @@ string ProofNode::toDotFormat(shared_ptr<ProofNode> currentGoal)
 
     if (parent != nullptr)
     {
-        output += "\"" + getId(*this) + "\" -> \"" + getId(*parent) + "\"[color = grey];\n";
+        output += "\"" + getId(*this) + "\" -> \"" + getId(*parent) + "\"[color=grey];\n";
     }
     return output;
 }

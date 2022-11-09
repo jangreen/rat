@@ -9,7 +9,6 @@ enum class ProofNodeStatus
 {
     none,
     closed,
-    open,
     dismiss
 };
 
@@ -31,6 +30,7 @@ public:
     RelationSet left;
     RelationSet right;
 
+    static string getId(ProofNode &node);
     string toDotFormat(shared_ptr<ProofNode> CurrentGoal);
     string relationString();
 
