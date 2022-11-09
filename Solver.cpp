@@ -930,11 +930,24 @@ bool Solver::solve()
         bool hasRuleApplied = currentGoal->appliedRule != ProofRule(ProofRule::none);
         bool leftClosed = currentGoal->leftNode == nullptr || currentGoal->leftNode->status == ProofNodeStatus::closed;
         bool rightClosed = currentGoal->rightNode == nullptr || currentGoal->rightNode->status == ProofNodeStatus::closed;
-        if (hasRuleApplied && leftClosed && rightClosed)
+        if (hasRuleApplied)
         {
-            log("Close goal since all childrens are closed.");
-            closeCurrentGoal();
-            continue;
+            if (leftClosed && rightClosed)
+            {
+                log("Close goal since all childrens are closed.");
+                closeCurrentGoal();
+                continue;
+            }
+
+            // must do rules, do not try other rule // TODO
+            if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
+                currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
+                currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
+                currentGoal->appliedRule == ProofRule(ProofRule::orRight))
+            {
+                goals.pop();
+                continue;
+            }
         }
 
         // apply next rule
