@@ -18,6 +18,7 @@ public:
     static set<shared_ptr<ProofNode>> proved;               // TODO: rename: closedGoals
     bool stepwise;
     int logLevel = 0; // 0 nothing 1 only important 2 all
+    static int iterations;
 
     void load(string model1, string model2);
     bool solve(); // models alread< loaded, main logic

@@ -59,6 +59,7 @@ map<int, set<shared_ptr<ProofNode>>> Solver::unprovable;
 set<shared_ptr<ProofNode>> Solver::proved;
 shared_ptr<ProofNode> Solver::root;
 shared_ptr<Solver> Solver::rootSolver;
+int Solver::iterations = 0;
 
 void Solver::log(string message, int requiredLevel = 2)
 {
@@ -868,6 +869,7 @@ bool Solver::solve()
     }
     while (!goals.empty())
     {
+        Solver::iterations++;
         shared_ptr<ProofNode> currentGoal = goals.top();
         log("|= " + currentGoal->relationString());
         if (stepwise)
@@ -890,7 +892,7 @@ bool Solver::solve()
         {
             if (*failed == *currentGoal)
             {
-                log("Goal is probably not provable.", 1);
+                log("Goal is probably not provable.");
                 currentGoal->status = ProofNodeStatus::dismiss;
                 dismissSiblings(currentGoal);
                 goals.pop();
