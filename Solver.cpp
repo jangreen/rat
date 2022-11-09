@@ -856,6 +856,14 @@ void Solver::closeCurrentGoal()
     goals.pop();
 }
 
+void Solver::dismissCurrentGoal()
+{
+    shared_ptr<ProofNode> currentGoal = goals.top();
+    currentGoal->status = ProofNodeStatus::dismiss;
+    dismissSiblings(currentGoal);
+    goals.pop();
+}
+
 bool Solver::solve()
 {
     shared_ptr<ProofNode> root = goals.top(); // needed check if rootSolver
@@ -945,7 +953,7 @@ bool Solver::solve()
                 currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
                 currentGoal->appliedRule == ProofRule(ProofRule::orRight))
             {
-                goals.pop();
+                dismissCurrentGoal();
                 continue;
             }
         }
@@ -1002,9 +1010,7 @@ bool Solver::solve()
         {
             log("No rule is applicable anymore.");
             unprovable[currentGoal->currentConsDepth].insert(currentGoal);
-            currentGoal->status = ProofNodeStatus::dismiss;
-            goals.pop();
-            dismissSiblings(currentGoal); // TODO create two functions: dissmissGoal / closeGoal
+            dismissCurrentGoal();
         }
     }
 

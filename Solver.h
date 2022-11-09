@@ -31,6 +31,7 @@ public:
     shared_ptr<ProofNode> newChildProofNode(shared_ptr<ProofNode> node);
     void learnGoal(shared_ptr<ProofNode> node);
     void closeCurrentGoal();
+    void dismissCurrentGoal();
 
     bool axiomEmpty(shared_ptr<ProofNode> node);
     bool axiomFull(shared_ptr<ProofNode> node);
