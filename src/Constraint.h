@@ -5,7 +5,8 @@
 
 using namespace std;
 
-enum class ConstraintType {
+enum class ConstraintType
+{
     empty,
     irreflexive,
     acyclic
@@ -18,9 +19,9 @@ public:
     Constraint(const ConstraintType &type, shared_ptr<Relation> relation, const string &name = "");
     ~Constraint();
 
-    string name;
     ConstraintType type;
     shared_ptr<Relation> relation;
+    string name;
 
     void toEmptyNormalForm();
 };

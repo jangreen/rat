@@ -25,8 +25,8 @@ public:
     Relation(const Operator &op = Operator::none, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr);
     ~Relation();
 
+    string alias; // set if operator none
     Operator op;
-    string alias;               // set if operator none
     shared_ptr<Relation> left;  // set if operator unary/binary
     shared_ptr<Relation> right; // set if operator binary
 

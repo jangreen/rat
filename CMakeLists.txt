@@ -1,28 +1,19 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+project(CatInfer LANGUAGES CXX)
+
+# ANTLR
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake) # add ./cmake folder to cmake module path
-project(CatInfer)
-
-# generate parser files out of g4 files, output: ${ANTLR_CatParser_CXX_OUTPUTS}
 set(ANTLR_EXECUTABLE /usr/local/lib/antlr-4.10.1-complete.jar)
-find_package(ANTLR REQUIRED)
-antlr_target(CatParser Cat.g4 VISITOR)
-include_directories(${ANTLR_CatParser_OUTPUT_DIR})
-
-# build and add runtime for antlr4, variable antlr4_static
+find_package(ANTLR REQUIRED) # require antlr commands
+antlr_target(CatParser Cat.g4 VISITOR) # generate parser files out of g4 files -> output: ${ANTLR_CatParser_CXX_OUTPUTS}
 add_definitions(-DANTLR4CPP_STATIC) # required if linking to static library
 set(ANTLR4_WITH_STATIC_CRT OFF) # using /MD flag for antlr4_runtime (for Visual C++ compilers only)
-include(ExternalAntlr4Cpp) # Add external build for antlrcpp runtime
-include_directories(${ANTLR4_INCLUDE_DIRS}) # add antrl4cpp artifacts to project environment
+include(ExternalAntlr4Cpp) # build and add runtime for antlr4 -> variable: antlr4_static
 
-file(GLOB CatInfer_SRC # do not need to add CatInferVisitor.cpp Relation.cpp Constraint.cpp manually anymore
-    "*.h"
-    "*.cpp"
-)
-
-# TODO: include all src folder
-add_executable(${PROJECT_NAME} main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS})
-target_link_libraries(${PROJECT_NAME} antlr4_static)
+# project executable
+file(GLOB CatInfer_SRC "src/*.cpp")
+add_executable(${PROJECT_NAME} src/main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS})
+target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_CatParser_OUTPUT_DIR}) # add generated parser files
+target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR4_INCLUDE_DIRS}) # add antrl4cpp artifacts to project environment
+target_link_libraries(${PROJECT_NAME} antlr4_static) # link with antlr runtime

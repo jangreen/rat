@@ -776,7 +776,6 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
 
 bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
 {
-    bool hasId = false;
     for (auto r1 : node->left)
     {
         if (*r1 == *Relation::get("id"))
@@ -1002,7 +1001,7 @@ bool Solver::solve()
         case ProofRule::empty:
             break;
         default:
-            cout << "error" << endl;
+            log("Error", 1);
             break;
         }
 

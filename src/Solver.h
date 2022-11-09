@@ -21,10 +21,10 @@ public:
     static int iterations;
 
     void load(string model1, string model2);
-    bool solve(); // models alread< loaded, main logic
-    bool solve(initializer_list<shared_ptr<ProofNode>> goals);
-    bool solve(Inequality goal);
-    bool solve(string model1, string model2);
+    bool solve();                                              // models alread< loaded, main logic
+    bool solve(initializer_list<shared_ptr<ProofNode>> goals); // subsolver
+    bool solve(Inequality goal);                               // wrapper
+    bool solve(string model1, string model2);                  // wrapper
     void reset();
 
     bool appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, shared_ptr<ProofNode> rightNode);

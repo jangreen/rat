@@ -14,3 +14,9 @@ $ cd /usr/local/lib
 $ curl -O <https://www.antlr.org/download/antlr-4.10.1-complete.jar>
 
 To see dot live preview: open dot preview on right side tohgether with proof.dot file
+
+Commands
+cmake -S . -B build         # generate Makefile
+cmake --build build         # build using Makefile
+cmake --install build       # install
+./build/CatInfer            # run program
