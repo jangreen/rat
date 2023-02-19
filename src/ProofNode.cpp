@@ -57,7 +57,7 @@ string ProofNode::toDotFormat(shared_ptr<ProofNode> currentGoal)
 
     bool isCurrentGoal = (&*currentGoal == this);
     // non record based layout:
-    string table = "<<table border='0' cellborder='1' cellspacing='0'><tr><td>" + regex_replace(leftSide, regex("\\&"), "&amp;") + "</td><td>" + regex_replace(rightSide, regex("\\&"), "&amp;") + "</td></tr><tr><td colspan='2'>" + appliedRule.toString() + "</td></tr></table>>";
+    string table = "<<table border='0' cellborder='1' cellspacing='0'><tr><td>" + regex_replace(leftSide, regex("\\&"), "&amp;") + "</td><td>" + regex_replace(rightSide, regex("\\&"), "&amp;") + "</td></tr><tr><td colspan='2'>" + string(appliedRule.toString()) + "</td></tr></table>>";
     string nodeAttributes = "[label=" + table + ", color=" + nodeStatusColor(status) + ", fontcolor=" + (isCurrentGoal ? "blue" : "black") + "]";
     string nodeDesc = "\"" + getId(*this) + "\" " + nodeAttributes;
     output += nodeDesc;
@@ -75,7 +75,7 @@ string ProofNode::toDotFormat(shared_ptr<ProofNode> currentGoal)
 
     if (parent != nullptr)
     {
-        output += "\"" + getId(*this) + "\" -> \"" + getId(*parent) + "\"[color=grey];\n";
+        // TODO: for debugging: output += "\"" + getId(*this) + "\" -> \"" + getId(*parent) + "\"[color=grey];\n";
     }
     return output;
 }

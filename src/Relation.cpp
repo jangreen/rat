@@ -4,8 +4,8 @@
 
 using namespace std;
 
-Relation::Relation(const string &alias) : alias(alias), op(Operator::none), left(nullptr), right(nullptr) {}
-Relation::Relation(const Operator &op, shared_ptr<Relation> left, shared_ptr<Relation> right) : alias("-"), op(op), left(left), right(right) {}
+Relation::Relation(const string &identifier) : op(Operator::none), identifier(identifier), left(nullptr), right(nullptr) {}
+Relation::Relation(const Operator &op, shared_ptr<Relation> left, shared_ptr<Relation> right) : op(op), identifier(""), left(left), right(right) {}
 Relation::~Relation() {}
 
 shared_ptr<Relation> Relation::ID = make_shared<Relation>("id");
@@ -47,14 +47,10 @@ string Relation::toString()
     case Operator::transitive:
         return left->toString() + "^+";
     case Operator::none:
-        return alias;
-    default:
-        return "-";
+        return identifier;
     }
 }
 
-// TODO: remove?
-// compares two relation syntactically
 bool Relation::operator==(const Relation &other) const
 {
     if (op != other.op)
@@ -63,10 +59,10 @@ bool Relation::operator==(const Relation &other) const
     }
     else if (op == Operator::none)
     {
-        return alias == other.alias;
+        return this == &other;
     }
     else
     {
-        return left == other.left && right == other.right;
+        return *left == *other.left && ((right == nullptr && other.right == nullptr) || *right == *other.right);
     }
 }

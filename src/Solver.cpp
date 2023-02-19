@@ -52,7 +52,7 @@ vector<shared_ptr<Relation>> getSpan(shared_ptr<Relation> relation, Operator op)
     return span;
 }
 
-Solver::Solver() : stepwise(false) {}
+Solver::Solver() {}
 Solver::~Solver() {}
 
 map<int, set<shared_ptr<ProofNode>>> Solver::unprovable;
@@ -60,6 +60,7 @@ set<shared_ptr<ProofNode>> Solver::proved;
 shared_ptr<ProofNode> Solver::root;
 shared_ptr<Solver> Solver::rootSolver;
 int Solver::iterations = 0;
+int Solver::steps = 0;
 
 void Solver::log(string message, int requiredLevel = 2)
 {
@@ -78,8 +79,9 @@ bool Solver::appendProofNodes(ProofRule rule, shared_ptr<ProofNode> leftNode, sh
         {
             continue;
         }
-        if (node->relationString().length() > 200 || node->currentConsDepth < 0)
-        { // dismiss too complex nodes & bound consRule depth
+        if (node->relationString().length() > 400)
+        { // dismiss too complex nodes
+            log("Complex node");
             return false;
         }
         // check if cyclic
@@ -109,13 +111,14 @@ shared_ptr<ProofNode> Solver::newChildProofNode(shared_ptr<ProofNode> node)
     newNode->parent = node;
     newNode->appliedRule = ProofRule::none;
     newNode->status = ProofNodeStatus::none;
+    newNode->marked = false;
     // left and right relation pointer remain untouched -> update in caller
     return newNode;
 }
 
 bool Solver::axiomEmpty(shared_ptr<ProofNode> node)
 {
-    if (node->left.find(Relation::get("0")) != node->left.end())
+    if (node->left.find(Relation::EMPTY) != node->left.end())
     {
         node->appliedRule = ProofRule::axiomEmpty;
         node->status = ProofNodeStatus::closed;
@@ -126,7 +129,7 @@ bool Solver::axiomEmpty(shared_ptr<ProofNode> node)
 }
 bool Solver::axiomFull(shared_ptr<ProofNode> node)
 {
-    if (node->left.find(Relation::get("1")) != node->left.end())
+    if (node->right.find(Relation::FULL) != node->right.end())
     {
         node->appliedRule = ProofRule::axiomFull;
         node->status = ProofNodeStatus::closed;
@@ -300,75 +303,109 @@ bool Solver::inverseRule(shared_ptr<ProofNode> node)
     }
     return false;
 }
-bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
+
+bool Solver::distributiveCupRule(shared_ptr<ProofNode> node)
 {
-    // distributive
     for (auto r1 : node->left)
     {
         if (r1->op == Operator::composition)
         {
-            /* TODO:
             vector<shared_ptr<Relation>> span = getSpan(r1, Operator::composition);
-            for (auto r = span.begin(); r != span.end(); r++;)
+            for (auto r = span.begin(); r != span.end(); r++)
             {
-                shared_ptr<Relation> curr = r->get();
-                if (curr->left->op == Operator::cup)
+                if ((*r)->op == Operator::cup)
                 {
-                    shared_ptr<ProofNode> newNode = newChildProofNode(node);
-                    shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
-                    shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
-                    r1Copy1->left = r1->left->left;
-                    r1Copy2->left = r1->left->right;
-                    newNode->left.erase(r1);
-                    newNode->left.insert(r1Copy1);
-                    newNode->left.insert(r1Copy2);
+                    int index = r - span.begin();
+                    shared_ptr<Relation> left = (*r)->left;
+                    shared_ptr<Relation> right = (*r)->right;
 
-                    if (!isCycle(newNode))
+                    shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                    shared_ptr<Relation> newR1;
+                    span[index] = left;
+                    for (auto r = span.begin(); r != span.end(); r++)
                     {
-                        node->leftNode = newNode;
-                        node->rightNode = nullptr;
-                        // TODO: node->appliedRule = ProofRule::seqLeft;
-                        goals.push(newNode);
+                        if (newR1 == nullptr)
+                        {
+                            newR1 = *r;
+                        }
+                        else
+                        {
+                            newR1 = make_shared<Relation>(Operator::composition, newR1, *r);
+                        }
+                    }
+                    newNode1->left.erase(r1);
+                    newNode1->left.insert(newR1);
+
+                    shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
+                    newR1 = nullptr;
+                    span[index] = right;
+                    for (auto r = span.begin(); r != span.end(); r++)
+                    {
+                        if (newR1 == nullptr)
+                        {
+                            newR1 = *r;
+                        }
+                        else
+                        {
+                            newR1 = make_shared<Relation>(Operator::composition, newR1, *r);
+                        }
+                    }
+                    newNode2->left.erase(r1);
+                    newNode2->left.insert(newR1);
+
+                    if (appendProofNodes(ProofRule::distributiveCup, newNode1, newNode2))
+                    {
+                        goals.push(newNode1);
+                        goals.push(newNode2);
                         return true;
                     }
-                }
-            }*/
-            if (r1->left->op == Operator::cup)
-            {
-                shared_ptr<ProofNode> newNode = newChildProofNode(node);
-                shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
-                shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
-                r1Copy1->left = r1->left->left;
-                r1Copy2->left = r1->left->right;
-                newNode->left.erase(r1);
-                newNode->left.insert(r1Copy1);
-                newNode->left.insert(r1Copy2);
-
-                if (appendProofNodes(ProofRule::seqLeft, newNode))
-                {
-                    goals.push(newNode);
-                    return true;
-                }
-            }
-            if (r1->right->op == Operator::cup)
-            {
-                shared_ptr<ProofNode> newNode = newChildProofNode(node);
-                shared_ptr<Relation> r1Copy1 = make_shared<Relation>(*r1);
-                shared_ptr<Relation> r1Copy2 = make_shared<Relation>(*r1);
-                r1Copy1->right = r1->right->left;
-                r1Copy2->right = r1->right->right;
-                newNode->left.erase(r1);
-                newNode->left.insert(r1Copy1);
-                newNode->left.insert(r1Copy2);
-
-                if (appendProofNodes(ProofRule::seqLeft, newNode))
-                {
-                    goals.push(newNode);
-                    return true;
                 }
             }
         }
     }
+    return false;
+}
+bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
+{
+    // remove id
+    for (auto r1 : node->left)
+    {
+        if (r1->op == Operator::composition)
+        {
+            vector<shared_ptr<Relation>> span = getSpan(r1, Operator::composition);
+            for (auto r = span.begin(); r != span.end(); r++)
+            {
+                if ((*r) == Relation::ID) // TODO compare pointers here on base relations is valid
+                {
+                    shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                    shared_ptr<Relation> newR1;
+                    for (auto r = span.begin(); r != span.end(); r++)
+                    {
+                        if ((*r) != Relation::ID)
+                        {
+                            if (newR1 == nullptr)
+                            {
+                                newR1 = *r;
+                            }
+                            else
+                            {
+                                newR1 = make_shared<Relation>(Operator::composition, newR1, *r);
+                            }
+                        }
+                    }
+                    newNode1->left.erase(r1);
+                    newNode1->left.insert(newR1);
+
+                    if (appendProofNodes(ProofRule::seqLeft, newNode1))
+                    {
+                        goals.push(newNode1);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
     // splits
     for (auto r1 : node->left)
     {
@@ -395,34 +432,21 @@ bool Solver::seqLeftRule(shared_ptr<ProofNode> node)
             }
         }
     }
-    /*/ TODO: append id
-    for (auto r1 : node->left)
-    {
-        shared_ptr<ProofNode> newNode = newChildProofNode(node);
-        newNode->left.clear();
-        shared_ptr<Relation> nr = make_shared<Relation>(Operator::composition, r1, Relation::get("id"));
-        newNode->left.insert(nr);
 
-        seqSolver.goals.push(newNode);
-        if (seqSolver.solve())
-        {
-            // successful split
-            node->leftNode = newNode;
-            node->rightNode = nullptr;
-            node->appliedRule = ProofRule::seqLeft; // TODO
-            return true;
-        }
-    }*/
     return false;
 }
+
+// TODO count as cons application? first transitive then simplify?
 bool Solver::simplifyTcRule(shared_ptr<ProofNode> node) // current:  aa=0, (a|b)+ -> (a|id)(bab|b)+(a|id)
 {
+    log("[Rule] Simplify TC");
     // TODO: rename unroll left
     // int unrollBound = 2;
     for (auto r : node->left)
     {
         if (r->op == Operator::transitive)
         {
+            // TODO: use span function
             RelationSet underlying;
             queue<shared_ptr<Relation>> current;
             current.push(r->left);
@@ -452,7 +476,8 @@ bool Solver::simplifyTcRule(shared_ptr<ProofNode> node) // current:  aa=0, (a|b)
 
                 if (appendProofNodes(ProofRule::simplifyTc, newNode) && solve({newNode}))
                 {
-                    underlying.erase(r1);
+                    // We know: r1;r1 <= 0
+                    /* TODO: old syymetric: underlying.erase(r1);
                     shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
                     node->rightNode = newNode2;
 
@@ -474,6 +499,31 @@ bool Solver::simplifyTcRule(shared_ptr<ProofNode> node) // current:  aa=0, (a|b)
 
                     newNode2->left.erase(r);
                     newNode2->left.insert(make_shared<Relation>(Operator::cup, comp2, r1));
+                    goals.push(newNode2);*/
+                    underlying.erase(r1);
+                    shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
+                    node->rightNode = newNode2;
+
+                    shared_ptr<Relation> unionR;
+                    for (auto r0 : underlying)
+                    {
+                        if (unionR == nullptr)
+                        {
+                            unionR = r0;
+                        }
+                        else
+                        {
+                            unionR = make_shared<Relation>(Operator::cup, unionR, r0);
+                        }
+                        shared_ptr<Relation> comp = make_shared<Relation>(Operator::composition, r0, r1);
+                        unionR = make_shared<Relation>(Operator::cup, unionR, comp);
+                    }
+                    shared_ptr<Relation> newTc = make_shared<Relation>(Operator::transitive, unionR);
+                    shared_ptr<Relation> aOrId = make_shared<Relation>(Operator::cup, r1, Relation::ID);
+                    shared_ptr<Relation> comp = make_shared<Relation>(Operator::composition, aOrId, newTc);
+
+                    newNode2->left.erase(r);
+                    newNode2->left.insert(make_shared<Relation>(Operator::cup, comp, r1));
                     goals.push(newNode2);
                     return true;
                 }
@@ -553,19 +603,23 @@ bool Solver::transitiveClosureRule(shared_ptr<ProofNode> node)
 
 bool Solver::unrollRule(shared_ptr<ProofNode> node)
 {
-    int unrollBound = 2;
     for (auto r : node->right)
     {
         if (r->op == Operator::transitive)
         {
             shared_ptr<ProofNode> newNode = newChildProofNode(node);
-            newNode->right.erase(r);
+            // newNode->right.erase(r); // TODO: better dont erease remember for later unrolls
             shared_ptr<Relation> unrolledR = r->left;
-            for (auto i = 0; i < unrollBound; i++)
+            /* TODO old: for (auto i = 0; i < unrollBound; i++)
             {
                 newNode->right.insert(unrolledR);
                 unrolledR = make_shared<Relation>(Operator::composition, unrolledR, r->left);
-            }
+            }*/
+
+            // TODO: new
+            newNode->right.erase(r);
+            newNode->right.insert(unrolledR);
+            newNode->right.insert(make_shared<Relation>(Operator::composition, r, r));
 
             if (appendProofNodes(ProofRule::unroll, newNode))
             {
@@ -580,6 +634,7 @@ bool Solver::unrollRule(shared_ptr<ProofNode> node)
 double heuristicVal(shared_ptr<ProofNode> node, Inequality inequality)
 {
     bool satisfiedLeft = true;
+    inequality->left.erase(Relation::FULL); // TODO: where handle this? empty side equals full
     for (auto r2 : inequality->left)
     {
         bool found = false;
@@ -595,16 +650,16 @@ double heuristicVal(shared_ptr<ProofNode> node, Inequality inequality)
             satisfiedLeft = false;
         }
     }
-    if (inequality->left.size() == 1 && *inequality->left.begin()->get() == *Relation::get("1"))
+    if (inequality->left.size() == 1 && *inequality->left.begin()->get() == *Relation::FULL)
     {
         // TODO same for the emmpty side
         satisfiedLeft = true; // TODO: where handle this? empty side equals full
     }
     bool satisfiedRight = true;
+    inequality->right.erase(Relation::EMPTY); // TODO: where handle this? empty side equals empty
     for (auto r2 : inequality->right)
     {
         // TODO right side needs to be emptycurrently
-        inequality->right.erase(Relation::get("0")); // TODO: where handle this? empty side equals empty
         bool found = false;
         for (auto r1 : node->right)
         {
@@ -639,8 +694,13 @@ vector<Inequality> consHeuristic(shared_ptr<ProofNode> node, Theory &theory)
 
 bool Solver::consRule(shared_ptr<ProofNode> node)
 {
+    if (node->currentConsDepth <= 0)
+    {
+        return false;
+    }
     vector<Inequality> sorted = consHeuristic(node, theory);
 
+    // theory applicationsto whole relation
     for (auto iequ = sorted.begin(); iequ != sorted.end(); iequ++)
     {
         Inequality inequality = *iequ;
@@ -650,11 +710,11 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
             shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
             if (inequality->right.empty())
             {
-                newNode1->left.insert(Relation::get("0"));
+                newNode1->left.insert(Relation::EMPTY);
             }
             if (inequality->left.empty())
             {
-                newNode1->right.insert(Relation::get("1"));
+                newNode2->right.insert(Relation::FULL);
             }
             for (auto n : inequality->right)
             {
@@ -674,6 +734,61 @@ bool Solver::consRule(shared_ptr<ProofNode> node)
             }
         }
     }
+    // application to subrelations
+    for (auto r : node->left)
+    {
+        if (r->op == Operator::composition)
+        {
+            for (auto iequ = sorted.begin(); iequ != sorted.end(); iequ++)
+            {
+                Inequality inequality = *iequ;
+                // TODO: in the moment only splitting inequ >= int | ext (but this is also possible a<=b|c with 1!<=b|c)
+                inequality->left.erase(Relation::FULL);
+                auto rightInequ = inequality->right.begin();
+                if (inequality->left.empty() && (*rightInequ)->op == Operator::cup)
+                {
+                    shared_ptr<ProofNode> newNode1 = newChildProofNode(node);
+                    shared_ptr<ProofNode> newNode12 = newChildProofNode(node);
+                    shared_ptr<ProofNode> newNode2 = newChildProofNode(node);
+                    shared_ptr<ProofNode> newNode22 = newChildProofNode(node);
+                    shared_ptr<Relation> newR1 = make_shared<Relation>(*r);
+                    shared_ptr<Relation> newR2 = make_shared<Relation>(*r);
+                    shared_ptr<Relation> rleftCapInequLeft = make_shared<Relation>(Operator::cap, r->left, (*rightInequ)->left);
+                    shared_ptr<Relation> rleftCapInequRight = make_shared<Relation>(Operator::cap, r->left, (*rightInequ)->right);
+                    shared_ptr<Relation> rrightCapInequLeft = make_shared<Relation>(Operator::cap, r->right, (*rightInequ)->left);
+                    shared_ptr<Relation> rrightCapInequRight = make_shared<Relation>(Operator::cap, r->right, (*rightInequ)->right);
+                    newR1->left = make_shared<Relation>(Operator::cup, rleftCapInequLeft, rleftCapInequRight);
+                    newR2->right = make_shared<Relation>(Operator::cup, rrightCapInequLeft, rrightCapInequRight);
+                    newNode1->left.erase(r);
+                    newNode2->left.erase(r);
+                    newNode1->left.insert(newR1);
+                    newNode2->left.insert(newR2);
+                    newNode22->right.clear();
+
+                    for (auto r0 = newNode2->left.begin(); r0 != newNode2->left.end(); r0++)
+                    {
+                        newNode22->right.insert(*r0);
+                    }
+                    // newNode12->right = RelationSet(newNode1->left);
+                    // newNode22->right = RelationSet(newNode2->left);
+
+                    newNode1->currentConsDepth--;
+                    newNode2->currentConsDepth--;
+                    newNode12->currentConsDepth--;
+                    newNode22->currentConsDepth--;
+                    if (appendProofNodes(ProofRule::cons, newNode1) && solve({newNode1})) // TODO: newNode12
+                    {
+                        return true;
+                    }
+                    else if (appendProofNodes(ProofRule::cons, newNode2) && solve({newNode2})) // TODO: newNode22
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
     return false;
 }
 
@@ -762,7 +877,7 @@ bool Solver::invcapEmptyRule(shared_ptr<ProofNode> node)
     {
         shared_ptr<ProofNode> newNode = newChildProofNode(node);
         shared_ptr<Relation> rComp = make_shared<Relation>(Operator::composition, r0, r1);
-        newNode->left = {rComp, Relation::get("id")};
+        newNode->left = {rComp, Relation::ID};
         newNode->right.clear();
 
         if (appendProofNodes(ProofRule::empty, newNode))
@@ -778,7 +893,7 @@ bool Solver::idseqEmptyRule(shared_ptr<ProofNode> node)
 {
     for (auto r1 : node->left)
     {
-        if (*r1 == *Relation::get("id"))
+        if (*r1 == *Relation::ID)
         {
             for (auto r2 : node->left)
             {
@@ -872,6 +987,7 @@ bool Solver::solve()
     }
     if (Solver::rootSolver == nullptr)
     {
+        log("Start solving");
         Solver::rootSolver = shared_ptr<Solver>(this);
     }
     while (!goals.empty())
@@ -879,10 +995,33 @@ bool Solver::solve()
         Solver::iterations++;
         shared_ptr<ProofNode> currentGoal = goals.top();
         log("|= " + currentGoal->relationString());
-        if (stepwise)
+        if (steps > -1 || currentGoal->marked)
         {
-            exportProof("proof", currentGoal);
-            cin.ignore();
+            if (steps > 1)
+            {
+                steps--;
+            }
+            else
+            {
+                exportProof("proof", currentGoal);
+                string input;
+                getline(cin, input);
+                int newSteps = stoi(input);
+                if (currentGoal->marked)
+                {
+                    currentGoal->marked = false;
+                    steps = 0;
+                }
+                else if (newSteps > -2)
+                {
+                    steps = newSteps;
+                }
+                else if (steps == -2)
+                {
+                    currentGoal->marked = true;
+                    steps = -1;
+                }
+            }
         }
 
         assert(currentGoal->status != ProofNodeStatus::closed);
@@ -895,7 +1034,8 @@ bool Solver::solve()
 
         bool skipGoal = false;
         // check if currentGoal is relative unprovable
-        for (auto failed : unprovable[currentGoal->currentConsDepth])
+        // TODO performance with hashing
+        /* for (auto failed : unprovable[currentGoal->currentConsDepth])
         {
             if (*failed == *currentGoal)
             {
@@ -905,7 +1045,7 @@ bool Solver::solve()
                 goals.pop();
                 skipGoal = true;
             }
-        }
+        } //*/
         // check if proven
         for (auto good : Solver::proved)
         {
@@ -946,12 +1086,10 @@ bool Solver::solve()
                 continue;
             }
 
-            // must do rules, do not try other rule // TODO
-            if (currentGoal->appliedRule == ProofRule(ProofRule::andLeft) ||
-                currentGoal->appliedRule == ProofRule(ProofRule::andRight) ||
-                currentGoal->appliedRule == ProofRule(ProofRule::orLeft) ||
-                currentGoal->appliedRule == ProofRule(ProofRule::orRight))
+            // must do rules, do not try other rule // TODO must-do == gdw rules
+            if (currentGoal->appliedRule.iffRule())
             {
+                unprovable[currentGoal->currentConsDepth].insert(currentGoal); // TODO: antilearn Function
                 dismissCurrentGoal();
                 continue;
             }
@@ -979,6 +1117,8 @@ bool Solver::solve()
         case ProofRule::andRight:
             done = !done ? inverseRule(currentGoal) : done;
         case ProofRule::inverse:
+            done = !done ? distributiveCupRule(currentGoal) : done;
+        case ProofRule::distributiveCup:
             done = !done ? seqLeftRule(currentGoal) : done;
         case ProofRule::seqLeft:
             done = !done ? transitiveClosureRule(currentGoal) : done;
@@ -1008,7 +1148,7 @@ bool Solver::solve()
         if (!done)
         {
             log("No rule is applicable anymore.");
-            unprovable[currentGoal->currentConsDepth].insert(currentGoal);
+            unprovable[currentGoal->currentConsDepth].insert(currentGoal); // TODO: antilearn Function
             dismissCurrentGoal();
         }
     }
@@ -1022,6 +1162,10 @@ bool Solver::solve()
         root->leftNode = nullptr;
         root->rightNode = nullptr;
         root->currentConsDepth++;
+        if (steps == -3)
+        {
+            steps = 0;
+        }
         log("# Increase consRule depth bound to " + to_string(root->currentConsDepth), 1);
         solve();
     }
@@ -1037,6 +1181,8 @@ void Solver::reset()
     {
         goals.pop();
     }
+    steps = 0;
+    Solver::root = nullptr;
 }
 bool Solver::solve(string model1, string model2)
 {
@@ -1049,7 +1195,8 @@ bool Solver::solve(string model1, string model2)
 bool Solver::solve(Inequality goal)
 {
     reset();
-    bool solved = solve({goal});
+    goals.push(goal);
+    bool solved = solve();
     cout << goal->relationString() << ": " << solved << endl;
     return solved;
 }
@@ -1074,7 +1221,6 @@ bool Solver::solve(initializer_list<shared_ptr<ProofNode>> goals)
     {
         Solver subSolver;
         subSolver.theory = theory;
-        subSolver.stepwise = stepwise;
         subSolver.logLevel = logLevel;
         subSolver.goals.push(goal);
         if (!subSolver.solve())
@@ -1117,14 +1263,71 @@ string Solver::toDotFormat(shared_ptr<ProofNode> node, shared_ptr<ProofNode> cur
         }
     }
 
+    string unprovableGoals;
+    for (auto goalSet = unprovable.begin(); goalSet != unprovable.end(); goalSet++)
+    {
+        int consDepth = (*goalSet).first;
+        for (auto goal = (*goalSet).second.begin(); goal != (*goalSet).second.end(); goal++)
+        {
+            unprovableGoals.append("\"" + to_string(consDepth) + ": " + (*goal)->relationString() + "\";\n");
+        }
+    }
+
     // hack: concentrate merges double edges when reusing proof nodes, but also merges parent edge
-    return "digraph { \nconcentrate=true\nnode [shape=plain];\n\n" + node->toDotFormat(currentGoal) + rootStackString + stackString + "\n}";
+    return "digraph { \nconcentrate=true\nnode [shape=plain];\n\n\"consDepth: " + to_string(node->currentConsDepth) + "\";\n" + node->toDotFormat(currentGoal) + rootStackString + stackString + /*TODO debugging unprovableGoals +*/ "\n}";
 }
 void Solver::exportProof(string filename, shared_ptr<ProofNode> currentGoal)
 {
     // export proof
+    log("Export proof.");
     ofstream dotFile;
     dotFile.open("build/" + filename + ".dot");
     dotFile << toDotFormat(root, currentGoal);
     dotFile.close();
+}
+
+/** CYCLIC Proof System */
+
+bool Solver::cyclicStarLeft(shared_ptr<ProofNode> node)
+{
+    for (auto r : node->left)
+    {
+        if (r->op == Operator::transitive)
+        {
+            shared_ptr<ProofNode> singleStep = newChildProofNode(node);
+            shared_ptr<ProofNode> unroll = newChildProofNode(node);
+
+            singleStep->left.erase(r);
+            singleStep->left.insert(r->left);
+            unroll->left.erase(r);
+            unroll->left.insert(make_shared<Relation>(Operator::composition, r->left, r));
+
+            if (appendProofNodes(ProofRule::transitiveClosure, singleStep, unroll))
+            {
+                return true;
+            }
+        }
+    }
+}
+
+bool Solver::cyclicStarRight(shared_ptr<ProofNode> node)
+{
+    for (auto r : node->right)
+    {
+        if (r->op == Operator::transitive)
+        {
+            shared_ptr<ProofNode> singleStep = newChildProofNode(node);
+            shared_ptr<ProofNode> unroll = newChildProofNode(node);
+
+            singleStep->left.erase(r);
+            singleStep->left.insert(r->left);
+            unroll->left.erase(r);
+            unroll->left.insert(make_shared<Relation>(Operator::composition, r->left, r));
+
+            if (appendProofNodes(ProofRule::transitiveClosure, singleStep, unroll))
+            {
+                return true;
+            }
+        }
+    }
 }

@@ -1,44 +1,34 @@
 #include <memory>
 #include <iostream>
+#include <vector>
 #include "Solver.h"
 #include "ProofNode.h"
 
 using namespace std;
 
-void test(Solver &solver, string &name)
-{
-    if (!solver.solve("test/" + name + "1.cat", "test/" + name + "2.cat"))
-    {
-        cout << name << " failed." << endl;
-    }
-}
-void tests()
-{
-    cout << "Tests..." << endl;
-    for (string s : {"a", "b"})
-    {
-        Solver solver;
-        test(solver, s);
-    }
-    cout << "Done." << endl;
-}
-
 void loadTheory(Solver &solver)
 {
     // TODO: make shared <Ineq>
     Inequality wrwr0 = make_shared<ProofNode>("W*R;W*R", "0");
-    // Inequality wrww0 = make_shared<ProofNode>("W*R;W*W", "0");
+    Inequality wrww0 = make_shared<ProofNode>("W*R;W*W", "0");
     // Inequality wwrr0 = make_shared<ProofNode>("W*W;R*R", "0");
     // Inequality wwrw0 = make_shared<ProofNode>("W*W;R*W", "0");
     // Inequality rwrr0 = make_shared<ProofNode>("R*W;R*R", "0");
+    Inequality rmwr_rr = make_shared<ProofNode>("R*M;W*R", "R*R");
+    Inequality rr_rm = make_shared<ProofNode>("R*R", "R*M");
+    Inequality rmrm = make_shared<ProofNode>("R*M;R*M", "R*M");
+
     // ... TODO
     Inequality popo = make_shared<ProofNode>("po;po", "po");
     Inequality poid0 = make_shared<ProofNode>("po & id", "0");
     Inequality poloc1 = make_shared<ProofNode>("po-loc", "po & loc");
     Inequality poloc2 = make_shared<ProofNode>("po & loc", "po-loc");
     Inequality rf = make_shared<ProofNode>("rf", "W*R & loc");
+    Inequality rfrf1 = make_shared<ProofNode>("rf;rf^-1", "id");
     Inequality rfe = make_shared<ProofNode>("rfe", "rf & ext");
     Inequality erf = make_shared<ProofNode>("rf & ext", "rfe");
+    Inequality co = make_shared<ProofNode>("co", "W*W & loc");
+    Inequality coco = make_shared<ProofNode>("co;co", "co");
     Inequality coe = make_shared<ProofNode>("coe", "co & ext");
     Inequality locloc = make_shared<ProofNode>("loc;loc", "loc");
     Inequality idloc = make_shared<ProofNode>("id & M*M", "loc");
@@ -53,14 +43,17 @@ void loadTheory(Solver &solver)
     Inequality ctrl = make_shared<ProofNode>("ctrl", "po & R*M");
     Inequality addr = make_shared<ProofNode>("addr", "po & R*M");
     Inequality scRmw = make_shared<ProofNode>("rmw", "0");
-    solver.theory = {wrwr0, popo, poid0, poloc1, poloc2, rf, rfe, erf, coe, locloc, idloc, locinv, invloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
+    solver.theory = {wrwr0, wrww0, rmwr_rr, rr_rm, rmrm, popo, poid0, poloc1, poloc2, rf, rfrf1, rfe, erf, co, coco, coe, locloc, idloc, locinv, invloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
 }
 
 int main(int argc, const char *argv[])
 {
+    vector<string> allArgs(argv, argv + argc);
+
     // setup solvers
     Solver solver;
     loadTheory(solver);
+    solver.logLevel = 1;
     Inequality uniproc = make_shared<ProofNode>("(po-loc | co | fr | rf)^+ & id", "0");
     Solver uniprocSolver;
     loadTheory(uniprocSolver);
@@ -71,10 +64,59 @@ int main(int argc, const char *argv[])
     // solver.exportProof("SC<=OOTA");
     // solver.solve("cat/sc.cat", "cat/tso.cat");
     // solver.exportProof("SC<=TSO");
-    // uniprocSolver.stepwise = true;
-    uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po-loc"));
-    uniprocSolver.exportProof("rfi<=po-loc+Uniproc");
-    cout << Solver::iterations << " iter" << endl;
+    // uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po-loc"));
+    // uniprocSolver.exportProof("rfi<=po-loc+Uniproc");
+    // solver.stepwise = true;
+    // solver.solve(make_shared<ProofNode>("rf;rf", "0"));
+    // solver.exportProof("rfrf<=0");
+    // solver.solve(make_shared<ProofNode>("a;(b|c)", "(a;b) | (a;c)"));
+    // solver.exportProof("proof");
+
+    // solver.solve(make_shared<ProofNode>("a;b", "(a;(b & int)) | (a;(b & ext))"));
+    // solver.exportProof("proof");
+    // uniprocSolver.solve(make_shared<ProofNode>("data;rf", "R*M | W*W"));
+    // uniprocSolver.exportProof("proof");
+
+    /* // guided (easy)
+    uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po"));
+    // TODO: uniprocSolver.learnGoal(make_shared<ProofNode>("rf & int", "po")); // rf & int != rf, int
+    // old guided: Inequality g = make_shared<ProofNode>("(data;rf)^+ & id", "((po & (R*M | W*W)) | rfe)^+");
+    uniprocSolver.solve(make_shared<ProofNode>("(data;rf)^+ & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    uniprocSolver.exportProof("proof");
+    // */
+
+    /* apply simplify rule
+    Inequality g = make_shared<ProofNode>("(data | addr | ctrl | rf)^+", "0");
+    uniprocSolver.proved.insert(make_shared<ProofNode>("rf;rf", "0"));
+    Solver::root = g;
+    uniprocSolver.goals.push(g);
+    uniprocSolver.simplifyTcRule(g);
+    cout << (*(g->rightNode->left.begin()))->toString() << endl;
+    uniprocSolver.exportProof("proof"); //*/
+
+    /*// after simplify
+    uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po")); // guided
+    // uniprocSolver.solve(make_shared<ProofNode>("(data | data;rf)^+ & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    // old symmetric: uniprocSolver.solve(make_shared<ProofNode>("(data | data;rf;data)^+ & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    // old sym: uniprocSolver.solve(make_shared<ProofNode>("((rf | id);(data | data;rf;data)^+;(rf | id)) & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    uniprocSolver.exportProof("proof"); //*/
+
+    /* // after real simplify
+    uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po")); // guided
+    uniprocSolver.solve(make_shared<ProofNode>("(data | id);(data | data;rf)^+ & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    uniprocSolver.exportProof("proof"); //*/
+
+    // with simplify
+    /*uniprocSolver.solve(make_shared<ProofNode>("rf & int", "po")); // guided
+    uniprocSolver.solve(make_shared<ProofNode>("(data | rf)^+ & id", "((po & (R*M | W*W)) | rfe)^+ & id"));
+    uniprocSolver.exportProof("proof"); //*/
+
     // solver.solve("cat/tso-modified.cat", "cat/oota.cat");
     // solver.exportProof("TSO<=OOTA");
+
+    // KATER goals // TODO
+    uniprocSolver.solve(make_shared<ProofNode>("(rf | co | fr)^+", "rf | ((co | fr);(rf | id))"));
+    uniprocSolver.exportProof("proof");
+
+    cout << Solver::iterations << " iterations" << endl;
 }

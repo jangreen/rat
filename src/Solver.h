@@ -16,8 +16,8 @@ public:
     Theory theory;                                          // inequalities that are true
     static map<int, set<shared_ptr<ProofNode>>> unprovable; // relative complete: unprovable under given bounds
     static set<shared_ptr<ProofNode>> proved;               // TODO: rename: closedGoals
-    bool stepwise;
-    int logLevel = 0; // 0 nothing 1 only important 2 all
+    static int steps;                                       // debugging (n=#steps, -1 endless, -2 mark, -3 cons bound)
+    int logLevel = 0;                                       // 0 nothing 1 only important 2 all
     static int iterations;
 
     void load(string model1, string model2);
@@ -42,6 +42,7 @@ public:
     bool orLeftRule(shared_ptr<ProofNode> node);
     bool orRightRule(shared_ptr<ProofNode> node);
     bool inverseRule(shared_ptr<ProofNode> node);
+    bool distributiveCupRule(shared_ptr<ProofNode> node);
     bool seqLeftRule(shared_ptr<ProofNode> node);
     bool simplifyTcRule(shared_ptr<ProofNode> node);
     bool transitiveClosureRule(shared_ptr<ProofNode> node);
@@ -50,6 +51,10 @@ public:
     bool weakRightRule(shared_ptr<ProofNode> node);
     bool weakLeftRule(shared_ptr<ProofNode> node);
     bool loopRule(shared_ptr<ProofNode> node);
+
+    // Cyclic
+    bool cyclicStarLeft(shared_ptr<ProofNode> node);
+    bool cyclicStarRight(shared_ptr<ProofNode> node);
 
     bool invcapEmptyRule(shared_ptr<ProofNode> node);
     bool idseqEmptyRule(shared_ptr<ProofNode> node);

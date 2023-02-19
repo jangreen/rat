@@ -26,6 +26,7 @@ public:
     shared_ptr<ProofNode> parent;
     // TODO: rename to allowed remaining cons application
     int currentConsDepth; // ierative deepening starting with zero then increase
+    bool marked;          // debugging mark to solve node
 
     RelationSet left;
     RelationSet right;

@@ -27,4 +27,5 @@ cmake -S . -B build         # generate Makefile
 cmake --build build         # build using Makefile
 cmake --install build       # install
 ./build/CatInfer            # run program
+gdb ./build/CatInfer        # debug program
 ```
