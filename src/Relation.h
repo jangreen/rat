@@ -6,40 +6,40 @@
 
 using namespace std;
 
-enum class Operator
+enum class Operation
 {
-    none, // base relation
-    cup,
-    cap,
+    none, // base relation, or empty relation (only label)
+    choice,
+    intersection,
     composition,
-    transitive,
-    inverse,
-    complement, // TODO: not supported
-    setminus    // TODO: not supported
+    transitiveClosure,
+    converse
 };
 
 class Relation
 {
 public:
-    Relation(const string &identifier); // base relation constructor, do not use directly -> use get method
-    Relation(const Operator &op = Operator::none, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr);
+    Relation(const optional<string> &identifier); // base relation constructor, do not use directly -> use get method
+    Relation(const Operation &operation, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr, optional<int> label = nullopt);
     ~Relation();
 
-    Operator op;
-    string identifier;          // optional: set iff operator none
-    shared_ptr<Relation> left;  // optional: set iff operator unary/binary
-    shared_ptr<Relation> right; // optional: set iff operator binary
+    Operation operation;
+    optional<string> identifier;       // is set iff operation none
+    shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
+    shared_ptr<Relation> rightOperand; // is set iff operation binary
+    optional<int> label;
 
-    static shared_ptr<Relation> ID;
-    static shared_ptr<Relation> EMPTY;
-    static shared_ptr<Relation> FULL;
+    static shared_ptr<Relation> ID;                               // constant: idendtity relation
+    static shared_ptr<Relation> EMPTY;                            // constant: empty relation
+    static shared_ptr<Relation> FULL;                             // constant: full relation
     static unordered_map<string, shared_ptr<Relation>> relations; // id, 0, 1, base relations and defined relations (named relations)
+    static int maxLabel;                                          // to create globally unique labels
     static shared_ptr<Relation> get(const string &identifier);
     static shared_ptr<Relation> parse(const string &expression);
 
-    bool operator==(const Relation &other) const; // compares two relation syntactically // TODO: needed or remove?
+    bool operator==(const Relation &other) const; // compares two relation syntactically
 
-    string toString(); // for printing
+    string toString() const; // for printing
 };
 
 typedef unordered_set<shared_ptr<Relation>> RelationSet; // TODO: refactor use hashing? not needed for axiom but maybe for proofNodes

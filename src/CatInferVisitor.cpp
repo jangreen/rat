@@ -116,42 +116,42 @@ antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 }
 antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {
-    shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
+    /* TODO: shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    return make_shared<Relation>(Operator::setminus, r1, r2);
+    return make_shared<Relation>(Operation::setminus, r1, r2); */
 }
 antlrcpp::Any CatInferVisitor::visitExprUnion(CatParser::ExprUnionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    return make_shared<Relation>(Operator::cup, r1, r2);
+    return make_shared<Relation>(Operation::choice, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprComposition(CatParser::ExprCompositionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    return make_shared<Relation>(Operator::composition, r1, r2);
+    return make_shared<Relation>(Operation::composition, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprIntersection(CatParser::ExprIntersectionContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e1->accept(this));
     shared_ptr<Relation> r2 = any_cast<shared_ptr<Relation>>(ctx->e2->accept(this));
-    return make_shared<Relation>(Operator::cap, r1, r2);
+    return make_shared<Relation>(Operation::intersection, r1, r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprTransitive(CatParser::ExprTransitiveContext *ctx)
 {
-    shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    return make_shared<Relation>(Operator::transitive, r1);
+    /* TODO: shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
+    return make_shared<Relation>(Operation::transitiveClosure, r1);*/
 }
 antlrcpp::Any CatInferVisitor::visitExprComplement(CatParser::ExprComplementContext *ctx)
 {
-    shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    return make_shared<Relation>(Operator::complement, r1);
+    /* shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
+    return make_shared<Relation>(Operation::complement, r1); */
 }
 antlrcpp::Any CatInferVisitor::visitExprInverse(CatParser::ExprInverseContext *ctx)
 {
     shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
-    return make_shared<Relation>(Operator::inverse, r1);
+    return make_shared<Relation>(Operation::converse, r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprDomainIdentity(CatParser::ExprDomainIdentityContext *ctx)
 {
@@ -162,10 +162,10 @@ antlrcpp::Any CatInferVisitor::visitExprIdentity(CatParser::ExprIdentityContext 
 {
     if (ctx->TOID() == nullptr)
     {
-        // TODO: dont use basic realtion cap id
-        // use text cap id
+        // TODO: dont use basic realtion intersection id
+        // use text intersection id
         string set = ctx->e->getText();
-        // TODO: fix return make_shared<Relation>(Operator::cap, Relation::get(set + "*" + set), Relation::ID);
+        // TODO: fix return make_shared<Relation>(Operation::intersection, Relation::get(set + "*" + set), Relation::ID);
         return nullptr;
     }
     else
@@ -181,8 +181,8 @@ antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdenti
 }
 antlrcpp::Any CatInferVisitor::visitExprTransRef(CatParser::ExprTransRefContext *ctx)
 {
-    cout << "TODO: visitExprTransRef: " << ctx->getText() << endl;
-    return nullptr;
+    shared_ptr<Relation> r1 = any_cast<shared_ptr<Relation>>(ctx->e->accept(this));
+    return make_shared<Relation>(Operation::transitiveClosure, r1);
 }
 antlrcpp::Any CatInferVisitor::visitExprFencerel(CatParser::ExprFencerelContext *ctx)
 {

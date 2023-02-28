@@ -1,12 +1,15 @@
 #include <memory>
 #include <iostream>
+#include <fstream>
 #include <vector>
-#include "Solver.h"
-#include "ProofNode.h"
+#include "Relation.h"
+#include "Tableau.h"
+// #include "Solver.h"
+// #include "ProofNode.h"
 
 using namespace std;
 
-void loadTheory(Solver &solver)
+/* void loadTheory(Solver &solver)
 {
     // TODO: make shared <Ineq>
     Inequality wrwr0 = make_shared<ProofNode>("W*R;W*R", "0");
@@ -44,11 +47,25 @@ void loadTheory(Solver &solver)
     Inequality addr = make_shared<ProofNode>("addr", "po & R*M");
     Inequality scRmw = make_shared<ProofNode>("rmw", "0");
     solver.theory = {wrwr0, wrww0, rmwr_rr, rr_rm, rmrm, popo, poid0, poloc1, poloc2, rf, rfrf1, rfe, erf, co, coco, coe, locloc, idloc, locinv, invloc, intext, int1, int2, rmw, mfence, data, ctrl, addr, scRmw}; // TODO scRmw needed?
-}
+}//*/
 
 int main(int argc, const char *argv[])
 {
-    vector<string> allArgs(argv, argv + argc);
+
+    shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
+    shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    r1->label = 0;
+    r2->label = 0;
+    shared_ptr<Tableau::Node> n1 = make_shared<Tableau::Node>(false, r1);
+    shared_ptr<Tableau::Node> n2 = make_shared<Tableau::Node>(true, r2);
+
+    Tableau tableau{n1, n2};
+    tableau.solve();
+
+    ofstream file("test.dot");
+    tableau.toDotFormat(file);
+
+    /*vector<string> allArgs(argv, argv + argc);
 
     // setup solvers
     Solver solver;
@@ -115,8 +132,8 @@ int main(int argc, const char *argv[])
     // solver.exportProof("TSO<=OOTA");
 
     // KATER goals // TODO
-    uniprocSolver.solve(make_shared<ProofNode>("(rf | co | fr)^+", "rf | ((co | fr);(rf | id))"));
+    /*uniprocSolver.solve(make_shared<ProofNode>("(rf | co | fr)^+", "rf | ((co | fr);(rf | id))"));
     uniprocSolver.exportProof("proof");
 
-    cout << Solver::iterations << " iterations" << endl;
+    cout << Solver::iterations << " iterations" << endl; //*/
 }

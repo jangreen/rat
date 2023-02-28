@@ -1,6 +1,5 @@
 #include "Constraint.h"
 #include "Relation.h"
-#include <iostream>
 
 using namespace std;
 
@@ -12,12 +11,12 @@ void Constraint::toEmptyNormalForm()
 {
     if (type == ConstraintType::irreflexive)
     {
-        relation = make_shared<Relation>(Operator::cap, relation, Relation::ID);
+        relation = make_shared<Relation>(Operation::intersection, relation, Relation::ID);
     }
     else if (type == ConstraintType::acyclic)
     {
-        shared_ptr<Relation> tc = make_shared<Relation>(Operator::transitive, relation);
-        relation = make_shared<Relation>(Operator::cap, tc, Relation::ID);
+        shared_ptr<Relation> tc = make_shared<Relation>(Operation::transitiveClosure, relation);
+        relation = make_shared<Relation>(Operation::intersection, tc, Relation::ID);
     }
     type = ConstraintType::empty;
 }

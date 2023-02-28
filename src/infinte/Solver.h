@@ -12,16 +12,11 @@ public:
     Solver();
     ~Solver();
 
-    stack<shared_ptr<ProofNode>> goals;                     // goals on stack that are not closed yet
-    Theory theory;                                          // inequalities that are true
-    static map<int, set<shared_ptr<ProofNode>>> unprovable; // relative complete: unprovable under given bounds
-    static set<shared_ptr<ProofNode>> proved;               // TODO: rename: closedGoals
-    static int steps;                                       // debugging (n=#steps, -1 endless, -2 mark, -3 cons bound)
-    int logLevel = 0;                                       // 0 nothing 1 only important 2 all
-    static int iterations;
+    stack<shared_ptr<ProofNode>> goals; // goals on stack that are not closed yet
+    Theory theory;                      // inequalities that are true
 
     void load(string model1, string model2);
-    bool solve();                                              // models alread< loaded, main logic
+    bool solve();                                              // models already loaded, main logic
     bool solve(initializer_list<shared_ptr<ProofNode>> goals); // subsolver
     bool solve(Inequality goal);                               // wrapper
     bool solve(string model1, string model2);                  // wrapper

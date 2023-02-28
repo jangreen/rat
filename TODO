@@ -1,8 +1,7 @@
-- benchmark
-- hashing
-
-(rf | id);
-(data | data;rf;data | data;rf;ctrl | data;rf;addr | ctrl | ctrl;rf;data | ctrl;rf;ctrl | ctrl;rf;addr | addr | addr;rf;data | addr;rf;ctrl | addr;rf;addr)^+;
-(rf | id)
-
-rf
+- Relation Term Class
+- Labeled Relation Term
+- Infinite Tableau
+- DNF
+- Regular Tableau
+  - Nodes
+  - Edges/renaming

@@ -21,7 +21,7 @@ public:
 
     ConstraintType type;
     shared_ptr<Relation> relation;
-    string name;
+    string name; // for printing
 
     void toEmptyNormalForm();
 };
