@@ -29,25 +29,6 @@ shared_ptr<Relation> Relation::parse(const string &expression)
     return visitor.parseRelation(expression);
 }
 
-/* TODO remove: vector<Relation *> Relation::getLabeledSubRelations()
-{
-    if (label >= 0)
-    {
-        return {this};
-    }
-    else if (operation == Operation::intersection)
-    {
-        vector a = leftOperand->getLabeledSubRelations();
-        vector b = rightOperand->getLabeledSubRelations();
-        a.insert(a.end(), b.begin(), b.end());
-        return a;
-    }
-    else
-    {
-        return leftOperand->getLabeledSubRelations();
-    }
-}*/
-
 bool Relation::operator==(const Relation &other) const
 {
     if (operation != other.operation || label != other.label)

@@ -22,8 +22,8 @@ public:
         shared_ptr<Metastatement> metastatement;
         shared_ptr<Node> leftNode;
         shared_ptr<Node> rightNode;
-        Node *parentNode;
-        bool closed;
+        Node *parentNode = nullptr;
+        bool closed = false;
 
         bool isClosed();
         bool isLeaf() const;

@@ -60,7 +60,7 @@ int main(int argc, const char *argv[])
     shared_ptr<Tableau::Node> n2 = make_shared<Tableau::Node>(true, r2);
 
     Tableau tableau{n1, n2};
-    tableau.solve();
+    tableau.solve(60);
 
     ofstream file("test.dot");
     tableau.toDotFormat(file);

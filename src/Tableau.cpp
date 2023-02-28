@@ -111,7 +111,7 @@ optional<shared_ptr<Relation>> idRule(shared_ptr<Relation> relation)
             // case: composition && emtpy labeled relation -> move label to 'next' relation
             if (relation->operation == Operation::composition && (*left)->operation == Operation::none && !(*left)->identifier && (*left)->label)
             {
-                shared_ptr<Relation> r1 = make_shared<Relation>(*relation->rightOperand); // empty relation
+                shared_ptr<Relation> r1 = make_shared<Relation>(*relation->rightOperand);
                 r1->label = (*left)->label;
                 return r1;
             }
@@ -152,7 +152,7 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Metastatement>>> aRule(shared_pt
             // case: composition && emtpy labeled relation -> move label to 'next' relation
             if (relation->operation == Operation::composition && subrelation1->operation == Operation::none && !subrelation1->identifier && subrelation1->label)
             {
-                shared_ptr<Relation> r1 = make_shared<Relation>(*relation->rightOperand); // empty relation
+                shared_ptr<Relation> r1 = make_shared<Relation>(*relation->rightOperand);
                 r1->label = subrelation1->label;
                 tuple<shared_ptr<Relation>, shared_ptr<Metastatement>> result{
                     r1,
@@ -183,7 +183,7 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Metastatement>>> aRule(shared_pt
     }
     else if (relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO compare relations with overloaded == operator
     {
-        // Rule::a, Rule::negA
+        // Rule::a
         shared_ptr<Relation> r1 = make_shared<Relation>(nullopt); // empty relation
         Relation::maxLabel++;
         r1->label = Relation::maxLabel;
@@ -192,6 +192,58 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Metastatement>>> aRule(shared_pt
                 r1,
                 make_shared<Metastatement>(MetastatementType::labelRelation, *relation->label, Relation::maxLabel, *relation->identifier)};
         return result;
+    }
+    return nullopt;
+}
+
+optional<shared_ptr<Relation>> negARule(shared_ptr<Tableau::Node> node, shared_ptr<Relation> relation)
+{
+    if (!relation->label)
+    {
+        // case: intersection or composition (only cases for labeled terms that can happen)
+        auto left = negARule(node, relation->leftOperand);
+        if (left)
+        {
+            // case: composition && emtpy labeled relation -> move label to 'next' relation
+            if (relation->operation == Operation::composition && (*left)->operation == Operation::none && !(*left)->identifier && (*left)->label)
+            {
+                shared_ptr<Relation> r1 = make_shared<Relation>(*relation->rightOperand);
+                r1->label = (*left)->label;
+                return r1;
+            }
+            return make_shared<Relation>(relation->operation, *left, relation->rightOperand);
+        }
+        // only intersection
+        if (relation->operation != Operation::intersection)
+        {
+            return nullopt;
+        }
+        auto right = negARule(node, relation->rightOperand);
+        if (right)
+        {
+            return make_shared<Relation>(relation->operation, relation->leftOperand, *right);
+        }
+        return nullopt;
+    }
+    else if (relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO compare relations with overloaded == operator
+    {
+        // Rule::negA
+        shared_ptr<Relation> r1 = make_shared<Relation>(nullopt); // empty relation
+        int label = *relation->label;
+        string baseRelation = *relation->identifier;
+        Tableau::Node *currentNode = &(*node);
+        while (currentNode != nullptr)
+        {
+            if (currentNode->metastatement != nullptr && currentNode->metastatement->type == MetastatementType::labelRelation)
+            {
+                if (currentNode->metastatement->label1 == label && currentNode->metastatement->baseRelation == baseRelation)
+                {
+                    r1->label = currentNode->metastatement->label2;
+                    return r1;
+                }
+            }
+            currentNode = currentNode->parentNode;
+        }
     }
     return nullopt;
 }
@@ -288,10 +340,8 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
     {
         return;
     }
-    cout << 111 << endl;
     if (isLeaf())
     {
-        cout << 112 << endl;
         this->leftNode = leftNode;
         leftNode->parentNode = this;
         if (rightNode != nullptr)
@@ -303,7 +353,6 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
         if (leftNode->relation != nullptr)
         {
             Node *currentNode = this;
-            cout << 115 << endl;
             while (currentNode != nullptr)
             {
                 if (currentNode->relation != nullptr && *currentNode->relation == *leftNode->relation && currentNode->negated != leftNode->negated)
@@ -318,7 +367,6 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
             }
         }
 
-        cout << 114 << endl;
         if (rightNode != nullptr && rightNode->relation != nullptr)
         {
             Node *currentNode = this;
@@ -334,7 +382,6 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
                     currentNode = currentNode->parentNode;
                 }
             }
-            cout << 113 << endl;
         }
 
         return;
@@ -376,20 +423,12 @@ void Tableau::Node::toDotFormat(ofstream &output) const
         leftNode->toDotFormat(output);
         output << "N" << this << " -- "
                << "N" << leftNode << ";" << endl;
-        if (leftNode->parentNode != this) // TODO: remove
-        {
-            cout << "Error " << leftNode->parentNode << " . " << this << endl;
-        };
     }
     if (rightNode != nullptr)
     {
         rightNode->toDotFormat(output);
         output << "N" << this << " -- "
                << "N" << rightNode << ";" << endl;
-        if (rightNode->parentNode != this) // TODO: remove
-        {
-            cout << "Error" << endl;
-        };
     }
 }
 
@@ -410,6 +449,30 @@ Tableau::~Tableau() {}
 
 void Tableau::applyRule(shared_ptr<Tableau::Node> node)
 {
+    if (node->metastatement != nullptr)
+    {
+        Tableau::Node *currentNode = &(*node);
+        while (currentNode != nullptr)
+        {
+            if (currentNode->relation != nullptr && currentNode->negated)
+            {
+                // hack: make shared node to only check the new mteastatement and not all again
+                auto rNegA = negARule(make_shared<Node>(node->metastatement), currentNode->relation);
+                if (rNegA)
+                {
+                    cout << "(-.a)" << endl;
+                    shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(currentNode->negated, *rNegA);
+                    node->appendBranches(newNode1);
+                    unreducedNodes.push(newNode1);
+                    // return; // TODO: hack, do not return allow multiple applications of metastatement
+                }
+            }
+            currentNode = currentNode->parentNode;
+        }
+
+        cout << "no rule applicable (metastatement)" << endl;
+        return;
+    }
     // Rule::id, Rule::negId
     auto rId = idRule(node->relation);
     if (rId)
@@ -450,11 +513,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(node->negated, r2);
         if (node->negated)
         {
-            cout << 12 << endl;
             node->appendBranches(newNode1);
-            cout << 13 << endl;
             node->appendBranches(newNode2);
-            cout << 14 << endl;
         }
         else
         {
@@ -462,10 +522,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         }
         unreducedNodes.push(newNode1);
         unreducedNodes.push(newNode2);
-        cout << 1 << endl;
         return;
     }
-    cout << 2 << endl;
     // Rule::transitiveClosure, Rule::negTransitiveClosure
     auto rTransitiveClosure = transitiveClosureRule(node->relation);
     if (rTransitiveClosure)
@@ -488,18 +546,33 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         return;
     }
     // Rule::a, Rule::negA
-    auto rA = aRule(node->relation);
-    if (rA && !node->negated)
+    if (node->negated)
     {
-        cout << "(a)" << endl;
-        const auto &[r1, metastatement] = *rA;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, r1);
-        shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(metastatement);
-        node->appendBranches(newNode1);
-        node->appendBranches(newNode2);
-        unreducedNodes.push(newNode1);
-        // unreducedNodes.push(newNode2); // TODO push metastatements also on stack?
-        return;
+        auto rNegA = negARule(node, node->relation);
+        if (rNegA)
+        {
+            cout << "(-.a)" << endl;
+            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, *rNegA);
+            node->appendBranches(newNode1);
+            unreducedNodes.push(newNode1);
+            return;
+        }
+    }
+    else
+    {
+        auto rA = aRule(node->relation);
+        if (rA)
+        {
+            cout << "(a)" << endl;
+            const auto &[r1, metastatement] = *rA;
+            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, r1);
+            shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(metastatement);
+            node->appendBranches(newNode1);
+            node->appendBranches(newNode2);
+            unreducedNodes.push(newNode1);
+            unreducedNodes.push(newNode2);
+            return;
+        }
     }
 
     cout << "no rule applicable" << endl;
@@ -521,9 +594,17 @@ bool Tableau::solve(int bound)
         bound--;
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
-        cout << "Current node: " << currentNode->relation->toString() << endl;
+        if (currentNode->relation != nullptr)
+        {
+            cout << "Current node: " << currentNode->relation->toString() << endl;
+        }
+        else
+        {
+            cout << "Current node: " << currentNode->metastatement->toString() << endl;
+        }
+
         /* TODO: remove, usful for debugging
-        ofstream file("test.dot");
+        ofstream file("output.dot");
         toDotFormat(file);
         cin.get(); //*/
         applyRule(currentNode);
