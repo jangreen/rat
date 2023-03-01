@@ -5,3 +5,7 @@
 - Regular Tableau
   - Nodes
   - Edges/renaming
+
+Performance CPP
+
+- use vectors

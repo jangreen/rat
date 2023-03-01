@@ -465,8 +465,8 @@ bool Tableau::Node::CompareNodes::operator()(const shared_ptr<Node> left, const 
     return true;
 }
 
-Tableau::Tableau(initializer_list<shared_ptr<Relation>> initalRelations) : Tableau(unordered_set(initalRelations)) {}
-Tableau::Tableau(unordered_set<shared_ptr<Relation>> initalRelations)
+Tableau::Tableau(initializer_list<shared_ptr<Relation>> initalRelations) : Tableau(vector(initalRelations)) {}
+Tableau::Tableau(vector<shared_ptr<Relation>> initalRelations)
 {
     shared_ptr<Node> currentNode = nullptr;
     for (auto relation : initalRelations)
@@ -486,6 +486,76 @@ Tableau::Tableau(unordered_set<shared_ptr<Relation>> initalRelations)
     }
 }
 Tableau::~Tableau() {}
+
+// helper
+bool applyDNFRule(shared_ptr<Tableau::Node> node)
+{
+    // Rule::id, Rule::negId
+    auto rId = idRule(node->relation);
+    if (rId)
+    {
+        cout << "(id)" << endl;
+        (*rId)->negated = node->relation->negated;
+        node->appendBranches(*rId);
+        return true;
+    }
+    // Rule::composition, Rule::negComposition
+    auto rComposition = compositionRule(node->relation);
+    if (rComposition)
+    {
+        cout << "(;)" << endl;
+        (*rComposition)->negated = node->relation->negated;
+        node->appendBranches(*rComposition);
+        return true;
+    }
+    // Rule::intersection, Rule::negIntersection
+    auto rIntersection = intersectionRule(node->relation);
+    if (rIntersection)
+    {
+        cout << "(&)" << endl;
+        (*rIntersection)->negated = node->relation->negated;
+        node->appendBranches(*rIntersection);
+        return true;
+    }
+    // Rule::choice, Rule::negChoice
+    auto rChoice = choiceRule(node->relation);
+    if (rChoice)
+    {
+        cout << "(|)" << endl;
+        const auto &[r1, r2] = *rChoice;
+        r1->negated = node->relation->negated;
+        r2->negated = node->relation->negated;
+        if (node->relation->negated)
+        {
+            node->appendBranches(r1);
+            node->appendBranches(r2);
+        }
+        else
+        {
+            node->appendBranches(r1, r2);
+        }
+        return true;
+    }
+    // Rule::transitiveClosure, Rule::negTransitiveClosure
+    auto rTransitiveClosure = transitiveClosureRule(node->relation);
+    if (rTransitiveClosure)
+    {
+        cout << "(*)" << endl;
+        const auto &[r1, r2] = *rTransitiveClosure;
+        r1->negated = node->relation->negated;
+        r2->negated = node->relation->negated;
+        if (node->relation->negated)
+        {
+            node->appendBranches(r1);
+            node->appendBranches(r2);
+        }
+        else
+        {
+            node->appendBranches(r1, r2);
+        }
+        return true;
+    }
+}
 
 void Tableau::applyRule(shared_ptr<Tableau::Node> node)
 {
@@ -512,69 +582,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         cout << "no rule applicable (metastatement)" << endl;
         return;
     }
-    // Rule::id, Rule::negId
-    auto rId = idRule(node->relation);
-    if (rId)
+    if (applyDNFRule(node))
     {
-        cout << "(id)" << endl;
-        (*rId)->negated = node->relation->negated;
-        node->appendBranches(*rId);
-        return;
-    }
-    // Rule::composition, Rule::negComposition
-    auto rComposition = compositionRule(node->relation);
-    if (rComposition)
-    {
-        cout << "(;)" << endl;
-        (*rComposition)->negated = node->relation->negated;
-        node->appendBranches(*rComposition);
-        return;
-    }
-    // Rule::intersection, Rule::negIntersection
-    auto rIntersection = intersectionRule(node->relation);
-    if (rIntersection)
-    {
-        cout << "(&)" << endl;
-        (*rIntersection)->negated = node->relation->negated;
-        node->appendBranches(*rIntersection);
-        return;
-    }
-    // Rule::choice, Rule::negChoice
-    auto rChoice = choiceRule(node->relation);
-    if (rChoice)
-    {
-        cout << "(|)" << endl;
-        const auto &[r1, r2] = *rChoice;
-        r1->negated = node->relation->negated;
-        r2->negated = node->relation->negated;
-        if (node->relation->negated)
-        {
-            node->appendBranches(r1);
-            node->appendBranches(r2);
-        }
-        else
-        {
-            node->appendBranches(r1, r2);
-        }
-        return;
-    }
-    // Rule::transitiveClosure, Rule::negTransitiveClosure
-    auto rTransitiveClosure = transitiveClosureRule(node->relation);
-    if (rTransitiveClosure)
-    {
-        cout << "(*)" << endl;
-        const auto &[r1, r2] = *rTransitiveClosure;
-        r1->negated = node->relation->negated;
-        r2->negated = node->relation->negated;
-        if (node->relation->negated)
-        {
-            node->appendBranches(r1);
-            node->appendBranches(r2);
-        }
-        else
-        {
-            node->appendBranches(r1, r2);
-        }
         return;
     }
     // Rule::a, Rule::negA
@@ -630,22 +639,54 @@ bool Tableau::solve(int bound)
         {
             cout << "Current node: " << currentNode->metastatement->toString() << endl;
         }
-
-        /* TODO: remove, usful for debugging
-        ofstream file("test.dot");
-        toDotFormat(file);
-        // TODO: remove:
-        // priority_queue<shared_ptr<Node>, vector<shared_ptr<Node>>, Node::CompareNodes> copy = unreducedNodes;
-        // cout << "Q: ";
-        // while (!copy.empty())
-        //{
-        //   cout << " # " << copy.top()->relation->toString();
-        //    copy.pop();
-        //}
-        // cout << '\n';
-        cin.get(); //*/
         applyRule(currentNode);
     }
+}
+
+// helper
+vector<vector<shared_ptr<Relation>>> extractDNF(shared_ptr<Tableau::Node> node)
+{
+    if (node == nullptr || node->isClosed())
+    {
+        return {};
+    }
+    if (node->isLeaf())
+    {
+        if (node->relation != nullptr && node->relation->isNormal())
+        {
+            return {{node->relation}};
+        }
+        return {};
+    }
+    else
+    {
+        vector<vector<shared_ptr<Relation>>> left = extractDNF(node->leftNode);
+        vector<vector<shared_ptr<Relation>>> right = extractDNF(node->rightNode);
+        left.insert(left.end(), right.begin(), right.end());
+        if (node->relation != nullptr && node->relation->isNormal())
+        {
+            for (vector<shared_ptr<Relation>> &clause : left)
+            {
+                clause.push_back(node->relation);
+            }
+        }
+        return left;
+    }
+}
+
+vector<vector<shared_ptr<Relation>>> Tableau::DNF()
+{
+    while (!unreducedNodes.empty())
+    {
+        auto currentNode = unreducedNodes.top();
+        unreducedNodes.pop();
+        applyDNFRule(currentNode);
+    }
+
+    ofstream file("dnf.dot");
+    toDotFormat(file);
+
+    return extractDNF(rootNode);
 }
 
 void Tableau::toDotFormat(ofstream &output) const

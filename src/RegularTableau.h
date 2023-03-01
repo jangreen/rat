@@ -34,7 +34,7 @@ public:
     unordered_set<shared_ptr<Node>> rootNodes;
     stack<shared_ptr<Node>> unreducedNodes;
 
-    static unordered_set<unordered_set<shared_ptr<Relation>>> DNF(unordered_set<shared_ptr<Relation>> clause);
+    static vector<vector<shared_ptr<Relation>>> DNF(vector<shared_ptr<Relation>> clause);
     void expandNode();
     bool solve();
 

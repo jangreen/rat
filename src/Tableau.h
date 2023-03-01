@@ -40,7 +40,7 @@ public:
     };
 
     Tableau(initializer_list<shared_ptr<Relation>> initalRelations);
-    Tableau(unordered_set<shared_ptr<Relation>> initalRelations);
+    Tableau(vector<shared_ptr<Relation>> initalRelations);
     ~Tableau();
 
     shared_ptr<Node> rootNode;
@@ -48,6 +48,8 @@ public:
 
     void applyRule(shared_ptr<Node> node);
     bool solve(int bound = 30);
+
+    vector<vector<shared_ptr<Relation>>> DNF();
 
     void toDotFormat(ofstream &output) const;
 };

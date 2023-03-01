@@ -4,6 +4,7 @@
 #include <vector>
 #include "Relation.h"
 #include "Tableau.h"
+#include "RegularTableau.h"
 // #include "Solver.h"
 // #include "ProofNode.h"
 
@@ -64,6 +65,18 @@ int main(int argc, const char *argv[])
 
     ofstream file("test.dot");
     tableau.toDotFormat(file);
+
+    cout << "DNF" << endl;
+    vector<shared_ptr<Relation>> c = {r1, r2};
+    auto dnf = RegularTableau::DNF(c);
+    for (auto clause : dnf)
+    {
+        cout << " |" << clause.size();
+        for (auto literal : clause)
+        {
+            cout << literal->toString() << " , ";
+        }
+    }
 
     /*vector<string> allArgs(argv, argv + argc);
 

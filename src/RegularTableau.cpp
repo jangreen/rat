@@ -17,7 +17,8 @@ RegularTableau::RegularTableau(initializer_list<shared_ptr<Node>> initalNodes)
 }
 RegularTableau::~RegularTableau() {}
 
-unordered_set<unordered_set<shared_ptr<Relation>>> RegularTableau::DNF(unordered_set<shared_ptr<Relation>> clause)
+vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relation>> clause)
 {
     Tableau tableau{clause};
+    return tableau.DNF();
 }

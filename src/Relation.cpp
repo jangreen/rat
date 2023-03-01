@@ -45,6 +45,21 @@ bool Relation::operator==(const Relation &other) const
     }
 }
 
+bool Relation::isNormal()
+{
+    if (label && (operation != Operation::none || identifier == "id" || identifier == "0"))
+    {
+        return false;
+    }
+    else if (leftOperand != nullptr) // has children
+    {
+        bool leftIsNormal = leftOperand == nullptr || leftOperand->isNormal();
+        bool rightIsNormal = rightOperand == nullptr || rightOperand->isNormal();
+        return leftIsNormal && rightIsNormal;
+    }
+    return true;
+}
+
 string Relation::toString() const
 {
     string output;
