@@ -30,6 +30,8 @@ public:
     bool negated;
     optional<int> label;
 
+    bool isNormal(); // true iff all labels are in front of base relations
+
     static shared_ptr<Relation> ID;                               // constant: idendtity relation
     static shared_ptr<Relation> EMPTY;                            // constant: empty relation
     static shared_ptr<Relation> FULL;                             // constant: full relation

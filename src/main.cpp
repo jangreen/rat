@@ -58,10 +58,8 @@ int main(int argc, const char *argv[])
     r1->negated = false;
     r2->label = 0;
     r2->negated = true;
-    shared_ptr<Tableau::Node> n1 = make_shared<Tableau::Node>(r1);
-    shared_ptr<Tableau::Node> n2 = make_shared<Tableau::Node>(r2);
 
-    Tableau tableau{n1, n2};
+    Tableau tableau{r1, r2};
     tableau.solve(200);
 
     ofstream file("test.dot");

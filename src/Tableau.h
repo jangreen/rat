@@ -1,5 +1,6 @@
 #pragma once
 #include <stack>
+#include <queue>
 #include <memory>
 #include <fstream>
 #include "Relation.h"
@@ -31,7 +32,8 @@ public:
         void toDotFormat(ofstream &output) const;
     };
 
-    Tableau(initializer_list<shared_ptr<Node>> initalNodes);
+    Tableau(initializer_list<shared_ptr<Relation>> initalRelations);
+    Tableau(unordered_set<shared_ptr<Relation>> initalRelations);
     ~Tableau();
 
     shared_ptr<Node> rootNode;

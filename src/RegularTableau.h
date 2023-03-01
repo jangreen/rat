@@ -17,13 +17,13 @@ public:
         Node(initializer_list<shared_ptr<Relation>> relations);
         ~Node();
 
-        unordered_set<shared_ptr<Relation>> relation;
+        unordered_set<shared_ptr<Relation>> relations;
         tuple<shared_ptr<Node>> childNodes;
         Node *parentNode = nullptr;
         bool closed = false;
 
         bool isClosed();
-        void append(initializer_list<shared_ptr<Node>> childNodes));
+        void append(initializer_list<shared_ptr<Node>> childNodes);
 
         void toDotFormat(ofstream &output) const;
     };
@@ -31,12 +31,12 @@ public:
     RegularTableau(initializer_list<shared_ptr<Node>> initalNodes);
     ~RegularTableau();
 
-    tuple<shared_ptr<Node>> rootNodes;
+    unordered_set<shared_ptr<Node>> rootNodes;
     stack<shared_ptr<Node>> unreducedNodes;
 
-    unordered_set<unordered_set<shared_ptr<Relation>>> DNF(unordered_set<shared_ptr<Relation>> clause);
-    void applyRule(shared_ptr<Node> node);
-    bool solve(int bound = 30);
+    static unordered_set<unordered_set<shared_ptr<Relation>>> DNF(unordered_set<shared_ptr<Relation>> clause);
+    void expandNode();
+    bool solve();
 
     void toDotFormat(ofstream &output) const;
 };

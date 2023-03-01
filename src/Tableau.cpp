@@ -432,18 +432,25 @@ void Tableau::Node::toDotFormat(ofstream &output) const
     }
 }
 
-Tableau::Tableau(initializer_list<shared_ptr<Node>> initalNodes)
+Tableau::Tableau(initializer_list<shared_ptr<Relation>> initalRelations) : Tableau(unordered_set(initalRelations)) {}
+Tableau::Tableau(unordered_set<shared_ptr<Relation>> initalRelations)
 {
-    rootNode = *initalNodes.begin();
-    auto currentNode = rootNode;
-    for (auto node : initalNodes)
+    shared_ptr<Node> currentNode = nullptr;
+    for (auto relation : initalRelations)
     {
-        currentNode->leftNode = node;
-        node->parentNode = &(*currentNode);
-        currentNode = node;
-        unreducedNodes.push(node);
+        shared_ptr<Node> newNode = make_shared<Node>(relation);
+        if (rootNode == nullptr)
+        {
+            rootNode = newNode;
+        }
+        if (currentNode != nullptr)
+        {
+            currentNode->leftNode = newNode;
+        }
+        newNode->parentNode = &(*currentNode);
+        currentNode = newNode;
+        unreducedNodes.push(newNode);
     }
-    rootNode->parentNode = nullptr;
 }
 Tableau::~Tableau() {}
 
