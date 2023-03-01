@@ -48,6 +48,10 @@ bool Relation::operator==(const Relation &other) const
 string Relation::toString() const
 {
     string output;
+    if (negated)
+    {
+        output += "-.";
+    }
     if (label)
     {
         output += "[" + to_string(*label) + "]";
