@@ -2,41 +2,39 @@
 #include <stack>
 #include <memory>
 #include <fstream>
+#include <unordered_set>
 #include "Relation.h"
 #include "Metastatement.h"
 
 using namespace std;
 
-class Tableau
+class RegularTableau
 {
 public:
     class Node
     {
     public:
-        Node(shared_ptr<Relation> relation);
-        Node(shared_ptr<Metastatement> metastatement);
+        Node(initializer_list<shared_ptr<Relation>> relations);
         ~Node();
 
-        shared_ptr<Relation> relation;
-        shared_ptr<Metastatement> metastatement;
-        shared_ptr<Node> leftNode;
-        shared_ptr<Node> rightNode;
+        unordered_set<shared_ptr<Relation>> relation;
+        tuple<shared_ptr<Node>> childNodes;
         Node *parentNode = nullptr;
         bool closed = false;
 
         bool isClosed();
-        bool isLeaf() const;
-        void appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> rightNode = nullptr);
+        void append(initializer_list<shared_ptr<Node>> childNodes));
 
         void toDotFormat(ofstream &output) const;
     };
 
-    Tableau(initializer_list<shared_ptr<Node>> initalNodes);
-    ~Tableau();
+    RegularTableau(initializer_list<shared_ptr<Node>> initalNodes);
+    ~RegularTableau();
 
-    shared_ptr<Node> rootNode;
+    tuple<shared_ptr<Node>> rootNodes;
     stack<shared_ptr<Node>> unreducedNodes;
 
+    unordered_set<unordered_set<shared_ptr<Relation>>> DNF(unordered_set<shared_ptr<Relation>> clause);
     void applyRule(shared_ptr<Node> node);
     bool solve(int bound = 30);
 

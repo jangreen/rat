@@ -5,7 +5,7 @@
 using namespace std;
 
 Relation::Relation(const optional<string> &identifier) : operation(Operation::none), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr), label(nullopt) {}
-Relation::Relation(const Operation &operation, shared_ptr<Relation> left, shared_ptr<Relation> right, optional<int> label) : operation(operation), identifier(""), leftOperand(left), rightOperand(right), label(label) {}
+Relation::Relation(const Operation &operation, shared_ptr<Relation> left, shared_ptr<Relation> right, bool negated, optional<int> label) : operation(operation), identifier(""), leftOperand(left), rightOperand(right), negated(negated), label(label) {}
 Relation::~Relation() {}
 
 shared_ptr<Relation> Relation::ID = make_shared<Relation>("id");

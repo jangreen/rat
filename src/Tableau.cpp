@@ -316,7 +316,7 @@ optional<shared_ptr<Relation>> intersectionRule(shared_ptr<Relation> relation)
 }
 /* END RULE IMPLEMENTATIONS */
 
-Tableau::Node::Node(bool negated, shared_ptr<Relation> relation) : negated(negated), relation(relation) {}
+Tableau::Node::Node(shared_ptr<Relation> relation) : relation(relation) {}
 Tableau::Node::Node(shared_ptr<Metastatement> metastatement) : metastatement(metastatement) {}
 Tableau::Node::~Node() {}
 
@@ -355,7 +355,7 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
             Node *currentNode = this;
             while (currentNode != nullptr)
             {
-                if (currentNode->relation != nullptr && *currentNode->relation == *leftNode->relation && currentNode->negated != leftNode->negated)
+                if (currentNode->relation != nullptr && *currentNode->relation == *leftNode->relation && currentNode->relation->negated != leftNode->relation->negated)
                 {
                     leftNode->closed = true;
                     currentNode = nullptr;
@@ -372,7 +372,7 @@ void Tableau::Node::appendBranches(shared_ptr<Node> leftNode, shared_ptr<Node> r
             Node *currentNode = this;
             while (currentNode != nullptr)
             {
-                if (currentNode->relation != nullptr && *currentNode->relation == *rightNode->relation && currentNode->negated != rightNode->negated)
+                if (currentNode->relation != nullptr && *currentNode->relation == *rightNode->relation && currentNode->relation->negated != rightNode->relation->negated)
                 {
                     rightNode->closed = true;
                     currentNode = nullptr;
@@ -402,7 +402,7 @@ void Tableau::Node::toDotFormat(ofstream &output) const
            << "[label=\"";
     if (relation != nullptr)
     {
-        output << (negated ? "-. " : "")
+        output << (relation->negated ? "-. " : "")
                << relation->toString();
     }
     else
@@ -454,14 +454,15 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         Tableau::Node *currentNode = &(*node);
         while (currentNode != nullptr)
         {
-            if (currentNode->relation != nullptr && currentNode->negated)
+            if (currentNode->relation != nullptr && currentNode->relation->negated)
             {
                 // hack: make shared node to only check the new mteastatement and not all again
                 auto rNegA = negARule(make_shared<Node>(node->metastatement), currentNode->relation);
                 if (rNegA)
                 {
                     cout << "(-.a)" << endl;
-                    shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(currentNode->negated, *rNegA);
+                    (*rNegA)->negated = currentNode->relation->negated;
+                    shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(*rNegA);
                     node->appendBranches(newNode1);
                     unreducedNodes.push(newNode1);
                     // return; // TODO: hack, do not return allow multiple applications of metastatement
@@ -478,7 +479,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     if (rId)
     {
         cout << "(id)" << endl;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, *rId);
+        (*rId)->negated = node->relation->negated;
+        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(*rId);
         node->appendBranches(newNode1);
         unreducedNodes.push(newNode1);
         return;
@@ -488,7 +490,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     if (rComposition)
     {
         cout << "(;)" << endl;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, *rComposition);
+        (*rComposition)->negated = node->relation->negated;
+        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(*rComposition);
         node->appendBranches(newNode1);
         unreducedNodes.push(newNode1);
         return;
@@ -498,7 +501,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     if (rIntersection)
     {
         cout << "(&)" << endl;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, *rIntersection);
+        (*rIntersection)->negated = node->relation->negated;
+        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(*rIntersection);
         node->appendBranches(newNode1);
         unreducedNodes.push(newNode1);
         return;
@@ -509,9 +513,11 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     {
         cout << "(|)" << endl;
         const auto &[r1, r2] = *rChoice;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, r1);
-        shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(node->negated, r2);
-        if (node->negated)
+        r1->negated = node->relation->negated;
+        r2->negated = node->relation->negated;
+        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(r1);
+        shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(r2);
+        if (node->relation->negated)
         {
             node->appendBranches(newNode1);
             node->appendBranches(newNode2);
@@ -530,9 +536,11 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     {
         cout << "(*)" << endl;
         const auto &[r1, r2] = *rTransitiveClosure;
-        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, r1);
-        shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(node->negated, r2);
-        if (node->negated)
+        r1->negated = node->relation->negated;
+        r2->negated = node->relation->negated;
+        shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(r1);
+        shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(r2);
+        if (node->relation->negated)
         {
             node->appendBranches(newNode1);
             node->appendBranches(newNode2);
@@ -546,13 +554,14 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         return;
     }
     // Rule::a, Rule::negA
-    if (node->negated)
+    if (node->relation->negated)
     {
         auto rNegA = negARule(node, node->relation);
         if (rNegA)
         {
             cout << "(-.a)" << endl;
-            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, *rNegA);
+            (*rNegA)->negated = node->relation->negated;
+            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(*rNegA);
             node->appendBranches(newNode1);
             unreducedNodes.push(newNode1);
             return;
@@ -565,7 +574,8 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
         {
             cout << "(a)" << endl;
             const auto &[r1, metastatement] = *rA;
-            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(node->negated, r1);
+            r1->negated = node->relation->negated;
+            shared_ptr<Tableau::Node> newNode1 = make_shared<Tableau::Node>(r1);
             shared_ptr<Tableau::Node> newNode2 = make_shared<Tableau::Node>(metastatement);
             node->appendBranches(newNode1);
             node->appendBranches(newNode2);
@@ -578,11 +588,9 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     cout << "no rule applicable" << endl;
     /* TODO
     case Rule::empty:
-    case Rule::bottom:
     case Rule::propagation:
     case Rule::at:
     case Rule::negAt:
-    case Rule::negA:
     case Rule::converseA:
     case Rule::negConverseA:*/
 }

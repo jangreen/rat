@@ -55,12 +55,14 @@ int main(int argc, const char *argv[])
     shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
     shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
     r1->label = 0;
+    r1->negated = false;
     r2->label = 0;
-    shared_ptr<Tableau::Node> n1 = make_shared<Tableau::Node>(false, r1);
-    shared_ptr<Tableau::Node> n2 = make_shared<Tableau::Node>(true, r2);
+    r2->negated = true;
+    shared_ptr<Tableau::Node> n1 = make_shared<Tableau::Node>(r1);
+    shared_ptr<Tableau::Node> n2 = make_shared<Tableau::Node>(r2);
 
     Tableau tableau{n1, n2};
-    tableau.solve(60);
+    tableau.solve(200);
 
     ofstream file("test.dot");
     tableau.toDotFormat(file);

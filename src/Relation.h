@@ -20,13 +20,14 @@ class Relation
 {
 public:
     Relation(const optional<string> &identifier); // base relation constructor, do not use directly -> use get method
-    Relation(const Operation &operation, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr, optional<int> label = nullopt);
+    Relation(const Operation &operation, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr, bool negated = false, optional<int> label = nullopt);
     ~Relation();
 
     Operation operation;
     optional<string> identifier;       // is set iff operation none
     shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
     shared_ptr<Relation> rightOperand; // is set iff operation binary
+    bool negated;
     optional<int> label;
 
     static shared_ptr<Relation> ID;                               // constant: idendtity relation
