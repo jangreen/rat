@@ -29,19 +29,19 @@ shared_ptr<Relation> Relation::parse(const string &expression)
     return visitor.parseRelation(expression);
 }
 
-bool Relation::operator==(const Relation &other) const
+bool Relation::operator==(const Relation &otherRelation) const
 {
-    if (operation != other.operation || label != other.label)
+    if (operation != otherRelation.operation || label != otherRelation.label)
     {
         return false;
     }
     else if (operation == Operation::none)
     {
-        return !identifier || (this == &other);
+        return identifier == otherRelation.identifier;
     }
     else
     {
-        return *leftOperand == *other.leftOperand && ((rightOperand == nullptr && other.rightOperand == nullptr) || *rightOperand == *other.rightOperand);
+        return *leftOperand == *otherRelation.leftOperand && ((rightOperand == nullptr && otherRelation.rightOperand == nullptr) || *rightOperand == *otherRelation.rightOperand);
     }
 }
 
@@ -58,6 +58,47 @@ bool Relation::isNormal()
         return leftIsNormal && rightIsNormal;
     }
     return true;
+}
+
+vector<int> Relation::labels()
+{
+    if (label)
+    {
+        return {*label};
+    }
+    else if (leftOperand == nullptr && rightOperand == nullptr)
+    {
+        return {};
+    }
+
+    auto result = leftOperand->labels();
+    if (rightOperand != nullptr)
+    {
+        auto right = rightOperand->labels();
+        result.insert(result.end(), right.begin(), right.end());
+    }
+    return result;
+}
+
+vector<int> Relation::calculateRenaming()
+{
+    return labels(); // labels already calculates the renaming
+}
+
+void Relation::rename(const vector<int> &renaming)
+{
+    if (label)
+    {
+        label = distance(renaming.begin(), find(renaming.begin(), renaming.end(), *label));
+    }
+    else if (leftOperand != nullptr)
+    {
+        leftOperand->rename(renaming);
+        if (rightOperand != nullptr)
+        {
+            rightOperand->rename(renaming);
+        }
+    }
 }
 
 string Relation::toString() const

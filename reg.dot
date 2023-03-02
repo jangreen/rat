@@ -1,0 +1,8 @@
+digraph {
+node[shape="box"]
+N0x7fb225007058[label="([0]a;(id;a)^*)
+-.(([0]a;a);(a;a)^*)
+-.[0]
+-.([0]a;(a;a)^*)
+"];
+}

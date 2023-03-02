@@ -46,10 +46,13 @@ public:
     shared_ptr<Node> rootNode;
     priority_queue<shared_ptr<Node>, vector<shared_ptr<Node>>, Node::CompareNodes> unreducedNodes;
 
-    void applyRule(shared_ptr<Node> node);
+    bool applyRule(shared_ptr<Node> node);
     bool solve(int bound = 30);
 
     vector<vector<shared_ptr<Relation>>> DNF();
+    void applyModalRule();
+    vector<shared_ptr<Relation>> calcReuqest();
 
     void toDotFormat(ofstream &output) const;
+    void exportProof(string filename);
 };

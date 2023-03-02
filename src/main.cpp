@@ -61,10 +61,8 @@ int main(int argc, const char *argv[])
     r2->negated = true;
 
     Tableau tableau{r1, r2};
-    tableau.solve(200);
-
-    ofstream file("test.dot");
-    tableau.toDotFormat(file);
+    tableau.solve(100);
+    tableau.exportProof("infinite");
 
     cout << "DNF" << endl;
     vector<shared_ptr<Relation>> c = {r1, r2};
@@ -77,6 +75,13 @@ int main(int argc, const char *argv[])
             cout << literal->toString() << " , ";
         }
     }
+
+    shared_ptr<RegularTableau::Node> node = make_shared<RegularTableau::Node>(dnf[0]);
+    RegularTableau regularTableau{node};
+    regularTableau.solve();
+
+    ofstream file2("reg.dot");
+    regularTableau.toDotFormat(file2);
 
     /*vector<string> allArgs(argv, argv + argc);
 

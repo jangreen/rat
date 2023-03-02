@@ -1,26 +1,22 @@
 graph {
 node[shape="plaintext"]
-N0x7fdc50804178[label="[0](id;a)^*"];
-N0x7fdc508041e8[label="-.[0]((a;(a;a)^*) | (a;a)^*)"];
-N0x7fdc50804338[label="-.[0](a;(a;a)^*)"];
-N0x7fdc508043a8[label="-.[0](a;a)^*"];
-N0x7fdc50804568[label="-.([0]a;(a;a)^*)"];
-N0x7fdc50804798[label="-.([0](a;a);-.(a;a)^*)"];
-N0x7fdc50804808[label="-.[0]"];
-N0x7fdc50804a38[label="-.(([0]a;a);-.(a;a)^*)"];
-N0x7fdc50804c68[label="([0](id;a);(id;a)^*)"];
-N0x7fdc50804f08[label="(([0]id;a);(id;a)^*)"];
-N0x7fdc50805058[label="([0]a;(id;a)^*)"];
-N0x7fdc50804f08 -- N0x7fdc50805058;
-N0x7fdc50804c68 -- N0x7fdc50804f08;
-N0x7fdc50804a38 -- N0x7fdc50804c68;
-N0x7fdc50804cd8[label="[0]", fontcolor=green];
-N0x7fdc50804a38 -- N0x7fdc50804cd8;
-N0x7fdc50804808 -- N0x7fdc50804a38;
-N0x7fdc50804798 -- N0x7fdc50804808;
-N0x7fdc50804568 -- N0x7fdc50804798;
-N0x7fdc508043a8 -- N0x7fdc50804568;
-N0x7fdc50804338 -- N0x7fdc508043a8;
-N0x7fdc508041e8 -- N0x7fdc50804338;
-N0x7fdc50804178 -- N0x7fdc508041e8;
+N0x7fb22472a178[label="[10](id;a)^*"];
+N0x7fb22472a1e8[label="-.[10](a;a)^*"];
+N0x7fb22472a258[label="-.([10]a;(a;a)^*)"];
+N0x7fb22472a488[label="-.([10](a;a);(a;a)^*)"];
+N0x7fb22472a4f8[label="-.[10]"];
+N0x7fb22472a728[label="-.(([10]a;a);(a;a)^*)"];
+N0x7fb22472a958[label="([10](id;a);(id;a)^*)"];
+N0x7fb22472abf8[label="(([10]id;a);(id;a)^*)"];
+N0x7fb22472ad48[label="([10]a;(id;a)^*)"];
+N0x7fb22472abf8 -- N0x7fb22472ad48;
+N0x7fb22472a958 -- N0x7fb22472abf8;
+N0x7fb22472a728 -- N0x7fb22472a958;
+N0x7fb22472a9c8[label="[10]", fontcolor=green];
+N0x7fb22472a728 -- N0x7fb22472a9c8;
+N0x7fb22472a4f8 -- N0x7fb22472a728;
+N0x7fb22472a488 -- N0x7fb22472a4f8;
+N0x7fb22472a258 -- N0x7fb22472a488;
+N0x7fb22472a1e8 -- N0x7fb22472a258;
+N0x7fb22472a178 -- N0x7fb22472a1e8;
 }

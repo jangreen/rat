@@ -30,7 +30,10 @@ public:
     bool negated;
     optional<int> label;
 
-    bool isNormal(); // true iff all labels are in front of base relations
+    bool isNormal();                 // true iff all labels are in front of base relations
+    vector<int> labels();            // return all labels of the relation term
+    vector<int> calculateRenaming(); // renaming {2,4,5}: 2->0,4->1,5->2
+    void rename(const vector<int> &renaming);
 
     static shared_ptr<Relation> ID;                               // constant: idendtity relation
     static shared_ptr<Relation> EMPTY;                            // constant: empty relation
@@ -40,7 +43,7 @@ public:
     static shared_ptr<Relation> get(const string &identifier);
     static shared_ptr<Relation> parse(const string &expression);
 
-    bool operator==(const Relation &other) const; // compares two relation syntactically
+    bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
 
     string toString() const; // for printing
 };

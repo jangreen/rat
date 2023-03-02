@@ -89,6 +89,7 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Relation>>> transitiveClosureRul
         r1->label = relation->label;
         shared_ptr<Relation> r12 = make_shared<Relation>(*relation);
         r12->label = nullopt;
+        r12->negated = false;
         shared_ptr<Relation> r2 = make_shared<Relation>(nullopt); // empty relation
         r2->label = relation->label;
         tuple<shared_ptr<Relation>, shared_ptr<Relation>>
@@ -445,11 +446,6 @@ void Tableau::Node::toDotFormat(ofstream &output) const
         output << "N" << this << " -- "
                << "N" << rightNode << ";" << endl;
     }
-    /*if (parentNode != nullptr) // TODO: remove only for debugging
-    {
-        output << "N" << this << " -- "
-               << "N" << parentNode << " [label=p];" << endl;
-    }*/
 }
 
 bool Tableau::Node::CompareNodes::operator()(const shared_ptr<Node> left, const shared_ptr<Node> right) const
@@ -557,34 +553,39 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     }
 }
 
-void Tableau::applyRule(shared_ptr<Tableau::Node> node)
+// helper
+bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
+{
+    Tableau::Node *currentNode = &(*node);
+    while (currentNode != nullptr)
+    {
+        if (currentNode->relation != nullptr && currentNode->relation->negated)
+        {
+            // hack: make shared node to only check the new mteastatement and not all again
+            auto rNegA = negARule(make_shared<Tableau::Node>(tableau, node->metastatement), currentNode->relation);
+            if (rNegA)
+            {
+                cout << "(-.a)" << endl;
+                (*rNegA)->negated = currentNode->relation->negated;
+                node->appendBranches(*rNegA);
+                // return; // TODO: hack, do not return allow multiple applications of metastatement
+            }
+        }
+        currentNode = currentNode->parentNode;
+    }
+}
+
+bool Tableau::applyRule(shared_ptr<Tableau::Node> node)
 {
     if (node->metastatement != nullptr)
     {
-        Tableau::Node *currentNode = &(*node);
-        while (currentNode != nullptr)
-        {
-            if (currentNode->relation != nullptr && currentNode->relation->negated)
-            {
-                // hack: make shared node to only check the new mteastatement and not all again
-                auto rNegA = negARule(make_shared<Node>(this, node->metastatement), currentNode->relation);
-                if (rNegA)
-                {
-                    cout << "(-.a)" << endl;
-                    (*rNegA)->negated = currentNode->relation->negated;
-                    node->appendBranches(*rNegA);
-                    // return; // TODO: hack, do not return allow multiple applications of metastatement
-                }
-            }
-            currentNode = currentNode->parentNode;
-        }
-
-        cout << "no rule applicable (metastatement)" << endl;
-        return;
+        applyRequestRule(this, node);
+        cout << "no rule applicable anymore (metastatement)" << endl;
+        return false; // TODO: this value may be true
     }
     if (applyDNFRule(node))
     {
-        return;
+        return true;
     }
     // Rule::a, Rule::negA
     if (node->relation->negated)
@@ -595,7 +596,7 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
             cout << "(-.a)" << endl;
             (*rNegA)->negated = node->relation->negated;
             node->appendBranches(*rNegA);
-            return;
+            return true;
         }
     }
     else
@@ -610,7 +611,7 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
             cout << 2 << endl;
             node->appendBranches(metastatement);
             cout << 1 << endl;
-            return;
+            return true;
         }
     }
 
@@ -622,6 +623,7 @@ void Tableau::applyRule(shared_ptr<Tableau::Node> node)
     case Rule::negAt:
     case Rule::converseA:
     case Rule::negConverseA:*/
+    return false;
 }
 
 bool Tableau::solve(int bound)
@@ -683,10 +685,86 @@ vector<vector<shared_ptr<Relation>>> Tableau::DNF()
         applyDNFRule(currentNode);
     }
 
-    ofstream file("dnf.dot");
-    toDotFormat(file);
+    exportProof("dnf");
 
     return extractDNF(rootNode);
+}
+
+void Tableau::applyModalRule()
+{
+    // TODO: hack using that all terms are reduced, s.t. only possible next rule is modal
+    while (!unreducedNodes.empty())
+    {
+        auto currentNode = unreducedNodes.top();
+        unreducedNodes.pop();
+        if (applyRule(currentNode))
+        {
+            return;
+        }
+    }
+}
+
+vector<shared_ptr<Relation>> Tableau::calcReuqest()
+{
+    while (!unreducedNodes.empty())
+    {
+        auto currentNode = unreducedNodes.top();
+        unreducedNodes.pop();
+        if (applyRequestRule(this, currentNode))
+        {
+            break; // metastatement found and all requests calculated
+        }
+
+        // exrtact terms for new node
+        shared_ptr<Node> node = rootNode;
+        shared_ptr<Relation> oldPositive = nullptr;
+        shared_ptr<Relation> newPositive = nullptr;
+        vector<int> activeLabels;
+        while (node != nullptr) // exploit that only alpha rules applied
+        {
+            if (node->relation != nullptr && !node->relation->negated)
+            {
+                if (oldPositive == nullptr)
+                {
+                    oldPositive = node->relation;
+                }
+                else
+                {
+                    newPositive = node->relation;
+                    activeLabels = node->relation->labels();
+                    sort(activeLabels.begin(), activeLabels.end());
+                }
+            }
+            node = node->leftNode;
+        }
+        vector<shared_ptr<Relation>> request{newPositive};
+        node = rootNode;
+        while (node != nullptr) // exploit that only alpha rules applied
+        {
+            if (node->relation != nullptr && node->relation->negated)
+            {
+                vector<int> relationLabels = node->relation->labels();
+                bool allLabelsActive = true;
+                cout << "Check: " << node->relation->toString() << endl;
+                for (auto label : relationLabels)
+                {
+                    cout << "checl Label: " << label << endl;
+                    if (find(activeLabels.begin(), activeLabels.end(), label) == activeLabels.end())
+                    {
+                        allLabelsActive = false;
+                        break;
+                    }
+                }
+                if (allLabelsActive)
+                {
+                    cout << "Push" << endl;
+                    request.push_back(node->relation);
+                }
+            }
+            node = node->leftNode;
+        }
+        return request;
+    }
 }
 
 void Tableau::toDotFormat(ofstream &output) const
@@ -695,4 +773,10 @@ void Tableau::toDotFormat(ofstream &output) const
            << "node[shape=\"plaintext\"]" << endl;
     rootNode->toDotFormat(output);
     output << "}" << endl;
+}
+
+void Tableau::exportProof(string filename)
+{
+    ofstream file(filename + ".dot");
+    toDotFormat(file);
 }
