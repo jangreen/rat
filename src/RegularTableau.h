@@ -20,14 +20,15 @@ public:
         ~Node();
 
         vector<shared_ptr<Relation>> relations;
-        vector<shared_ptr<Node>> childNodes;
+        vector<tuple<shared_ptr<Node>, vector<int>>> childNodes;
         Node *parentNode = nullptr;
         bool closed = false;
 
         bool isClosed();
         void append(initializer_list<shared_ptr<Node>> childNodes);
 
-        void toDotFormat(ofstream &output) const;
+        bool printed = false; // prevent cycling in printing
+        void toDotFormat(ofstream &output);
 
         bool operator==(const Node &otherNode) const;
 

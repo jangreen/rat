@@ -37,7 +37,7 @@ RegularTableau::Node::Node(vector<shared_ptr<Relation>> relations) : relations(r
 
 RegularTableau::Node::~Node() {}
 
-void RegularTableau::Node::toDotFormat(ofstream &output) const
+void RegularTableau::Node::toDotFormat(ofstream &output)
 {
     output << "N" << this
            << "[label=\"";
@@ -53,12 +53,22 @@ void RegularTableau::Node::toDotFormat(ofstream &output) const
     }
     output
         << "];" << endl;
-    // children
-    for (auto childNode : childNodes)
+    // edges
+    for (auto &[childNode, edgeLabel] : childNodes)
     {
-        childNode->toDotFormat(output);
         output << "N" << this << " -> "
                << "N" << childNode << ";" << endl;
+    }
+    printed = true;
+
+    // children
+    for (auto &[childNode, edgeLabel] : childNodes)
+    {
+        cout << "child" << endl;
+        if (!childNode->printed)
+        {
+            childNode->toDotFormat(output);
+        }
     }
 }
 
@@ -81,11 +91,11 @@ vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relat
 void RegularTableau::expandNode(shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
-    tableau.exportProof("inital");
+    // TODO: remove: tableau.exportProof("inital");
     tableau.applyModalRule();
-    tableau.exportProof("modal");
+    // tableau.exportProof("modal");
     auto request = tableau.calcReuqest();
-    tableau.exportProof("request");
+    // tableau.exportProof("request");
     auto dnf = DNF(request);
     for (auto clause : dnf)
     {
@@ -112,17 +122,20 @@ void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation
     }
     // create node, edges, push to unreduced nodes
     shared_ptr<Node> newNode = make_shared<Node>(clause);
-    for (auto literal : clause)
+    auto existingNode = nodes.find(newNode);
+    if (existingNode != nodes.end())
     {
-        cout << literal->toString() << " # ";
+        // equivalent node exists
+        tuple<shared_ptr<Node>, vector<int>> edge{existingNode->get(), renaming};
+        parent->childNodes.push_back(edge);
     }
-
-    cout << hash<Node>()(*newNode) << endl;
-    cout << Node::Hash()(newNode) << endl;
-    cout << (nodes.find(newNode) != nodes.end()) << endl;
-    for (auto node : nodes)
+    else
     {
-        cout << hash<Node>()(*node) << endl;
+        // equivalent node does not exist
+        tuple<shared_ptr<Node>, vector<int>> edge{newNode, renaming};
+        parent->childNodes.push_back(edge);
+        nodes.emplace(newNode);
+        unreducedNodes.push(newNode);
     }
 }
 

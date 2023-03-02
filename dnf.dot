@@ -1,22 +1,22 @@
 graph {
 node[shape="plaintext"]
-N0x7fb22472a178[label="[10](id;a)^*"];
-N0x7fb22472a1e8[label="-.[10](a;a)^*"];
-N0x7fb22472a258[label="-.([10]a;(a;a)^*)"];
-N0x7fb22472a488[label="-.([10](a;a);(a;a)^*)"];
-N0x7fb22472a4f8[label="-.[10]"];
-N0x7fb22472a728[label="-.(([10]a;a);(a;a)^*)"];
-N0x7fb22472a958[label="([10](id;a);(id;a)^*)"];
-N0x7fb22472abf8[label="(([10]id;a);(id;a)^*)"];
-N0x7fb22472ad48[label="([10]a;(id;a)^*)"];
-N0x7fb22472abf8 -- N0x7fb22472ad48;
-N0x7fb22472a958 -- N0x7fb22472abf8;
-N0x7fb22472a728 -- N0x7fb22472a958;
-N0x7fb22472a9c8[label="[10]", fontcolor=green];
-N0x7fb22472a728 -- N0x7fb22472a9c8;
-N0x7fb22472a4f8 -- N0x7fb22472a728;
-N0x7fb22472a488 -- N0x7fb22472a4f8;
-N0x7fb22472a258 -- N0x7fb22472a488;
-N0x7fb22472a1e8 -- N0x7fb22472a258;
-N0x7fb22472a178 -- N0x7fb22472a1e8;
+N0x7fb278f1af88[label="[10](id;a)^*"];
+N0x7fb278f1aff8[label="-.[10](a;a)^*"];
+N0x7fb278f20888[label="-.([10]a;(a;a)^*)"];
+N0x7fb278f20298[label="-.([10](a;a);(a;a)^*)"];
+N0x7fb278f20308[label="-.[10]"];
+N0x7fb278f1ff88[label="-.(([10]a;a);(a;a)^*)"];
+N0x7fb278f1ed08[label="([10](id;a);(id;a)^*)"];
+N0x7fb278f1efa8[label="(([10]id;a);(id;a)^*)"];
+N0x7fb278f21cc8[label="([10]a;(id;a)^*)"];
+N0x7fb278f1efa8 -- N0x7fb278f21cc8;
+N0x7fb278f1ed08 -- N0x7fb278f1efa8;
+N0x7fb278f1ff88 -- N0x7fb278f1ed08;
+N0x7fb278f1ed78[label="[10]", fontcolor=green];
+N0x7fb278f1ff88 -- N0x7fb278f1ed78;
+N0x7fb278f20308 -- N0x7fb278f1ff88;
+N0x7fb278f20298 -- N0x7fb278f20308;
+N0x7fb278f20888 -- N0x7fb278f20298;
+N0x7fb278f1aff8 -- N0x7fb278f20888;
+N0x7fb278f1af88 -- N0x7fb278f1aff8;
 }

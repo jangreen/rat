@@ -80,6 +80,7 @@ int main(int argc, const char *argv[])
     RegularTableau regularTableau{node};
     regularTableau.solve();
 
+    cout << "Export Regular Tableau..." << endl;
     ofstream file2("reg.dot");
     regularTableau.toDotFormat(file2);
 

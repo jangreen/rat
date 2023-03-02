@@ -490,7 +490,6 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     auto rId = idRule(node->relation);
     if (rId)
     {
-        cout << "(id)" << endl;
         (*rId)->negated = node->relation->negated;
         node->appendBranches(*rId);
         return true;
@@ -499,7 +498,6 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     auto rComposition = compositionRule(node->relation);
     if (rComposition)
     {
-        cout << "(;)" << endl;
         (*rComposition)->negated = node->relation->negated;
         node->appendBranches(*rComposition);
         return true;
@@ -508,7 +506,6 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     auto rIntersection = intersectionRule(node->relation);
     if (rIntersection)
     {
-        cout << "(&)" << endl;
         (*rIntersection)->negated = node->relation->negated;
         node->appendBranches(*rIntersection);
         return true;
@@ -517,7 +514,6 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     auto rChoice = choiceRule(node->relation);
     if (rChoice)
     {
-        cout << "(|)" << endl;
         const auto &[r1, r2] = *rChoice;
         r1->negated = node->relation->negated;
         r2->negated = node->relation->negated;
@@ -536,7 +532,6 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
     auto rTransitiveClosure = transitiveClosureRule(node->relation);
     if (rTransitiveClosure)
     {
-        cout << "(*)" << endl;
         const auto &[r1, r2] = *rTransitiveClosure;
         r1->negated = node->relation->negated;
         r2->negated = node->relation->negated;
@@ -565,7 +560,6 @@ bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
             auto rNegA = negARule(make_shared<Tableau::Node>(tableau, node->metastatement), currentNode->relation);
             if (rNegA)
             {
-                cout << "(-.a)" << endl;
                 (*rNegA)->negated = currentNode->relation->negated;
                 node->appendBranches(*rNegA);
                 // return; // TODO: hack, do not return allow multiple applications of metastatement
@@ -580,7 +574,7 @@ bool Tableau::applyRule(shared_ptr<Tableau::Node> node)
     if (node->metastatement != nullptr)
     {
         applyRequestRule(this, node);
-        cout << "no rule applicable anymore (metastatement)" << endl;
+        // no rule applicable anymore (metastatement)
         return false; // TODO: this value may be true
     }
     if (applyDNFRule(node))
@@ -593,7 +587,6 @@ bool Tableau::applyRule(shared_ptr<Tableau::Node> node)
         auto rNegA = negARule(node, node->relation);
         if (rNegA)
         {
-            cout << "(-.a)" << endl;
             (*rNegA)->negated = node->relation->negated;
             node->appendBranches(*rNegA);
             return true;
@@ -604,18 +597,15 @@ bool Tableau::applyRule(shared_ptr<Tableau::Node> node)
         auto rA = aRule(node->relation);
         if (rA)
         {
-            cout << "(a)" << endl;
             const auto &[r1, metastatement] = *rA;
             r1->negated = node->relation->negated;
             node->appendBranches(r1);
-            cout << 2 << endl;
             node->appendBranches(metastatement);
-            cout << 1 << endl;
             return true;
         }
     }
 
-    cout << "no rule applicable" << endl;
+    // "no rule applicable"
     /* TODO
     case Rule::empty:
     case Rule::propagation:
@@ -633,14 +623,6 @@ bool Tableau::solve(int bound)
         bound--;
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
-        if (currentNode->relation != nullptr)
-        {
-            cout << "Current node: " << currentNode->relation->toString() << endl;
-        }
-        else
-        {
-            cout << "Current node: " << currentNode->metastatement->toString() << endl;
-        }
         applyRule(currentNode);
     }
 }
@@ -685,7 +667,7 @@ vector<vector<shared_ptr<Relation>>> Tableau::DNF()
         applyDNFRule(currentNode);
     }
 
-    exportProof("dnf");
+    // exportProof("dnf");
 
     return extractDNF(rootNode);
 }
@@ -745,10 +727,8 @@ vector<shared_ptr<Relation>> Tableau::calcReuqest()
             {
                 vector<int> relationLabels = node->relation->labels();
                 bool allLabelsActive = true;
-                cout << "Check: " << node->relation->toString() << endl;
                 for (auto label : relationLabels)
                 {
-                    cout << "checl Label: " << label << endl;
                     if (find(activeLabels.begin(), activeLabels.end(), label) == activeLabels.end())
                     {
                         allLabelsActive = false;
@@ -757,7 +737,6 @@ vector<shared_ptr<Relation>> Tableau::calcReuqest()
                 }
                 if (allLabelsActive)
                 {
-                    cout << "Push" << endl;
                     request.push_back(node->relation);
                 }
             }
