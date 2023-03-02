@@ -1,10 +1,9 @@
-- Relation Term Class
-- Labeled Relation Term
-- Infinite Tableau
-- DNF
-- Regular Tableau
-  - Nodes
-  - Edges/renaming
+- refactoring
+- converse
+  -check insonsitency
+- intersection
+
+-hypotheses
 
 Performance CPP
 
