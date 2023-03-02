@@ -112,7 +112,7 @@ antlrcpp::Any CatInferVisitor::visitExprCartesian(CatParser::ExprCartesianContex
 antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
     string name = ctx->NAME()->getText();
-    return Relation::get(name);
+    return make_shared<Relation>(name); // TODO: remove old: Relation::get(name);
 }
 antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {

@@ -27,8 +27,8 @@ public:
     optional<string> identifier;       // is set iff operation none
     shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
     shared_ptr<Relation> rightOperand; // is set iff operation binary
-    bool negated;
-    optional<int> label;
+    bool negated = false;
+    optional<int> label = nullopt;
 
     bool isNormal();                 // true iff all labels are in front of base relations
     vector<int> labels();            // return all labels of the relation term
