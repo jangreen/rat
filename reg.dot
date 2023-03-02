@@ -1,9 +1,0 @@
-digraph {
-node[shape="box"]
-N0x7ff35cf1b8b8[label="([0]a;(id;a)^*)
--.(([0]a;a);(a;a)^*)
--.[0]
--.([0]a;(a;a)^*)
-"];
-N0x7ff35cf1b8b8 -> N0x7ff35cf1b8b8;
-}
