@@ -486,6 +486,10 @@ Tableau::~Tableau() {}
 // helper
 bool applyDNFRule(shared_ptr<Tableau::Node> node)
 {
+    if (node->relation == nullptr)
+    {
+        cout << "NULL: " << node->metastatement->toString() << endl;
+    }
     // Rule::id, Rule::negId
     auto rId = idRule(node->relation);
     if (rId)
@@ -672,7 +676,7 @@ vector<vector<shared_ptr<Relation>>> Tableau::DNF()
     return extractDNF(rootNode);
 }
 
-void Tableau::applyModalRule()
+bool Tableau::applyModalRule()
 {
     // TODO: hack using that all terms are reduced, s.t. only possible next rule is modal
     while (!unreducedNodes.empty())
@@ -681,9 +685,10 @@ void Tableau::applyModalRule()
         unreducedNodes.pop();
         if (applyRule(currentNode))
         {
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 vector<shared_ptr<Relation>> Tableau::calcReuqest()
@@ -696,54 +701,53 @@ vector<shared_ptr<Relation>> Tableau::calcReuqest()
         {
             break; // metastatement found and all requests calculated
         }
-
-        // exrtact terms for new node
-        shared_ptr<Node> node = rootNode;
-        shared_ptr<Relation> oldPositive = nullptr;
-        shared_ptr<Relation> newPositive = nullptr;
-        vector<int> activeLabels;
-        while (node != nullptr) // exploit that only alpha rules applied
-        {
-            if (node->relation != nullptr && !node->relation->negated)
-            {
-                if (oldPositive == nullptr)
-                {
-                    oldPositive = node->relation;
-                }
-                else
-                {
-                    newPositive = node->relation;
-                    activeLabels = node->relation->labels();
-                    sort(activeLabels.begin(), activeLabels.end());
-                }
-            }
-            node = node->leftNode;
-        }
-        vector<shared_ptr<Relation>> request{newPositive};
-        node = rootNode;
-        while (node != nullptr) // exploit that only alpha rules applied
-        {
-            if (node->relation != nullptr && node->relation->negated)
-            {
-                vector<int> relationLabels = node->relation->labels();
-                bool allLabelsActive = true;
-                for (auto label : relationLabels)
-                {
-                    if (find(activeLabels.begin(), activeLabels.end(), label) == activeLabels.end())
-                    {
-                        allLabelsActive = false;
-                        break;
-                    }
-                }
-                if (allLabelsActive)
-                {
-                    request.push_back(node->relation);
-                }
-            }
-            node = node->leftNode;
-        }
-        return request;
     }
+
+    // exrtact terms for new node
+    shared_ptr<Node> node = rootNode;
+    shared_ptr<Relation> oldPositive = nullptr;
+    shared_ptr<Relation> newPositive = nullptr;
+    vector<int> activeLabels;
+    while (node != nullptr) // exploit that only alpha rules applied
+    {
+        if (node->relation != nullptr && !node->relation->negated)
+        {
+            if (oldPositive == nullptr)
+            {
+                oldPositive = node->relation;
+            }
+            else
+            {
+                newPositive = node->relation;
+                activeLabels = node->relation->labels();
+            }
+        }
+        node = node->leftNode;
+    }
+    vector<shared_ptr<Relation>> request{newPositive};
+    node = rootNode;
+    while (node != nullptr) // exploit that only alpha rules applied
+    {
+        if (node->relation != nullptr && node->relation->negated)
+        {
+            vector<int> relationLabels = node->relation->labels();
+            bool allLabelsActive = true;
+            for (auto label : relationLabels)
+            {
+                if (find(activeLabels.begin(), activeLabels.end(), label) == activeLabels.end())
+                {
+                    allLabelsActive = false;
+                    break;
+                }
+            }
+            if (allLabelsActive)
+            {
+                request.push_back(node->relation);
+            }
+        }
+        node = node->leftNode;
+    }
+    return request;
 }
 
 void Tableau::toDotFormat(ofstream &output) const

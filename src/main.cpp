@@ -5,8 +5,7 @@
 #include "Relation.h"
 #include "Tableau.h"
 #include "RegularTableau.h"
-// #include "Solver.h"
-// #include "ProofNode.h"
+#include "Assumption.h"
 
 using namespace std;
 
@@ -67,6 +66,10 @@ int main(int argc, const char *argv[])
     Tableau tableau{r1, r2};
     tableau.solve(100);
     tableau.exportProof("infinite");
+
+    // setup assumptions
+    shared_ptr<Relation> leftSide = Relation::parse("a;a");
+    shared_ptr<Assumption> transitiveA = make_shared<Assumption>(AssumptionType::regular, leftSide, "a");
 
     // regular: 1. DNF, 2. Regular Solver
     cout << "Regular Proof..." << endl;

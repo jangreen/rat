@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include "Relation.h"
 #include "Metastatement.h"
+#include "Assumption.h"
 
 using namespace std;
 
@@ -24,8 +25,8 @@ public:
         Node *parentNode = nullptr;
         bool closed = false;
 
-        bool isClosed();
-        void append(initializer_list<shared_ptr<Node>> childNodes);
+        shared_ptr<Relation> saturateRelation(shared_ptr<Relation>);
+        void saturate();
 
         bool printed = false; // prevent cycling in printing
         void toDotFormat(ofstream &output);
@@ -49,10 +50,11 @@ public:
     vector<shared_ptr<Node>> rootNodes;
     unordered_set<shared_ptr<Node>, Node::Hash, Node::Equal> nodes;
     stack<shared_ptr<Node>> unreducedNodes;
+    static vector<shared_ptr<Assumption>> assumptions;
 
     static vector<vector<shared_ptr<Relation>>> DNF(vector<shared_ptr<Relation>> clause);
     void expandNode(shared_ptr<Node> node);
-    void addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation>> clause);
+    void addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation>> clause); // TODO: move in node class, call on parent
     bool solve();
 
     void toDotFormat(ofstream &output) const;

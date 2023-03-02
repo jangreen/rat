@@ -49,8 +49,9 @@ public:
     bool applyRule(shared_ptr<Node> node);
     bool solve(int bound = 30);
 
+    // methods for regular reasoning
     vector<vector<shared_ptr<Relation>>> DNF();
-    void applyModalRule();
+    bool applyModalRule();
     vector<shared_ptr<Relation>> calcReuqest();
 
     void toDotFormat(ofstream &output) const;

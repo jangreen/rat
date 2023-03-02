@@ -34,8 +34,65 @@ using namespace std;
 
 RegularTableau::Node::Node(initializer_list<shared_ptr<Relation>> relations) : relations(relations) {}
 RegularTableau::Node::Node(vector<shared_ptr<Relation>> relations) : relations(relations) {}
-
 RegularTableau::Node::~Node() {}
+
+shared_ptr<Relation> RegularTableau::Node::saturateRelation(shared_ptr<Relation> relation)
+{
+    if (relation == nullptr || relation->saturated)
+    {
+        return nullptr;
+    }
+    if (relation->label && relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO: operation::id operation::empty native
+    {
+        string baseRelation = *relation->identifier;
+        for (auto assumption : assumptions)
+        {
+            if (assumption->type == AssumptionType::regular && *assumption->baseRelation == baseRelation)
+            {
+                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
+                leftSide->saturated = true;
+                leftSide->label = relation->label;
+                leftSide->negated = true;
+                return leftSide;
+            }
+        }
+        return nullptr;
+    }
+    shared_ptr<Relation> leftSaturated = saturateRelation(relation->leftOperand);
+    shared_ptr<Relation> rightSaturated = saturateRelation(relation->rightOperand);
+    if (leftSaturated == nullptr && rightSaturated == nullptr)
+    {
+        return nullptr;
+    }
+    if (leftSaturated == nullptr)
+    {
+        leftSaturated = relation->leftOperand;
+    }
+    if (rightSaturated == nullptr)
+    {
+        rightSaturated = relation->rightOperand;
+    }
+    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
+    saturated->negated = true;
+    return saturated;
+}
+
+void RegularTableau::Node::saturate()
+{
+    vector<shared_ptr<Relation>> saturatedRelations;
+    for (auto relation : relations)
+    {
+        if (relation->negated)
+        {
+            auto saturated = saturateRelation(relation);
+            if (saturated != nullptr)
+            {
+                saturatedRelations.push_back(saturated);
+            }
+        }
+    }
+    relations.insert(relations.end(), saturatedRelations.begin(), saturatedRelations.end());
+}
 
 void RegularTableau::Node::toDotFormat(ofstream &output)
 {
@@ -64,7 +121,6 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     // children
     for (auto &[childNode, edgeLabel] : childNodes)
     {
-        cout << "child" << endl;
         if (!childNode->printed)
         {
             childNode->toDotFormat(output);
@@ -82,6 +138,7 @@ RegularTableau::RegularTableau(initializer_list<shared_ptr<Node>> initalNodes)
     }
 }
 RegularTableau::~RegularTableau() {}
+vector<shared_ptr<Assumption>> RegularTableau::assumptions;
 
 vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relation>> clause)
 {
@@ -91,15 +148,22 @@ vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relat
 void RegularTableau::expandNode(shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
-    // TODO: remove: tableau.exportProof("inital");
-    tableau.applyModalRule();
-    // tableau.exportProof("modal");
-    auto request = tableau.calcReuqest();
-    // tableau.exportProof("request");
-    auto dnf = DNF(request);
-    for (auto clause : dnf)
+    tableau.exportProof("inital");
+    bool expandable = tableau.applyModalRule();
+    if (expandable)
     {
-        addNode(node, clause);
+        tableau.exportProof("modal");
+        auto request = tableau.calcReuqest();
+        tableau.exportProof("request");
+        auto dnf = DNF(request);
+        for (auto clause : dnf)
+        {
+            addNode(node, clause);
+        }
+    }
+    else
+    {
+        // TODO:
     }
 }
 
@@ -120,8 +184,13 @@ void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation
     {
         literal->rename(renaming);
     }
+
     // create node, edges, push to unreduced nodes
     shared_ptr<Node> newNode = make_shared<Node>(clause);
+
+    // saturation phase (assumptions)
+    // newNode->saturate();
+
     auto existingNode = nodes.find(newNode);
     if (existingNode != nodes.end())
     {
@@ -145,12 +214,18 @@ bool RegularTableau::solve()
     {
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
+        ofstream file2("reg.dot");
+        toDotFormat(file2);
         expandNode(currentNode);
     }
 }
 
 void RegularTableau::toDotFormat(ofstream &output) const
 {
+    for (auto node : nodes)
+    { // reset printed property
+        node->printed = false;
+    }
     output << "digraph {" << endl
            << "node[shape=\"box\"]" << endl;
     for (auto rootNode : rootNodes)

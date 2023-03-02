@@ -24,11 +24,12 @@ public:
     ~Relation();
 
     Operation operation;
-    optional<string> identifier;       // is set iff operation none
-    shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
-    shared_ptr<Relation> rightOperand; // is set iff operation binary
+    optional<string> identifier = nullopt; // is set iff operation none
+    shared_ptr<Relation> leftOperand;      // is set iff operation unary/binary
+    shared_ptr<Relation> rightOperand;     // is set iff operation binary
     bool negated = false;
     optional<int> label = nullopt;
+    bool saturated = false;
 
     bool isNormal();                 // true iff all labels are in front of base relations
     vector<int> labels();            // return all labels of the relation term
@@ -47,5 +48,3 @@ public:
 
     string toString() const; // for printing
 };
-
-typedef unordered_set<shared_ptr<Relation>> RelationSet; // TODO: refactor use hashing? not needed for axiom but maybe for proofNodes
