@@ -133,8 +133,14 @@ RegularTableau::RegularTableau(initializer_list<shared_ptr<Node>> initalNodes)
     rootNodes = initalNodes;
     for (auto node : initalNodes)
     {
-        nodes.emplace(node);
-        unreducedNodes.push(node);
+        node->saturate(); // TODO: do this in an dedicated method 'addNode'?
+        auto saturatedDNF = DNF(node->relations);
+        for (auto saturatedClause : saturatedDNF)
+        {
+            shared_ptr<Node> saturatedNode = make_shared<Node>(saturatedClause);
+            nodes.emplace(saturatedNode);
+            unreducedNodes.push(saturatedNode);
+        }
     }
 }
 RegularTableau::~RegularTableau() {}
@@ -145,20 +151,29 @@ vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relat
     Tableau tableau{clause};
     return tableau.DNF();
 }
+
+// node has only normal terms
 void RegularTableau::expandNode(shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
-    tableau.exportProof("inital");
+    // tableau.exportProof("inital");
     bool expandable = tableau.applyModalRule();
     if (expandable)
     {
-        tableau.exportProof("modal");
+        // tableau.exportProof("modal");
         auto request = tableau.calcReuqest();
-        tableau.exportProof("request");
+        // tableau.exportProof("request");
         auto dnf = DNF(request);
         for (auto clause : dnf)
         {
-            addNode(node, clause);
+            // saturation phase (assumptions)
+            shared_ptr<Node> newNode = make_shared<Node>(clause);
+            newNode->saturate();
+            auto saturatedDNF = DNF(newNode->relations);
+            for (auto saturatedClause : saturatedDNF)
+            {
+                addNode(node, saturatedClause);
+            }
         }
     }
     else
@@ -167,6 +182,7 @@ void RegularTableau::expandNode(shared_ptr<Node> node)
     }
 }
 
+// clause is in normal form
 void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation>> clause)
 {
     shared_ptr<Relation> positiveRelation = nullptr;
@@ -187,9 +203,6 @@ void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation
 
     // create node, edges, push to unreduced nodes
     shared_ptr<Node> newNode = make_shared<Node>(clause);
-
-    // saturation phase (assumptions)
-    // newNode->saturate();
 
     auto existingNode = nodes.find(newNode);
     if (existingNode != nodes.end())
@@ -214,8 +227,9 @@ bool RegularTableau::solve()
     {
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
+        /* TODO: remove: */
         ofstream file2("reg.dot");
-        toDotFormat(file2);
+        toDotFormat(file2); //*/
         expandNode(currentNode);
     }
 }

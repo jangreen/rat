@@ -486,10 +486,6 @@ Tableau::~Tableau() {}
 // helper
 bool applyDNFRule(shared_ptr<Tableau::Node> node)
 {
-    if (node->relation == nullptr)
-    {
-        cout << "NULL: " << node->metastatement->toString() << endl;
-    }
     // Rule::id, Rule::negId
     auto rId = idRule(node->relation);
     if (rId)
