@@ -51,10 +51,10 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    // shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
-    // shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
-    shared_ptr<Relation> r1 = Relation::parse("a;a^*");
-    shared_ptr<Relation> r2 = Relation::parse("a");
+    shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
+    shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    // shared_ptr<Relation> r1 = Relation::parse("a;a^*");
+    // shared_ptr<Relation> r2 = Relation::parse("a");
     r1->label = 0;
     r1->negated = false;
     r2->label = 0;
@@ -76,12 +76,19 @@ int main(int argc, const char *argv[])
     cout << "Regular Proof..." << endl;
     vector<shared_ptr<Relation>> c = {r1, r2};
     auto dnf = RegularTableau::DNF(c);
+    cout << "Inital DNF: ";
+    for (auto clause : dnf)
+    {
+        cout << "  &&  ";
+        for (auto literal : clause)
+            cout << literal->toString() << " ";
+    }
+    cout << endl;
 
     shared_ptr<RegularTableau::Node> node = make_shared<RegularTableau::Node>(dnf[0]);
     RegularTableau regularTableau{node};
     regularTableau.solve();
 
     cout << "Export Regular Tableau..." << endl;
-    ofstream file2("reg.dot");
-    regularTableau.toDotFormat(file2);
+    regularTableau.exportProof("reg");
 }

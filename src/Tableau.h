@@ -16,7 +16,6 @@ public:
     public:
         Node(Tableau *tableau, shared_ptr<Relation> relation);
         Node(Tableau *tableau, shared_ptr<Metastatement> metastatement);
-        ~Node();
 
         Tableau *tableau;
         shared_ptr<Relation> relation = nullptr;
@@ -41,7 +40,6 @@ public:
 
     Tableau(initializer_list<shared_ptr<Relation>> initalRelations);
     Tableau(vector<shared_ptr<Relation>> initalRelations);
-    ~Tableau();
 
     shared_ptr<Node> rootNode;
     priority_queue<shared_ptr<Node>, vector<shared_ptr<Node>>, Node::CompareNodes> unreducedNodes;
@@ -55,5 +53,5 @@ public:
     vector<shared_ptr<Relation>> calcReuqest();
 
     void toDotFormat(ofstream &output) const;
-    void exportProof(string filename);
+    void exportProof(string filename) const;
 };

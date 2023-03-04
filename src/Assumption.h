@@ -15,8 +15,7 @@ enum class AssumptionType
 class Assumption
 {
 public:
-    Assumption(const AssumptionType &type, shared_ptr<Relation> relation, optional<string> baseRelation = nullopt);
-    ~Assumption();
+    Assumption(const AssumptionType type, shared_ptr<Relation> relation, optional<string> baseRelation = nullopt);
 
     AssumptionType type;
     shared_ptr<Relation> relation;

@@ -1,17 +1,13 @@
-#include <unordered_map>
-#include <iostream>
-#include <memory>
+#include "CatInferVisitor.h"
 #include <antlr4-runtime.h>
 #include <CatParser.h>
 #include <CatLexer.h>
-#include "CatInferVisitor.h"
-#include "Relation.h"
-#include "Constraint.h"
+#include <memory>
 
 using namespace std;
 using namespace antlr4;
 
-ConstraintSet CatInferVisitor::parse(string filePath)
+vector<Constraint> CatInferVisitor::parseMemoryModel(const string &filePath)
 {
     ifstream stream;
     stream.open(filePath);
@@ -22,12 +18,12 @@ ConstraintSet CatInferVisitor::parse(string filePath)
     CatParser parser(&tokens);
 
     CatParser::McmContext *ctx = parser.mcm();
-    return any_cast<ConstraintSet>(this->visitMcm(ctx));
+    return any_cast<vector<Constraint>>(this->visitMcm(ctx));
 }
 
-shared_ptr<Relation> CatInferVisitor::parseRelation(string r)
+shared_ptr<Relation> CatInferVisitor::parseRelation(const string &relationString)
 {
-    ANTLRInputStream input(r);
+    ANTLRInputStream input(relationString);
     CatLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
     CatParser parser(&tokens);
@@ -38,7 +34,7 @@ shared_ptr<Relation> CatInferVisitor::parseRelation(string r)
 
 antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
 {
-    unordered_map<string, Constraint> constraints;
+    vector<Constraint> constraints;
 
     for (auto definitionContext : ctx->definition())
     {
@@ -53,7 +49,7 @@ antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
         else if (definitionContext->axiomDefinition())
         {
             Constraint axiom = any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
-            constraints[axiom.name] = axiom;
+            constraints.push_back(axiom);
         }
     }
     return constraints;
@@ -107,12 +103,20 @@ antlrcpp::Any CatInferVisitor::visitExprCartesian(CatParser::ExprCartesianContex
     // TODO: currently we consider cartesian product as binary base relation
     string r1 = ctx->e1->getText();
     string r2 = ctx->e2->getText();
-    return Relation::get(r1 + "*" + r2);
+    return make_shared<Relation>(Operation::base, r1 + "*" + r2); // Relation(Operation::base, r1 + "*" + r2);
 }
 antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
     string name = ctx->NAME()->getText();
-    return make_shared<Relation>(name); // TODO: remove old: Relation::get(name);
+    if (name == "id")
+    {
+        return make_shared<Relation>(Operation::identity);
+    }
+    if (name == "0")
+    {
+        return make_shared<Relation>(Operation::empty);
+    }
+    return make_shared<Relation>(Operation::base, name); // TODO: remove old: Relation::get(name);
 }
 antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {

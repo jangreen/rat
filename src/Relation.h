@@ -1,5 +1,4 @@
 #pragma once
-#include <unordered_set>
 #include <unordered_map>
 #include <memory>
 #include <string>
@@ -8,43 +7,40 @@ using namespace std;
 
 enum class Operation
 {
-    none, // base relation, or empty relation (only label)
-    choice,
-    intersection,
-    composition,
-    transitiveClosure,
-    converse
+    none,              // no relation, only label
+    base,              // nullary function (aka constant): base relation
+    identity,          // nullary function (aka constant): identity relation
+    empty,             // nullary function (aka constant): empty relation
+    choice,            // binary function
+    intersection,      // binary function
+    composition,       // binary function
+    transitiveClosure, // unary function
+    converse           // unary function
 };
 
 class Relation
 {
 public:
-    Relation(const optional<string> &identifier); // base relation constructor, do not use directly -> use get method
-    Relation(const Operation &operation, shared_ptr<Relation> left = nullptr, shared_ptr<Relation> right = nullptr, bool negated = false, optional<int> label = nullopt);
-    ~Relation();
+    Relation(const Operation operation, const optional<string> &identifier = nullopt);                      // nullary
+    Relation(const Operation operation, const shared_ptr<Relation> left);                                   // unary
+    Relation(const Operation operation, const shared_ptr<Relation> left, const shared_ptr<Relation> right); // binary
 
     Operation operation;
-    optional<string> identifier = nullopt; // is set iff operation none
-    shared_ptr<Relation> leftOperand;      // is set iff operation unary/binary
-    shared_ptr<Relation> rightOperand;     // is set iff operation binary
-    bool negated = false;
+    optional<string> identifier;       // is set iff operation base
+    shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
+    shared_ptr<Relation> rightOperand; // is set iff operation binary
     optional<int> label = nullopt;
+    bool negated = false;
     bool saturated = false;
 
-    bool isNormal();                 // true iff all labels are in front of base relations
-    vector<int> labels();            // return all labels of the relation term
-    vector<int> calculateRenaming(); // renaming {2,4,5}: 2->0,4->1,5->2
+    bool isNormal() const;                 // true iff all labels are in front of base relations
+    vector<int> labels() const;            // return all labels of the relation term
+    vector<int> calculateRenaming() const; // renaming {2,4,5}: 2->0,4->1,5->2
     void rename(const vector<int> &renaming);
+    bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
+    string toString() const;                              // for printing
 
-    static shared_ptr<Relation> ID;                               // constant: idendtity relation
-    static shared_ptr<Relation> EMPTY;                            // constant: empty relation
-    static shared_ptr<Relation> FULL;                             // constant: full relation
     static unordered_map<string, shared_ptr<Relation>> relations; // id, 0, 1, base relations and defined relations (named relations)
     static int maxLabel;                                          // to create globally unique labels
-    static shared_ptr<Relation> get(const string &identifier);
     static shared_ptr<Relation> parse(const string &expression);
-
-    bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
-
-    string toString() const; // for printing
 };

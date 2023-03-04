@@ -13,14 +13,12 @@ enum class MetastatementType
 class Metastatement
 {
 public:
-    Metastatement();
-    Metastatement(const MetastatementType &type, int label1, int label2, optional<string> baseRelation = nullopt);
-    ~Metastatement();
+    Metastatement(const MetastatementType type, int label1, int label2, optional<string> baseRelation = nullopt);
 
     MetastatementType type;
     int label1;
     int label2;
     optional<string> baseRelation; // is set iff labelRelation
 
-    string toString(); // for printing
+    string toString() const; // for printing
 };

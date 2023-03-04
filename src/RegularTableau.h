@@ -18,7 +18,6 @@ public:
     public:
         Node(initializer_list<shared_ptr<Relation>> relations);
         Node(vector<shared_ptr<Relation>> relations);
-        ~Node();
 
         vector<shared_ptr<Relation>> relations;
         vector<tuple<shared_ptr<Node>, vector<int>>> childNodes;
@@ -45,7 +44,6 @@ public:
     };
 
     RegularTableau(initializer_list<shared_ptr<Node>> initalNodes);
-    ~RegularTableau();
 
     vector<shared_ptr<Node>> rootNodes;
     unordered_set<shared_ptr<Node>, Node::Hash, Node::Equal> nodes;
@@ -58,6 +56,7 @@ public:
     bool solve();
 
     void toDotFormat(ofstream &output) const;
+    void exportProof(string filename) const;
 };
 
 namespace std

@@ -15,15 +15,11 @@ enum class ConstraintType
 class Constraint
 {
 public:
-    Constraint();
-    Constraint(const ConstraintType &type, shared_ptr<Relation> relation, const string &name = "");
-    ~Constraint();
+    Constraint(const ConstraintType type, const shared_ptr<Relation> relation, const optional<string> name = nullopt);
 
     ConstraintType type;
     shared_ptr<Relation> relation;
-    string name; // for printing
+    optional<string> name; // for printing
 
     void toEmptyNormalForm();
 };
-
-typedef unordered_map<string, Constraint> ConstraintSet;

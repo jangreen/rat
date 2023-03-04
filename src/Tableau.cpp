@@ -6,6 +6,31 @@
 using namespace std;
 
 /* RULE IMPLEMENTATIONS */
+template <typename T>
+optional<T> rule(shared_ptr<Relation> relation, T (*labeledCase)(shared_ptr<Relation>), T (*combineLeft)(T, shared_ptr<Relation>), T (*combineRight)(T, shared_ptr<Relation>))
+{
+    if (relation->label)
+    {
+        return labeledCase(relation);
+    }
+    // case: intersection or composition (only cases for labeled terms that can happen)
+    optional<T> leftSubRelation = rule<T>(relation->leftOperand, labeledCase, combineLeft);
+    if (leftSubRelation)
+    {
+        return combineLeft(*leftSubRelation, relation);
+    }
+    // case: intersection
+    if (relation->operation != Operation::intersection)
+    {
+        return nullopt;
+    }
+    optional<T> rightSubRelation = rule<T>(relation->rightOperand, labeledCase, combineLeft);
+    if (rightSubRelation)
+    {
+        return combineRight(*rightSubRelation, relation);
+    }
+    return nullopt;
+}
 // TODO generice function: mayb binaryRule, ...
 optional<tuple<shared_ptr<Relation>, shared_ptr<Relation>>> choiceRule(shared_ptr<Relation> relation)
 {
@@ -90,7 +115,7 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Relation>>> transitiveClosureRul
         shared_ptr<Relation> r12 = make_shared<Relation>(*relation);
         r12->label = nullopt;
         r12->negated = false;
-        shared_ptr<Relation> r2 = make_shared<Relation>(nullopt); // empty relation
+        shared_ptr<Relation> r2 = make_shared<Relation>(Operation::none); // empty relation
         r2->label = relation->label;
         tuple<shared_ptr<Relation>, shared_ptr<Relation>>
             result{
@@ -130,10 +155,10 @@ optional<shared_ptr<Relation>> idRule(shared_ptr<Relation> relation)
         }
         return nullopt;
     }
-    else if (relation->operation == Operation::none && relation->identifier && *relation->identifier == "id") // TODO compare relations with overloaded == operator
+    else if (relation->operation == Operation::identity) // TODO compare relations with overloaded == operator
     {
         // Rule::id, Rule::negId
-        shared_ptr<Relation> r1 = make_shared<Relation>(nullopt); // empty relation
+        shared_ptr<Relation> r1 = make_shared<Relation>(Operation::none); // empty relation
         r1->label = relation->label;
         return r1;
     }
@@ -182,10 +207,10 @@ optional<tuple<shared_ptr<Relation>, shared_ptr<Metastatement>>> aRule(shared_pt
         }
         return nullopt;
     }
-    else if (relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO compare relations with overloaded == operator
+    else if (relation->operation == Operation::base) // TODO compare relations with overloaded == operator
     {
         // Rule::a
-        shared_ptr<Relation> r1 = make_shared<Relation>(nullopt); // empty relation
+        shared_ptr<Relation> r1 = make_shared<Relation>(Operation::none); // empty relation
         Relation::maxLabel++;
         r1->label = Relation::maxLabel;
         tuple<shared_ptr<Relation>, shared_ptr<Metastatement>>
@@ -226,10 +251,10 @@ optional<shared_ptr<Relation>> negARule(shared_ptr<Tableau::Node> node, shared_p
         }
         return nullopt;
     }
-    else if (relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO compare relations with overloaded == operator
+    else if (relation->operation == Operation::base) // TODO compare relations with overloaded == operator
     {
         // Rule::negA
-        shared_ptr<Relation> r1 = make_shared<Relation>(nullopt); // empty relation
+        shared_ptr<Relation> r1 = make_shared<Relation>(Operation::none); // empty relation
         int label = *relation->label;
         string baseRelation = *relation->identifier;
         Tableau::Node *currentNode = &(*node);
@@ -319,7 +344,6 @@ optional<shared_ptr<Relation>> intersectionRule(shared_ptr<Relation> relation)
 
 Tableau::Node::Node(Tableau *tableau, shared_ptr<Relation> relation) : tableau(tableau), relation(relation) {}
 Tableau::Node::Node(Tableau *tableau, shared_ptr<Metastatement> metastatement) : tableau(tableau), metastatement(metastatement) {}
-Tableau::Node::~Node() {}
 
 bool Tableau::Node::isClosed()
 {
@@ -481,7 +505,6 @@ Tableau::Tableau(vector<shared_ptr<Relation>> initalRelations)
         unreducedNodes.push(newNode);
     }
 }
-Tableau::~Tableau() {}
 
 // helper
 bool applyDNFRule(shared_ptr<Tableau::Node> node)
@@ -623,6 +646,7 @@ bool Tableau::solve(int bound)
         bound--;
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
+        // exportProof("infinite");
         applyRule(currentNode);
     }
 }
@@ -664,6 +688,7 @@ vector<vector<shared_ptr<Relation>>> Tableau::DNF()
     {
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
+        // exportProof("dnfcalc");
         applyDNFRule(currentNode);
     }
 
@@ -754,7 +779,7 @@ void Tableau::toDotFormat(ofstream &output) const
     output << "}" << endl;
 }
 
-void Tableau::exportProof(string filename)
+void Tableau::exportProof(string filename) const
 {
     ofstream file(filename + ".dot");
     toDotFormat(file);

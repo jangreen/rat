@@ -4,24 +4,12 @@
 
 using namespace std;
 
-Relation::Relation(const optional<string> &identifier) : operation(Operation::none), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr), label(nullopt) {}
-Relation::Relation(const Operation &operation, shared_ptr<Relation> left, shared_ptr<Relation> right, bool negated, optional<int> label) : operation(operation), identifier(""), leftOperand(left), rightOperand(right), negated(negated), label(label) {}
-Relation::~Relation() {}
+Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
+Relation::Relation(const Operation operation, const shared_ptr<Relation> left) : operation(operation), identifier(nullopt), leftOperand(left), rightOperand(nullptr) {}
+Relation::Relation(const Operation operation, const shared_ptr<Relation> left, const shared_ptr<Relation> right) : operation(operation), identifier(nullopt), leftOperand(left), rightOperand(right) {}
 
-shared_ptr<Relation> Relation::ID = make_shared<Relation>("id");
-shared_ptr<Relation> Relation::EMPTY = make_shared<Relation>("0");
-shared_ptr<Relation> Relation::FULL = make_shared<Relation>("1");
-unordered_map<string, shared_ptr<Relation>> Relation::relations = {{"0", Relation::EMPTY}, {"1", Relation::FULL}, {"id", Relation::ID}};
+unordered_map<string, shared_ptr<Relation>> Relation::relations;
 int Relation::maxLabel = 0;
-
-shared_ptr<Relation> Relation::get(const string &name)
-{
-    if (!relations.contains(name))
-    {
-        relations[name] = make_shared<Relation>(name);
-    }
-    return relations[name];
-}
 
 shared_ptr<Relation> Relation::parse(const string &expression)
 {
@@ -31,23 +19,35 @@ shared_ptr<Relation> Relation::parse(const string &expression)
 
 bool Relation::operator==(const Relation &otherRelation) const
 {
-    if (operation != otherRelation.operation || label != otherRelation.label)
+    if (operation != otherRelation.operation)
     {
         return false;
     }
-    else if (operation == Operation::none)
+
+    if ((label.has_value() != otherRelation.label.has_value()) && (!label || *label != *otherRelation.label))
     {
-        return identifier == otherRelation.identifier;
+        return false;
     }
-    else
+
+    if (operation == Operation::base)
     {
-        return *leftOperand == *otherRelation.leftOperand && ((rightOperand == nullptr && otherRelation.rightOperand == nullptr) || *rightOperand == *otherRelation.rightOperand);
+        return *identifier == *otherRelation.identifier;
     }
+
+    if (operation == Operation::none || operation == Operation::identity || operation == Operation::empty)
+    {
+        return true;
+    }
+
+    bool leftEqual = *leftOperand == *otherRelation.leftOperand;
+    bool rightNullEqual = (rightOperand == nullptr) == (otherRelation.rightOperand == nullptr);
+    bool rightEqual = rightNullEqual && (rightOperand == nullptr || *rightOperand == *otherRelation.rightOperand);
+    return leftEqual && rightEqual;
 }
 
-bool Relation::isNormal()
+bool Relation::isNormal() const
 {
-    if (label && (operation != Operation::none || identifier == "id" || identifier == "0"))
+    if (label && operation != Operation::base && operation != Operation::none)
     {
         return false;
     }
@@ -60,7 +60,7 @@ bool Relation::isNormal()
     return true;
 }
 
-vector<int> Relation::labels()
+vector<int> Relation::labels() const
 {
     if (label)
     {
@@ -80,7 +80,7 @@ vector<int> Relation::labels()
     return result;
 }
 
-vector<int> Relation::calculateRenaming()
+vector<int> Relation::calculateRenaming() const
 {
     return labels(); // labels already calculates the renaming
 }
@@ -91,12 +91,12 @@ void Relation::rename(const vector<int> &renaming)
     {
         label = distance(renaming.begin(), find(renaming.begin(), renaming.end(), *label));
     }
-    else if (leftOperand != nullptr)
+    else if (leftOperand)
     {
-        leftOperand->rename(renaming);
-        if (rightOperand != nullptr)
+        (*leftOperand).rename(renaming);
+        if (rightOperand)
         {
-            rightOperand->rename(renaming);
+            (*rightOperand).rename(renaming);
         }
     }
 }
@@ -129,11 +129,16 @@ string Relation::toString() const
     case Operation::transitiveClosure:
         output += leftOperand->toString() + "^*";
         break;
+    case Operation::base:
+        output += *identifier;
+        break;
+    case Operation::identity:
+        output += "id";
+        break;
+    case Operation::empty:
+        output += "0";
+        break;
     case Operation::none:
-        if (identifier)
-        {
-            output += *identifier;
-        }
         break;
     }
     return output;

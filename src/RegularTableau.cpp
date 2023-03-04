@@ -34,7 +34,6 @@ using namespace std;
 
 RegularTableau::Node::Node(initializer_list<shared_ptr<Relation>> relations) : relations(relations) {}
 RegularTableau::Node::Node(vector<shared_ptr<Relation>> relations) : relations(relations) {}
-RegularTableau::Node::~Node() {}
 
 shared_ptr<Relation> RegularTableau::Node::saturateRelation(shared_ptr<Relation> relation)
 {
@@ -42,7 +41,7 @@ shared_ptr<Relation> RegularTableau::Node::saturateRelation(shared_ptr<Relation>
     {
         return nullptr;
     }
-    if (relation->label && relation->operation == Operation::none && relation->identifier && *relation->identifier != "id" && *relation->identifier != "0") // TODO: operation::id operation::empty native
+    if (relation->label && relation->operation == Operation::base)
     {
         string baseRelation = *relation->identifier;
         for (auto assumption : assumptions)
@@ -133,17 +132,21 @@ RegularTableau::RegularTableau(initializer_list<shared_ptr<Node>> initalNodes)
     rootNodes = initalNodes;
     for (auto node : initalNodes)
     {
-        node->saturate(); // TODO: do this in an dedicated method 'addNode'?
+        /*node->saturate(); // TODO: do this in an dedicated method 'addNode'?
         auto saturatedDNF = DNF(node->relations);
         for (auto saturatedClause : saturatedDNF)
         {
             shared_ptr<Node> saturatedNode = make_shared<Node>(saturatedClause);
             nodes.emplace(saturatedNode);
             unreducedNodes.push(saturatedNode);
-        }
+        }*/
+
+        nodes.emplace(node);
+        unreducedNodes.push(node);
     }
+    // exportProof("initalized");
 }
-RegularTableau::~RegularTableau() {}
+
 vector<shared_ptr<Assumption>> RegularTableau::assumptions;
 
 vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relation>> clause)
@@ -167,13 +170,15 @@ void RegularTableau::expandNode(shared_ptr<Node> node)
         for (auto clause : dnf)
         {
             // saturation phase (assumptions)
-            shared_ptr<Node> newNode = make_shared<Node>(clause);
+            /*shared_ptr<Node> newNode = make_shared<Node>(clause);
             newNode->saturate();
             auto saturatedDNF = DNF(newNode->relations);
             for (auto saturatedClause : saturatedDNF)
             {
                 addNode(node, saturatedClause);
-            }
+            }*/
+
+            addNode(node, clause);
         }
     }
     else
@@ -204,6 +209,12 @@ void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation
     // create node, edges, push to unreduced nodes
     shared_ptr<Node> newNode = make_shared<Node>(clause);
 
+    cout << Node::Hash()(newNode) << endl;
+    for (auto node : nodes)
+    {
+        cout << Node::Hash()(node) << endl;
+    }
+
     auto existingNode = nodes.find(newNode);
     if (existingNode != nodes.end())
     {
@@ -228,8 +239,7 @@ bool RegularTableau::solve()
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
         /* TODO: remove: */
-        ofstream file2("reg.dot");
-        toDotFormat(file2); //*/
+        exportProof("reg");
         expandNode(currentNode);
     }
 }
@@ -247,6 +257,12 @@ void RegularTableau::toDotFormat(ofstream &output) const
         rootNode->toDotFormat(output);
     }
     output << "}" << endl;
+}
+
+void RegularTableau::exportProof(string filename) const
+{
+    ofstream file(filename + ".dot");
+    toDotFormat(file);
 }
 
 bool RegularTableau::Node::operator==(const Node &otherNode) const
