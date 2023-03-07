@@ -101,27 +101,25 @@ vector<Clause> RegularTableau::DNF(Clause clause)
 void RegularTableau::expandNode(shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
-    // tableau.exportProof("inital");
+    tableau.exportProof("inital");
     bool expandable = tableau.applyModalRule();
     if (expandable)
     {
-        // tableau.exportProof("modal");
+        tableau.exportProof("modal");
         auto request = tableau.calcReuqest();
-        // tableau.exportProof("request");
+        tableau.exportProof("request");
+        if (tableau.rootNode->isClosed())
+        {
+            // can happen with empty hypotheses
+            node->closed = true;
+            return;
+        }
         auto dnf = DNF(request);
         for (auto clause : dnf)
         {
-            // saturation phase (assumptions)
-            /*shared_ptr<Node> newNode = make_shared<Node>(clause);
-            newNode->saturate();
-            auto saturatedDNF = DNF(newNode->relations);
-            for (auto saturatedClause : saturatedDNF)
-            {
-                addNode(node, saturatedClause);
-            }*/
-
             addNode(node, clause);
         }
+        // TODO: if dnf is empty close node
     }
     else
     {
@@ -232,6 +230,7 @@ shared_ptr<Relation> RegularTableau::saturateRelation(shared_ptr<Relation> relat
 void RegularTableau::saturate(Clause &clause)
 {
     Clause saturatedRelations;
+    // regular assumptions
     for (auto literal : clause)
     {
         if (literal->negated)
@@ -243,6 +242,37 @@ void RegularTableau::saturate(Clause &clause)
             }
         }
     }
+    // empty assumptions
+    for (auto assumption : assumptions)
+    {
+        if (assumption->type == AssumptionType::empty)
+        {
+            vector<int> nodeLabels;
+            for (auto literal : clause)
+            {
+                for (auto label : literal->labels())
+                {
+                    if (find(nodeLabels.begin(), nodeLabels.end(), label) == nodeLabels.end())
+                    {
+                        nodeLabels.push_back(label);
+                    }
+                }
+            }
+
+            for (auto label : nodeLabels)
+            {
+                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
+                shared_ptr<Relation> full = make_shared<Relation>(Operation::full);
+                shared_ptr<Relation> r = make_shared<Relation>(Operation::composition, leftSide, full);
+                r->saturated = true;
+                r->label = label;
+                r->negated = true;
+                saturatedRelations.push_back(r);
+            }
+        }
+    }
+    // identity assumptions
+    // TODO
     clause.insert(clause.end(), saturatedRelations.begin(), saturatedRelations.end());
 }
 

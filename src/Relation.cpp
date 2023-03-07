@@ -34,7 +34,7 @@ bool Relation::operator==(const Relation &otherRelation) const
         return *identifier == *otherRelation.identifier;
     }
 
-    if (operation == Operation::none || operation == Operation::identity || operation == Operation::empty)
+    if (operation == Operation::none || operation == Operation::identity || operation == Operation::empty || operation == Operation::full)
     {
         return true;
     }
@@ -137,6 +137,9 @@ string Relation::toString() const
         break;
     case Operation::empty:
         output += "0";
+        break;
+    case Operation::full:
+        output += "1";
         break;
     case Operation::none:
         break;

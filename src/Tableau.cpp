@@ -340,6 +340,17 @@ optional<shared_ptr<Relation>> intersectionRule(shared_ptr<Relation> relation)
     }
     return nullopt;
 }
+
+/* implemented in consitency check when term is added to branch
+optional<shared_ptr<Relation>> negTopRule(shared_ptr<Relation> relation)
+{
+    if (relation->label && relation->negated && relation->operation == Operation::full)
+    {
+        // special case: rule only for trailing top occurences
+
+    }
+    return nullopt;
+}*/
 /* END RULE IMPLEMENTATIONS */
 
 Tableau::Node::Node(Tableau *tableau, shared_ptr<Relation> relation) : tableau(tableau), relation(relation) {}
@@ -387,7 +398,14 @@ void Tableau::Node::appendBranches(shared_ptr<Relation> leftRelation, shared_ptr
             this->leftNode = leftNode;
             leftNode->parentNode = this;
             leftNode->closed = checkIfClosed(this, leftRelation);
-            tableau->unreducedNodes.push(leftNode);
+            if (leftRelation->negated && leftRelation->operation == Operation::full)
+            {
+                leftNode->closed = true;
+            }
+            if (!leftNode->closed)
+            {
+                tableau->unreducedNodes.push(leftNode);
+            }
         }
         if (rightRelation != nullptr)
         {
@@ -395,7 +413,15 @@ void Tableau::Node::appendBranches(shared_ptr<Relation> leftRelation, shared_ptr
             this->rightNode = rightNode;
             rightNode->parentNode = this;
             rightNode->closed = checkIfClosed(this, rightRelation);
-            tableau->unreducedNodes.push(rightNode);
+            tableau->unreducedNodes.push(leftNode);
+            if (rightRelation->negated && rightRelation->operation == Operation::full)
+            {
+                rightNode->closed = true;
+            }
+            if (!rightNode->closed)
+            {
+                tableau->unreducedNodes.push(rightNode);
+            }
         }
         return;
     }
@@ -692,7 +718,7 @@ vector<Clause> Tableau::DNF()
         applyDNFRule(currentNode);
     }
 
-    // exportProof("dnf");
+    exportProof("dnfcalc");
 
     return extractDNF(rootNode);
 }

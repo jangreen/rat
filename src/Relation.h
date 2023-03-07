@@ -8,9 +8,10 @@ using namespace std;
 enum class Operation
 {
     none,              // no relation, only label
-    base,              // nullary function (aka constant): base relation
-    identity,          // nullary function (aka constant): identity relation
-    empty,             // nullary function (aka constant): empty relation
+    base,              // nullary function (constant): base relation
+    identity,          // nullary function (constant): identity relation
+    empty,             // nullary function (constant): empty relation
+    full,              // nullary function (constant): full relation
     choice,            // binary function
     intersection,      // binary function
     composition,       // binary function

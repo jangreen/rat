@@ -70,7 +70,9 @@ int main(int argc, const char *argv[])
     // setup assumptions
     shared_ptr<Relation> leftSide = Relation::parse("a;a");
     shared_ptr<Assumption> transitiveA = make_shared<Assumption>(AssumptionType::regular, leftSide, "a");
-    RegularTableau::assumptions.push_back(transitiveA);
+    shared_ptr<Assumption> emptyAA = make_shared<Assumption>(AssumptionType::empty, leftSide);
+    // RegularTableau::assumptions.push_back(transitiveA);
+    RegularTableau::assumptions.push_back(emptyAA);
 
     // regular: 1. DNF, 2. Regular Solver
     cout << "Regular Proof..." << endl;
