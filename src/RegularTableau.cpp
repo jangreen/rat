@@ -33,65 +33,7 @@ bool RegularTableau::Node::Equal::operator()(const shared_ptr<Node> node1, const
 using namespace std;
 
 RegularTableau::Node::Node(initializer_list<shared_ptr<Relation>> relations) : relations(relations) {}
-RegularTableau::Node::Node(vector<shared_ptr<Relation>> relations) : relations(relations) {}
-
-shared_ptr<Relation> RegularTableau::Node::saturateRelation(shared_ptr<Relation> relation)
-{
-    if (relation == nullptr || relation->saturated)
-    {
-        return nullptr;
-    }
-    if (relation->label && relation->operation == Operation::base)
-    {
-        string baseRelation = *relation->identifier;
-        for (auto assumption : assumptions)
-        {
-            if (assumption->type == AssumptionType::regular && *assumption->baseRelation == baseRelation)
-            {
-                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
-                leftSide->saturated = true;
-                leftSide->label = relation->label;
-                leftSide->negated = true;
-                return leftSide;
-            }
-        }
-        return nullptr;
-    }
-    shared_ptr<Relation> leftSaturated = saturateRelation(relation->leftOperand);
-    shared_ptr<Relation> rightSaturated = saturateRelation(relation->rightOperand);
-    if (leftSaturated == nullptr && rightSaturated == nullptr)
-    {
-        return nullptr;
-    }
-    if (leftSaturated == nullptr)
-    {
-        leftSaturated = relation->leftOperand;
-    }
-    if (rightSaturated == nullptr)
-    {
-        rightSaturated = relation->rightOperand;
-    }
-    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
-    saturated->negated = true;
-    return saturated;
-}
-
-void RegularTableau::Node::saturate()
-{
-    vector<shared_ptr<Relation>> saturatedRelations;
-    for (auto relation : relations)
-    {
-        if (relation->negated)
-        {
-            auto saturated = saturateRelation(relation);
-            if (saturated != nullptr)
-            {
-                saturatedRelations.push_back(saturated);
-            }
-        }
-    }
-    relations.insert(relations.end(), saturatedRelations.begin(), saturatedRelations.end());
-}
+RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
 void RegularTableau::Node::toDotFormat(ofstream &output)
 {
@@ -127,29 +69,29 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     }
 }
 
-RegularTableau::RegularTableau(initializer_list<shared_ptr<Node>> initalNodes)
+RegularTableau::RegularTableau(initializer_list<shared_ptr<Relation>> initalRelations) : RegularTableau(vector(initalRelations)) {}
+RegularTableau::RegularTableau(Clause initalRelations)
 {
-    rootNodes = initalNodes;
-    for (auto node : initalNodes)
+    auto dnf = DNF(initalRelations);
+    cout << "Inital DNF: ";
+    for (auto clause : dnf)
     {
-        /*node->saturate(); // TODO: do this in an dedicated method 'addNode'?
-        auto saturatedDNF = DNF(node->relations);
-        for (auto saturatedClause : saturatedDNF)
-        {
-            shared_ptr<Node> saturatedNode = make_shared<Node>(saturatedClause);
-            nodes.emplace(saturatedNode);
-            unreducedNodes.push(saturatedNode);
-        }*/
+        cout << "  &&  ";
+        for (auto literal : clause)
+            cout << literal->toString() << " ";
+    }
+    cout << endl;
 
-        nodes.emplace(node);
-        unreducedNodes.push(node);
+    for (auto clause : dnf)
+    {
+        addNode(nullptr, clause);
     }
     // exportProof("initalized");
 }
 
 vector<shared_ptr<Assumption>> RegularTableau::assumptions;
 
-vector<vector<shared_ptr<Relation>>> RegularTableau::DNF(vector<shared_ptr<Relation>> clause)
+vector<Clause> RegularTableau::DNF(Clause clause)
 {
     Tableau tableau{clause};
     return tableau.DNF();
@@ -188,7 +130,8 @@ void RegularTableau::expandNode(shared_ptr<Node> node)
 }
 
 // clause is in normal form
-void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation>> clause)
+// parent == nullptr -> rootNode
+void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
 {
     shared_ptr<Relation> positiveRelation = nullptr;
     for (auto literal : clause)
@@ -206,30 +149,101 @@ void RegularTableau::addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation
         literal->rename(renaming);
     }
 
-    // create node, edges, push to unreduced nodes
-    shared_ptr<Node> newNode = make_shared<Node>(clause);
+    // saturation phase
+    saturate(clause);
+    auto saturatedDNF = DNF(clause);
+    for (auto saturatedClause : saturatedDNF)
+    {
+        // create node, edges, push to unreduced nodes
+        shared_ptr<Node> newNode = make_shared<Node>(saturatedClause);
 
-    cout << Node::Hash()(newNode) << endl;
-    for (auto node : nodes)
-    {
-        cout << Node::Hash()(node) << endl;
+        auto existingNode = nodes.find(newNode);
+        if (existingNode != nodes.end())
+        {
+            // equivalent node exists
+            if (parent != nullptr)
+            {
+                tuple<shared_ptr<Node>, vector<int>> edge{existingNode->get(), renaming};
+                parent->childNodes.push_back(edge);
+            }
+        }
+        else
+        {
+            // equivalent node does not exist
+            if (parent != nullptr)
+            {
+                tuple<shared_ptr<Node>, vector<int>> edge{newNode, renaming};
+                parent->childNodes.push_back(edge);
+                nodes.emplace(newNode);
+                unreducedNodes.push(newNode);
+            }
+            else
+            {
+                // new root node
+                nodes.emplace(newNode);
+                unreducedNodes.push(newNode);
+                rootNodes.push_back(newNode);
+            }
+        }
     }
+}
 
-    auto existingNode = nodes.find(newNode);
-    if (existingNode != nodes.end())
+shared_ptr<Relation> RegularTableau::saturateRelation(shared_ptr<Relation> relation)
+{
+    if (relation == nullptr || relation->saturated || relation->operation == Operation::none || relation->operation == Operation::identity || relation->operation == Operation::empty)
     {
-        // equivalent node exists
-        tuple<shared_ptr<Node>, vector<int>> edge{existingNode->get(), renaming};
-        parent->childNodes.push_back(edge);
+        return nullptr;
     }
-    else
+    if (relation->label && relation->operation == Operation::base)
     {
-        // equivalent node does not exist
-        tuple<shared_ptr<Node>, vector<int>> edge{newNode, renaming};
-        parent->childNodes.push_back(edge);
-        nodes.emplace(newNode);
-        unreducedNodes.push(newNode);
+        string baseRelation = *relation->identifier;
+        for (auto assumption : assumptions)
+        {
+            if (assumption->type == AssumptionType::regular && *assumption->baseRelation == baseRelation)
+            {
+                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
+                leftSide->saturated = true;
+                leftSide->label = relation->label;
+                leftSide->negated = true;
+                return leftSide;
+            }
+        }
+        return nullptr;
     }
+    shared_ptr<Relation> leftSaturated = saturateRelation(relation->leftOperand);
+    shared_ptr<Relation> rightSaturated = saturateRelation(relation->rightOperand);
+    if (leftSaturated == nullptr && rightSaturated == nullptr)
+    {
+        return nullptr;
+    }
+    if (leftSaturated == nullptr)
+    {
+        leftSaturated = relation->leftOperand;
+    }
+    if (rightSaturated == nullptr)
+    {
+        rightSaturated = relation->rightOperand;
+    }
+    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
+    saturated->negated = true;
+    return saturated;
+}
+
+void RegularTableau::saturate(Clause &clause)
+{
+    Clause saturatedRelations;
+    for (auto literal : clause)
+    {
+        if (literal->negated)
+        {
+            auto saturated = saturateRelation(literal);
+            if (saturated != nullptr)
+            {
+                saturatedRelations.push_back(saturated);
+            }
+        }
+    }
+    clause.insert(clause.end(), saturatedRelations.begin(), saturatedRelations.end());
 }
 
 bool RegularTableau::solve()

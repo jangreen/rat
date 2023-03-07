@@ -44,3 +44,5 @@ public:
     static int maxLabel;                                          // to create globally unique labels
     static shared_ptr<Relation> parse(const string &expression);
 };
+
+typedef vector<shared_ptr<Relation>> Clause;

@@ -17,15 +17,12 @@ public:
     {
     public:
         Node(initializer_list<shared_ptr<Relation>> relations);
-        Node(vector<shared_ptr<Relation>> relations);
+        Node(Clause relations);
 
-        vector<shared_ptr<Relation>> relations;
+        Clause relations;
         vector<tuple<shared_ptr<Node>, vector<int>>> childNodes;
         Node *parentNode = nullptr;
         bool closed = false;
-
-        shared_ptr<Relation> saturateRelation(shared_ptr<Relation>);
-        void saturate();
 
         bool printed = false; // prevent cycling in printing
         void toDotFormat(ofstream &output);
@@ -43,16 +40,19 @@ public:
         };
     };
 
-    RegularTableau(initializer_list<shared_ptr<Node>> initalNodes);
+    RegularTableau(initializer_list<shared_ptr<Relation>> initalRelations);
+    RegularTableau(Clause initalRelations);
 
     vector<shared_ptr<Node>> rootNodes;
     unordered_set<shared_ptr<Node>, Node::Hash, Node::Equal> nodes;
     stack<shared_ptr<Node>> unreducedNodes;
     static vector<shared_ptr<Assumption>> assumptions;
 
-    static vector<vector<shared_ptr<Relation>>> DNF(vector<shared_ptr<Relation>> clause);
+    static vector<Clause> DNF(Clause clause);
     void expandNode(shared_ptr<Node> node);
-    void addNode(shared_ptr<Node> parent, vector<shared_ptr<Relation>> clause); // TODO: move in node class, call on parent
+    void addNode(shared_ptr<Node> parent, Clause clause); // TODO: move in node class, call on parent
+    shared_ptr<Relation> saturateRelation(shared_ptr<Relation>);
+    void saturate(Clause &clause);
     bool solve();
 
     void toDotFormat(ofstream &output) const;

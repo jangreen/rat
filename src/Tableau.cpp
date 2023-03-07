@@ -486,7 +486,7 @@ bool Tableau::Node::CompareNodes::operator()(const shared_ptr<Node> left, const 
 }
 
 Tableau::Tableau(initializer_list<shared_ptr<Relation>> initalRelations) : Tableau(vector(initalRelations)) {}
-Tableau::Tableau(vector<shared_ptr<Relation>> initalRelations)
+Tableau::Tableau(Clause initalRelations)
 {
     shared_ptr<Node> currentNode = nullptr;
     for (auto relation : initalRelations)
@@ -652,7 +652,7 @@ bool Tableau::solve(int bound)
 }
 
 // helper
-vector<vector<shared_ptr<Relation>>> extractDNF(shared_ptr<Tableau::Node> node)
+vector<Clause> extractDNF(shared_ptr<Tableau::Node> node)
 {
     if (node == nullptr || node->isClosed())
     {
@@ -668,12 +668,12 @@ vector<vector<shared_ptr<Relation>>> extractDNF(shared_ptr<Tableau::Node> node)
     }
     else
     {
-        vector<vector<shared_ptr<Relation>>> left = extractDNF(node->leftNode);
-        vector<vector<shared_ptr<Relation>>> right = extractDNF(node->rightNode);
+        vector<Clause> left = extractDNF(node->leftNode);
+        vector<Clause> right = extractDNF(node->rightNode);
         left.insert(left.end(), right.begin(), right.end());
         if (node->relation != nullptr && node->relation->isNormal())
         {
-            for (vector<shared_ptr<Relation>> &clause : left)
+            for (Clause &clause : left)
             {
                 clause.push_back(node->relation);
             }
@@ -682,7 +682,7 @@ vector<vector<shared_ptr<Relation>>> extractDNF(shared_ptr<Tableau::Node> node)
     }
 }
 
-vector<vector<shared_ptr<Relation>>> Tableau::DNF()
+vector<Clause> Tableau::DNF()
 {
     while (!unreducedNodes.empty())
     {
@@ -712,7 +712,7 @@ bool Tableau::applyModalRule()
     return false;
 }
 
-vector<shared_ptr<Relation>> Tableau::calcReuqest()
+Clause Tableau::calcReuqest()
 {
     while (!unreducedNodes.empty())
     {
@@ -745,7 +745,7 @@ vector<shared_ptr<Relation>> Tableau::calcReuqest()
         }
         node = node->leftNode;
     }
-    vector<shared_ptr<Relation>> request{newPositive};
+    Clause request{newPositive};
     node = rootNode;
     while (node != nullptr) // exploit that only alpha rules applied
     {

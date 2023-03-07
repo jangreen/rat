@@ -51,21 +51,21 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
-    shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
-    // shared_ptr<Relation> r1 = Relation::parse("a;a^*");
-    // shared_ptr<Relation> r2 = Relation::parse("a");
+    // shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
+    // shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    shared_ptr<Relation> r1 = Relation::parse("a;a^*");
+    shared_ptr<Relation> r2 = Relation::parse("a");
     r1->label = 0;
     r1->negated = false;
     r2->label = 0;
     r2->negated = true;
     cout << "|=" << r1->toString() << " & " << r2->toString() << endl;
 
-    // infinite
+    /*/ infinite
     cout << "Infinite Proof..." << endl;
     Tableau tableau{r1, r2};
     tableau.solve(100);
-    tableau.exportProof("infinite");
+    tableau.exportProof("infinite");*/
 
     // setup assumptions
     shared_ptr<Relation> leftSide = Relation::parse("a;a");
@@ -74,19 +74,7 @@ int main(int argc, const char *argv[])
 
     // regular: 1. DNF, 2. Regular Solver
     cout << "Regular Proof..." << endl;
-    vector<shared_ptr<Relation>> c = {r1, r2};
-    auto dnf = RegularTableau::DNF(c);
-    cout << "Inital DNF: ";
-    for (auto clause : dnf)
-    {
-        cout << "  &&  ";
-        for (auto literal : clause)
-            cout << literal->toString() << " ";
-    }
-    cout << endl;
-
-    shared_ptr<RegularTableau::Node> node = make_shared<RegularTableau::Node>(dnf[0]);
-    RegularTableau regularTableau{node};
+    RegularTableau regularTableau{r1, r2};
     regularTableau.solve();
 
     cout << "Export Regular Tableau..." << endl;

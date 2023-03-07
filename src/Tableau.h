@@ -39,7 +39,7 @@ public:
     };
 
     Tableau(initializer_list<shared_ptr<Relation>> initalRelations);
-    Tableau(vector<shared_ptr<Relation>> initalRelations);
+    Tableau(Clause initalRelations);
 
     shared_ptr<Node> rootNode;
     priority_queue<shared_ptr<Node>, vector<shared_ptr<Node>>, Node::CompareNodes> unreducedNodes;
@@ -48,9 +48,9 @@ public:
     bool solve(int bound = 30);
 
     // methods for regular reasoning
-    vector<vector<shared_ptr<Relation>>> DNF();
+    vector<Clause> DNF();
     bool applyModalRule();
-    vector<shared_ptr<Relation>> calcReuqest();
+    Clause calcReuqest();
 
     void toDotFormat(ofstream &output) const;
     void exportProof(string filename) const;
