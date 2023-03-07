@@ -51,34 +51,50 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    // shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
-    // shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    /* 1)
+    shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
+    shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    //*/
+    /* 2)
     shared_ptr<Relation> r1 = Relation::parse("a;a^*");
     shared_ptr<Relation> r2 = Relation::parse("a");
+    shared_ptr<Relation> leftSide = Relation::parse("a;a");
+    shared_ptr<Assumption> transitiveA = make_shared<Assumption>(AssumptionType::regular, leftSide, "a");
+    RegularTableau::assumptions.push_back(transitiveA);
+    //*/
+    /* 3)
+    shared_ptr<Relation> r1 = Relation::parse("a;a^*");
+    shared_ptr<Relation> r2 = Relation::parse("a");
+    shared_ptr<Relation> leftSide = Relation::parse("a;a");
+    shared_ptr<Assumption> emptyAA = make_shared<Assumption>(AssumptionType::empty, leftSide);
+    RegularTableau::assumptions.push_back(emptyAA);
+    //*/
+    /* 4) */
+    shared_ptr<Relation> r1 = Relation::parse("a;b;c");
+    shared_ptr<Relation> r2 = Relation::parse("c");
+    shared_ptr<Relation> leftSide = Relation::parse("a;b");
+    shared_ptr<Assumption> idAB = make_shared<Assumption>(AssumptionType::identity, leftSide);
+    RegularTableau::assumptions.push_back(idAB);
+    //*/
+
     r1->label = 0;
     r1->negated = false;
     r2->label = 0;
     r2->negated = true;
     cout << "|=" << r1->toString() << " & " << r2->toString() << endl;
 
-    /*/ infinite
+    /* INFINITE
     cout << "Infinite Proof..." << endl;
     Tableau tableau{r1, r2};
     tableau.solve(100);
-    tableau.exportProof("infinite");*/
+    tableau.exportProof("infinite");
+    //*/
 
-    // setup assumptions
-    shared_ptr<Relation> leftSide = Relation::parse("a;a");
-    shared_ptr<Assumption> transitiveA = make_shared<Assumption>(AssumptionType::regular, leftSide, "a");
-    shared_ptr<Assumption> emptyAA = make_shared<Assumption>(AssumptionType::empty, leftSide);
-    // RegularTableau::assumptions.push_back(transitiveA);
-    RegularTableau::assumptions.push_back(emptyAA);
-
-    // regular: 1. DNF, 2. Regular Solver
+    /* REGULAR */
     cout << "Regular Proof..." << endl;
     RegularTableau regularTableau{r1, r2};
     regularTableau.solve();
-
     cout << "Export Regular Tableau..." << endl;
     regularTableau.exportProof("reg");
+    //*/
 }

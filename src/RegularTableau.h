@@ -51,7 +51,8 @@ public:
     static vector<Clause> DNF(Clause clause);
     void expandNode(shared_ptr<Node> node);
     void addNode(shared_ptr<Node> parent, Clause clause); // TODO: move in node class, call on parent
-    shared_ptr<Relation> saturateRelation(shared_ptr<Relation>);
+    shared_ptr<Relation> saturateRelation(shared_ptr<Relation> relation);
+    shared_ptr<Relation> saturateIdRelation(shared_ptr<Assumption> assumption, shared_ptr<Relation> relation);
     void saturate(Clause &clause);
     bool solve();
 

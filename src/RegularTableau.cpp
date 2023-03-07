@@ -76,9 +76,9 @@ RegularTableau::RegularTableau(Clause initalRelations)
     cout << "Inital DNF: ";
     for (auto clause : dnf)
     {
-        cout << "  &&  ";
+        cout << "  ||  ";
         for (auto literal : clause)
-            cout << literal->toString() << " ";
+            cout << literal->toString() << " and ";
     }
     cout << endl;
 
@@ -195,7 +195,7 @@ shared_ptr<Relation> RegularTableau::saturateRelation(shared_ptr<Relation> relat
     if (relation->label && relation->operation == Operation::base)
     {
         string baseRelation = *relation->identifier;
-        for (auto assumption : assumptions)
+        for (auto assumption : assumptions) // TODO fast get regular assumption
         {
             if (assumption->type == AssumptionType::regular && *assumption->baseRelation == baseRelation)
             {
@@ -210,6 +210,44 @@ shared_ptr<Relation> RegularTableau::saturateRelation(shared_ptr<Relation> relat
     }
     shared_ptr<Relation> leftSaturated = saturateRelation(relation->leftOperand);
     shared_ptr<Relation> rightSaturated = saturateRelation(relation->rightOperand);
+    if (leftSaturated == nullptr && rightSaturated == nullptr)
+    {
+        return nullptr;
+    }
+    if (leftSaturated == nullptr)
+    {
+        leftSaturated = relation->leftOperand;
+    }
+    if (rightSaturated == nullptr)
+    {
+        rightSaturated = relation->rightOperand;
+    }
+    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
+    saturated->negated = true;
+    return saturated;
+}
+
+shared_ptr<Relation> RegularTableau::saturateIdRelation(shared_ptr<Assumption> assumption, shared_ptr<Relation> relation)
+{
+    if (relation == nullptr || relation->saturated || relation->operation == Operation::identity || relation->operation == Operation::empty)
+    {
+        return nullptr;
+    }
+    if (relation->label)
+    {
+        shared_ptr<Relation> copy = make_shared<Relation>(*relation);
+        copy->label = nullopt;
+        copy->negated = false;
+        shared_ptr<Relation> assumptionR = make_shared<Relation>(*assumption->relation);
+        assumptionR->saturated = true;
+        assumptionR->label = relation->label;
+        shared_ptr<Relation> r = make_shared<Relation>(Operation::composition, assumptionR, copy);
+        r->negated = true;
+        return r;
+    }
+    shared_ptr<Relation> leftSaturated = saturateIdRelation(assumption, relation->leftOperand);
+    shared_ptr<Relation> rightSaturated = saturateIdRelation(assumption, relation->rightOperand);
+    // TODO_ support intersections -> different identity or no saturations
     if (leftSaturated == nullptr && rightSaturated == nullptr)
     {
         return nullptr;
@@ -242,12 +280,13 @@ void RegularTableau::saturate(Clause &clause)
             }
         }
     }
-    // empty assumptions
+
     for (auto assumption : assumptions)
     {
-        if (assumption->type == AssumptionType::empty)
+        vector<int> nodeLabels;
+        switch (assumption->type)
         {
-            vector<int> nodeLabels;
+        case AssumptionType::empty:
             for (auto literal : clause)
             {
                 for (auto label : literal->labels())
@@ -269,10 +308,24 @@ void RegularTableau::saturate(Clause &clause)
                 r->negated = true;
                 saturatedRelations.push_back(r);
             }
+            break;
+        case AssumptionType::identity:
+            for (auto literal : clause)
+            {
+                if (literal->negated)
+                {
+                    auto saturated = saturateIdRelation(assumption, literal);
+                    if (saturated != nullptr)
+                    {
+                        saturatedRelations.push_back(saturated);
+                    }
+                }
+            }
+        default:
+            break;
         }
     }
-    // identity assumptions
-    // TODO
+
     clause.insert(clause.end(), saturatedRelations.begin(), saturatedRelations.end());
 }
 
