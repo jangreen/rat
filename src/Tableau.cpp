@@ -413,7 +413,6 @@ void Tableau::Node::appendBranches(shared_ptr<Relation> leftRelation, shared_ptr
             this->rightNode = rightNode;
             rightNode->parentNode = this;
             rightNode->closed = checkIfClosed(this, rightRelation);
-            tableau->unreducedNodes.push(leftNode);
             if (rightRelation->negated && rightRelation->operation == Operation::full)
             {
                 rightNode->closed = true;
@@ -672,7 +671,7 @@ bool Tableau::solve(int bound)
         bound--;
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
-        // exportProof("infinite");
+        exportProof("inf");
         applyRule(currentNode);
     }
 }
@@ -714,7 +713,7 @@ vector<Clause> Tableau::DNF()
     {
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
-        // exportProof("dnfcalc");
+        exportProof("dnfcalc");
         applyDNFRule(currentNode);
     }
 

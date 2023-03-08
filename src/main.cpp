@@ -69,12 +69,25 @@ int main(int argc, const char *argv[])
     shared_ptr<Assumption> emptyAA = make_shared<Assumption>(AssumptionType::empty, leftSide);
     RegularTableau::assumptions.push_back(emptyAA);
     //*/
-    /* 4) */
+    /* 4)
     shared_ptr<Relation> r1 = Relation::parse("a;b;c");
     shared_ptr<Relation> r2 = Relation::parse("c");
     shared_ptr<Relation> leftSide = Relation::parse("a;b");
     shared_ptr<Assumption> idAB = make_shared<Assumption>(AssumptionType::identity, leftSide);
     RegularTableau::assumptions.push_back(idAB);
+    //*/
+    /* 5) KATER ECO PAPER*/
+    shared_ptr<Relation> r1 = Relation::parse("(rf | co | fr);(rf | co | fr)^*");
+    shared_ptr<Relation> r2 = Relation::parse("rf | (co | fr);(rf | id)");
+    shared_ptr<Assumption> coTransitive = make_shared<Assumption>(AssumptionType::regular, Relation::parse("co;co^*"), "co");
+    RegularTableau::assumptions.push_back(coTransitive);
+    /*
+    assume co;co <= co
+    assume co;rf-1 = 0
+    assume rf;rf = 0
+    assume rf;co = 0
+    assume rf;rf-1 <= id
+    */
     //*/
 
     r1->label = 0;

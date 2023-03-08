@@ -49,6 +49,7 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     {
         output << ", color=green";
     }
+    // TODO: mark root nodes if (re)
     output
         << "];" << endl;
     // edges
@@ -172,16 +173,14 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
             {
                 tuple<shared_ptr<Node>, vector<int>> edge{newNode, renaming};
                 parent->childNodes.push_back(edge);
-                nodes.emplace(newNode);
-                unreducedNodes.push(newNode);
             }
             else
             {
                 // new root node
-                nodes.emplace(newNode);
-                unreducedNodes.push(newNode);
                 rootNodes.push_back(newNode);
             }
+            nodes.emplace(newNode);
+            unreducedNodes.push(newNode);
         }
     }
 }
