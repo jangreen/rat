@@ -16,7 +16,7 @@ public:
     class Node
     {
     public:
-        Node(initializer_list<shared_ptr<Relation>> relations);
+        Node(initializer_list<Relation> relations);
         Node(Clause relations);
 
         Clause relations;
@@ -40,19 +40,19 @@ public:
         };
     };
 
-    RegularTableau(initializer_list<shared_ptr<Relation>> initalRelations);
+    RegularTableau(initializer_list<Relation> initalRelations);
     RegularTableau(Clause initalRelations);
 
     vector<shared_ptr<Node>> rootNodes;
     unordered_set<shared_ptr<Node>, Node::Hash, Node::Equal> nodes;
     stack<shared_ptr<Node>> unreducedNodes;
-    static vector<shared_ptr<Assumption>> assumptions;
+    static vector<Assumption> assumptions;
 
-    static vector<Clause> DNF(Clause clause);
+    static vector<Clause> DNF(const Clause &clause);
     void expandNode(shared_ptr<Node> node);
     void addNode(shared_ptr<Node> parent, Clause clause); // TODO: move in node class, call on parent
-    shared_ptr<Relation> saturateRelation(shared_ptr<Relation> relation);
-    shared_ptr<Relation> saturateIdRelation(shared_ptr<Assumption> assumption, shared_ptr<Relation> relation);
+    optional<Relation> saturateRelation(const Relation &relation);
+    unique_ptr<Relation> saturateIdRelation(const Assumption &assumption, const Relation &relation);
     void saturate(Clause &clause);
     bool solve();
 

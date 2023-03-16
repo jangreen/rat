@@ -1,19 +1,23 @@
 #include "Constraint.h"
 
-Constraint::Constraint(const ConstraintType type, const shared_ptr<Relation> relation, const optional<string> name) : type(type), relation(relation), name(name) {}
+Constraint::Constraint(const Constraint &other) : type(other.type), name(other.name)
+{
+    relation = make_unique<Relation>(*other.relation);
+}
+Constraint::Constraint(const ConstraintType type, const Relation &&relation, const optional<string> name) : type(type), relation(make_unique<Relation>(relation)), name(name) {}
 
 void Constraint::toEmptyNormalForm()
 {
     if (type == ConstraintType::irreflexive)
     {
-        shared_ptr<Relation> id = make_shared<Relation>(Operation::identity);
-        relation = make_shared<Relation>(Operation::intersection, relation, id);
+        Relation id = Relation(Operation::identity);
+        relation = make_unique<Relation>(Operation::intersection, move(*relation), move(id));
     }
     else if (type == ConstraintType::acyclic)
     {
-        shared_ptr<Relation> tc = make_shared<Relation>(Operation::transitiveClosure, relation);
-        shared_ptr<Relation> id = make_shared<Relation>(Operation::identity);
-        relation = make_shared<Relation>(Operation::intersection, tc, id);
+        Relation tc = Relation(Operation::transitiveClosure, move(*relation));
+        Relation id = Relation(Operation::identity);
+        relation = make_unique<Relation>(Operation::intersection, move(tc), move(id));
     }
     type = ConstraintType::empty;
 }

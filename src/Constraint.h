@@ -15,10 +15,11 @@ enum class ConstraintType
 class Constraint
 {
 public:
-    Constraint(const ConstraintType type, const shared_ptr<Relation> relation, const optional<string> name = nullopt);
+    Constraint(const Constraint &other); // TODO also implement move constructor
+    Constraint(const ConstraintType type, const Relation &&relation, const optional<string> name = nullopt);
 
     ConstraintType type;
-    shared_ptr<Relation> relation;
+    unique_ptr<Relation> relation;
     optional<string> name; // for printing
 
     void toEmptyNormalForm();

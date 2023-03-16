@@ -2,4 +2,27 @@
 
 using namespace std;
 
-Assumption::Assumption(const AssumptionType type, shared_ptr<Relation> relation, optional<string> baseRelation) : type(type), relation(relation), baseRelation(baseRelation) {}
+// helper
+void markBaseAsSaturated(Relation &relation)
+{
+    if (relation.operation == Operation::base)
+    {
+        relation.saturated = true;
+    }
+    else
+    {
+        if (relation.leftOperand != nullptr)
+        {
+            markBaseAsSaturated(*relation.leftOperand);
+        }
+        if (relation.rightOperand != nullptr)
+        {
+            markBaseAsSaturated(*relation.rightOperand);
+        }
+    }
+}
+
+Assumption::Assumption(const AssumptionType type, Relation &&relation, optional<string> baseRelation) : type(type), relation(make_unique<Relation>(move(relation))), baseRelation(baseRelation)
+{
+    markBaseAsSaturated(*this->relation);
+}

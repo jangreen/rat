@@ -14,12 +14,12 @@ public:
     class Node
     {
     public:
-        Node(Tableau *tableau, shared_ptr<Relation> relation);
-        Node(Tableau *tableau, shared_ptr<Metastatement> metastatement);
+        Node(Tableau *tableau, const Relation &&relation);
+        Node(Tableau *tableau, const Metastatement &&metastatement);
 
         Tableau *tableau;
-        shared_ptr<Relation> relation = nullptr;
-        shared_ptr<Metastatement> metastatement = nullptr;
+        optional<Relation> relation = nullopt;
+        optional<Metastatement> metastatement = nullopt;
         shared_ptr<Node> leftNode = nullptr;
         shared_ptr<Node> rightNode = nullptr;
         Node *parentNode = nullptr;
@@ -27,8 +27,9 @@ public:
 
         bool isClosed();
         bool isLeaf() const;
-        void appendBranches(shared_ptr<Relation> leftRelation, shared_ptr<Relation> rightRelation = nullptr);
-        void appendBranches(shared_ptr<Metastatement> metastatement);
+        void appendBranches(const Relation &leftRelation, const Relation &rightRelation);
+        void appendBranches(const Relation &leftRelation);
+        void appendBranches(const Metastatement &metastatement);
 
         void toDotFormat(ofstream &output) const;
 
@@ -38,7 +39,7 @@ public:
         };
     };
 
-    Tableau(initializer_list<shared_ptr<Relation>> initalRelations);
+    Tableau(initializer_list<Relation> initalRelations);
     Tableau(Clause initalRelations);
 
     shared_ptr<Node> rootNode;

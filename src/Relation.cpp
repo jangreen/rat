@@ -4,14 +4,49 @@
 
 using namespace std;
 
-Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
-Relation::Relation(const Operation operation, const shared_ptr<Relation> left) : operation(operation), identifier(nullopt), leftOperand(left), rightOperand(nullptr) {}
-Relation::Relation(const Operation operation, const shared_ptr<Relation> left, const shared_ptr<Relation> right) : operation(operation), identifier(nullopt), leftOperand(left), rightOperand(right) {}
+/* Rule of Five */
+Relation::Relation(const Relation &other) : operation(other.operation), identifier(other.identifier), label(other.label), negated(other.negated), saturated(other.saturated)
+{
+    if (other.leftOperand != nullptr)
+    {
+        leftOperand = make_unique<Relation>(*other.leftOperand);
+    }
+    if (other.rightOperand != nullptr)
+    {
+        rightOperand = make_unique<Relation>(*other.rightOperand);
+    }
+}
+Relation &Relation::operator=(Relation other)
+{
+    swap(*this, other);
+    return *this;
+}
+Relation::Relation(Relation &&other) noexcept : Relation(Operation::none)
+{
+    swap(*this, other);
+}
 
-unordered_map<string, shared_ptr<Relation>> Relation::relations;
+/* TODO: Relation::Relation(const string &expression) : Relation(Operation::none)
+{
+    CatInferVisitor visitor;
+    Relation parsedRelation = visitor.parseRelation(expression);
+    swap(*this, parsedRelation);
+}*/
+Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
+Relation::Relation(const Operation operation, Relation &&left) : operation(operation), identifier(nullopt), rightOperand(nullptr)
+{
+    leftOperand = make_unique<Relation>(move(left));
+}
+Relation::Relation(const Operation operation, Relation &&left, Relation &&right) : operation(operation), identifier(nullopt)
+{
+    leftOperand = make_unique<Relation>(move(left));
+    rightOperand = make_unique<Relation>(move(right));
+}
+
+unordered_map<string, Relation> Relation::relations;
 int Relation::maxLabel = 0;
 
-shared_ptr<Relation> Relation::parse(const string &expression)
+Relation Relation::parse(const string &expression)
 {
     CatInferVisitor visitor;
     return visitor.parseRelation(expression);
@@ -106,7 +141,7 @@ string Relation::toString() const
     string output;
     if (negated)
     {
-        output += "-.";
+        output += "-";
     }
     if (label)
     {
@@ -143,6 +178,10 @@ string Relation::toString() const
         break;
     case Operation::none:
         break;
+    }
+    if (saturated)
+    {
+        output += ".";
     }
     return output;
 }

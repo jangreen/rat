@@ -13,9 +13,9 @@ inline void hash_combine(std::size_t &seed, T const &v)
 size_t hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const
 {
     size_t seed = 0;
-    for (auto relation : node.relations)
+    for (const auto &relation : node.relations)
     {
-        hash_combine(seed, relation->toString()); // TODO: use string reprstation
+        hash_combine(seed, relation.toString()); // TODO: use string reprstation
     }
     return seed;
 }
@@ -32,16 +32,16 @@ bool RegularTableau::Node::Equal::operator()(const shared_ptr<Node> node1, const
 
 using namespace std;
 
-RegularTableau::Node::Node(initializer_list<shared_ptr<Relation>> relations) : relations(relations) {}
+RegularTableau::Node::Node(initializer_list<Relation> relations) : relations(relations) {}
 RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
 void RegularTableau::Node::toDotFormat(ofstream &output)
 {
     output << "N" << this
            << "[label=\"";
-    for (auto relation : relations)
+    for (const auto &relation : relations)
     {
-        output << relation->toString() << endl;
+        output << relation.toString() << endl;
     }
     output << "\"";
     // color closed branches
@@ -70,7 +70,7 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     }
 }
 
-RegularTableau::RegularTableau(initializer_list<shared_ptr<Relation>> initalRelations) : RegularTableau(vector(initalRelations)) {}
+RegularTableau::RegularTableau(initializer_list<Relation> initalRelations) : RegularTableau(vector(initalRelations)) {}
 RegularTableau::RegularTableau(Clause initalRelations)
 {
     auto dnf = DNF(initalRelations);
@@ -78,8 +78,8 @@ RegularTableau::RegularTableau(Clause initalRelations)
     for (auto clause : dnf)
     {
         cout << "  ||  ";
-        for (auto literal : clause)
-            cout << literal->toString() << " and ";
+        for (const auto &literal : clause)
+            cout << literal.toString() << " and ";
     }
     cout << endl;
 
@@ -90,9 +90,9 @@ RegularTableau::RegularTableau(Clause initalRelations)
     // exportProof("initalized");
 }
 
-vector<shared_ptr<Assumption>> RegularTableau::assumptions;
+vector<Assumption> RegularTableau::assumptions;
 
-vector<Clause> RegularTableau::DNF(Clause clause)
+vector<Clause> RegularTableau::DNF(const Clause &clause)
 {
     Tableau tableau{clause};
     return tableau.DNF();
@@ -132,20 +132,20 @@ void RegularTableau::expandNode(shared_ptr<Node> node)
 // parent == nullptr -> rootNode
 void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
 {
-    shared_ptr<Relation> positiveRelation = nullptr;
-    for (auto literal : clause)
+    unique_ptr<Relation> positiveRelation = nullptr;
+    for (const auto &literal : clause)
     {
-        if (!literal->negated)
+        if (!literal.negated)
         {
-            positiveRelation = literal;
+            positiveRelation = make_unique<Relation>(literal);
             break;
         }
     }
     // calculate renaming & rename
     vector<int> renaming = positiveRelation->calculateRenaming();
-    for (auto literal : clause)
+    for (Relation &literal : clause)
     {
-        literal->rename(renaming);
+        literal.rename(renaming);
     }
 
     // saturation phase
@@ -185,67 +185,92 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
     }
 }
 
-shared_ptr<Relation> RegularTableau::saturateRelation(shared_ptr<Relation> relation)
+optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
 {
-    if (relation == nullptr || relation->saturated || relation->operation == Operation::none || relation->operation == Operation::identity || relation->operation == Operation::empty)
+    if (relation.saturated)
     {
-        return nullptr;
+        return nullopt;
     }
-    if (relation->label && relation->operation == Operation::base)
+
+    optional<Relation> leftSaturated;
+    optional<Relation> rightSaturated;
+
+    switch (relation.operation)
     {
-        string baseRelation = *relation->identifier;
-        for (auto assumption : assumptions) // TODO fast get regular assumption
+    case Operation::none:
+        return nullopt;
+    case Operation::identity:
+        return nullopt;
+    case Operation::empty:
+        return nullopt;
+    case Operation::base:
+        for (const auto &assumption : assumptions) // TODO fast get regular assumption
         {
-            if (assumption->type == AssumptionType::regular && *assumption->baseRelation == baseRelation)
+            if (assumption.type == AssumptionType::regular && *assumption.baseRelation == *relation.identifier)
             {
-                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
-                leftSide->saturated = true;
-                leftSide->label = relation->label;
-                leftSide->negated = true;
+                Relation leftSide = Relation(*assumption.relation);
+                leftSide.label = relation.label;
+                leftSide.negated = true;
                 return leftSide;
             }
         }
-        return nullptr;
+        return nullopt;
+    case Operation::choice:
+    case Operation::intersection:
+        leftSaturated = saturateRelation(*relation.leftOperand);
+        rightSaturated = saturateRelation(*relation.rightOperand);
+        break;
+    case Operation::composition:
+    case Operation::converse:
+    case Operation::transitiveClosure:
+        leftSaturated = saturateRelation(*relation.leftOperand);
+        break;
+    default:
+        break;
     }
-    shared_ptr<Relation> leftSaturated = saturateRelation(relation->leftOperand);
-    shared_ptr<Relation> rightSaturated = saturateRelation(relation->rightOperand);
-    if (leftSaturated == nullptr && rightSaturated == nullptr)
+    if (!leftSaturated && !rightSaturated)
     {
-        return nullptr;
+        return nullopt;
     }
-    if (leftSaturated == nullptr)
+    if (!leftSaturated)
     {
-        leftSaturated = relation->leftOperand;
+        leftSaturated = Relation(*relation.leftOperand);
     }
-    if (rightSaturated == nullptr)
+    if (!rightSaturated && relation.rightOperand != nullptr)
     {
-        rightSaturated = relation->rightOperand;
+        rightSaturated = Relation(*relation.rightOperand);
     }
-    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
-    saturated->negated = true;
+    if (rightSaturated)
+    {
+        Relation saturated = Relation(relation.operation, move(*leftSaturated), move(*rightSaturated));
+        saturated.negated = true;
+        return saturated;
+    }
+    Relation saturated = Relation(relation.operation, move(*leftSaturated));
+    saturated.negated = true;
     return saturated;
 }
 
-shared_ptr<Relation> RegularTableau::saturateIdRelation(shared_ptr<Assumption> assumption, shared_ptr<Relation> relation)
+unique_ptr<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
 {
-    if (relation == nullptr || relation->saturated || relation->operation == Operation::identity || relation->operation == Operation::empty)
+    if (relation.saturated || relation.operation == Operation::identity || relation.operation == Operation::empty)
     {
         return nullptr;
     }
-    if (relation->label)
+    if (relation.label)
     {
-        shared_ptr<Relation> copy = make_shared<Relation>(*relation);
+        unique_ptr<Relation> copy = make_unique<Relation>(relation);
         copy->label = nullopt;
         copy->negated = false;
-        shared_ptr<Relation> assumptionR = make_shared<Relation>(*assumption->relation);
+        unique_ptr<Relation> assumptionR = make_unique<Relation>(*assumption.relation);
         assumptionR->saturated = true;
-        assumptionR->label = relation->label;
-        shared_ptr<Relation> r = make_shared<Relation>(Operation::composition, assumptionR, copy);
+        assumptionR->label = relation.label;
+        unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, move(*assumptionR), move(*copy));
         r->negated = true;
         return r;
     }
-    shared_ptr<Relation> leftSaturated = saturateIdRelation(assumption, relation->leftOperand);
-    shared_ptr<Relation> rightSaturated = saturateIdRelation(assumption, relation->rightOperand);
+    unique_ptr<Relation> leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
+    unique_ptr<Relation> rightSaturated = saturateIdRelation(assumption, *relation.rightOperand);
     // TODO_ support intersections -> different identity or no saturations
     if (leftSaturated == nullptr && rightSaturated == nullptr)
     {
@@ -253,42 +278,43 @@ shared_ptr<Relation> RegularTableau::saturateIdRelation(shared_ptr<Assumption> a
     }
     if (leftSaturated == nullptr)
     {
-        leftSaturated = relation->leftOperand;
+        leftSaturated = make_unique<Relation>(*relation.leftOperand);
     }
     if (rightSaturated == nullptr)
     {
-        rightSaturated = relation->rightOperand;
+        rightSaturated = make_unique<Relation>(*relation.rightOperand);
     }
-    shared_ptr<Relation> saturated = make_shared<Relation>(relation->operation, leftSaturated, rightSaturated);
+    unique_ptr<Relation> saturated = make_unique<Relation>(relation.operation, move(*leftSaturated), move(*rightSaturated));
     saturated->negated = true;
     return saturated;
 }
 
 void RegularTableau::saturate(Clause &clause)
 {
+    // return; // TODO remove:
     Clause saturatedRelations;
     // regular assumptions
-    for (auto literal : clause)
+    for (const Relation &literal : clause)
     {
-        if (literal->negated)
+        if (literal.negated)
         {
-            auto saturated = saturateRelation(literal);
-            if (saturated != nullptr)
+            optional<Relation> saturated = saturateRelation(literal);
+            if (saturated)
             {
-                saturatedRelations.push_back(saturated);
+                saturatedRelations.push_back(move(*saturated));
             }
         }
     }
 
-    for (auto assumption : assumptions)
+    for (const auto &assumption : assumptions)
     {
         vector<int> nodeLabels;
-        switch (assumption->type)
+        switch (assumption.type)
         {
         case AssumptionType::empty:
-            for (auto literal : clause)
+            for (const auto &literal : clause)
             {
-                for (auto label : literal->labels())
+                for (auto label : literal.labels())
                 {
                     if (find(nodeLabels.begin(), nodeLabels.end(), label) == nodeLabels.end())
                     {
@@ -299,24 +325,24 @@ void RegularTableau::saturate(Clause &clause)
 
             for (auto label : nodeLabels)
             {
-                shared_ptr<Relation> leftSide = make_shared<Relation>(*assumption->relation);
-                shared_ptr<Relation> full = make_shared<Relation>(Operation::full);
-                shared_ptr<Relation> r = make_shared<Relation>(Operation::composition, leftSide, full);
+                Relation leftSide = Relation(*assumption.relation);
+                Relation full = Relation(Operation::full);
+                unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, move(leftSide), move(full));
                 r->saturated = true;
                 r->label = label;
                 r->negated = true;
-                saturatedRelations.push_back(r);
+                saturatedRelations.push_back(*r);
             }
             break;
         case AssumptionType::identity:
-            for (auto literal : clause)
+            for (const auto &literal : clause)
             {
-                if (literal->negated)
+                if (literal.negated)
                 {
                     auto saturated = saturateIdRelation(assumption, literal);
                     if (saturated != nullptr)
                     {
-                        saturatedRelations.push_back(saturated);
+                        saturatedRelations.push_back(*saturated);
                     }
                 }
             }
@@ -364,19 +390,20 @@ void RegularTableau::exportProof(string filename) const
 bool RegularTableau::Node::operator==(const Node &otherNode) const
 {
     // <=
-    for (auto relation : relations)
+    for (const auto &relation : relations)
     {
-        if (find_if(otherNode.relations.begin(), otherNode.relations.end(), [relation](const shared_ptr<Relation> comparedRelation)
-                    { return *comparedRelation == *relation; }) == otherNode.relations.end())
+        // TODO replace by normal find
+        if (find_if(otherNode.relations.begin(), otherNode.relations.end(), [relation](const Relation &comparedRelation)
+                    { return comparedRelation == relation; }) == otherNode.relations.end())
         {
             return false;
         }
     }
     // =>
-    for (auto relation : otherNode.relations)
+    for (const auto &relation : otherNode.relations)
     {
-        if (find_if(relations.begin(), relations.end(), [relation](const shared_ptr<Relation> comparedRelation)
-                    { return *comparedRelation == *relation; }) == relations.end())
+        if (find_if(relations.begin(), relations.end(), [relation](const Relation &comparedRelation)
+                    { return comparedRelation == relation; }) == relations.end())
         {
             return false;
         }

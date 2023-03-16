@@ -22,14 +22,31 @@ enum class Operation
 class Relation
 {
 public:
-    Relation(const Operation operation, const optional<string> &identifier = nullopt);                      // nullary
-    Relation(const Operation operation, const shared_ptr<Relation> left);                                   // unary
-    Relation(const Operation operation, const shared_ptr<Relation> left, const shared_ptr<Relation> right); // binary
+    /* Rule of five */
+    Relation(const Relation &other);
+    Relation &operator=(Relation other);
+    Relation(Relation &&other) noexcept;
+    friend void swap(Relation &first, Relation &second)
+    {
+        using std::swap;
+        swap(first.operation, second.operation);
+        swap(first.identifier, second.identifier);
+        swap(first.leftOperand, second.leftOperand);
+        swap(first.rightOperand, second.rightOperand);
+        swap(first.label, second.label);
+        swap(first.negated, second.negated);
+        swap(first.saturated, second.saturated);
+    }
+
+    // TODO: Relation(const string &expression);                                                // parse constructor
+    Relation(const Operation operation, const optional<string> &identifier = nullopt); // nullary
+    Relation(const Operation operation, Relation &&left);                              // unary
+    Relation(const Operation operation, Relation &&left, Relation &&right);            // binary
 
     Operation operation;
     optional<string> identifier;       // is set iff operation base
-    shared_ptr<Relation> leftOperand;  // is set iff operation unary/binary
-    shared_ptr<Relation> rightOperand; // is set iff operation binary
+    unique_ptr<Relation> leftOperand;  // is set iff operation unary/binary
+    unique_ptr<Relation> rightOperand; // is set iff operation binary
     optional<int> label = nullopt;
     bool negated = false;
     bool saturated = false;
@@ -41,9 +58,9 @@ public:
     bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
     string toString() const;                              // for printing
 
-    static unordered_map<string, shared_ptr<Relation>> relations; // id, 0, 1, base relations and defined relations (named relations)
-    static int maxLabel;                                          // to create globally unique labels
-    static shared_ptr<Relation> parse(const string &expression);
+    static unordered_map<string, Relation> relations; // id, 0, 1, base relations and defined relations (named relations)
+    static int maxLabel;                              // to create globally unique labels
+    static Relation parse(const string &expression);
 };
 
-typedef vector<shared_ptr<Relation>> Clause;
+typedef vector<Relation> Clause;

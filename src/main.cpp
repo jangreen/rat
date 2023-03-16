@@ -52,35 +52,43 @@ using namespace std;
 int main(int argc, const char *argv[])
 {
     /* 1)
-    shared_ptr<Relation> r1 = Relation::parse("(id;a)^*");
-    shared_ptr<Relation> r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
+    Relation r1 = Relation::parse("(id;a)^*");
+    Relation r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
     //*/
     /* 2)
-    shared_ptr<Relation> r1 = Relation::parse("a;a^*");
-    shared_ptr<Relation> r2 = Relation::parse("a");
-    shared_ptr<Relation> leftSide = Relation::parse("a;a");
-    shared_ptr<Assumption> transitiveA = make_shared<Assumption>(AssumptionType::regular, leftSide, "a");
-    RegularTableau::assumptions.push_back(transitiveA);
+    Relation r1 = Relation::parse("a;a;a^*");
+    Relation r2 = Relation::parse("a");
+    Relation leftSide = Relation::parse("a;a^*");
+    Assumption transitiveA = Assumption(AssumptionType::regular, move(leftSide), "a");
+    RegularTableau::assumptions.push_back(move(transitiveA));
     //*/
     /* 3)
-    shared_ptr<Relation> r1 = Relation::parse("a;a^*");
-    shared_ptr<Relation> r2 = Relation::parse("a");
-    shared_ptr<Relation> leftSide = Relation::parse("a;a");
-    shared_ptr<Assumption> emptyAA = make_shared<Assumption>(AssumptionType::empty, leftSide);
-    RegularTableau::assumptions.push_back(emptyAA);
+    Relation r1 = Relation::parse("a;a^*");
+    Relation r2 = Relation::parse("a");
+    Relation leftSide = Relation::parse("a;a");
+    Assumption emptyAA = Assumption(AssumptionType::empty, move(leftSide));
+    RegularTableau::assumptions.push_back(move(emptyAA));
     //*/
     /* 4)
-    shared_ptr<Relation> r1 = Relation::parse("a;b;c");
-    shared_ptr<Relation> r2 = Relation::parse("c");
-    shared_ptr<Relation> leftSide = Relation::parse("a;b");
-    shared_ptr<Assumption> idAB = make_shared<Assumption>(AssumptionType::identity, leftSide);
-    RegularTableau::assumptions.push_back(idAB);
+    Relation r1 = Relation::parse("a;b;c");
+    Relation r2 = Relation::parse("c");
+    Relation leftSide = Relation::parse("a;b");
+    Assumption idAB = Assumption(AssumptionType::identity, move(leftSide));
+    RegularTableau::assumptions.push_back(move(idAB));
     //*/
-    /* 5) KATER ECO PAPER*/
-    shared_ptr<Relation> r1 = Relation::parse("(rf | co | fr);(rf | co | fr)^*");
-    shared_ptr<Relation> r2 = Relation::parse("rf | (co | fr);(rf | id)");
-    shared_ptr<Assumption> coTransitive = make_shared<Assumption>(AssumptionType::regular, Relation::parse("co;co^*"), "co");
-    RegularTableau::assumptions.push_back(coTransitive);
+    /* 5) KATER ECO PAPER */
+    Relation r1 = Relation::parse("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
+    Relation r2 = Relation::parse("rf | (co | rfinv;co);(rf | id)");
+    Assumption coTransitive = Assumption(AssumptionType::regular, Relation::parse("co;co^*"), "co");
+    RegularTableau::assumptions.push_back(move(coTransitive));
+    Assumption rfrf = Assumption(AssumptionType::empty, Relation::parse("rf;rf"));
+    Assumption rfco = Assumption(AssumptionType::empty, Relation::parse("rf;co"));
+    Assumption corfinv = Assumption(AssumptionType::empty, Relation::parse("co;rfinv"));
+    RegularTableau::assumptions.push_back(move(rfrf));
+    RegularTableau::assumptions.push_back(move(rfco));
+    RegularTableau::assumptions.push_back(move(corfinv));
+    Assumption rfrfinv = Assumption(AssumptionType::identity, Relation::parse("rf;rfinv"));
+
     /*
     assume co;co <= co
     assume co;rf-1 = 0
@@ -90,11 +98,13 @@ int main(int argc, const char *argv[])
     */
     //*/
 
-    r1->label = 0;
-    r1->negated = false;
-    r2->label = 0;
-    r2->negated = true;
-    cout << "|=" << r1->toString() << " & " << r2->toString() << endl;
+    /* PROOF SETUP */
+    r1.label = 0;
+    r1.negated = false;
+    r2.label = 0;
+    r2.negated = true;
+    std::cout << "|=" << r1.toString() << " & " << r2.toString() << endl;
+    //*/
 
     /* INFINITE
     cout << "Infinite Proof..." << endl;
@@ -104,10 +114,10 @@ int main(int argc, const char *argv[])
     //*/
 
     /* REGULAR */
-    cout << "Regular Proof..." << endl;
+    std::cout << "Regular Proof..." << endl;
     RegularTableau regularTableau{r1, r2};
     regularTableau.solve();
-    cout << "Export Regular Tableau..." << endl;
+    std::cout << "Export Regular Tableau..." << endl;
     regularTableau.exportProof("reg");
     //*/
 }
