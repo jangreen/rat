@@ -35,12 +35,12 @@ Relation::Relation(Relation &&other) noexcept : Relation(Operation::none)
 Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
 Relation::Relation(const Operation operation, Relation &&left) : operation(operation), identifier(nullopt), rightOperand(nullptr)
 {
-    leftOperand = make_unique<Relation>(move(left));
+    leftOperand = make_unique<Relation>(std::move(left));
 }
 Relation::Relation(const Operation operation, Relation &&left, Relation &&right) : operation(operation), identifier(nullopt)
 {
-    leftOperand = make_unique<Relation>(move(left));
-    rightOperand = make_unique<Relation>(move(right));
+    leftOperand = make_unique<Relation>(std::move(left));
+    rightOperand = make_unique<Relation>(std::move(right));
 }
 
 unordered_map<string, Relation> Relation::relations;

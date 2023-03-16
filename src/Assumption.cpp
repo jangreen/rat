@@ -22,7 +22,7 @@ void markBaseAsSaturated(Relation &relation)
     }
 }
 
-Assumption::Assumption(const AssumptionType type, Relation &&relation, optional<string> baseRelation) : type(type), relation(make_unique<Relation>(move(relation))), baseRelation(baseRelation)
+Assumption::Assumption(const AssumptionType type, Relation &&relation, optional<string> baseRelation) : type(type), relation(make_unique<Relation>(std::move(relation))), baseRelation(baseRelation)
 {
     markBaseAsSaturated(*this->relation);
 }

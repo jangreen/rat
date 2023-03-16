@@ -242,11 +242,11 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
     }
     if (rightSaturated)
     {
-        Relation saturated = Relation(relation.operation, move(*leftSaturated), move(*rightSaturated));
+        Relation saturated = Relation(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
         saturated.negated = true;
         return saturated;
     }
-    Relation saturated = Relation(relation.operation, move(*leftSaturated));
+    Relation saturated = Relation(relation.operation, std::move(*leftSaturated));
     saturated.negated = true;
     return saturated;
 }
@@ -265,7 +265,7 @@ unique_ptr<Relation> RegularTableau::saturateIdRelation(const Assumption &assump
         unique_ptr<Relation> assumptionR = make_unique<Relation>(*assumption.relation);
         assumptionR->saturated = true;
         assumptionR->label = relation.label;
-        unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, move(*assumptionR), move(*copy));
+        unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, std::move(*assumptionR), std::move(*copy));
         r->negated = true;
         return r;
     }
@@ -284,7 +284,7 @@ unique_ptr<Relation> RegularTableau::saturateIdRelation(const Assumption &assump
     {
         rightSaturated = make_unique<Relation>(*relation.rightOperand);
     }
-    unique_ptr<Relation> saturated = make_unique<Relation>(relation.operation, move(*leftSaturated), move(*rightSaturated));
+    unique_ptr<Relation> saturated = make_unique<Relation>(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
     saturated->negated = true;
     return saturated;
 }
@@ -301,7 +301,7 @@ void RegularTableau::saturate(Clause &clause)
             optional<Relation> saturated = saturateRelation(literal);
             if (saturated)
             {
-                saturatedRelations.push_back(move(*saturated));
+                saturatedRelations.push_back(std::move(*saturated));
             }
         }
     }
@@ -327,7 +327,7 @@ void RegularTableau::saturate(Clause &clause)
             {
                 Relation leftSide = Relation(*assumption.relation);
                 Relation full = Relation(Operation::full);
-                unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, move(leftSide), move(full));
+                unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, std::move(leftSide), std::move(full));
                 r->saturated = true;
                 r->label = label;
                 r->negated = true;

@@ -81,7 +81,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
         type = ConstraintType::acyclic;
     }
     Relation relation = any_cast<Relation>(ctx->e->accept(this));
-    return Constraint(type, move(relation), name);
+    return Constraint(type, std::move(relation), name);
 }
 
 /*void*/ antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx)
@@ -130,19 +130,19 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-    return Relation(Operation::choice, move(r1), move(r2));
+    return Relation(Operation::choice, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprComposition(CatParser::ExprCompositionContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-    return Relation(Operation::composition, move(r1), move(r2));
+    return Relation(Operation::composition, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprIntersection(CatParser::ExprIntersectionContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
     Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-    return Relation(Operation::intersection, move(r1), move(r2));
+    return Relation(Operation::intersection, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprTransitive(CatParser::ExprTransitiveContext *ctx)
 {
@@ -157,7 +157,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprInverse(CatParser::ExprInverseContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e->accept(this));
-    return Relation(Operation::converse, move(r1));
+    return Relation(Operation::converse, std::move(r1));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprDomainIdentity(CatParser::ExprDomainIdentityContext *ctx)
 {
@@ -188,7 +188,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprTransRef(CatParser::ExprTransRefContext *ctx)
 {
     Relation r1 = any_cast<Relation>(ctx->e->accept(this));
-    return Relation(Operation::transitiveClosure, move(r1));
+    return Relation(Operation::transitiveClosure, std::move(r1));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprFencerel(CatParser::ExprFencerelContext *ctx)
 {

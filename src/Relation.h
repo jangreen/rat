@@ -47,14 +47,14 @@ public:
     optional<string> identifier;       // is set iff operation base
     unique_ptr<Relation> leftOperand;  // is set iff operation unary/binary
     unique_ptr<Relation> rightOperand; // is set iff operation binary
-    optional<int> label = nullopt;
-    bool negated = false;
-    bool saturated = false;
+    optional<int> label = nullopt;     // is set iff labeled term
+    bool negated = false;              // propsitional negation
+    bool saturated = false;            // mark base relation
 
-    bool isNormal() const;                 // true iff all labels are in front of base relations
-    vector<int> labels() const;            // return all labels of the relation term
-    vector<int> calculateRenaming() const; // renaming {2,4,5}: 2->0,4->1,5->2
-    void rename(const vector<int> &renaming);
+    bool isNormal() const;                                // true iff all labels are in front of base relations
+    vector<int> labels() const;                           // return all labels of the relation term
+    vector<int> calculateRenaming() const;                // renaming {2,4,5}: 2->0,4->1,5->2
+    void rename(const vector<int> &renaming);             // renames given a renaming function
     bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
     string toString() const;                              // for printing
 

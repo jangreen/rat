@@ -51,7 +51,7 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    /* 1)
+    /* 1) */
     Relation r1 = Relation::parse("(id;a)^*");
     Relation r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
     //*/
@@ -59,34 +59,34 @@ int main(int argc, const char *argv[])
     Relation r1 = Relation::parse("a;a;a^*");
     Relation r2 = Relation::parse("a");
     Relation leftSide = Relation::parse("a;a^*");
-    Assumption transitiveA = Assumption(AssumptionType::regular, move(leftSide), "a");
-    RegularTableau::assumptions.push_back(move(transitiveA));
+    Assumption transitiveA = Assumption(AssumptionType::regular, std::move(leftSide), "a");
+    RegularTableau::assumptions.push_back(std::move(transitiveA));
     //*/
     /* 3)
     Relation r1 = Relation::parse("a;a^*");
     Relation r2 = Relation::parse("a");
     Relation leftSide = Relation::parse("a;a");
-    Assumption emptyAA = Assumption(AssumptionType::empty, move(leftSide));
-    RegularTableau::assumptions.push_back(move(emptyAA));
+    Assumption emptyAA = Assumption(AssumptionType::empty, std::move(leftSide));
+    RegularTableau::assumptions.push_back(std::move(emptyAA));
     //*/
     /* 4)
     Relation r1 = Relation::parse("a;b;c");
     Relation r2 = Relation::parse("c");
     Relation leftSide = Relation::parse("a;b");
-    Assumption idAB = Assumption(AssumptionType::identity, move(leftSide));
-    RegularTableau::assumptions.push_back(move(idAB));
+    Assumption idAB = Assumption(AssumptionType::identity, std::move(leftSide));
+    RegularTableau::assumptions.push_back(std::move(idAB));
     //*/
-    /* 5) KATER ECO PAPER */
+    /* 5) KATER ECO PAPER
     Relation r1 = Relation::parse("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
     Relation r2 = Relation::parse("rf | (co | rfinv;co);(rf | id)");
     Assumption coTransitive = Assumption(AssumptionType::regular, Relation::parse("co;co^*"), "co");
-    RegularTableau::assumptions.push_back(move(coTransitive));
+    RegularTableau::assumptions.push_back(std::move(coTransitive));
     Assumption rfrf = Assumption(AssumptionType::empty, Relation::parse("rf;rf"));
     Assumption rfco = Assumption(AssumptionType::empty, Relation::parse("rf;co"));
     Assumption corfinv = Assumption(AssumptionType::empty, Relation::parse("co;rfinv"));
-    RegularTableau::assumptions.push_back(move(rfrf));
-    RegularTableau::assumptions.push_back(move(rfco));
-    RegularTableau::assumptions.push_back(move(corfinv));
+    RegularTableau::assumptions.push_back(std::move(rfrf));
+    RegularTableau::assumptions.push_back(std::move(rfco));
+    RegularTableau::assumptions.push_back(std::move(corfinv));
     Assumption rfrfinv = Assumption(AssumptionType::identity, Relation::parse("rf;rfinv"));
 
     /*
@@ -106,7 +106,7 @@ int main(int argc, const char *argv[])
     std::cout << "|=" << r1.toString() << " & " << r2.toString() << endl;
     //*/
 
-    /* INFINITE
+    /* INFINITE */
     cout << "Infinite Proof..." << endl;
     Tableau tableau{r1, r2};
     tableau.solve(100);
