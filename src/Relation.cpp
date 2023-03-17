@@ -4,7 +4,6 @@
 
 using namespace std;
 
-/* Rule of Five */
 Relation::Relation(const Relation &other) : operation(other.operation), identifier(other.identifier), label(other.label), negated(other.negated), saturated(other.saturated)
 {
     if (other.leftOperand != nullptr)
@@ -16,15 +15,13 @@ Relation::Relation(const Relation &other) : operation(other.operation), identifi
         rightOperand = make_unique<Relation>(*other.rightOperand);
     }
 }
-Relation &Relation::operator=(Relation other)
+Relation &Relation::operator=(const Relation &other)
 {
-    swap(*this, other);
+    Relation copy(other);
+    swap(*this, copy);
     return *this;
 }
-Relation::Relation(Relation &&other) noexcept : Relation(Operation::none)
-{
-    swap(*this, other);
-}
+// TODO remove: Relation::Relation(Relation &&other) noexcept : operation(other.operation), identifier(other.identifier), leftOperand(std::move(other.leftOperand)), rightOperand(std::move(other.rightOperand)), label(other.label), negated(other.negated), saturated(other.saturated) {}
 
 /* TODO: Relation::Relation(const string &expression) : Relation(Operation::none)
 {
@@ -32,7 +29,9 @@ Relation::Relation(Relation &&other) noexcept : Relation(Operation::none)
     Relation parsedRelation = visitor.parseRelation(expression);
     swap(*this, parsedRelation);
 }*/
-Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
+Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr)
+{
+}
 Relation::Relation(const Operation operation, Relation &&left) : operation(operation), identifier(nullopt), rightOperand(nullptr)
 {
     leftOperand = make_unique<Relation>(std::move(left));
@@ -59,6 +58,11 @@ bool Relation::operator==(const Relation &otherRelation) const
         return false;
     }
 
+    /* modulo negation if (negated != otherRelation.negated)
+    {
+        return false;
+    }*/
+
     if ((label.has_value() != otherRelation.label.has_value()) || (label && *label != *otherRelation.label))
     {
         return false;
@@ -78,6 +82,10 @@ bool Relation::operator==(const Relation &otherRelation) const
     bool rightNullEqual = (rightOperand == nullptr) == (otherRelation.rightOperand == nullptr);
     bool rightEqual = rightNullEqual && (rightOperand == nullptr || *rightOperand == *otherRelation.rightOperand);
     return leftEqual && rightEqual;
+}
+bool Relation::operator<(const Relation &otherRelation) const
+{
+    return (toString() < otherRelation.toString());
 }
 
 bool Relation::isNormal() const

@@ -13,7 +13,9 @@ inline void hash_combine(std::size_t &seed, T const &v)
 size_t hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const
 {
     size_t seed = 0;
-    for (const auto &relation : node.relations)
+    Clause copy = node.relations;
+    sort(copy.begin(), copy.end());
+    for (const auto &relation : copy)
     {
         hash_combine(seed, relation.toString()); // TODO: use string reprstation
     }
@@ -39,6 +41,7 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
 {
     output << "N" << this
            << "[label=\"";
+    output << hash<Node>()(*this) << endl;
     for (const auto &relation : relations)
     {
         output << relation.toString() << endl;
@@ -397,24 +400,15 @@ void RegularTableau::exportProof(string filename) const
 
 bool RegularTableau::Node::operator==(const Node &otherNode) const
 {
-    // <=
-    for (const auto &relation : relations)
+    // shorcuts
+    if (relations.size() != otherNode.relations.size())
     {
-        // TODO replace by normal find
-        if (find_if(otherNode.relations.begin(), otherNode.relations.end(), [relation](const Relation &comparedRelation)
-                    { return comparedRelation == relation; }) == otherNode.relations.end())
-        {
-            return false;
-        }
+        return false;
     }
-    // =>
-    for (const auto &relation : otherNode.relations)
-    {
-        if (find_if(relations.begin(), relations.end(), [relation](const Relation &comparedRelation)
-                    { return comparedRelation == relation; }) == relations.end())
-        {
-            return false;
-        }
-    }
-    return true;
+    // copy, sort, compare O(n log n)
+    Clause c1 = relations;
+    Clause c2 = otherNode.relations;
+    std::sort(c1.begin(), c1.end());
+    std::sort(c2.begin(), c2.end());
+    return c1 == c2;
 }

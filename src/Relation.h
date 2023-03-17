@@ -24,8 +24,10 @@ class Relation
 public:
     /* Rule of five */
     Relation(const Relation &other);
-    Relation &operator=(Relation other);
-    Relation(Relation &&other) noexcept;
+    Relation &operator=(const Relation &other);
+    Relation &operator=(Relation &&other) = default;
+    Relation(Relation &&other) = default;
+    ~Relation() = default;
     friend void swap(Relation &first, Relation &second)
     {
         using std::swap;
@@ -56,6 +58,7 @@ public:
     vector<int> calculateRenaming() const;                // renaming {2,4,5}: 2->0,4->1,5->2
     void rename(const vector<int> &renaming);             // renames given a renaming function
     bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
+    bool operator<(const Relation &otherRelation) const;  // for sorting/hashing
     string toString() const;                              // for printing
 
     static unordered_map<string, Relation> relations; // id, 0, 1, base relations and defined relations (named relations)
