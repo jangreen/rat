@@ -1,7 +1,7 @@
 #include "Relation.h"
 #include "CatInferVisitor.h"
 
-Relation::Relation(const Relation &other) : operation(other.operation), identifier(other.identifier), label(other.label), negated(other.negated), saturated(other.saturated)
+Relation::Relation(const Relation &other) : operation(other.operation), identifier(other.identifier), label(other.label), negated(other.negated), saturated(other.saturated), saturatedId(other.saturatedId)
 {
     if (other.leftOperand != nullptr)
     {
@@ -177,6 +177,10 @@ std::string Relation::toString() const
     if (saturated)
     {
         output += ".";
+    }
+    if (saturatedId)
+    {
+        output += "..";
     }
     return output;
 }

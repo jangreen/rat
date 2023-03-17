@@ -1,26 +1,33 @@
 #include "Assumption.h"
 
 // helper
-void markBaseAsSaturated(Relation &relation)
+void markBaseAsSaturated(bool identity, Relation &relation)
 {
     if (relation.operation == Operation::base)
     {
-        relation.saturated = true;
+        if (identity)
+        {
+            relation.saturatedId = true;
+        }
+        else
+        {
+            relation.saturated = true;
+        }
     }
     else
     {
         if (relation.leftOperand != nullptr)
         {
-            markBaseAsSaturated(*relation.leftOperand);
+            markBaseAsSaturated(identity, *relation.leftOperand);
         }
         if (relation.rightOperand != nullptr)
         {
-            markBaseAsSaturated(*relation.rightOperand);
+            markBaseAsSaturated(identity, *relation.rightOperand);
         }
     }
 }
 
 Assumption::Assumption(const AssumptionType type, Relation &&relation, std::optional<std::string> baseRelation) : type(type), relation(std::move(relation)), baseRelation(baseRelation)
 {
-    markBaseAsSaturated(this->relation);
+    markBaseAsSaturated((this->type == AssumptionType::identity), this->relation);
 }

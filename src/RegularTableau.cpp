@@ -190,7 +190,7 @@ void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause)
 
 std::optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
 {
-    if (relation.saturated)
+    if (relation.saturated || relation.saturatedId)
     {
         return std::nullopt;
     }
@@ -254,7 +254,7 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
 
 std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
 {
-    if (relation.saturated || relation.operation == Operation::identity || relation.operation == Operation::empty)
+    if (relation.saturatedId || relation.operation == Operation::identity || relation.operation == Operation::empty)
     {
         return std::nullopt;
     }

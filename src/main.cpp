@@ -31,20 +31,20 @@ int main(int argc, const char *argv[])
     Assumption idAB(AssumptionType::identity, std::move(leftSide));
     RegularTableau::assumptions.push_back(std::move(idAB));
     //*/
-    /* 5) KATER ECO PAPER *
+    /* 5) KATER ECO PAPER */
     Relation r1("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
     Relation r2("rf | (co | rfinv;co);(rf | id)");
-    Assumption coTransitive(AssumptionType::regular, Relation::parse("co;co^*"), "co");
+    Assumption coTransitive(AssumptionType::regular, Relation("co;co^*"), "co");
     RegularTableau::assumptions.push_back(std::move(coTransitive));
-    Assumption rfrf(AssumptionType::empty, Relation::parse("rf;rf"));
-    Assumption rfco(AssumptionType::empty, Relation::parse("rf;co"));
-    Assumption corfinv(AssumptionType::empty, Relation::parse("co;rfinv"));
+    Assumption rfrf(AssumptionType::empty, Relation("rf;rf"));
+    Assumption rfco(AssumptionType::empty, Relation("rf;co"));
+    Assumption corfinv(AssumptionType::empty, Relation("co;rfinv"));
     RegularTableau::assumptions.push_back(std::move(rfrf));
     RegularTableau::assumptions.push_back(std::move(rfco));
     RegularTableau::assumptions.push_back(std::move(corfinv));
-    Assumption rfrfinv(AssumptionType::identity, Relation::parse("rf;rfinv"));
+    Assumption rfrfinv(AssumptionType::identity, Relation("rf;rfinv"));
     RegularTableau::assumptions.push_back(std::move(rfrfinv));
-    /* 6) REGINCL */
+    /* 6) REGINCL *
     Relation r1("(a;a|b)^*;a;b");
     Relation r2("(a;(a;a)^* | b)^*;b");
     //*/

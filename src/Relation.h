@@ -38,6 +38,7 @@ public:
         swap(first.label, second.label);
         swap(first.negated, second.negated);
         swap(first.saturated, second.saturated);
+        swap(first.saturatedId, second.saturatedId);
     }
 
     explicit Relation(const std::string &expression);                                                 // parse constructor
@@ -52,6 +53,7 @@ public:
     std::optional<int> label = std::nullopt; // is set iff labeled term
     bool negated = false;                    // propsitional negation
     bool saturated = false;                  // mark base relation
+    bool saturatedId = false;
 
     bool isNormal() const;                                // true iff all labels are in front of base relations
     std::vector<int> labels() const;                      // return all labels of the relation term

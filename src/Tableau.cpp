@@ -493,6 +493,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         }
         return true;
     }
+    return false;
 }
 
 // helper
