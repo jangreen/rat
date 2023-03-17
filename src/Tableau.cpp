@@ -192,15 +192,15 @@ void Tableau::Node::appendBranches(const Relation &leftRelation)
     }
     if (isLeaf())
     {
-        cout << leftRelation.toString() << endl;
-        if (checkIfDuplicate(this, leftRelation))
+        // TODO merge with function below
+        auto leftNode = make_shared<Node>(tableau, Relation(leftRelation));
+        leftNode->closed = checkIfClosed(this, leftRelation);
+        if (!leftNode->closed && checkIfDuplicate(this, leftRelation))
         {
             return;
         }
-        auto leftNode = make_shared<Node>(tableau, Relation(leftRelation));
         this->leftNode = leftNode;
         leftNode->parentNode = this;
-        leftNode->closed = checkIfClosed(this, leftRelation);
         if (leftRelation.negated && leftRelation.operation == Operation::full)
         {
             leftNode->closed = true;

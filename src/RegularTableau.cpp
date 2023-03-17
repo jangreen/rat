@@ -137,17 +137,17 @@ bool RegularTableau::expandNode(shared_ptr<Node> node)
 // parent == nullptr -> rootNode
 void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
 {
-    unique_ptr<Relation> positiveRelation = nullptr;
+    // calculate renaming & rename
+    vector<int> renaming;
     for (const auto &literal : clause)
     {
         if (!literal.negated)
         {
-            positiveRelation = make_unique<Relation>(literal);
+            renaming = literal.calculateRenaming();
             break;
         }
     }
-    // calculate renaming & rename
-    vector<int> renaming = positiveRelation->calculateRenaming();
+
     for (Relation &literal : clause)
     {
         literal.rename(renaming);
@@ -213,7 +213,7 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
         {
             if (assumption.type == AssumptionType::regular && *assumption.baseRelation == *relation.identifier)
             {
-                Relation leftSide = Relation(*assumption.relation);
+                Relation leftSide = Relation(assumption.relation);
                 leftSide.label = relation.label;
                 leftSide.negated = true;
                 return leftSide;
@@ -256,41 +256,63 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
     return saturated;
 }
 
-unique_ptr<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
+optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
 {
     if (relation.saturated || relation.operation == Operation::identity || relation.operation == Operation::empty)
     {
-        return nullptr;
+        return nullopt;
     }
     if (relation.label)
     {
-        unique_ptr<Relation> copy = make_unique<Relation>(relation);
-        copy->label = nullopt;
-        copy->negated = false;
-        unique_ptr<Relation> assumptionR = make_unique<Relation>(*assumption.relation);
-        assumptionR->saturated = true;
-        assumptionR->label = relation.label;
-        unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, std::move(*assumptionR), std::move(*copy));
-        r->negated = true;
+        Relation copy = Relation(relation);
+        copy.label = nullopt;
+        copy.negated = false;
+        Relation assumptionR = Relation(assumption.relation);
+        assumptionR.label = relation.label;
+        Relation r = Relation(Operation::composition, std::move(assumptionR), std::move(copy));
+        r.negated = true;
         return r;
     }
-    unique_ptr<Relation> leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
-    unique_ptr<Relation> rightSaturated = saturateIdRelation(assumption, *relation.rightOperand);
+
+    optional<Relation> leftSaturated;
+    optional<Relation> rightSaturated;
+
+    switch (relation.operation)
+    {
+    case Operation::none:
+    case Operation::identity:
+    case Operation::empty:
+    case Operation::base:
+        return nullopt;
+    case Operation::choice:
+    case Operation::intersection:
+        leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
+        rightSaturated = saturateIdRelation(assumption, *relation.rightOperand);
+        break;
+    case Operation::composition:
+    case Operation::converse:
+    case Operation::transitiveClosure:
+        leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
+        break;
+    default:
+        break;
+    }
+
     // TODO_ support intersections -> different identity or no saturations
-    if (leftSaturated == nullptr && rightSaturated == nullptr)
+    if (!leftSaturated && !rightSaturated)
     {
-        return nullptr;
+        return nullopt;
     }
-    if (leftSaturated == nullptr)
+    if (!leftSaturated)
     {
-        leftSaturated = make_unique<Relation>(*relation.leftOperand);
+        leftSaturated = Relation(*relation.leftOperand);
     }
-    if (rightSaturated == nullptr)
+    if (!rightSaturated)
     {
-        rightSaturated = make_unique<Relation>(*relation.rightOperand);
+        rightSaturated = Relation(*relation.rightOperand);
     }
-    unique_ptr<Relation> saturated = make_unique<Relation>(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
-    saturated->negated = true;
+    Relation saturated = Relation(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
+    saturated.negated = true;
     return saturated;
 }
 
@@ -330,13 +352,13 @@ void RegularTableau::saturate(Clause &clause)
 
             for (auto label : nodeLabels)
             {
-                Relation leftSide = Relation(*assumption.relation);
+                Relation leftSide = Relation(assumption.relation);
                 Relation full = Relation(Operation::full);
-                unique_ptr<Relation> r = make_unique<Relation>(Operation::composition, std::move(leftSide), std::move(full));
-                r->saturated = true;
-                r->label = label;
-                r->negated = true;
-                saturatedRelations.push_back(*r);
+                Relation r = Relation(Operation::composition, std::move(leftSide), std::move(full));
+                r.saturated = true;
+                r.label = label;
+                r.negated = true;
+                saturatedRelations.push_back(std::move(r));
             }
             break;
         case AssumptionType::identity:
@@ -345,7 +367,7 @@ void RegularTableau::saturate(Clause &clause)
                 if (literal.negated)
                 {
                     auto saturated = saturateIdRelation(assumption, literal);
-                    if (saturated != nullptr)
+                    if (saturated)
                     {
                         saturatedRelations.push_back(*saturated);
                     }
