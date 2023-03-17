@@ -59,7 +59,7 @@ bool Relation::operator==(const Relation &otherRelation) const
         return false;
     }
 
-    if ((label.has_value() != otherRelation.label.has_value()) && (!label || *label != *otherRelation.label))
+    if ((label.has_value() != otherRelation.label.has_value()) || (label && *label != *otherRelation.label))
     {
         return false;
     }
