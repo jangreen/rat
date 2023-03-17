@@ -23,6 +23,7 @@ public:
         shared_ptr<Node> leftNode = nullptr;
         shared_ptr<Node> rightNode = nullptr;
         Node *parentNode = nullptr;
+        Node *parentMetastatement = nullptr; // metastatement chain
         bool closed = false;
 
         bool isClosed();

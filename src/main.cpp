@@ -11,7 +11,6 @@ using namespace std;
 
 /* void loadTheory(Solver &solver)
 {
-    // TODO: make shared <Ineq>
     Inequality wrwr0 = make_shared<ProofNode>("W*R;W*R", "0");
     Inequality wrww0 = make_shared<ProofNode>("W*R;W*W", "0");
     // Inequality wwrr0 = make_shared<ProofNode>("W*W;R*R", "0");
@@ -21,7 +20,6 @@ using namespace std;
     Inequality rr_rm = make_shared<ProofNode>("R*R", "R*M");
     Inequality rmrm = make_shared<ProofNode>("R*M;R*M", "R*M");
 
-    // ... TODO
     Inequality popo = make_shared<ProofNode>("po;po", "po");
     Inequality poid0 = make_shared<ProofNode>("po & id", "0");
     Inequality poloc1 = make_shared<ProofNode>("po-loc", "po & loc");
@@ -51,32 +49,32 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-    /* 1) */
+    /* 1) *
     Relation r1 = Relation::parse("(id;a)^*");
     Relation r2 = Relation::parse("a;(a;a)^* | (a;a)^*");
     //*/
-    /* 2)
+    /* 2) *
     Relation r1 = Relation::parse("a;a;a^*");
     Relation r2 = Relation::parse("a");
     Relation leftSide = Relation::parse("a;a^*");
     Assumption transitiveA = Assumption(AssumptionType::regular, std::move(leftSide), "a");
     RegularTableau::assumptions.push_back(std::move(transitiveA));
     //*/
-    /* 3)
+    /* 3) *
     Relation r1 = Relation::parse("a;a^*");
     Relation r2 = Relation::parse("a");
     Relation leftSide = Relation::parse("a;a");
     Assumption emptyAA = Assumption(AssumptionType::empty, std::move(leftSide));
     RegularTableau::assumptions.push_back(std::move(emptyAA));
     //*/
-    /* 4)
+    /* 4) *
     Relation r1 = Relation::parse("a;b;c");
     Relation r2 = Relation::parse("c");
     Relation leftSide = Relation::parse("a;b");
     Assumption idAB = Assumption(AssumptionType::identity, std::move(leftSide));
     RegularTableau::assumptions.push_back(std::move(idAB));
     //*/
-    /* 5) KATER ECO PAPER
+    /* 5) KATER ECO PAPER *
     Relation r1 = Relation::parse("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
     Relation r2 = Relation::parse("rf | (co | rfinv;co);(rf | id)");
     Assumption coTransitive = Assumption(AssumptionType::regular, Relation::parse("co;co^*"), "co");
@@ -88,6 +86,11 @@ int main(int argc, const char *argv[])
     RegularTableau::assumptions.push_back(std::move(rfco));
     RegularTableau::assumptions.push_back(std::move(corfinv));
     Assumption rfrfinv = Assumption(AssumptionType::identity, Relation::parse("rf;rfinv"));
+    RegularTableau::assumptions.push_back(std::move(rfrfinv));
+    /* 6) REGINCL */
+    Relation r1 = Relation::parse("(a;a|b)^*;a;b");
+    Relation r2 = Relation::parse("(a;(a;a)^* | b)^*;b");
+    //*/
 
     /*
     assume co;co <= co
@@ -106,18 +109,18 @@ int main(int argc, const char *argv[])
     std::cout << "|=" << r1.toString() << " & " << r2.toString() << endl;
     //*/
 
-    /* INFINITE */
+    /* INFINITE
     cout << "Infinite Proof..." << endl;
     Tableau tableau{r1, r2};
-    tableau.solve(100);
+    tableau.solve(200);
     tableau.exportProof("infinite");
     //*/
 
     /* REGULAR */
     std::cout << "Regular Proof..." << endl;
     RegularTableau regularTableau{r1, r2};
-    regularTableau.solve();
+    std::cout << "Done. " << regularTableau.solve() << endl;
     std::cout << "Export Regular Tableau..." << endl;
-    regularTableau.exportProof("reg");
+    regularTableau.exportProof("regular");
     //*/
 }

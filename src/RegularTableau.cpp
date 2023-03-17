@@ -74,20 +74,11 @@ RegularTableau::RegularTableau(initializer_list<Relation> initalRelations) : Reg
 RegularTableau::RegularTableau(Clause initalRelations)
 {
     auto dnf = DNF(initalRelations);
-    cout << "Inital DNF: ";
-    for (auto clause : dnf)
-    {
-        cout << "  ||  ";
-        for (const auto &literal : clause)
-            cout << literal.toString() << " and ";
-    }
-    cout << endl;
-
     for (auto clause : dnf)
     {
         addNode(nullptr, clause);
     }
-    // exportProof("initalized");
+    // TODO: remove exportProof("initalized");
 }
 
 vector<Assumption> RegularTableau::assumptions;
@@ -99,33 +90,44 @@ vector<Clause> RegularTableau::DNF(const Clause &clause)
 }
 
 // node has only normal terms
-void RegularTableau::expandNode(shared_ptr<Node> node)
+bool RegularTableau::expandNode(shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
-    tableau.exportProof("inital");
+    tableau.exportProof("dnfcalc"); // initial
     bool expandable = tableau.applyModalRule();
     if (expandable)
     {
-        tableau.exportProof("modal");
+        tableau.exportProof("dnfcalc"); // modal
         auto request = tableau.calcReuqest();
-        tableau.exportProof("request");
+        tableau.exportProof("dnfcalc"); // request
         if (tableau.rootNode->isClosed())
         {
             // can happen with empty hypotheses
             node->closed = true;
-            return;
+            return true;
         }
         auto dnf = DNF(request);
-        for (auto clause : dnf)
+        for (const auto &clause : dnf)
         {
             addNode(node, clause);
         }
         // TODO: if dnf is empty close node
+        /*cout << "--------" << endl;
+        for (auto clause : dnf)
+        {
+            cout << "--" << endl;
+            for (auto literal : clause)
+            {
+                cout << literal.toString() << endl;
+            }
+        }*/
+        if (dnf.empty())
+        {
+            node->closed = true;
+        }
+        return true;
     }
-    else
-    {
-        // TODO:
-    }
+    return false;
 }
 
 // clause is in normal form
@@ -361,9 +363,13 @@ bool RegularTableau::solve()
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
         /* TODO: remove: */
-        exportProof("reg");
-        expandNode(currentNode);
+        exportProof("regular");
+        if (!expandNode(currentNode))
+        {
+            return false;
+        }
     }
+    return true;
 }
 
 void RegularTableau::toDotFormat(ofstream &output) const
@@ -377,6 +383,8 @@ void RegularTableau::toDotFormat(ofstream &output) const
     for (auto rootNode : rootNodes)
     {
         rootNode->toDotFormat(output);
+        output << "root -> "
+               << "N" << rootNode << ";" << endl;
     }
     output << "}" << endl;
 }

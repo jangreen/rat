@@ -8,8 +8,8 @@ using namespace std;
 enum class AssumptionType
 {
     regular,
-    empty,   // TODO
-    identity // TODO
+    empty,
+    identity
 };
 
 class Assumption

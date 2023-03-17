@@ -170,6 +170,18 @@ bool checkIfClosed(Tableau::Node *node, const Relation &relation)
     }
     return false;
 }
+bool checkIfDuplicate(Tableau::Node *node, const Relation &relation)
+{
+    while (node != nullptr)
+    {
+        if (node->relation && *node->relation == relation)
+        {
+            return true;
+        }
+        node = node->parentNode;
+    }
+    return false;
+}
 
 void Tableau::Node::appendBranches(const Relation &leftRelation)
 {
@@ -180,6 +192,11 @@ void Tableau::Node::appendBranches(const Relation &leftRelation)
     }
     if (isLeaf())
     {
+        cout << leftRelation.toString() << endl;
+        if (checkIfDuplicate(this, leftRelation))
+        {
+            return;
+        }
         auto leftNode = make_shared<Node>(tableau, Relation(leftRelation));
         this->leftNode = leftNode;
         leftNode->parentNode = this;
@@ -497,19 +514,6 @@ bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
                     Relation r1 = Relation(Operation::none); // empty relation
                     int label = *relation.label;
                     string baseRelation = *relation.identifier;
-                    /* TODO remove : Tableau::Node *currentNode = &(*node);
-                    while (currentNode != nullptr)
-                    {
-                        if (currentNode->metastatement && currentNode->metastatement->type == MetastatementType::labelRelation)
-                        {
-                            if (currentNode->metastatement->label1 == label && currentNode->metastatement->baseRelation == baseRelation)
-                            {
-                                r1.label = currentNode->metastatement->label2;
-                                return r1;
-                            }
-                        }
-                            currentNode = currentNode->parentNode;
-                        }*/
                     if (node->metastatement && node->metastatement->type == MetastatementType::labelRelation)
                     {
                         if (node->metastatement->label1 == label && node->metastatement->baseRelation == baseRelation)
@@ -588,7 +592,7 @@ bool Tableau::solve(int bound)
         bound--;
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
-        exportProof("inf");
+        exportProof("infinite");
         applyRule(currentNode);
     }
 }

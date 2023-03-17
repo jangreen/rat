@@ -49,7 +49,7 @@ public:
     static vector<Assumption> assumptions;
 
     static vector<Clause> DNF(const Clause &clause);
-    void expandNode(shared_ptr<Node> node);
+    bool expandNode(shared_ptr<Node> node);
     void addNode(shared_ptr<Node> parent, Clause clause); // TODO: move in node class, call on parent
     optional<Relation> saturateRelation(const Relation &relation);
     unique_ptr<Relation> saturateIdRelation(const Assumption &assumption, const Relation &relation);
