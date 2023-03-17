@@ -1,8 +1,7 @@
 #pragma once
 #include <string>
+#include <optional>
 #include "Relation.h"
-
-using namespace std;
 
 enum class AssumptionType
 {
@@ -14,9 +13,9 @@ enum class AssumptionType
 class Assumption
 {
 public:
-    Assumption(const AssumptionType type, Relation &&relation, optional<string> baseRelation = nullopt);
+    Assumption(const AssumptionType type, Relation &&relation, std::optional<std::string> baseRelation = std::nullopt);
 
     AssumptionType type;
     Relation relation;
-    optional<string> baseRelation; // is set iff regular
+    std::optional<std::string> baseRelation; // is set iff regular
 };

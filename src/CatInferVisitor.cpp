@@ -1,31 +1,24 @@
 #include "CatInferVisitor.h"
-#include <antlr4-runtime.h>
-#include <CatParser.h>
-#include <CatLexer.h>
-#include <memory>
 
-using namespace std;
-using namespace antlr4;
-
-vector<Constraint> CatInferVisitor::parseMemoryModel(const string &filePath)
+std::vector<Constraint> CatInferVisitor::parseMemoryModel(const std::string &filePath)
 {
-    ifstream stream;
+    std::ifstream stream;
     stream.open(filePath);
-    ANTLRInputStream input(stream);
+    antlr4::ANTLRInputStream input(stream);
 
     CatLexer lexer(&input);
-    CommonTokenStream tokens(&lexer);
+    antlr4::CommonTokenStream tokens(&lexer);
     CatParser parser(&tokens);
 
     CatParser::McmContext *ctx = parser.mcm();
-    return any_cast<vector<Constraint>>(this->visitMcm(ctx));
+    return any_cast<std::vector<Constraint>>(this->visitMcm(ctx));
 }
 
-Relation CatInferVisitor::parseRelation(const string &relationString)
+Relation CatInferVisitor::parseRelation(const std::string &relationString)
 {
-    ANTLRInputStream input(relationString);
+    antlr4::ANTLRInputStream input(relationString);
     CatLexer lexer(&input);
-    CommonTokenStream tokens(&lexer);
+    antlr4::CommonTokenStream tokens(&lexer);
     CatParser parser(&tokens);
 
     CatParser::ExpressionContext *ctx = parser.expression(); // expect expression
@@ -33,9 +26,9 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
     return parsedRelation;
 }
 
-/*vector<Constraint>*/ antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
+/*std::vector<Constraint>*/ antlrcpp::Any CatInferVisitor::visitMcm(CatParser::McmContext *ctx)
 {
-    vector<Constraint> constraints;
+    std::vector<Constraint> constraints;
 
     for (auto definitionContext : ctx->definition())
     {
@@ -45,7 +38,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
         }
         else if (definitionContext->letRecDefinition())
         {
-            cout << "TODO: recursive definitions" << endl;
+            std::cout << "TODO: recursive definitions" << std::endl;
         }
         else if (definitionContext->axiomDefinition())
         {
@@ -58,7 +51,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 
 /*Constraint*/ antlrcpp::Any CatInferVisitor::visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx)
 {
-    string name;
+    std::string name;
     if (ctx->NAME())
     {
         name = ctx->NAME()->getText();
@@ -86,7 +79,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 
 /*void*/ antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx)
 {
-    string name = ctx->NAME()->getText();
+    std::string name = ctx->NAME()->getText();
     Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
     // Relation::relations[name] = derivedRelation; // TODO: why error?
     Relation::relations.insert({name, derivedRelation});
@@ -103,13 +96,13 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprCartesian(CatParser::ExprCartesianContext *ctx)
 {
     // TODO: currently we consider cartesian product as binary base relation
-    string r1 = ctx->e1->getText();
-    string r2 = ctx->e2->getText();
+    std::string r1 = ctx->e1->getText();
+    std::string r2 = ctx->e2->getText();
     return Relation(Operation::base, r1 + "*" + r2); // Relation(Operation::base, r1 + "*" + r2);
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx)
 {
-    string name = ctx->NAME()->getText();
+    std::string name = ctx->NAME()->getText();
     if (name == "id")
     {
         return Relation(Operation::identity);
@@ -161,7 +154,7 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprDomainIdentity(CatParser::ExprDomainIdentityContext *ctx)
 {
-    cout << "TODO: visitExprDomainIdentity: " << ctx->getText() << endl;
+    std::cout << "TODO: visitExprDomainIdentity: " << ctx->getText() << std::endl;
     return nullptr;
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprIdentity(CatParser::ExprIdentityContext *ctx)
@@ -170,19 +163,19 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
     {
         // TODO: dont use basic realtion intersection id
         // use text intersection id
-        string set = ctx->e->getText();
+        std::string set = ctx->e->getText();
         // TODO: fix return Relation(Operation::intersection, Relation::get(set + "*" + set), Relation::ID);
         return nullptr;
     }
     else
     {
-        cout << "TODO: visitExprIdentity TOID: " << ctx->getText() << endl;
+        std::cout << "TODO: visitExprIdentity TOID: " << ctx->getText() << std::endl;
         return nullptr;
     }
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(CatParser::ExprRangeIdentityContext *ctx)
 {
-    cout << "TODO: visitExprRangeIdentity: " << ctx->getText() << endl;
+    std::cout << "TODO: visitExprRangeIdentity: " << ctx->getText() << std::endl;
     return nullptr;
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprTransRef(CatParser::ExprTransRefContext *ctx)
@@ -192,11 +185,11 @@ Relation CatInferVisitor::parseRelation(const string &relationString)
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprFencerel(CatParser::ExprFencerelContext *ctx)
 {
-    cout << "TODO: visitExprOptional: " << ctx->getText() << endl;
+    std::cout << "TODO: visitExprOptional: " << ctx->getText() << std::endl;
     return nullptr;
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprOptional(CatParser::ExprOptionalContext *ctx)
 {
-    cout << "TODO: visitExprOptional: " << ctx->getText() << endl;
+    std::cout << "TODO: visitExprOptional: " << ctx->getText() << std::endl;
     return nullptr;
 }

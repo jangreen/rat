@@ -10,41 +10,39 @@ inline void hash_combine(std::size_t &seed, T const &v)
     seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-size_t hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const
+size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const
 {
     size_t seed = 0;
     Clause copy = node.relations;
     sort(copy.begin(), copy.end());
     for (const auto &relation : copy)
     {
-        hash_combine(seed, relation.toString()); // TODO: use string reprstation
+        hash_combine(seed, relation.toString()); // TODO: use std::string reprstation
     }
     return seed;
 }
 
-size_t RegularTableau::Node::Hash::operator()(const shared_ptr<Node> node) const
+size_t RegularTableau::Node::Hash::operator()(const std::shared_ptr<Node> node) const
 {
-    return hash<Node>()(*node);
+    return std::hash<Node>()(*node);
 }
 
-bool RegularTableau::Node::Equal::operator()(const shared_ptr<Node> node1, const shared_ptr<Node> node2) const
+bool RegularTableau::Node::Equal::operator()(const std::shared_ptr<Node> node1, const std::shared_ptr<Node> node2) const
 {
     return *node1 == *node2;
 }
 
-using namespace std;
-
-RegularTableau::Node::Node(initializer_list<Relation> relations) : relations(relations) {}
+RegularTableau::Node::Node(std::initializer_list<Relation> relations) : relations(relations) {}
 RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
-void RegularTableau::Node::toDotFormat(ofstream &output)
+void RegularTableau::Node::toDotFormat(std::ofstream &output)
 {
     output << "N" << this
            << "[label=\"";
-    output << hash<Node>()(*this) << endl;
+    output << std::hash<Node>()(*this) << std::endl;
     for (const auto &relation : relations)
     {
-        output << relation.toString() << endl;
+        output << relation.toString() << std::endl;
     }
     output << "\"";
     // color closed branches
@@ -54,12 +52,12 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     }
     // TODO: mark root nodes if (re)
     output
-        << "];" << endl;
+        << "];" << std::endl;
     // edges
     for (auto &[childNode, edgeLabel] : childNodes)
     {
         output << "N" << this << " -> "
-               << "N" << childNode << ";" << endl;
+               << "N" << childNode << ";" << std::endl;
     }
     printed = true;
 
@@ -73,7 +71,7 @@ void RegularTableau::Node::toDotFormat(ofstream &output)
     }
 }
 
-RegularTableau::RegularTableau(initializer_list<Relation> initalRelations) : RegularTableau(vector(initalRelations)) {}
+RegularTableau::RegularTableau(std::initializer_list<Relation> initalRelations) : RegularTableau(std::vector(initalRelations)) {}
 RegularTableau::RegularTableau(Clause initalRelations)
 {
     auto dnf = DNF(initalRelations);
@@ -84,16 +82,16 @@ RegularTableau::RegularTableau(Clause initalRelations)
     // TODO: remove exportProof("initalized");
 }
 
-vector<Assumption> RegularTableau::assumptions;
+std::vector<Assumption> RegularTableau::assumptions;
 
-vector<Clause> RegularTableau::DNF(const Clause &clause)
+std::vector<Clause> RegularTableau::DNF(const Clause &clause)
 {
     Tableau tableau{clause};
     return tableau.DNF();
 }
 
 // node has only normal terms
-bool RegularTableau::expandNode(shared_ptr<Node> node)
+bool RegularTableau::expandNode(std::shared_ptr<Node> node)
 {
     Tableau tableau{node->relations};
     tableau.exportProof("dnfcalc"); // initial
@@ -135,10 +133,10 @@ bool RegularTableau::expandNode(shared_ptr<Node> node)
 
 // clause is in normal form
 // parent == nullptr -> rootNode
-void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
+void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause)
 {
     // calculate renaming & rename
-    vector<int> renaming;
+    std::vector<int> renaming;
     for (const auto &literal : clause)
     {
         if (!literal.negated)
@@ -159,7 +157,7 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
     for (auto saturatedClause : saturatedDNF)
     {
         // create node, edges, push to unreduced nodes
-        shared_ptr<Node> newNode = make_shared<Node>(saturatedClause);
+        std::shared_ptr<Node> newNode = make_shared<Node>(saturatedClause);
 
         auto existingNode = nodes.find(newNode);
         if (existingNode != nodes.end())
@@ -167,7 +165,7 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
             // equivalent node exists
             if (parent != nullptr)
             {
-                tuple<shared_ptr<Node>, vector<int>> edge{existingNode->get(), renaming};
+                std::tuple<std::shared_ptr<Node>, std::vector<int>> edge{existingNode->get(), renaming};
                 parent->childNodes.push_back(edge);
             }
         }
@@ -176,7 +174,7 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
             // equivalent node does not exist
             if (parent != nullptr)
             {
-                tuple<shared_ptr<Node>, vector<int>> edge{newNode, renaming};
+                std::tuple<std::shared_ptr<Node>, std::vector<int>> edge{newNode, renaming};
                 parent->childNodes.push_back(edge);
             }
             else
@@ -190,24 +188,22 @@ void RegularTableau::addNode(shared_ptr<Node> parent, Clause clause)
     }
 }
 
-optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
+std::optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
 {
     if (relation.saturated)
     {
-        return nullopt;
+        return std::nullopt;
     }
 
-    optional<Relation> leftSaturated;
-    optional<Relation> rightSaturated;
+    std::optional<Relation> leftSaturated;
+    std::optional<Relation> rightSaturated;
 
     switch (relation.operation)
     {
     case Operation::none:
-        return nullopt;
     case Operation::identity:
-        return nullopt;
     case Operation::empty:
-        return nullopt;
+        return std::nullopt;
     case Operation::base:
         for (const auto &assumption : assumptions) // TODO fast get regular assumption
         {
@@ -219,7 +215,7 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
                 return leftSide;
             }
         }
-        return nullopt;
+        return std::nullopt;
     case Operation::choice:
     case Operation::intersection:
         leftSaturated = saturateRelation(*relation.leftOperand);
@@ -235,7 +231,7 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
     }
     if (!leftSaturated && !rightSaturated)
     {
-        return nullopt;
+        return std::nullopt;
     }
     if (!leftSaturated)
     {
@@ -256,16 +252,16 @@ optional<Relation> RegularTableau::saturateRelation(const Relation &relation)
     return saturated;
 }
 
-optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
+std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption, const Relation &relation)
 {
     if (relation.saturated || relation.operation == Operation::identity || relation.operation == Operation::empty)
     {
-        return nullopt;
+        return std::nullopt;
     }
     if (relation.label)
     {
         Relation copy = Relation(relation);
-        copy.label = nullopt;
+        copy.label = std::nullopt;
         copy.negated = false;
         Relation assumptionR = Relation(assumption.relation);
         assumptionR.label = relation.label;
@@ -274,8 +270,8 @@ optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumpti
         return r;
     }
 
-    optional<Relation> leftSaturated;
-    optional<Relation> rightSaturated;
+    std::optional<Relation> leftSaturated;
+    std::optional<Relation> rightSaturated;
 
     switch (relation.operation)
     {
@@ -283,7 +279,7 @@ optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumpti
     case Operation::identity:
     case Operation::empty:
     case Operation::base:
-        return nullopt;
+        return std::nullopt;
     case Operation::choice:
     case Operation::intersection:
         leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
@@ -301,7 +297,7 @@ optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumpti
     // TODO_ support intersections -> different identity or no saturations
     if (!leftSaturated && !rightSaturated)
     {
-        return nullopt;
+        return std::nullopt;
     }
     if (!leftSaturated)
     {
@@ -325,7 +321,7 @@ void RegularTableau::saturate(Clause &clause)
     {
         if (literal.negated)
         {
-            optional<Relation> saturated = saturateRelation(literal);
+            std::optional<Relation> saturated = saturateRelation(literal);
             if (saturated)
             {
                 saturatedRelations.push_back(std::move(*saturated));
@@ -335,7 +331,7 @@ void RegularTableau::saturate(Clause &clause)
 
     for (const auto &assumption : assumptions)
     {
-        vector<int> nodeLabels;
+        std::vector<int> nodeLabels;
         switch (assumption.type)
         {
         case AssumptionType::empty:
@@ -397,26 +393,26 @@ bool RegularTableau::solve()
     return true;
 }
 
-void RegularTableau::toDotFormat(ofstream &output) const
+void RegularTableau::toDotFormat(std::ofstream &output) const
 {
     for (auto node : nodes)
     { // reset printed property
         node->printed = false;
     }
-    output << "digraph {" << endl
-           << "node[shape=\"box\"]" << endl;
+    output << "digraph {" << std::endl
+           << "node[shape=\"box\"]" << std::endl;
     for (auto rootNode : rootNodes)
     {
         rootNode->toDotFormat(output);
         output << "root -> "
-               << "N" << rootNode << ";" << endl;
+               << "N" << rootNode << ";" << std::endl;
     }
-    output << "}" << endl;
+    output << "}" << std::endl;
 }
 
-void RegularTableau::exportProof(string filename) const
+void RegularTableau::exportProof(std::string filename) const
 {
-    ofstream file(filename + ".dot");
+    std::ofstream file(filename + ".dot");
     toDotFormat(file);
 }
 

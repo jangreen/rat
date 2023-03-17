@@ -1,6 +1,6 @@
 #include "Constraint.h"
 
-Constraint::Constraint(const ConstraintType type, const Relation &&relation, const optional<string> name) : type(type), relation(std::move(relation)), name(name) {}
+Constraint::Constraint(const ConstraintType type, const Relation &&relation, const std::optional<std::string> name) : type(type), relation(std::move(relation)), name(name) {}
 
 void Constraint::toEmptyNormalForm()
 {

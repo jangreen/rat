@@ -1,9 +1,7 @@
 #pragma once
 #include <string>
-#include <memory>
+#include <optional>
 #include "Relation.h"
-
-using namespace std;
 
 enum class ConstraintType
 {
@@ -15,11 +13,11 @@ enum class ConstraintType
 class Constraint
 {
 public:
-    Constraint(const ConstraintType type, const Relation &&relation, const optional<string> name = nullopt);
+    Constraint(const ConstraintType type, const Relation &&relation, const std::optional<std::string> name = std::nullopt);
 
     ConstraintType type;
     Relation relation;
-    optional<string> name; // for printing
+    std::optional<std::string> name; // for printing
 
     void toEmptyNormalForm();
 };

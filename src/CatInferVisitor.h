@@ -1,14 +1,19 @@
 #pragma once
+#include <string>
+#include <vector>
 #include <CatBaseVisitor.h>
+#include <antlr4-runtime.h>
+#include <CatParser.h>
+#include <CatLexer.h>
 #include "Constraint.h"
 #include "Relation.h"
 
 class CatInferVisitor : CatBaseVisitor
 {
 public:
-    vector<Constraint> parseMemoryModel(const string &filePath);
-    Relation parseRelation(const string &relationString);
-    /*vector<Constraint>*/ antlrcpp::Any visitMcm(CatParser::McmContext *ctx);
+    std::vector<Constraint> parseMemoryModel(const std::string &filePath);
+    Relation parseRelation(const std::string &relationString);
+    /*std::vector<Constraint>*/ antlrcpp::Any visitMcm(CatParser::McmContext *ctx);
     /*void*/ antlrcpp::Any visitLetDefinition(CatParser::LetDefinitionContext *ctx);
     /*Constraint*/ antlrcpp::Any visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx);
     /*Relation*/ antlrcpp::Any visitExpr(CatParser::ExprContext *ctx);

@@ -1,18 +1,15 @@
-#include <iostream>
 #include "Relation.h"
 #include "CatInferVisitor.h"
-
-using namespace std;
 
 Relation::Relation(const Relation &other) : operation(other.operation), identifier(other.identifier), label(other.label), negated(other.negated), saturated(other.saturated)
 {
     if (other.leftOperand != nullptr)
     {
-        leftOperand = make_unique<Relation>(*other.leftOperand);
+        leftOperand = std::make_unique<Relation>(*other.leftOperand);
     }
     if (other.rightOperand != nullptr)
     {
-        rightOperand = make_unique<Relation>(*other.rightOperand);
+        rightOperand = std::make_unique<Relation>(*other.rightOperand);
     }
 }
 Relation &Relation::operator=(const Relation &other)
@@ -21,35 +18,25 @@ Relation &Relation::operator=(const Relation &other)
     swap(*this, copy);
     return *this;
 }
-// TODO remove: Relation::Relation(Relation &&other) noexcept : operation(other.operation), identifier(other.identifier), leftOperand(std::move(other.leftOperand)), rightOperand(std::move(other.rightOperand)), label(other.label), negated(other.negated), saturated(other.saturated) {}
 
-/* TODO: Relation::Relation(const string &expression) : Relation(Operation::none)
+Relation::Relation(const std::string &expression)
 {
     CatInferVisitor visitor;
-    Relation parsedRelation = visitor.parseRelation(expression);
-    swap(*this, parsedRelation);
-}*/
-Relation::Relation(const Operation operation, const optional<string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr)
-{
+    *this = visitor.parseRelation(expression);
 }
-Relation::Relation(const Operation operation, Relation &&left) : operation(operation), identifier(nullopt), rightOperand(nullptr)
+Relation::Relation(const Operation operation, const std::optional<std::string> &identifier) : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
+Relation::Relation(const Operation operation, Relation &&left) : operation(operation), identifier(std::nullopt), rightOperand(nullptr)
 {
-    leftOperand = make_unique<Relation>(std::move(left));
+    leftOperand = std::make_unique<Relation>(std::move(left));
 }
-Relation::Relation(const Operation operation, Relation &&left, Relation &&right) : operation(operation), identifier(nullopt)
+Relation::Relation(const Operation operation, Relation &&left, Relation &&right) : operation(operation), identifier(std::nullopt)
 {
-    leftOperand = make_unique<Relation>(std::move(left));
-    rightOperand = make_unique<Relation>(std::move(right));
+    leftOperand = std::make_unique<Relation>(std::move(left));
+    rightOperand = std::make_unique<Relation>(std::move(right));
 }
 
-unordered_map<string, Relation> Relation::relations;
+std::unordered_map<std::string, Relation> Relation::relations;
 int Relation::maxLabel = 0;
-
-Relation Relation::parse(const string &expression)
-{
-    CatInferVisitor visitor;
-    return visitor.parseRelation(expression);
-}
 
 bool Relation::operator==(const Relation &otherRelation) const
 {
@@ -103,7 +90,7 @@ bool Relation::isNormal() const
     return true;
 }
 
-vector<int> Relation::labels() const
+std::vector<int> Relation::labels() const
 {
     if (label)
     {
@@ -123,12 +110,12 @@ vector<int> Relation::labels() const
     return result;
 }
 
-vector<int> Relation::calculateRenaming() const
+std::vector<int> Relation::calculateRenaming() const
 {
     return labels(); // labels already calculates the renaming
 }
 
-void Relation::rename(const vector<int> &renaming)
+void Relation::rename(const std::vector<int> &renaming)
 {
     if (label)
     {
@@ -144,16 +131,16 @@ void Relation::rename(const vector<int> &renaming)
     }
 }
 
-string Relation::toString() const
+std::string Relation::toString() const
 {
-    string output;
+    std::string output;
     if (negated)
     {
         output += "-";
     }
     if (label)
     {
-        output += "[" + to_string(*label) + "]";
+        output += "[" + std::to_string(*label) + "]";
     }
     switch (operation)
     {

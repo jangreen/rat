@@ -2,8 +2,6 @@
 #include <string>
 #include <optional>
 
-using namespace std;
-
 enum class MetastatementType
 {
     labelEquality,
@@ -13,12 +11,12 @@ enum class MetastatementType
 class Metastatement
 {
 public:
-    Metastatement(const MetastatementType type, int label1, int label2, optional<string> baseRelation = nullopt);
+    Metastatement(const MetastatementType type, int label1, int label2, std::optional<std::string> baseRelation = std::nullopt);
 
     MetastatementType type;
     int label1;
     int label2;
-    optional<string> baseRelation; // is set iff labelRelation
+    std::optional<std::string> baseRelation; // is set iff labelRelation
 
-    string toString() const; // for printing
+    std::string toString() const; // for printing
 };

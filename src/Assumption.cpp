@@ -1,7 +1,5 @@
 #include "Assumption.h"
 
-using namespace std;
-
 // helper
 void markBaseAsSaturated(Relation &relation)
 {
@@ -22,7 +20,7 @@ void markBaseAsSaturated(Relation &relation)
     }
 }
 
-Assumption::Assumption(const AssumptionType type, Relation &&relation, optional<string> baseRelation) : type(type), relation(std::move(relation)), baseRelation(baseRelation)
+Assumption::Assumption(const AssumptionType type, Relation &&relation, std::optional<std::string> baseRelation) : type(type), relation(std::move(relation)), baseRelation(baseRelation)
 {
     markBaseAsSaturated(this->relation);
 }

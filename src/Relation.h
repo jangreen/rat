@@ -1,9 +1,9 @@
 #pragma once
+#include <string>
+#include <vector>
+#include <optional>
 #include <unordered_map>
 #include <memory>
-#include <string>
-
-using namespace std;
 
 enum class Operation
 {
@@ -24,9 +24,9 @@ class Relation
 public:
     /* Rule of five */
     Relation(const Relation &other);
+    Relation(Relation &&other) = default;
     Relation &operator=(const Relation &other);
     Relation &operator=(Relation &&other) = default;
-    Relation(Relation &&other) = default;
     ~Relation() = default;
     friend void swap(Relation &first, Relation &second)
     {
@@ -40,30 +40,29 @@ public:
         swap(first.saturated, second.saturated);
     }
 
-    // TODO: Relation(const string &expression);                                                // parse constructor
-    Relation(const Operation operation, const optional<string> &identifier = nullopt); // nullary
-    Relation(const Operation operation, Relation &&left);                              // unary
-    Relation(const Operation operation, Relation &&left, Relation &&right);            // binary
+    explicit Relation(const std::string &expression);                                                 // parse constructor
+    Relation(const Operation operation, const std::optional<std::string> &identifier = std::nullopt); // nullary
+    Relation(const Operation operation, Relation &&left);                                             // unary
+    Relation(const Operation operation, Relation &&left, Relation &&right);                           // binary
 
     Operation operation;
-    optional<string> identifier;       // is set iff operation base
-    unique_ptr<Relation> leftOperand;  // is set iff operation unary/binary
-    unique_ptr<Relation> rightOperand; // is set iff operation binary
-    optional<int> label = nullopt;     // is set iff labeled term
-    bool negated = false;              // propsitional negation
-    bool saturated = false;            // mark base relation
+    std::optional<std::string> identifier;   // is set iff operation base
+    std::unique_ptr<Relation> leftOperand;   // is set iff operation unary/binary
+    std::unique_ptr<Relation> rightOperand;  // is set iff operation binary
+    std::optional<int> label = std::nullopt; // is set iff labeled term
+    bool negated = false;                    // propsitional negation
+    bool saturated = false;                  // mark base relation
 
     bool isNormal() const;                                // true iff all labels are in front of base relations
-    vector<int> labels() const;                           // return all labels of the relation term
-    vector<int> calculateRenaming() const;                // renaming {2,4,5}: 2->0,4->1,5->2
-    void rename(const vector<int> &renaming);             // renames given a renaming function
+    std::vector<int> labels() const;                      // return all labels of the relation term
+    std::vector<int> calculateRenaming() const;           // renaming {2,4,5}: 2->0,4->1,5->2
+    void rename(const std::vector<int> &renaming);        // renames given a renaming function
     bool operator==(const Relation &otherRelation) const; // compares two relation syntactically
     bool operator<(const Relation &otherRelation) const;  // for sorting/hashing
-    string toString() const;                              // for printing
+    std::string toString() const;                         // for printing
 
-    static unordered_map<string, Relation> relations; // id, 0, 1, base relations and defined relations (named relations)
-    static int maxLabel;                              // to create globally unique labels
-    static Relation parse(const string &expression);
+    static std::unordered_map<std::string, Relation> relations; // id, 0, 1, base relations and defined relations (named relations)
+    static int maxLabel;                                        // to create globally unique labels
 };
 
-typedef vector<Relation> Clause;
+typedef std::vector<Relation> Clause;

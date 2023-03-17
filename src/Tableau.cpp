@@ -3,18 +3,16 @@
 #include "ProofRule.h"
 #include "Metastatement.h"
 
-using namespace std;
-
 /* RULE IMPLEMENTATIONS */
 template <typename T>
-optional<T> rule(const Relation &relation, auto &baseCase, auto &combineLeft, auto &combineRight)
+std::optional<T> rule(const Relation &relation, auto &baseCase, auto &combineLeft, auto &combineRight)
 {
     if (relation.label)
     {
         return baseCase(relation);
     }
     // case: intersection or composition (only cases for labeled terms that can happen)
-    optional<T> leftSubRelation = rule<T>(*relation.leftOperand, baseCase, combineLeft, combineRight);
+    std::optional<T> leftSubRelation = rule<T>(*relation.leftOperand, baseCase, combineLeft, combineRight);
     if (leftSubRelation)
     {
         return combineLeft(*leftSubRelation, relation);
@@ -22,19 +20,19 @@ optional<T> rule(const Relation &relation, auto &baseCase, auto &combineLeft, au
     // case: intersection
     if (relation.operation != Operation::intersection)
     {
-        return nullopt;
+        return std::nullopt;
     }
-    optional<T> rightSubRelation = rule<T>(*relation.rightOperand, baseCase, combineLeft, combineRight);
+    std::optional<T> rightSubRelation = rule<T>(*relation.rightOperand, baseCase, combineLeft, combineRight);
     if (rightSubRelation)
     {
         return combineRight(*rightSubRelation, relation);
     }
-    return nullopt;
+    return std::nullopt;
 }
 
-optional<tuple<Relation, Relation>> binaryRule(const Relation &relation, auto &baseCase)
+std::optional<std::tuple<Relation, Relation>> binaryRule(const Relation &relation, auto &baseCase)
 {
-    auto combineLeft = [](tuple<Relation, Relation> &subrelations, const Relation &relation)
+    auto combineLeft = [](std::tuple<Relation, Relation> &subrelations, const Relation &relation)
     {
         auto &[subrelation1, subrelation2] = subrelations;
         if (relation.operation == Operation::composition && subrelation1.operation == Operation::none && subrelation1.label)
@@ -42,27 +40,27 @@ optional<tuple<Relation, Relation>> binaryRule(const Relation &relation, auto &b
             // TODO: is correct? check only for subrelation1?
             Relation r1 = Relation(*relation.rightOperand);
             r1.label = subrelation1.label;
-            tuple<Relation, Relation> result{
+            std::tuple<Relation, Relation> result{
                 r1,
                 Relation(relation.operation, std::move(subrelation2), Relation(*relation.rightOperand))};
             return result;
         }
-        tuple<Relation, Relation> result{
+        std::tuple<Relation, Relation> result{
             Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
             Relation(relation.operation, std::move(subrelation2), Relation(*relation.rightOperand))};
         return result;
     };
-    auto combineRight = [](tuple<Relation, Relation> &subrelations, const Relation &relation)
+    auto combineRight = [](std::tuple<Relation, Relation> &subrelations, const Relation &relation)
     {
         auto &[subrelation1, subrelation2] = subrelations;
-        tuple<Relation, Relation> result{
+        std::tuple<Relation, Relation> result{
             Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
             Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation2))};
         return result;
     };
-    return rule<tuple<Relation, Relation>>(relation, baseCase, combineLeft, combineRight);
+    return rule<std::tuple<Relation, Relation>>(relation, baseCase, combineLeft, combineRight);
 }
-optional<Relation> unaryRule(const Relation &relation, auto &baseCase)
+std::optional<Relation> unaryRule(const Relation &relation, auto &baseCase)
 {
     auto combineLeft = [](Relation &subrelation, const Relation &relation)
     {
@@ -81,9 +79,9 @@ optional<Relation> unaryRule(const Relation &relation, auto &baseCase)
     return rule<Relation>(relation, baseCase, combineLeft, combineRight);
 }
 
-optional<tuple<Relation, shared_ptr<Metastatement>>> aRule(const Relation &relation)
+std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> aRule(const Relation &relation)
 {
-    auto combineLeft = [](tuple<Relation, shared_ptr<Metastatement>> &subrelations, const Relation &relation)
+    auto combineLeft = [](std::tuple<Relation, std::shared_ptr<Metastatement>> &subrelations, const Relation &relation)
     {
         auto &[subrelation1, metastatement] = subrelations;
 
@@ -92,25 +90,25 @@ optional<tuple<Relation, shared_ptr<Metastatement>>> aRule(const Relation &relat
         {
             Relation r1 = Relation(*relation.rightOperand);
             r1.label = subrelation1.label;
-            tuple<Relation, shared_ptr<Metastatement>> result{
+            std::tuple<Relation, std::shared_ptr<Metastatement>> result{
                 std::move(r1),
                 std::move(metastatement)};
             return result;
         }
-        tuple<Relation, shared_ptr<Metastatement>> result{
+        std::tuple<Relation, std::shared_ptr<Metastatement>> result{
             Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
             std::move(metastatement)};
         return result;
     };
-    auto combineRight = [](tuple<Relation, shared_ptr<Metastatement>> &subrelations, const Relation &relation)
+    auto combineRight = [](std::tuple<Relation, std::shared_ptr<Metastatement>> &subrelations, const Relation &relation)
     {
         auto &[subrelation1, metastatement] = subrelations;
-        tuple<Relation, shared_ptr<Metastatement>> result{
+        std::tuple<Relation, std::shared_ptr<Metastatement>> result{
             Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
             std::move(metastatement)};
         return result;
     };
-    auto baseCase = [](const Relation &relation) -> optional<tuple<Relation, shared_ptr<Metastatement>>>
+    auto baseCase = [](const Relation &relation) -> std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>>
     {
         if (relation.operation == Operation::base) // TODO compare relations with overloaded == operator
         {
@@ -118,15 +116,15 @@ optional<tuple<Relation, shared_ptr<Metastatement>>> aRule(const Relation &relat
             Relation r1 = Relation(Operation::none); // empty relation
             Relation::maxLabel++;
             r1.label = Relation::maxLabel;
-            tuple<Relation, shared_ptr<Metastatement>>
+            std::tuple<Relation, std::shared_ptr<Metastatement>>
                 result{
                     std::move(r1),
                     make_unique<Metastatement>(MetastatementType::labelRelation, *relation.label, Relation::maxLabel, *relation.identifier)};
             return result;
         }
-        return nullopt;
+        return std::nullopt;
     };
-    return rule<tuple<Relation, shared_ptr<Metastatement>>>(relation, baseCase, combineLeft, combineRight);
+    return rule<std::tuple<Relation, std::shared_ptr<Metastatement>>>(relation, baseCase, combineLeft, combineRight);
 }
 
 /* implemented in consitency check when term is added to branch
@@ -193,7 +191,7 @@ void Tableau::Node::appendBranches(const Relation &leftRelation)
     if (isLeaf())
     {
         // TODO merge with function below
-        auto leftNode = make_shared<Node>(tableau, Relation(leftRelation));
+        auto leftNode = std::make_shared<Node>(tableau, Relation(leftRelation));
         leftNode->closed = checkIfClosed(this, leftRelation);
         if (!leftNode->closed && checkIfDuplicate(this, leftRelation))
         {
@@ -231,7 +229,7 @@ void Tableau::Node::appendBranches(const Relation &leftRelation, const Relation 
     }
     if (isLeaf())
     {
-        auto leftNode = make_shared<Node>(tableau, Relation(leftRelation));
+        auto leftNode = std::make_shared<Node>(tableau, Relation(leftRelation));
         this->leftNode = leftNode;
         leftNode->parentNode = this;
         leftNode->closed = checkIfClosed(this, leftRelation);
@@ -244,7 +242,7 @@ void Tableau::Node::appendBranches(const Relation &leftRelation, const Relation 
             tableau->unreducedNodes.push(leftNode);
         }
 
-        auto rightNode = make_shared<Node>(tableau, Relation(rightRelation));
+        auto rightNode = std::make_shared<Node>(tableau, Relation(rightRelation));
         this->rightNode = rightNode;
         rightNode->parentNode = this;
         rightNode->closed = checkIfClosed(this, rightRelation);
@@ -277,7 +275,7 @@ void Tableau::Node::appendBranches(const Metastatement &metastatement)
     }
     if (isLeaf())
     {
-        auto leftNode = make_shared<Node>(tableau, Metastatement(metastatement));
+        auto leftNode = std::make_shared<Node>(tableau, Metastatement(metastatement));
         this->leftNode = leftNode;
         leftNode->parentNode = this;
         tableau->unreducedNodes.push(leftNode);
@@ -293,7 +291,7 @@ void Tableau::Node::appendBranches(const Metastatement &metastatement)
     }
 }
 
-void Tableau::Node::toDotFormat(ofstream &output) const
+void Tableau::Node::toDotFormat(std::ofstream &output) const
 {
     output << "N" << this
            << "[label=\"";
@@ -312,23 +310,23 @@ void Tableau::Node::toDotFormat(ofstream &output) const
         output << ", fontcolor=green";
     }
     output
-        << "];" << endl;
+        << "];" << std::endl;
     // children
     if (leftNode != nullptr)
     {
         leftNode->toDotFormat(output);
         output << "N" << this << " -- "
-               << "N" << leftNode << ";" << endl;
+               << "N" << leftNode << ";" << std::endl;
     }
     if (rightNode != nullptr)
     {
         rightNode->toDotFormat(output);
         output << "N" << this << " -- "
-               << "N" << rightNode << ";" << endl;
+               << "N" << rightNode << ";" << std::endl;
     }
 }
 
-bool Tableau::Node::CompareNodes::operator()(const shared_ptr<Node> left, const shared_ptr<Node> right) const
+bool Tableau::Node::CompareNodes::operator()(const std::shared_ptr<Node> left, const std::shared_ptr<Node> right) const
 {
     if (left->relation && right->relation)
     {
@@ -341,13 +339,13 @@ bool Tableau::Node::CompareNodes::operator()(const shared_ptr<Node> left, const 
     return true;
 }
 
-Tableau::Tableau(initializer_list<Relation> initalRelations) : Tableau(vector(initalRelations)) {}
+Tableau::Tableau(std::initializer_list<Relation> initalRelations) : Tableau(std::vector(initalRelations)) {}
 Tableau::Tableau(Clause initalRelations)
 {
-    shared_ptr<Node> currentNode = nullptr;
+    std::shared_ptr<Node> currentNode = nullptr;
     for (auto relation : initalRelations)
     {
-        shared_ptr<Node> newNode = make_shared<Node>(this, Relation(relation));
+        std::shared_ptr<Node> newNode = std::make_shared<Node>(this, Relation(relation));
         if (rootNode == nullptr)
         {
             rootNode = newNode;
@@ -363,10 +361,10 @@ Tableau::Tableau(Clause initalRelations)
 }
 
 // helper
-bool applyDNFRule(shared_ptr<Tableau::Node> node)
+bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
 {
     // Rule::id, Rule::negId
-    auto idRule = [](const Relation &relation) -> optional<Relation>
+    auto idRule = [](const Relation &relation) -> std::optional<Relation>
     {
         if (relation.operation == Operation::identity) // TODO compare relations with overloaded == operator
         {
@@ -375,7 +373,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
             r1.label = relation.label;
             return r1;
         }
-        return nullopt;
+        return std::nullopt;
     };
     auto rId = unaryRule(*node->relation, idRule);
     if (rId)
@@ -385,7 +383,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
         return true;
     }
     // Rule::composition, Rule::negComposition
-    auto compositionRule = [](const Relation &relation) -> optional<Relation>
+    auto compositionRule = [](const Relation &relation) -> std::optional<Relation>
     {
         if (relation.operation == Operation::composition)
         {
@@ -395,7 +393,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
             Relation r2 = Relation(*relation.rightOperand);
             return Relation(Operation::composition, std::move(r1), std::move(r2));
         }
-        return nullopt;
+        return std::nullopt;
     };
     auto rComposition = unaryRule(*node->relation, compositionRule);
     if (rComposition)
@@ -405,7 +403,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
         return true;
     }
     // Rule::intersection, Rule::negIntersection
-    auto intersectionRule = [](const Relation &relation) -> optional<Relation>
+    auto intersectionRule = [](const Relation &relation) -> std::optional<Relation>
     {
         if (relation.operation == Operation::intersection)
         {
@@ -416,7 +414,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
             r1.label = relation.label;
             return Relation(Operation::intersection, std::move(r1), std::move(r2));
         }
-        return nullopt;
+        return std::nullopt;
     };
     auto rIntersection = unaryRule(*node->relation, intersectionRule);
     if (rIntersection)
@@ -426,7 +424,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
         return true;
     }
     // Rule::choice, Rule::negChoice
-    auto choiceRule = [](const Relation &relation) -> optional<tuple<Relation, Relation>>
+    auto choiceRule = [](const Relation &relation) -> std::optional<std::tuple<Relation, Relation>>
     {
         if (relation.operation == Operation::choice)
         {
@@ -435,10 +433,10 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
             r1.label = relation.label;
             Relation r2 = Relation(*relation.rightOperand);
             r2.label = relation.label;
-            tuple<Relation, Relation> result{std::move(r1), std::move(r2)};
+            std::tuple<Relation, Relation> result{std::move(r1), std::move(r2)};
             return result;
         }
-        return nullopt;
+        return std::nullopt;
     };
     auto rChoice = binaryRule(*node->relation, choiceRule);
     if (rChoice)
@@ -458,7 +456,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
         return true;
     }
     // Rule::transitiveClosure, Rule::negTransitiveClosure
-    auto transitiveClosureRule = [](const Relation &relation) -> optional<tuple<Relation, Relation>>
+    auto transitiveClosureRule = [](const Relation &relation) -> std::optional<std::tuple<Relation, Relation>>
     {
         if (relation.operation == Operation::transitiveClosure)
         {
@@ -466,17 +464,17 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
             Relation r1 = Relation(*relation.leftOperand);
             r1.label = relation.label;
             Relation r12 = Relation(relation);
-            r12.label = nullopt;
+            r12.label = std::nullopt;
             r12.negated = false;
             Relation r2 = Relation(Operation::none); // empty relation
             r2.label = relation.label;
-            tuple<Relation, Relation>
+            std::tuple<Relation, Relation>
                 result{
                     std::move(r2),
                     Relation(Operation::composition, std::move(r1), std::move(r12))};
             return result;
         }
-        return nullopt;
+        return std::nullopt;
     };
     auto rTransitiveClosure = binaryRule(*node->relation, transitiveClosureRule);
     if (rTransitiveClosure)
@@ -498,7 +496,7 @@ bool applyDNFRule(shared_ptr<Tableau::Node> node)
 }
 
 // helper
-bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
+bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
 {
     Tableau::Node *currentNode = &(*node);
     while (currentNode != nullptr)
@@ -506,14 +504,14 @@ bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
         if (currentNode->relation && (*currentNode->relation).negated)
         {
             // hack: make shared node to only check the new mteastatement and not all again
-            auto negARule = [node](const Relation &relation) -> optional<Relation>
+            auto negARule = [node](const Relation &relation) -> std::optional<Relation>
             {
                 if (relation.operation == Operation::base) // TODO compare relations with overloaded == operator
                 {
                     // Rule::negA
                     Relation r1 = Relation(Operation::none); // empty relation
                     int label = *relation.label;
-                    string baseRelation = *relation.identifier;
+                    std::string baseRelation = *relation.identifier;
                     if (node->metastatement && node->metastatement->type == MetastatementType::labelRelation)
                     {
                         if (node->metastatement->label1 == label && node->metastatement->baseRelation == baseRelation)
@@ -523,7 +521,7 @@ bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
                         }
                     }
                 }
-                return nullopt;
+                return std::nullopt;
             };
             auto rNegA = unaryRule(*currentNode->relation, negARule);
             if (rNegA)
@@ -537,7 +535,7 @@ bool applyRequestRule(Tableau *tableau, shared_ptr<Tableau::Node> node)
     }
 }
 
-bool Tableau::applyRule(shared_ptr<Tableau::Node> node)
+bool Tableau::applyRule(std::shared_ptr<Tableau::Node> node)
 {
     if (node->metastatement)
     {
@@ -598,7 +596,7 @@ bool Tableau::solve(int bound)
 }
 
 // helper
-vector<Clause> extractDNF(shared_ptr<Tableau::Node> node)
+std::vector<Clause> extractDNF(std::shared_ptr<Tableau::Node> node)
 {
     if (node == nullptr || node->isClosed())
     {
@@ -614,8 +612,8 @@ vector<Clause> extractDNF(shared_ptr<Tableau::Node> node)
     }
     else
     {
-        vector<Clause> left = extractDNF(node->leftNode);
-        vector<Clause> right = extractDNF(node->rightNode);
+        std::vector<Clause> left = extractDNF(node->leftNode);
+        std::vector<Clause> right = extractDNF(node->rightNode);
         left.insert(left.end(), right.begin(), right.end());
         if (node->relation && node->relation->isNormal())
         {
@@ -628,7 +626,7 @@ vector<Clause> extractDNF(shared_ptr<Tableau::Node> node)
     }
 }
 
-vector<Clause> Tableau::DNF()
+std::vector<Clause> Tableau::DNF()
 {
     while (!unreducedNodes.empty())
     {
@@ -671,10 +669,10 @@ Clause Tableau::calcReuqest()
     }
 
     // exrtact terms for new node
-    shared_ptr<Node> node = rootNode;
-    optional<Relation> oldPositive;
-    optional<Relation> newPositive;
-    vector<int> activeLabels;
+    std::shared_ptr<Node> node = rootNode;
+    std::optional<Relation> oldPositive;
+    std::optional<Relation> newPositive;
+    std::vector<int> activeLabels;
     while (node != nullptr) // exploit that only alpha rules applied
     {
         if (node->relation && !node->relation->negated)
@@ -697,7 +695,7 @@ Clause Tableau::calcReuqest()
     {
         if (node->relation && node->relation->negated)
         {
-            vector<int> relationLabels = node->relation->labels();
+            std::vector<int> relationLabels = node->relation->labels();
             bool allLabelsActive = true;
             for (auto label : relationLabels)
             {
@@ -717,16 +715,16 @@ Clause Tableau::calcReuqest()
     return request;
 }
 
-void Tableau::toDotFormat(ofstream &output) const
+void Tableau::toDotFormat(std::ofstream &output) const
 {
-    output << "graph {" << endl
-           << "node[shape=\"plaintext\"]" << endl;
+    output << "graph {" << std::endl
+           << "node[shape=\"plaintext\"]" << std::endl;
     rootNode->toDotFormat(output);
-    output << "}" << endl;
+    output << "}" << std::endl;
 }
 
-void Tableau::exportProof(string filename) const
+void Tableau::exportProof(std::string filename) const
 {
-    ofstream file(filename + ".dot");
+    std::ofstream file(filename + ".dot");
     toDotFormat(file);
 }
