@@ -12,7 +12,7 @@ int main(int argc, const char *argv[])
     Relation r1("(id;a)^*");
     Relation r2("a;(a;a)^* | (a;a)^*");
     //*/
-    /* 2) KATER ECO PAPER *
+    /* 2) KATER ECO PAPER */
     Relation r1("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
     Relation r2("rf | (co | rfinv;co);(rf | id)");
     Assumption coTransitive(AssumptionType::regular, Relation("co;co^*"), "co");
@@ -26,9 +26,10 @@ int main(int argc, const char *argv[])
     Assumption rfrfinv(AssumptionType::identity, Relation("rf;rfinv"));
     RegularTableau::assumptions.push_back(std::move(rfrfinv));
     //*/
-    /* Intersections */
+    /* Intersections *
     Relation r1("a;(b & c)");
     Relation r2("a;c & a;b");
+    //*/
 
     /* PROOF SETUP */
     r1.label = 0;
@@ -38,14 +39,14 @@ int main(int argc, const char *argv[])
     std::cout << "|=" << r1.toString() << " & " << r2.toString() << std::endl;
     //*/
 
-    /* INFINITE */
+    /* INFINITE *
     std::cout << "Infinite Proof..." << std::endl;
     Tableau tableau{r1, r2};
     tableau.solve(200);
     tableau.exportProof("infinite");
     //*/
 
-    /* REGULAR *
+    /* REGULAR */
     std::cout << "Regular Proof..." << std::endl;
     RegularTableau regularTableau{r1, r2};
     std::cout << "Done. " << regularTableau.solve() << std::endl;

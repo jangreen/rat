@@ -138,29 +138,36 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> atRule(const
             std::make_unique<Metastatement>(MetastatementType::labelEquality, *relation.leftOperand->label, *relation.rightOperand->label)};
         return result;
     }
-    // case: intersection or composition (only cases for labeled terms that can happen)
-    auto leftSubRelation = atRule(*relation.leftOperand);
-    if (leftSubRelation)
+    if (relation.leftOperand != nullptr)
     {
-        auto &[subrelation1, metastatement] = *leftSubRelation;
-        std::tuple<Relation, std::shared_ptr<Metastatement>> result{
-            Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
-            std::move(metastatement)};
-        return result;
+        // case: intersection or composition (only cases for labeled terms that can happen)
+        auto leftSubRelation = atRule(*relation.leftOperand);
+        if (leftSubRelation)
+        {
+            auto &[subrelation1, metastatement] = *leftSubRelation;
+            std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+                Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
+                std::move(metastatement)};
+            return result;
+        }
     }
-    // case: intersection
-    if (relation.operation != Operation::intersection)
+    if (relation.rightOperand != nullptr)
     {
+        // case: intersection
+        if (relation.operation != Operation::intersection)
+        {
+            return std::nullopt;
+        }
+        auto rightSubRelation = atRule(*relation.rightOperand);
+        if (rightSubRelation)
+        {
+            auto &[subrelation1, metastatement] = *rightSubRelation;
+            std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+                Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
+                std::move(metastatement)};
+            return result;
+        }
         return std::nullopt;
-    }
-    auto rightSubRelation = atRule(*relation.rightOperand);
-    if (rightSubRelation)
-    {
-        auto &[subrelation1, metastatement] = *rightSubRelation;
-        std::tuple<Relation, std::shared_ptr<Metastatement>> result{
-            Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
-            std::move(metastatement)};
-        return result;
     }
     return std::nullopt;
 }
@@ -179,26 +186,34 @@ std::optional<Relation> negAtRule(const Relation &relation)
     }
     // TODO DRY: use template functions
     // case: intersection or composition (only cases for labeled terms that can happen)
-    auto leftSubRelation = negAtRule(*relation.leftOperand);
-    if (leftSubRelation)
+    if (relation.leftOperand != nullptr)
     {
-        if (relation.operation == Operation::composition && leftSubRelation->operation == Operation::none && leftSubRelation->label)
+        auto leftSubRelation = negAtRule(*relation.leftOperand);
+        if (leftSubRelation)
         {
-            Relation r1(*relation.rightOperand);
-            r1.label = leftSubRelation->label;
-            return r1;
+            if (relation.operation == Operation::composition && leftSubRelation->operation == Operation::none && leftSubRelation->label)
+            {
+                Relation r1(*relation.rightOperand);
+                r1.label = leftSubRelation->label;
+                return r1;
+            }
+            return Relation(relation.operation, std::move(*leftSubRelation), Relation(*relation.rightOperand));
         }
-        return Relation(relation.operation, std::move(*leftSubRelation), Relation(*relation.rightOperand));
-    }
-    // case: intersection
-    if (relation.operation != Operation::intersection)
-    {
         return std::nullopt;
     }
-    auto rightSubRelation = negAtRule(*relation.rightOperand);
-    if (rightSubRelation)
+    if (relation.rightOperand != nullptr)
     {
-        return Relation(relation.operation, Relation(*relation.leftOperand), std::move(*rightSubRelation));
+        // case: intersection
+        if (relation.operation != Operation::intersection)
+        {
+            return std::nullopt;
+        }
+        auto rightSubRelation = negAtRule(*relation.rightOperand);
+        if (rightSubRelation)
+        {
+            return Relation(relation.operation, Relation(*relation.leftOperand), std::move(*rightSubRelation));
+        }
+        return std::nullopt;
     }
     return std::nullopt;
 }
@@ -440,7 +455,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         if (relation.operation == Operation::identity) // TODO compare relations with overloaded == operator
         {
             // Rule::id, Rule::negId
-            Relation r1 = Relation(Operation::none); // empty relation
+            Relation r1(Operation::none); // empty relation
             r1.label = relation.label;
             return r1;
         }
@@ -459,9 +474,9 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         if (relation.operation == Operation::composition)
         {
             // Rule::comnposition, Rule::negComposition
-            Relation r1 = Relation(*relation.leftOperand);
+            Relation r1(*relation.leftOperand);
             r1.label = relation.label;
-            Relation r2 = Relation(*relation.rightOperand);
+            Relation r2(*relation.rightOperand);
             return Relation(Operation::composition, std::move(r1), std::move(r2));
         }
         return std::nullopt;
@@ -479,9 +494,9 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         if (relation.operation == Operation::intersection)
         {
             // Rule::inertsection, Rule::negIntersection
-            Relation r1 = Relation(*relation.leftOperand);
+            Relation r1(*relation.leftOperand);
             r1.label = relation.label;
-            Relation r2 = Relation(*relation.rightOperand);
+            Relation r2(*relation.rightOperand);
             r2.label = relation.label;
             return Relation(Operation::intersection, std::move(r1), std::move(r2));
         }
@@ -523,9 +538,9 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         if (relation.operation == Operation::choice)
         {
             // Rule::choice, Rule::negChoice
-            Relation r1 = Relation(*relation.leftOperand);
+            Relation r1(*relation.leftOperand);
             r1.label = relation.label;
-            Relation r2 = Relation(*relation.rightOperand);
+            Relation r2(*relation.rightOperand);
             r2.label = relation.label;
             std::tuple<Relation, Relation> result{std::move(r1), std::move(r2)};
             return result;
@@ -555,12 +570,12 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
         if (relation.operation == Operation::transitiveClosure)
         {
             // Rule::transitiveClosure, Rule::negTransitiveClosure
-            Relation r1 = Relation(*relation.leftOperand);
+            Relation r1(*relation.leftOperand);
             r1.label = relation.label;
-            Relation r12 = Relation(relation);
+            Relation r12(relation);
             r12.label = std::nullopt;
             r12.negated = false;
-            Relation r2 = Relation(Operation::none); // empty relation
+            Relation r2(Operation::none); // empty relation
             r2.label = relation.label;
             std::tuple<Relation, Relation>
                 result{
@@ -604,7 +619,7 @@ bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
                 if (relation.operation == Operation::base) // TODO compare relations with overloaded == operator
                 {
                     // Rule::negA
-                    Relation r1 = Relation(Operation::none); // empty relation
+                    Relation r1(Operation::none); // empty relation
                     int label = *relation.label;
                     std::string baseRelation = *relation.identifier;
                     if (node->metastatement && node->metastatement->type == MetastatementType::labelRelation)
@@ -675,7 +690,7 @@ bool applyRequestRuleNoMeta(Tableau *tableau, std::shared_ptr<Tableau::Node> nod
                 if (relation.operation == Operation::base)
                 {
                     // Rule::negA
-                    Relation r1 = Relation(Operation::none); // empty relation
+                    Relation r1(Operation::none); // empty relation
                     int label = *relation.label;
                     std::string baseRelation = *relation.identifier;
                     if (currentMetaNode->metastatement->label1 == label && currentMetaNode->metastatement->baseRelation == baseRelation)

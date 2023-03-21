@@ -209,7 +209,7 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
         {
             if (assumption.type == AssumptionType::regular && *assumption.baseRelation == *relation.identifier)
             {
-                Relation leftSide = Relation(assumption.relation);
+                Relation leftSide(assumption.relation);
                 leftSide.label = relation.label;
                 leftSide.negated = true;
                 return leftSide;
@@ -243,11 +243,11 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
     }
     if (rightSaturated)
     {
-        Relation saturated = Relation(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
+        Relation saturated(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
         saturated.negated = true;
         return saturated;
     }
-    Relation saturated = Relation(relation.operation, std::move(*leftSaturated));
+    Relation saturated(relation.operation, std::move(*leftSaturated));
     saturated.negated = true;
     return saturated;
 }
@@ -260,12 +260,12 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
     }
     if (relation.label)
     {
-        Relation copy = Relation(relation);
+        Relation copy(relation);
         copy.label = std::nullopt;
         copy.negated = false;
-        Relation assumptionR = Relation(assumption.relation);
+        Relation assumptionR(assumption.relation);
         assumptionR.label = relation.label;
-        Relation r = Relation(Operation::composition, std::move(assumptionR), std::move(copy));
+        Relation r(Operation::composition, std::move(assumptionR), std::move(copy));
         r.negated = true;
         return r;
     }
@@ -307,7 +307,7 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
     {
         rightSaturated = Relation(*relation.rightOperand);
     }
-    Relation saturated = Relation(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
+    Relation saturated(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
     saturated.negated = true;
     return saturated;
 }
@@ -348,9 +348,9 @@ void RegularTableau::saturate(Clause &clause)
 
             for (auto label : nodeLabels)
             {
-                Relation leftSide = Relation(assumption.relation);
-                Relation full = Relation(Operation::full);
-                Relation r = Relation(Operation::composition, std::move(leftSide), std::move(full));
+                Relation leftSide(assumption.relation);
+                Relation full(Operation::full);
+                Relation r(Operation::composition, std::move(leftSide), std::move(full));
                 r.saturated = true;
                 r.label = label;
                 r.negated = true;
