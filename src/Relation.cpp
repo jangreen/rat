@@ -85,7 +85,8 @@ bool Relation::isNormal() const
     {
         bool leftIsNormal = leftOperand == nullptr || leftOperand->isNormal();
         bool rightIsNormal = rightOperand == nullptr || rightOperand->isNormal();
-        return leftIsNormal && rightIsNormal;
+        bool leftRightSpecialCase = leftOperand == nullptr || rightOperand == nullptr || leftOperand->operation != Operation::none || rightOperand->operation != Operation::none;
+        return leftIsNormal && rightIsNormal && leftRightSpecialCase;
     }
     return true;
 }

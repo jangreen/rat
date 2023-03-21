@@ -111,7 +111,11 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString)
     {
         return Relation(Operation::empty);
     }
-    return Relation(Operation::base, name); // TODO: remove old: Relation::get(name);
+    if (Relation::relations.contains(name))
+    {
+        return Relation::relations.at(name);
+    }
+    return Relation(Operation::base, name);
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx)
 {

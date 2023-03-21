@@ -11,7 +11,7 @@ std::string Metastatement::toString() const
     }
     else
     {
-        output = "TODO";
+        output = std::to_string(label1) + " = " + std::to_string(label2);
     }
     return output;
 }
