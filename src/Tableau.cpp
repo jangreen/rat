@@ -383,11 +383,11 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const
            << "[label=\"";
     if (relation)
     {
-        output << (*relation).toString();
+        output << relation->toString();
     }
     else
     {
-        output << (*metastatement).toString();
+        output << metastatement->toString();
     }
     output << "\"";
     // color closed branches
@@ -464,7 +464,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
     auto rId = unaryRule(*node->relation, idRule);
     if (rId)
     {
-        (*rId).negated = node->relation->negated;
+        rId->negated = node->relation->negated;
         node->appendBranches(*rId);
         return true;
     }
@@ -484,7 +484,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
     auto rComposition = unaryRule(*node->relation, compositionRule);
     if (rComposition)
     {
-        (*rComposition).negated = node->relation->negated;
+        rComposition->negated = node->relation->negated;
         node->appendBranches(*rComposition);
         return true;
     }
@@ -505,7 +505,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
     auto rIntersection = unaryRule(*node->relation, intersectionRule);
     if (rIntersection)
     {
-        (*rIntersection).negated = node->relation->negated;
+        rIntersection->negated = node->relation->negated;
         node->appendBranches(*rIntersection);
         return true;
     }
@@ -551,8 +551,8 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
     if (rChoice)
     {
         auto &[r1, r2] = *rChoice;
-        r1.negated = (*node->relation).negated;
-        r2.negated = (*node->relation).negated;
+        r1.negated = node->relation->negated;
+        r2.negated = node->relation->negated;
         if (node->relation->negated)
         {
             node->appendBranches(r1);
@@ -589,8 +589,8 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node)
     if (rTransitiveClosure)
     {
         auto &[r1, r2] = *rTransitiveClosure;
-        r1.negated = (*node->relation).negated;
-        r2.negated = (*node->relation).negated;
+        r1.negated = node->relation->negated;
+        r2.negated = node->relation->negated;
         if (node->relation->negated)
         {
             node->appendBranches(r1);
@@ -611,7 +611,7 @@ bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
     Tableau::Node *currentNode = &(*node);
     while (currentNode != nullptr)
     {
-        if (currentNode->relation && (*currentNode->relation).negated)
+        if (currentNode->relation && currentNode->relation->negated)
         {
             // hack: make shared node to only check the new mteastatement and not all again
             auto negARule = [node](const Relation &relation) -> std::optional<Relation>
@@ -636,7 +636,7 @@ bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
             auto rNegA = unaryRule(*currentNode->relation, negARule);
             if (rNegA)
             {
-                (*rNegA).negated = (*currentNode->relation).negated;
+                rNegA->negated = currentNode->relation->negated;
                 node->appendBranches(*rNegA);
                 // return; // TODO: hack, do not return allow multiple applications of metastatement
             }
@@ -649,7 +649,7 @@ bool applyPropagationRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
     Tableau::Node *currentNode = &(*node);
     while (currentNode != nullptr)
     {
-        if (currentNode->relation && (*currentNode->relation).negated)
+        if (currentNode->relation && currentNode->relation->negated)
         {
             // hack: make shared node to only check the new mteastatement and not all again
             auto propRule = [node](const Relation &relation) -> std::optional<Relation>
@@ -668,7 +668,7 @@ bool applyPropagationRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
             auto rProp = unaryRule(*currentNode->relation, propRule);
             if (rProp)
             {
-                (*rProp).negated = (*currentNode->relation).negated;
+                rProp->negated = currentNode->relation->negated;
                 node->appendBranches(*rProp);
                 // return; // TODO: hack, do not return allow multiple applications of metastatement
             }
@@ -704,7 +704,7 @@ bool applyRequestRuleNoMeta(Tableau *tableau, std::shared_ptr<Tableau::Node> nod
             auto rNegA = unaryRule(r, negARule);
             if (rNegA)
             {
-                (*rNegA).negated = r.negated;
+                rNegA->negated = r.negated;
                 node->appendBranches(*rNegA);
                 // return; // TODO: hack, do not return allow multiple applications of metastatement
             }
@@ -731,9 +731,9 @@ bool Tableau::applyRule(std::shared_ptr<Tableau::Node> node)
     }
     else if (node->relation)
     {
-        if ((*node->relation).isNormal())
+        if (node->relation->isNormal())
         {
-            if ((*node->relation).negated)
+            if (node->relation->negated)
             {
                 if (applyRequestRuleNoMeta(this, node))
                 {

@@ -124,10 +124,10 @@ void Relation::rename(const std::vector<int> &renaming)
     }
     else if (leftOperand)
     {
-        (*leftOperand).rename(renaming);
+        leftOperand->rename(renaming);
         if (rightOperand)
         {
-            (*rightOperand).rename(renaming);
+            rightOperand->rename(renaming);
         }
     }
 }
