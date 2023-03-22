@@ -10,7 +10,7 @@ class Constraint {
  public:
   Constraint(const ConstraintType type, const Relation &&relation,
              const std::optional<std::string> name = std::nullopt);
-             
+
   ConstraintType type;
   Relation relation;
   std::optional<std::string> name;  // for printing

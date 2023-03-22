@@ -2,6 +2,8 @@
 #include <fstream>
 #include <memory>
 #include <queue>
+#include <string>
+#include <vector>
 
 #include "Metastatement.h"
 #include "Relation.h"
@@ -36,7 +38,7 @@ class Tableau {
   };
 
   Tableau(std::initializer_list<Relation> initalRelations);
-  Tableau(Clause initalRelations);
+  explicit Tableau(Clause initalRelations);
 
   std::shared_ptr<Node> rootNode;
   std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, Node::CompareNodes>

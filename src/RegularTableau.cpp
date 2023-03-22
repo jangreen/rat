@@ -47,7 +47,6 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   if (closed) {
     output << ", color=green";
   }
-  // TODO: mark root nodes if (re)
   output << "];" << std::endl;
   // edges
   for (auto &[childNode, edgeLabel] : childNodes) {
@@ -99,16 +98,6 @@ bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
     for (const auto &clause : dnf) {
       addNode(node, clause);
     }
-    // TODO: if dnf is empty close node
-    /*cout << "--------" << endl;
-    for (auto clause : dnf)
-    {
-        cout << "--" << endl;
-        for (auto literal : clause)
-        {
-            cout << literal.toString() << endl;
-        }
-    }*/
     if (dnf.empty()) {
       node->closed = true;
     }

@@ -8,10 +8,12 @@ Constraint::Constraint(const ConstraintType type, const Relation &&relation,
 
 void Constraint::toEmptyNormalForm() {
   if (type == ConstraintType::irreflexive) {
-    relation = Relation(Operation::intersection, std::move(relation), Operation::identity);
+    Relation id(Operation::identity);
+    relation = Relation(Operation::intersection, std::move(relation), std::move(id));
   } else if (type == ConstraintType::acyclic) {
+    Relation id(Operation::identity);
     Relation tc(Operation::transitiveClosure, std::move(relation));
-    relation = Relation(Operation::intersection, std::move(tc), Operation::identity);
+    relation = Relation(Operation::intersection, std::move(tc), std::move(id));
   }
   type = ConstraintType::empty;
 }

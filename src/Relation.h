@@ -40,7 +40,8 @@ class Relation {
   }
 
   explicit Relation(const std::string &expression);  // parse constructor
-  Relation(const Operation operation, const std::optional<std::string> &identifier = std::nullopt);
+  explicit Relation(const Operation operation,
+                    const std::optional<std::string> &identifier = std::nullopt);
   Relation(const Operation operation, Relation &&left);
   Relation(const Operation operation, Relation &&left, Relation &&right);
 

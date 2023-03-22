@@ -1,6 +1,10 @@
 #include "Tableau.h"
 
+#include <algorithm>
 #include <iostream>
+#include <tuple>
+#include <utility>
+
 
 #include "Metastatement.h"
 #include "ProofRule.h"
@@ -103,9 +107,7 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> aRule(
   };
   auto baseCase = [](const Relation &relation)
       -> std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> {
-    if (relation.operation ==
-        Operation::base)  // TODO compare relations with overloaded == operator
-    {
+    if (relation.operation == Operation::base) {
       // Rule::a
       Relation r1(Operation::none);  // empty relation
       Relation::maxLabel++;
@@ -232,9 +234,9 @@ bool Tableau::Node::isClosed() {
   closed = closed ||
            (expanded && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed()));
   return closed;
-};
+}
 
-bool Tableau::Node::isLeaf() const { return leftNode == nullptr && rightNode == nullptr; };
+bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
 
 // helper
 bool checkIfClosed(Tableau::Node *node, const Relation &relation) {
@@ -393,9 +395,7 @@ Tableau::Tableau(Clause initalRelations) {
 bool applyDNFRule(std::shared_ptr<Tableau::Node> node) {
   // Rule::id, Rule::negId
   auto idRule = [](const Relation &relation) -> std::optional<Relation> {
-    if (relation.operation ==
-        Operation::identity)  // TODO compare relations with overloaded == operator
-    {
+    if (relation.operation == Operation::identity) {
       // Rule::id, Rule::negId
       Relation r1(Operation::none);  // empty relation
       r1.label = relation.label;
@@ -529,9 +529,7 @@ bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node) {
     if (currentNode->relation && currentNode->relation->negated) {
       // hack: make shared node to only check the new mteastatement and not all again
       auto negARule = [node](const Relation &relation) -> std::optional<Relation> {
-        if (relation.operation ==
-            Operation::base)  // TODO compare relations with overloaded == operator
-        {
+        if (relation.operation == Operation::base) {
           // Rule::negA
           Relation r1(Operation::none);  // empty relation
           int label = *relation.label;
@@ -733,8 +731,7 @@ Clause Tableau::calcReuqest() {
   std::optional<Relation> oldPositive;
   std::optional<Relation> newPositive;
   std::vector<int> activeLabels;
-  while (node != nullptr)  // exploit that only alpha rules applied
-  {
+  while (node != nullptr) {  // exploit that only alpha rules applied
     if (node->relation && !node->relation->negated) {
       if (!oldPositive) {
         oldPositive = node->relation;
@@ -747,8 +744,7 @@ Clause Tableau::calcReuqest() {
   }
   Clause request{*newPositive};
   node = rootNode;
-  while (node != nullptr)  // exploit that only alpha rules applied
-  {
+  while (node != nullptr) {  // exploit that only alpha rules applied
     if (node->relation && node->relation->negated) {
       std::vector<int> relationLabels = node->relation->labels();
       bool allLabelsActive = true;

@@ -16,7 +16,7 @@ class RegularTableau {
   class Node {
    public:
     Node(std::initializer_list<Relation> relations);
-    Node(Clause relations);
+    explicit Node(Clause relations);
 
     Clause relations;
     std::vector<std::tuple<std::shared_ptr<Node>, std::vector<int>>> childNodes;
