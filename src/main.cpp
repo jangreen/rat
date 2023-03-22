@@ -12,7 +12,7 @@ int main(int argc, const char *argv[]) {
   Relation r1("(id;a)^*");
   Relation r2("a;(a;a)^* | (a;a)^*");
   //*/
-  /* 2) KATER ECO PAPER *
+  /* 2) KATER ECO PAPER */
   Relation r1("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
   Relation r2("rf | (co | rfinv;co);(rf | id)");
   Assumption coTransitive(AssumptionType::regular, Relation("co;co^*"), "co");
@@ -26,7 +26,7 @@ int main(int argc, const char *argv[]) {
   Assumption rfrfinv(AssumptionType::identity, Relation("rf;rfinv"));
   RegularTableau::assumptions.push_back(std::move(rfrfinv));
   //*/
-  /* Intersections */
+  /* Intersections *
   Relation r1("a;(b & c)");
   Relation r2("a;c & a;b");
   //*/

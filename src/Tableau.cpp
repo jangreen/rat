@@ -76,9 +76,8 @@ std::optional<Relation> unaryRule(const Relation &relation, auto &baseCase) {
   return rule<Relation>(relation, baseCase, combineLeft, combineRight);
 }
 
-std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> aRule(
-    const Relation &relation) {
-  auto combineLeft = [](std::tuple<Relation, std::shared_ptr<Metastatement>> &subrelations,
+std::optional<std::tuple<Relation, Metastatement>> aRule(const Relation &relation) {
+  auto combineLeft = [](std::tuple<Relation, Metastatement> &subrelations,
                         const Relation &relation) {
     auto &[subrelation1, metastatement] = subrelations;
 
@@ -87,44 +86,40 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> aRule(
         !subrelation1.identifier && subrelation1.label) {
       Relation r1(*relation.rightOperand);
       r1.label = subrelation1.label;
-      std::tuple<Relation, std::shared_ptr<Metastatement>> result{std::move(r1),
-                                                                  std::move(metastatement)};
+      std::tuple<Relation, Metastatement> result{std::move(r1), std::move(metastatement)};
       return result;
     }
-    std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+    std::tuple<Relation, Metastatement> result{
         Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
         std::move(metastatement)};
     return result;
   };
-  auto combineRight = [](std::tuple<Relation, std::shared_ptr<Metastatement>> &subrelations,
+  auto combineRight = [](std::tuple<Relation, Metastatement> &subrelations,
                          const Relation &relation) {
     auto &[subrelation1, metastatement] = subrelations;
-    std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+    std::tuple<Relation, Metastatement> result{
         Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
         std::move(metastatement)};
     return result;
   };
-  auto baseCase = [](const Relation &relation)
-      -> std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> {
+  auto baseCase =
+      [](const Relation &relation) -> std::optional<std::tuple<Relation, Metastatement>> {
     if (relation.operation == Operation::base) {
       // Rule::a
       Relation r1(Operation::none);  // empty relation
       Relation::maxLabel++;
       r1.label = Relation::maxLabel;
-      std::tuple<Relation, std::shared_ptr<Metastatement>> result{
-          std::move(r1),
-          std::make_unique<Metastatement>(MetastatementType::labelRelation, *relation.label,
-                                          Relation::maxLabel, *relation.identifier)};
+      Metastatement m(MetastatementType::labelRelation, *relation.label, Relation::maxLabel,
+                      *relation.identifier);
+      std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
       return result;
     }
     return std::nullopt;
   };
-  return rule<std::tuple<Relation, std::shared_ptr<Metastatement>>>(relation, baseCase, combineLeft,
-                                                                    combineRight);
+  return rule<std::tuple<Relation, Metastatement>>(relation, baseCase, combineLeft, combineRight);
 }
 
-std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> atRule(
-    const Relation &relation) {
+std::optional<std::tuple<Relation, Metastatement>> atRule(const Relation &relation) {
   if (relation.leftOperand != nullptr && relation.rightOperand != nullptr &&
       relation.leftOperand->operation == Operation::none &&
       relation.rightOperand->operation == Operation::none &&
@@ -132,10 +127,9 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> atRule(
     // identify labels
     Relation r1(Operation::none);
     r1.label = std::min(*relation.leftOperand->label, *relation.rightOperand->label);
-    std::tuple<Relation, std::shared_ptr<Metastatement>> result{
-        std::move(r1), std::make_unique<Metastatement>(MetastatementType::labelEquality,
-                                                       *relation.leftOperand->label,
-                                                       *relation.rightOperand->label)};
+    Metastatement m(MetastatementType::labelEquality, *relation.leftOperand->label,
+                    *relation.rightOperand->label);
+    std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
     return result;
   }
   if (relation.leftOperand != nullptr) {
@@ -143,7 +137,7 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> atRule(
     auto leftSubRelation = atRule(*relation.leftOperand);
     if (leftSubRelation) {
       auto &[subrelation1, metastatement] = *leftSubRelation;
-      std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+      std::tuple<Relation, Metastatement> result{
           Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
           std::move(metastatement)};
       return result;
@@ -157,7 +151,7 @@ std::optional<std::tuple<Relation, std::shared_ptr<Metastatement>>> atRule(
     auto rightSubRelation = atRule(*relation.rightOperand);
     if (rightSubRelation) {
       auto &[subrelation1, metastatement] = *rightSubRelation;
-      std::tuple<Relation, std::shared_ptr<Metastatement>> result{
+      std::tuple<Relation, Metastatement> result{
           Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
           std::move(metastatement)};
       return result;
@@ -449,7 +443,7 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node) {
       auto &[r1, metastatement] = *rAt;
       r1.negated = node->relation->negated;
       node->appendBranches(r1);
-      node->appendBranches(*metastatement);
+      node->appendBranches(metastatement);
       return true;
     }
   } else {
@@ -611,7 +605,7 @@ bool applyRequestRuleNoMeta(Tableau *tableau, std::shared_ptr<Tableau::Node> nod
   }
 }
 
-bool Tableau::applyRule(std::shared_ptr<Tableau::Node> node) {
+bool Tableau::applyRule(std::shared_ptr<Node> node) {
   if (node->metastatement) {
     if (node->metastatement->type == MetastatementType::labelRelation) {
       applyRequestRule(this, node);
@@ -633,7 +627,7 @@ bool Tableau::applyRule(std::shared_ptr<Tableau::Node> node) {
           auto &[r1, metastatement] = *rA;
           r1.negated = node->relation->negated;
           node->appendBranches(r1);
-          node->appendBranches(*metastatement);
+          node->appendBranches(metastatement);
           return true;
         }
       }
