@@ -148,13 +148,13 @@ void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause,
     if (existingNode != nodes.end()) {
       // equivalent node exists
       if (parent != nullptr) {
-        std::tuple<std::shared_ptr<Node>, std::vector<int>> edge{existingNode->get(), renaming};
+        std::tuple<Node *, std::vector<int>> edge{existingNode->get(), renaming};
         parent->childNodes.push_back(edge);
       }
     } else {
       // equivalent node does not exist
       if (parent != nullptr) {
-        std::tuple<std::shared_ptr<Node>, std::vector<int>> edge{newNode, renaming};
+        std::tuple<Node *, std::vector<int>> edge{newNode.get(), renaming};
         parent->childNodes.push_back(edge);
       } else {
         // new root node

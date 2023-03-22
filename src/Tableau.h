@@ -18,8 +18,8 @@ class Tableau {
     Tableau *tableau;
     std::optional<Relation> relation = std::nullopt;
     std::optional<Metastatement> metastatement = std::nullopt;
-    std::shared_ptr<Node> leftNode = nullptr;
-    std::shared_ptr<Node> rightNode = nullptr;
+    std::unique_ptr<Node> leftNode = nullptr;
+    std::unique_ptr<Node> rightNode = nullptr;
     Node *parentNode = nullptr;
     Node *parentMetastatement = nullptr;  // metastatement chain
     bool closed = false;
@@ -33,18 +33,17 @@ class Tableau {
     void toDotFormat(std::ofstream &output) const;
 
     struct CompareNodes {
-      bool operator()(const std::shared_ptr<Node> left, const std::shared_ptr<Node> right) const;
+      bool operator()(const Node *left, const Node *right) const;
     };
   };
 
   Tableau(std::initializer_list<Relation> initalRelations);
   explicit Tableau(Clause initalRelations);
 
-  std::shared_ptr<Node> rootNode;
-  std::priority_queue<std::shared_ptr<Node>, std::vector<std::shared_ptr<Node>>, Node::CompareNodes>
-      unreducedNodes;
+  std::unique_ptr<Node> rootNode;
+  std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
-  bool applyRule(std::shared_ptr<Node> node);
+  bool applyRule(Node *node);
   bool solve(int bound = 30);
 
   // methods for regular reasoning

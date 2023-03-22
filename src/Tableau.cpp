@@ -273,9 +273,9 @@ void Tableau::Node::appendBranches(const Relation &leftRelation) {
   if (!isClosed() && isLeaf()) {
     auto newNode = createNode(this, leftRelation);
     if (newNode) {
-      leftNode = std::make_shared<Node>(std::move(*newNode));
+      leftNode = std::make_unique<Node>(std::move(*newNode));
       if (!leftNode->closed) {
-        tableau->unreducedNodes.push(leftNode);
+        tableau->unreducedNodes.push(leftNode.get());
       }
     }
   } else {
@@ -293,15 +293,15 @@ void Tableau::Node::appendBranches(const Relation &leftRelation, const Relation 
     auto newNodeLeft = createNode(this, leftRelation);
     auto newNodeRight = createNode(this, rightRelation);
     if (newNodeLeft) {
-      leftNode = std::make_shared<Node>(std::move(*newNodeLeft));
+      leftNode = std::make_unique<Node>(std::move(*newNodeLeft));
       if (!leftNode->closed) {
-        tableau->unreducedNodes.push(leftNode);
+        tableau->unreducedNodes.push(leftNode.get());
       }
     }
     if (newNodeRight) {
-      rightNode = std::make_shared<Node>(std::move(*newNodeRight));
+      rightNode = std::make_unique<Node>(std::move(*newNodeRight));
       if (!rightNode->closed) {
-        tableau->unreducedNodes.push(rightNode);
+        tableau->unreducedNodes.push(rightNode.get());
       }
     }
   } else {
@@ -316,10 +316,10 @@ void Tableau::Node::appendBranches(const Relation &leftRelation, const Relation 
 // TODO DRY
 void Tableau::Node::appendBranches(const Metastatement &metastatement) {
   if (!isClosed() && isLeaf()) {
-    leftNode = std::make_shared<Node>(tableau, Metastatement(metastatement));
+    leftNode = std::make_unique<Node>(tableau, Metastatement(metastatement));
     leftNode->parentNode = this;
     leftNode->parentMetastatement = (this->metastatement) ? this : parentMetastatement;
-    tableau->unreducedNodes.push(leftNode);
+    tableau->unreducedNodes.push(leftNode.get());
   } else {
     if (leftNode != nullptr) {
       leftNode->appendBranches(metastatement);
@@ -356,8 +356,7 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   }
 }
 
-bool Tableau::Node::CompareNodes::operator()(const std::shared_ptr<Node> left,
-                                             const std::shared_ptr<Node> right) const {
+bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
   if (left->relation && right->relation) {
     return left->relation->negated < right->relation->negated;
   } else if (right->relation) {
@@ -369,23 +368,24 @@ bool Tableau::Node::CompareNodes::operator()(const std::shared_ptr<Node> left,
 Tableau::Tableau(std::initializer_list<Relation> initalRelations)
     : Tableau(std::vector(initalRelations)) {}
 Tableau::Tableau(Clause initalRelations) {
-  std::shared_ptr<Node> currentNode = nullptr;
+  Node *currentNode = nullptr;
   for (auto relation : initalRelations) {
-    std::shared_ptr<Node> newNode = std::make_shared<Node>(this, Relation(relation));
+    auto newNode = std::make_unique<Node>(this, Relation(relation));
+    newNode->parentNode = currentNode;
+    Node *temp = newNode.get();
     if (rootNode == nullptr) {
-      rootNode = newNode;
+      rootNode = std::move(newNode);
+    } else if (currentNode != nullptr) {
+      currentNode->leftNode = std::move(newNode);
     }
-    if (currentNode != nullptr) {
-      currentNode->leftNode = newNode;
-    }
-    newNode->parentNode = &(*currentNode);
-    currentNode = newNode;
-    unreducedNodes.push(newNode);
+
+    currentNode = temp;
+    unreducedNodes.push(temp);
   }
 }
 
 // helper
-bool applyDNFRule(std::shared_ptr<Tableau::Node> node) {
+bool applyDNFRule(Tableau::Node *node) {
   // Rule::id, Rule::negId
   auto idRule = [](const Relation &relation) -> std::optional<Relation> {
     if (relation.operation == Operation::identity) {
@@ -516,8 +516,8 @@ bool applyDNFRule(std::shared_ptr<Tableau::Node> node) {
 }
 
 // helper
-bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node) {
-  Tableau::Node *currentNode = &(*node);
+bool applyRequestRule(Tableau *tableau, Tableau::Node *node) {
+  Tableau::Node *currentNode = node;
   while (currentNode != nullptr) {
     if (currentNode->relation && currentNode->relation->negated) {
       // hack: make shared node to only check the new mteastatement and not all again
@@ -548,8 +548,8 @@ bool applyRequestRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node) {
     currentNode = currentNode->parentNode;
   }
 }
-bool applyPropagationRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node) {
-  Tableau::Node *currentNode = &(*node);
+bool applyPropagationRule(Tableau *tableau, Tableau::Node *node) {
+  Tableau::Node *currentNode = node;
   while (currentNode != nullptr) {
     if (currentNode->relation && currentNode->relation->negated) {
       // hack: make shared node to only check the new mteastatement and not all again
@@ -574,7 +574,7 @@ bool applyPropagationRule(Tableau *tableau, std::shared_ptr<Tableau::Node> node)
     currentNode = currentNode->parentNode;
   }
 }
-bool applyRequestRuleNoMeta(Tableau *tableau, std::shared_ptr<Tableau::Node> node) {
+bool applyRequestRuleNoMeta(Tableau *tableau, Tableau::Node *node) {
   Relation r = *node->relation;
   Tableau::Node *currentMetaNode = node->parentMetastatement;
   while (currentMetaNode != nullptr) {
@@ -605,7 +605,7 @@ bool applyRequestRuleNoMeta(Tableau *tableau, std::shared_ptr<Tableau::Node> nod
   }
 }
 
-bool Tableau::applyRule(std::shared_ptr<Node> node) {
+bool Tableau::applyRule(Node *node) {
   if (node->metastatement) {
     if (node->metastatement->type == MetastatementType::labelRelation) {
       applyRequestRule(this, node);
@@ -658,7 +658,7 @@ bool Tableau::solve(int bound) {
 }
 
 // helper
-std::vector<Clause> extractDNF(std::shared_ptr<Tableau::Node> node) {
+std::vector<Clause> extractDNF(Tableau::Node *node) {
   if (node == nullptr || node->isClosed()) {
     return {};
   }
@@ -668,8 +668,8 @@ std::vector<Clause> extractDNF(std::shared_ptr<Tableau::Node> node) {
     }
     return {};
   } else {
-    std::vector<Clause> left = extractDNF(node->leftNode);
-    std::vector<Clause> right = extractDNF(node->rightNode);
+    std::vector<Clause> left = extractDNF(node->leftNode.get());
+    std::vector<Clause> right = extractDNF(node->rightNode.get());
     left.insert(left.end(), right.begin(), right.end());
     if (node->relation && node->relation->isNormal()) {
       if (left.empty()) {
@@ -700,7 +700,7 @@ std::vector<Clause> Tableau::DNF() {
 
   exportProof("dnfcalc");
 
-  return extractDNF(rootNode);
+  return extractDNF(rootNode.get());
 }
 
 bool Tableau::applyModalRule() {
@@ -731,7 +731,7 @@ Clause Tableau::calcReuqest() {
   }
 
   // exrtact terms for new node
-  std::shared_ptr<Node> node = rootNode;
+  Node *node = rootNode.get();
   std::optional<Relation> oldPositive;
   std::optional<Relation> newPositive;
   std::vector<int> activeLabels;
@@ -744,10 +744,10 @@ Clause Tableau::calcReuqest() {
         activeLabels = node->relation->labels();
       }
     }
-    node = node->leftNode;
+    node = node->leftNode.get();
   }
   Clause request{*newPositive};
-  node = rootNode;
+  node = rootNode.get();
   while (node != nullptr) {  // exploit that only alpha rules applied
     if (node->relation && node->relation->negated) {
       std::vector<int> relationLabels = node->relation->labels();
@@ -762,7 +762,7 @@ Clause Tableau::calcReuqest() {
         request.push_back(*node->relation);
       }
     }
-    node = node->leftNode;
+    node = node->leftNode.get();
   }
   return request;
 }

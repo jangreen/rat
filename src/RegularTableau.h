@@ -19,7 +19,7 @@ class RegularTableau {
     explicit Node(Clause relations);
 
     Clause relations;
-    std::vector<std::tuple<std::shared_ptr<Node>, std::vector<int>>> childNodes;
+    std::vector<std::tuple<Node *, std::vector<int>>> childNodes;
     Node *parentNode = nullptr;
     std::vector<int> parentNodeRenaming;  // TODO
     std::string parentNodeBaseRelation;   // TODO
