@@ -820,7 +820,15 @@ std::vector<Clause> Tableau::DNF()
         auto currentNode = unreducedNodes.top();
         unreducedNodes.pop();
         exportProof("dnfcalc");
-        applyDNFRule(currentNode);
+        if (currentNode->metastatement)
+        {
+            // only equality meatstatement possible
+            applyPropagationRule(this, currentNode);
+        }
+        else
+        {
+            applyDNFRule(currentNode);
+        }
     }
 
     exportProof("dnfcalc");
