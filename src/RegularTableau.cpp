@@ -24,12 +24,12 @@ size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &n
   return seed;
 }
 
-size_t RegularTableau::Node::Hash::operator()(const std::shared_ptr<Node> node) const {
+size_t RegularTableau::Node::Hash::operator()(const std::unique_ptr<Node> &node) const {
   return std::hash<Node>()(*node);
 }
 
-bool RegularTableau::Node::Equal::operator()(const std::shared_ptr<Node> node1,
-                                             const std::shared_ptr<Node> node2) const {
+bool RegularTableau::Node::Equal::operator()(const std::unique_ptr<Node> &node1,
+                                             const std::unique_ptr<Node> &node2) const {
   return *node1 == *node2;
 }
 
@@ -92,7 +92,7 @@ std::string calcExpandedRelation(const Tableau &tableau) {
 }
 
 // node has only normal terms
-bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
+bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->relations};
   // TODO: remove  tableau.exportProof("dnfcalc");  // initial
   bool expandable = tableau.applyModalRule();
@@ -120,8 +120,7 @@ bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
 
 // clause is in normal form
 // parent == nullptr -> rootNode
-void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause,
-                             std::string expandedBaseRelation) {
+void RegularTableau::addNode(Node *parent, Clause clause, std::string expandedBaseRelation) {
   // calculate renaming & rename
   std::vector<int> renaming;
   for (const auto &literal : clause) {
@@ -140,7 +139,7 @@ void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause,
   auto saturatedDNF = DNF(clause);
   for (auto saturatedClause : saturatedDNF) {
     // create node, edges, push to unreduced nodes
-    std::shared_ptr<Node> newNode = make_shared<Node>(saturatedClause);
+    auto newNode = std::make_unique<Node>(saturatedClause);
     newNode->parentNodeBaseRelation = expandedBaseRelation;
     newNode->parentNode = &(*parent);
 
@@ -158,10 +157,10 @@ void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause,
         parent->childNodes.push_back(edge);
       } else {
         // new root node
-        rootNodes.push_back(newNode);
+        rootNodes.push_back(newNode.get());
       }
-      nodes.emplace(newNode);
-      unreducedNodes.push(newNode);
+      unreducedNodes.push(newNode.get());
+      nodes.emplace(std::move(newNode));
     }
   }
 }
@@ -356,7 +355,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output) const {
-  for (auto node : nodes) {  // reset printed property
+  for (const auto &node : nodes) {  // reset printed property
     node->printed = false;
   }
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;

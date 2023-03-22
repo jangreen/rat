@@ -31,25 +31,25 @@ class RegularTableau {
     bool operator==(const Node &otherNode) const;
 
     struct Hash {
-      size_t operator()(const std::shared_ptr<Node> node) const;
+      size_t operator()(const std::unique_ptr<Node> &node) const;
     };
 
     struct Equal {
-      bool operator()(const std::shared_ptr<Node> node1, const std::shared_ptr<Node> node2) const;
+      bool operator()(const std::unique_ptr<Node> &node1, const std::unique_ptr<Node> &node2) const;
     };
   };
 
   RegularTableau(std::initializer_list<Relation> initalRelations);
   explicit RegularTableau(Clause initalRelations);
 
-  std::vector<std::shared_ptr<Node>> rootNodes;
-  std::unordered_set<std::shared_ptr<Node>, Node::Hash, Node::Equal> nodes;
-  std::stack<std::shared_ptr<Node>> unreducedNodes;
+  std::vector<Node *> rootNodes;
+  std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
+  std::stack<Node *> unreducedNodes;
   static std::vector<Assumption> assumptions;
 
   static std::vector<Clause> DNF(const Clause &clause);
-  bool expandNode(std::shared_ptr<Node> node);
-  void addNode(std::shared_ptr<Node> parent, Clause clause,
+  bool expandNode(Node *node);
+  void addNode(Node *parent, Clause clause,
                std::string expandedBaseRelation = "-");  // TODO: move in node class
   std::optional<Relation> saturateRelation(const Relation &relation);
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
