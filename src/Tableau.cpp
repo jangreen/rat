@@ -5,7 +5,6 @@
 #include <tuple>
 #include <utility>
 
-
 #include "Metastatement.h"
 #include "ProofRule.h"
 
@@ -679,8 +678,13 @@ std::vector<Clause> extractDNF(std::shared_ptr<Tableau::Node> node) {
     std::vector<Clause> right = extractDNF(node->rightNode);
     left.insert(left.end(), right.begin(), right.end());
     if (node->relation && node->relation->isNormal()) {
-      for (Clause &clause : left) {
-        clause.push_back(*node->relation);
+      if (left.empty()) {
+        Clause newClause({*node->relation});
+        left.push_back(std::move(newClause));
+      } else {
+        for (Clause &clause : left) {
+          clause.push_back(*node->relation);
+        }
       }
     }
     return left;
@@ -691,7 +695,7 @@ std::vector<Clause> Tableau::DNF() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    exportProof("dnfcalc");
+    // TODO: remove exportProof("dnfcalc");
     if (currentNode->metastatement) {
       // only equality meatstatement possible
       applyPropagationRule(this, currentNode);
@@ -721,8 +725,14 @@ Clause Tableau::calcReuqest() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    if (applyRequestRule(this, currentNode)) {
-      break;  // metastatement found and all requests calculated
+    if (currentNode->metastatement) {
+      if (applyRequestRule(this, currentNode)) {
+        break;  // metastatement found and all requests calculated
+      }
+    } else if (currentNode->relation && currentNode->relation->negated) {
+      if (applyRequestRuleNoMeta(this, currentNode)) {
+        break;
+      }
     }
   }
 
@@ -772,4 +782,5 @@ void Tableau::toDotFormat(std::ofstream &output) const {
 void Tableau::exportProof(std::string filename) const {
   std::ofstream file(filename + ".dot");
   toDotFormat(file);
+  file.close();
 }

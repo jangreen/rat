@@ -26,12 +26,16 @@ int main(int argc, const char *argv[]) {
   Assumption rfrfinv(AssumptionType::identity, Relation("rf;rfinv"));
   RegularTableau::assumptions.push_back(std::move(rfrfinv));
   //*/
-  /* Intersections *
+  /* Intersections */
   Relation r1("a;(b & c)");
   Relation r2("a;c & a;b");
   //*/
+  /* Intersections Counterexample *
+  Relation r2("a;(b & c)");
+  Relation r1("a;c & a;b");
+  //*/
 
-  /* PROOF SETUP *
+  /* PROOF SETUP */
   r1.label = 0;
   r1.negated = false;
   r2.label = 0;
@@ -46,7 +50,7 @@ int main(int argc, const char *argv[]) {
   tableau.exportProof("infinite");
   //*/
 
-  /* REGULAR *
+  /* REGULAR */
   std::cout << "Regular Proof..." << std::endl;
   RegularTableau regularTableau{r1, r2};
   std::cout << "Done. " << regularTableau.solve() << std::endl;
@@ -54,7 +58,7 @@ int main(int argc, const char *argv[]) {
   regularTableau.exportProof("regular");
   //*/
 
-  /*---------------  Memory models  --------------------*/
+  /*---------------  Memory models  --------------------*
 
   Clause initialClause;
   CatInferVisitor visitor;
@@ -71,7 +75,7 @@ int main(int argc, const char *argv[]) {
   }
   Relation r = *unionR;
   r.label = 0;
-  r.negated = true;
+  // r.negated = true;
   initialClause.push_back(std::move(r));
 
   auto tso = visitor.parseMemoryModel("../cat/tso.cat");
@@ -87,6 +91,7 @@ int main(int argc, const char *argv[]) {
   }
   Relation r2 = *unionR2;
   r2.label = 0;
+  r2.negated = true;
   initialClause.push_back(std::move(r2));
 
   std::cout << "Regular Proof..." << std::endl;

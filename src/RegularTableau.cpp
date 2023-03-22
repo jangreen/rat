@@ -38,7 +38,7 @@ RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
 void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "N" << this << "[label=\"";
-  output << std::hash<Node>()(*this) << std::endl;
+  // TODO: remove output << std::hash<Node>()(*this) << std::endl;
   for (const auto &relation : relations) {
     output << relation.toString() << std::endl;
   }
@@ -80,15 +80,27 @@ std::vector<Clause> RegularTableau::DNF(const Clause &clause) {
   return tableau.DNF();
 }
 
+// helper
+std::string calcExpandedRelation(const Tableau &tableau) {
+  Tableau::Node *node = &(*tableau.rootNode);
+  while (node != nullptr) {  // exploit that only alpha rules applied
+    if (node->metastatement) {
+      return *node->metastatement->baseRelation;
+    }
+    node = &(*node->leftNode);
+  }
+}
+
 // node has only normal terms
 bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
   Tableau tableau{node->relations};
-  tableau.exportProof("dnfcalc");  // initial
+  // TODO: remove  tableau.exportProof("dnfcalc");  // initial
   bool expandable = tableau.applyModalRule();
   if (expandable) {
-    tableau.exportProof("dnfcalc");  // modal
+    // TODO: remove  tableau.exportProof("dnfcalc");  // modal
+    auto baseRelation = calcExpandedRelation(tableau);
     auto request = tableau.calcReuqest();
-    tableau.exportProof("dnfcalc");  // request
+    // TODO: remove tableau.exportProof("dnfcalc");  // request
     if (tableau.rootNode->isClosed()) {
       // can happen with empty hypotheses
       node->closed = true;
@@ -96,7 +108,7 @@ bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
     }
     auto dnf = DNF(request);
     for (const auto &clause : dnf) {
-      addNode(node, clause);
+      addNode(node, clause, baseRelation);
     }
     if (dnf.empty()) {
       node->closed = true;
@@ -108,7 +120,8 @@ bool RegularTableau::expandNode(std::shared_ptr<Node> node) {
 
 // clause is in normal form
 // parent == nullptr -> rootNode
-void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause) {
+void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause,
+                             std::string expandedBaseRelation) {
   // calculate renaming & rename
   std::vector<int> renaming;
   for (const auto &literal : clause) {
@@ -128,6 +141,8 @@ void RegularTableau::addNode(std::shared_ptr<Node> parent, Clause clause) {
   for (auto saturatedClause : saturatedDNF) {
     // create node, edges, push to unreduced nodes
     std::shared_ptr<Node> newNode = make_shared<Node>(saturatedClause);
+    newNode->parentNodeBaseRelation = expandedBaseRelation;
+    newNode->parentNode = &(*parent);
 
     auto existingNode = nodes.find(newNode);
     if (existingNode != nodes.end()) {
@@ -322,10 +337,22 @@ bool RegularTableau::solve() {
     /* TODO: remove: */
     exportProof("regular");
     if (!expandNode(currentNode)) {
+      extractCounterexample(&(*currentNode));
       return false;
     }
   }
   return true;
+}
+
+void RegularTableau::extractCounterexample(Node *openNode) {
+  // TODO: work in progress
+  std::cout << "Counterexample:";
+  Node *node = openNode;
+  while (node != nullptr) {
+    std::cout << " " << node->parentNodeBaseRelation;
+    node = node->parentNode;
+  }
+  std::cout << std::endl;
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output) const {
@@ -344,6 +371,7 @@ void RegularTableau::toDotFormat(std::ofstream &output) const {
 void RegularTableau::exportProof(std::string filename) const {
   std::ofstream file(filename + ".dot");
   toDotFormat(file);
+  file.close();
 }
 
 bool RegularTableau::Node::operator==(const Node &otherNode) const {

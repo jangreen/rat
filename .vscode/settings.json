@@ -88,6 +88,8 @@
     "graphviz-interactive-preview.debouncingInterval": 1000,
     "cpplint.lineLength": 100,
     "cpplint.filters": [
-        "-legal/copyright"
+        "-legal/copyright",
+        "-runtime/references",
+        "-readability/todo"
     ],
 }
