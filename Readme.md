@@ -20,12 +20,7 @@ Install Graphviz. For Mac:
 
 -> to enable dot live preview of proofs: open dot preview(extension) on right side together with proof.dot file (configure debounce rendering in settings)
 
-## Useful commands
+### Linting
 
-```
-cmake -S . -B build         # generate Makefile
-cmake --build build         # build using Makefile
-cmake --install build       # install
-./build/CatInfer            # run program
-gdb ./build/CatInfer        # debug program
-```
+This project uses cpplint for linting. the .clang-format file describes lint config. In VS Code you can use 'cpplint' extension (mine) for automatic linting and C/C++ extension (Microsoft) for automatic formatting (enabled in settings.json).
+`$ brew install cpplint`

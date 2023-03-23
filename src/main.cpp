@@ -1,12 +1,7 @@
-#include <fstream>
 #include <iostream>
-#include <optional>
 
-#include "Assumption.h"
-#include "CatInferVisitor.h"
 #include "LogicVisitor.h"
 #include "RegularTableau.h"
-#include "Relation.h"
 #include "Tableau.h"
 
 int main(int argc, const char *argv[]) {
@@ -26,7 +21,13 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
+  std::string path;
+  if (programArguments[0][0] == '/') {
+    path = programArguments[0];
+  } else {
+    path = "../tests/" + programArguments[0];
+  }
+  const auto &[assumptions, assertion] = Logic::parse(path);
   if (programArguments.size() > 1 && programArguments[1] == "infinite") {
     Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
     tableau.solve(200);

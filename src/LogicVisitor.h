@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Assumption.h"
+#include "CatInferVisitor.h"
 #include "RegularTableau.h"
 #include "Relation.h"
 
