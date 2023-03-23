@@ -14,6 +14,24 @@
 #include "RegularTableau.h"
 #include "Relation.h"
 
+// helper
+Relation loadModel(const std::string &file) {
+  CatInferVisitor visitor;
+  auto sc = visitor.parseMemoryModel("../cat/" + file);
+  std::optional<Relation> unionR;
+  for (auto &constraint : sc) {
+    constraint.toEmptyNormalForm();
+    Relation r = constraint.relation;
+    if (unionR) {
+      unionR = Relation(Operation::choice, std::move(*unionR), std::move(r));
+    } else {
+      unionR = r;
+    }
+  }
+  unionR->label = 0;
+  return *unionR;
+}
+
 typedef std::tuple<Relation, Relation> Assertion;
 
 class Logic : LogicBaseVisitor {
@@ -21,11 +39,14 @@ class Logic : LogicBaseVisitor {
   /*std::tuple<std::vector<Assumption>, Assertion>*/ std::any visitStatement(
       LogicParser::StatementContext *ctx) {
     std::optional<Assertion> assertion;
-    for (const auto &assertionContext : ctx->assertion()) {
+    const auto &assertionContext = ctx->assertion();
+    if (assertionContext != nullptr) {
       assertion = any_cast<Assertion>(assertionContext->accept(this));
-      // TODO: currently only one assertion is supported
-      break;
+    } else {
+      const auto &assertionMmContext = ctx->mmAssertion();
+      assertion = any_cast<Assertion>(assertionMmContext->accept(this));
     }
+
     std::vector<Assumption> hypotheses;
     for (const auto &hypothesisContext : ctx->hypothesis()) {
       auto hypothesis = any_cast<Assumption>(hypothesisContext->accept(this));
@@ -59,6 +80,16 @@ class Logic : LogicBaseVisitor {
     r2.label = 0;
     r2.negated = true;
     Assertion response{std::move(r1), std::move(r2)};
+    return response;
+  }
+
+  /*Assertion*/ std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
+    std::string lhs(ctx->lhs->getText());
+    std::string rhs(ctx->rhs->getText());
+    auto lhsModel = loadModel(lhs + ".cat");
+    auto rhsModel = loadModel(rhs + ".cat");
+    lhsModel.negated = true;
+    Assertion response{std::move(rhsModel), std::move(lhsModel)};
     return response;
   }
 
