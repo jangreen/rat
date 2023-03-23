@@ -62,9 +62,8 @@ class Relation {
   bool operator<(const Relation &otherRelation) const;   // for sorting/hashing
   std::string toString() const;                          // for printing
 
-  static std::unordered_map<std::string, Relation>
-      relations;        // id, 0, 1, base relations and defined relations (named relations)
-  static int maxLabel;  // to create globally unique labels
+  static std::unordered_map<std::string, Relation> relations;  // defined relations
+  static int maxLabel;                                         // to create globally unique labels
 };
 
 typedef std::vector<Relation> Clause;

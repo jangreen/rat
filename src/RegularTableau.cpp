@@ -337,9 +337,11 @@ bool RegularTableau::solve() {
     exportProof("regular");
     if (!expandNode(currentNode)) {
       extractCounterexample(&(*currentNode));
+      std::cout << "False." << std::endl;
       return false;
     }
   }
+  std::cout << "True." << std::endl;
   return true;
 }
 

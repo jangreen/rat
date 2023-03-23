@@ -1,62 +1,36 @@
+#include <fstream>
 #include <iostream>
 #include <optional>
 
 #include "Assumption.h"
 #include "CatInferVisitor.h"
+#include "LogicVisitor.h"
 #include "RegularTableau.h"
 #include "Relation.h"
 #include "Tableau.h"
 
 int main(int argc, const char *argv[]) {
-  /* 1) *
-  Relation r1("(id;a)^*");
-  Relation r2("a;(a;a)^* | (a;a)^*");
-  //*/
-  /* 2) KATER ECO PAPER */
-  Relation r1("(rf | co | rfinv;co);(rf | co | rfinv;co)^*");
-  Relation r2("rf | (co | rfinv;co);(rf | id)");
-  Assumption coTransitive(AssumptionType::regular, Relation("co;co^*"), "co");
-  RegularTableau::assumptions.push_back(std::move(coTransitive));
-  Assumption rfrf(AssumptionType::empty, Relation("rf;rf"));
-  Assumption rfco(AssumptionType::empty, Relation("rf;co"));
-  Assumption corfinv(AssumptionType::empty, Relation("co;rfinv"));
-  RegularTableau::assumptions.push_back(std::move(rfrf));
-  RegularTableau::assumptions.push_back(std::move(rfco));
-  RegularTableau::assumptions.push_back(std::move(corfinv));
-  Assumption rfrfinv(AssumptionType::identity, Relation("rf;rfinv"));
-  RegularTableau::assumptions.push_back(std::move(rfrfinv));
-  //*/
-  /* Intersections *
-  Relation r1("a;(b & c)");
-  Relation r2("a;c & a;b");
-  //*/
-  /* Intersections Counterexample *
-  Relation r2("a;(b & c)");
-  Relation r1("a;c & a;b");
-  //*/
+  std::string programName = argv[0];
+  std::vector<std::string> programArguments;
+  if (argc > 1) {
+    programArguments.assign(argv + 1, argv + argc);
+  } else {
+    // TODO: gui, ask for test
+    // return 0;
+    programArguments.push_back("test0");
+  }
 
-  /* PROOF SETUP */
-  r1.label = 0;
-  r1.negated = false;
-  r2.label = 0;
-  r2.negated = true;
-  std::cout << "|=" << r1.toString() << " & " << r2.toString() << std::endl;
-  //*/
-
-  /* INFINITE *
-  std::cout << "Infinite Proof..." << std::endl;
-  Tableau tableau{r1, r2};
-  tableau.solve(200);
-  tableau.exportProof("infinite");
-  //*/
-
-  /* REGULAR */
-  std::cout << "Regular Proof..." << std::endl;
-  RegularTableau regularTableau{r1, r2};
-  std::cout << "Done. " << regularTableau.solve() << std::endl;
-  std::cout << "Export Regular Tableau..." << std::endl;
-  regularTableau.exportProof("regular");
-  //*/
+  const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
+  if (programArguments.size() > 1 && programArguments[1] == "infinite") {
+    Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+    tableau.solve(200);
+    tableau.exportProof("infinite");
+  } else {
+    RegularTableau::assumptions = assumptions;
+    RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+    tableau.solve();
+    tableau.exportProof("regular");
+  }
 
   /*---------------  Memory models  --------------------*
 
@@ -94,9 +68,8 @@ int main(int argc, const char *argv[]) {
   r2.negated = true;
   initialClause.push_back(std::move(r2));
 
-  std::cout << "Regular Proof..." << std::endl;
   RegularTableau regularTableau(initialClause);
-  std::cout << "Done. " << regularTableau.solve() << std::endl;
+  regularTableau.solve();
   regularTableau.exportProof("regular");
   //*/
 }
