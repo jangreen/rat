@@ -35,6 +35,7 @@ class Logic : LogicBaseVisitor {
                                                             std::move(*assertion)};
     return response;
   }
+
   /*Assumption*/ std::any visitHypothesis(LogicParser::HypothesisContext *ctx) {
     Relation lhs(ctx->lhs->getText());
     Relation rhs(ctx->rhs->getText());

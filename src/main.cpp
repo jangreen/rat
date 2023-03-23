@@ -15,9 +15,10 @@ int main(int argc, const char *argv[]) {
   if (argc > 1) {
     programArguments.assign(argv + 1, argv + argc);
   } else {
-    // TODO: gui, ask for test
-    // return 0;
-    programArguments.push_back("test0");
+    std::cout << "> " << std::flush;
+    std::string test;
+    std::getline(std::cin, test);
+    programArguments.push_back(test);
   }
 
   const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
