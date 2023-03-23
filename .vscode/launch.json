@@ -11,9 +11,9 @@
             "program": "${workspaceFolder}/build/CatInfer",
             "args": [],
             "stopAtEntry": true,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/build", //"${fileDirname}",
             "environment": [],
-            "externalConsole": false,
+            "externalConsole": true,
             "MIMode": "lldb"
         }
     ]

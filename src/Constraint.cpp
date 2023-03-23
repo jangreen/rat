@@ -12,7 +12,9 @@ void Constraint::toEmptyNormalForm() {
     relation = Relation(Operation::intersection, std::move(relation), std::move(id));
   } else if (type == ConstraintType::acyclic) {
     Relation id(Operation::identity);
-    Relation tc(Operation::transitiveClosure, std::move(relation));
+    Relation copyR(relation);
+    Relation reflTc(Operation::transitiveClosure, std::move(relation));
+    Relation tc(Operation::composition, std::move(copyR), std::move(reflTc));
     relation = Relation(Operation::intersection, std::move(tc), std::move(id));
   }
   type = ConstraintType::empty;

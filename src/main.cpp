@@ -9,35 +9,10 @@
 #include "Relation.h"
 #include "Tableau.h"
 
-int main(int argc, const char *argv[]) {
-  std::string programName = argv[0];
-  std::vector<std::string> programArguments;
-  if (argc > 1) {
-    programArguments.assign(argv + 1, argv + argc);
-  } else {
-    std::cout << "> " << std::flush;
-    std::string test;
-    std::getline(std::cin, test);
-    programArguments.push_back(test);
-  }
-
-  const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
-  if (programArguments.size() > 1 && programArguments[1] == "infinite") {
-    Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
-    tableau.solve(200);
-    tableau.exportProof("infinite");
-  } else {
-    RegularTableau::assumptions = assumptions;
-    RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
-    tableau.solve();
-    tableau.exportProof("regular");
-  }
-
-  /*---------------  Memory models  --------------------*
-
-  Clause initialClause;
+// helper
+Relation loadModel(const std::string &file) {
   CatInferVisitor visitor;
-  auto sc = visitor.parseMemoryModel("../cat/sc.cat");
+  auto sc = visitor.parseMemoryModel("../cat/" + file);
   std::optional<Relation> unionR;
   for (auto &constraint : sc) {
     constraint.toEmptyNormalForm();
@@ -48,29 +23,46 @@ int main(int argc, const char *argv[]) {
       unionR = r;
     }
   }
-  Relation r = *unionR;
-  r.label = 0;
-  // r.negated = true;
-  initialClause.push_back(std::move(r));
+  unionR->label = 0;
+  return *unionR;
+}
 
-  auto tso = visitor.parseMemoryModel("../cat/tso.cat");
-  std::optional<Relation> unionR2;
-  for (auto &constraint : tso) {
-    constraint.toEmptyNormalForm();
-    Relation r = constraint.relation;
-    if (unionR2) {
-      unionR2 = Relation(Operation::choice, std::move(*unionR2), std::move(r));
-    } else {
-      unionR2 = r;
+int main(int argc, const char *argv[]) {
+  std::string programName = argv[0];
+  std::vector<std::string> programArguments;
+  if (argc > 1) {
+    programArguments.assign(argv + 1, argv + argc);
+  } else {
+    std::cout << "> " << std::flush;
+    std::string input;
+    std::getline(std::cin, input);
+    std::stringstream inputStream(input);
+    std::string argument;
+    while (inputStream >> argument) {
+      programArguments.push_back(argument);
     }
   }
-  Relation r2 = *unionR2;
-  r2.label = 0;
-  r2.negated = true;
-  initialClause.push_back(std::move(r2));
 
-  RegularTableau regularTableau(initialClause);
-  regularTableau.solve();
-  regularTableau.exportProof("regular");
-  //*/
+  if (programArguments.size() > 1 && programArguments[1] == "infinite") {
+    const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
+    Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+    tableau.solve(200);
+    tableau.exportProof("infinite");
+  } else if (programArguments.size() > 1) {
+    // memory models
+    // TODO: load base theory
+    auto lhsModel = loadModel(programArguments[0] + ".cat");
+    auto rhsModel = loadModel(programArguments[1] + ".cat");
+    rhsModel.negated = true;
+    RegularTableau tableau{std::move(lhsModel), std::move(rhsModel)};
+    tableau.solve();
+    tableau.exportProof("regular");
+    //*/
+  } else {
+    const auto &[assumptions, assertion] = Logic::parse("../tests/" + programArguments[0]);
+    RegularTableau::assumptions = assumptions;
+    RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+    tableau.solve();
+    tableau.exportProof("regular");
+  }
 }
