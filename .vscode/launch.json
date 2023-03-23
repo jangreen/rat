@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/CatInfer",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build", //"${fileDirname}",
             "environment": [],
             "externalConsole": true,
