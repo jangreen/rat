@@ -1,2 +1,3 @@
 assume a^+ <= a
+
 assert (id;a)^+ <= a

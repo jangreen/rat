@@ -8,214 +8,6 @@
 #include "Metastatement.h"
 #include "ProofRule.h"
 
-/* RULE IMPLEMENTATIONS */
-template <typename T>
-std::optional<T> rule(const Relation &relation, auto &baseCase, auto &combineLeft,
-                      auto &combineRight) {
-  if (relation.label) {
-    return baseCase(relation);
-  }
-  // case: intersection or composition (only cases for labeled terms that can happen)
-  std::optional<T> leftSubRelation =
-      rule<T>(*relation.leftOperand, baseCase, combineLeft, combineRight);
-  if (leftSubRelation) {
-    return combineLeft(*leftSubRelation, relation);
-  }
-  // case: intersection
-  if (relation.operation != Operation::intersection) {
-    return std::nullopt;
-  }
-  std::optional<T> rightSubRelation =
-      rule<T>(*relation.rightOperand, baseCase, combineLeft, combineRight);
-  if (rightSubRelation) {
-    return combineRight(*rightSubRelation, relation);
-  }
-  return std::nullopt;
-}
-
-std::optional<std::tuple<Relation, Relation>> binaryRule(const Relation &relation, auto &baseCase) {
-  auto combineLeft = [](std::tuple<Relation, Relation> &subrelations, const Relation &relation) {
-    auto &[subrelation1, subrelation2] = subrelations;
-    if (relation.operation == Operation::composition && subrelation1.operation == Operation::none &&
-        subrelation1.label) {
-      // TODO: is correct? check only for subrelation1?
-      Relation r1(*relation.rightOperand);
-      r1.label = subrelation1.label;
-      std::tuple<Relation, Relation> result{
-          r1,
-          Relation(relation.operation, std::move(subrelation2), Relation(*relation.rightOperand))};
-      return result;
-    }
-    std::tuple<Relation, Relation> result{
-        Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
-        Relation(relation.operation, std::move(subrelation2), Relation(*relation.rightOperand))};
-    return result;
-  };
-  auto combineRight = [](std::tuple<Relation, Relation> &subrelations, const Relation &relation) {
-    auto &[subrelation1, subrelation2] = subrelations;
-    std::tuple<Relation, Relation> result{
-        Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
-        Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation2))};
-    return result;
-  };
-  return rule<std::tuple<Relation, Relation>>(relation, baseCase, combineLeft, combineRight);
-}
-std::optional<Relation> unaryRule(const Relation &relation, auto &baseCase) {
-  auto combineLeft = [](Relation &subrelation, const Relation &relation) {
-    if (relation.operation == Operation::composition && subrelation.operation == Operation::none &&
-        subrelation.label) {
-      Relation r1(*relation.rightOperand);
-      r1.label = subrelation.label;
-      return r1;
-    }
-    return Relation(relation.operation, std::move(subrelation), Relation(*relation.rightOperand));
-  };
-  auto combineRight = [](Relation &subrelation, const Relation &relation) {
-    return Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation));
-  };
-  return rule<Relation>(relation, baseCase, combineLeft, combineRight);
-}
-
-std::optional<std::tuple<Relation, Metastatement>> aRule(const Relation &relation) {
-  auto combineLeft = [](std::tuple<Relation, Metastatement> &subrelations,
-                        const Relation &relation) {
-    auto &[subrelation1, metastatement] = subrelations;
-
-    // case: composition && emtpy labeled relation -> move label to 'next' relation
-    if (relation.operation == Operation::composition && subrelation1.operation == Operation::none &&
-        !subrelation1.identifier && subrelation1.label) {
-      Relation r1(*relation.rightOperand);
-      r1.label = subrelation1.label;
-      std::tuple<Relation, Metastatement> result{std::move(r1), std::move(metastatement)};
-      return result;
-    }
-    std::tuple<Relation, Metastatement> result{
-        Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
-        std::move(metastatement)};
-    return result;
-  };
-  auto combineRight = [](std::tuple<Relation, Metastatement> &subrelations,
-                         const Relation &relation) {
-    auto &[subrelation1, metastatement] = subrelations;
-    std::tuple<Relation, Metastatement> result{
-        Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
-        std::move(metastatement)};
-    return result;
-  };
-  auto baseCase =
-      [](const Relation &relation) -> std::optional<std::tuple<Relation, Metastatement>> {
-    if (relation.operation == Operation::base) {
-      // Rule::a
-      Relation r1(Operation::none);  // empty relation
-      Relation::maxLabel++;
-      r1.label = Relation::maxLabel;
-      Metastatement m(MetastatementType::labelRelation, *relation.label, Relation::maxLabel,
-                      *relation.identifier);
-      std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
-      return result;
-    }
-    return std::nullopt;
-  };
-  return rule<std::tuple<Relation, Metastatement>>(relation, baseCase, combineLeft, combineRight);
-}
-
-std::optional<std::tuple<Relation, Metastatement>> atRule(const Relation &relation) {
-  if (relation.leftOperand != nullptr && relation.rightOperand != nullptr &&
-      relation.leftOperand->operation == Operation::none &&
-      relation.rightOperand->operation == Operation::none &&
-      relation.operation == Operation::intersection) {
-    // identify labels
-    Relation r1(Operation::none);
-    r1.label = std::min(*relation.leftOperand->label, *relation.rightOperand->label);
-    Metastatement m(MetastatementType::labelEquality, *relation.leftOperand->label,
-                    *relation.rightOperand->label);
-    std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
-    return result;
-  }
-  if (relation.leftOperand != nullptr) {
-    // case: intersection or composition (only cases for labeled terms that can happen)
-    auto leftSubRelation = atRule(*relation.leftOperand);
-    if (leftSubRelation) {
-      auto &[subrelation1, metastatement] = *leftSubRelation;
-      std::tuple<Relation, Metastatement> result{
-          Relation(relation.operation, std::move(subrelation1), Relation(*relation.rightOperand)),
-          std::move(metastatement)};
-      return result;
-    }
-  }
-  if (relation.rightOperand != nullptr) {
-    // case: intersection
-    if (relation.operation != Operation::intersection) {
-      return std::nullopt;
-    }
-    auto rightSubRelation = atRule(*relation.rightOperand);
-    if (rightSubRelation) {
-      auto &[subrelation1, metastatement] = *rightSubRelation;
-      std::tuple<Relation, Metastatement> result{
-          Relation(relation.operation, Relation(*relation.leftOperand), std::move(subrelation1)),
-          std::move(metastatement)};
-      return result;
-    }
-    return std::nullopt;
-  }
-  return std::nullopt;
-}
-std::optional<Relation> negAtRule(const Relation &relation) {
-  if (relation.leftOperand != nullptr && relation.rightOperand != nullptr &&
-      relation.leftOperand->operation == Operation::none &&
-      relation.rightOperand->operation == Operation::none &&
-      relation.operation == Operation::intersection) {
-    // identify labels
-    if (*relation.leftOperand->label == *relation.rightOperand->label) {
-      Relation r1(Operation::none);
-      r1.label = *relation.leftOperand->label;
-      return r1;
-    }
-    return std::nullopt;
-  }
-  // TODO DRY: use template functions
-  // case: intersection or composition (only cases for labeled terms that can happen)
-  if (relation.leftOperand != nullptr) {
-    auto leftSubRelation = negAtRule(*relation.leftOperand);
-    if (leftSubRelation) {
-      if (relation.operation == Operation::composition &&
-          leftSubRelation->operation == Operation::none && leftSubRelation->label) {
-        Relation r1(*relation.rightOperand);
-        r1.label = leftSubRelation->label;
-        return r1;
-      }
-      return Relation(relation.operation, std::move(*leftSubRelation),
-                      Relation(*relation.rightOperand));
-    }
-    return std::nullopt;
-  }
-  if (relation.rightOperand != nullptr) {
-    // case: intersection
-    if (relation.operation != Operation::intersection) {
-      return std::nullopt;
-    }
-    auto rightSubRelation = negAtRule(*relation.rightOperand);
-    if (rightSubRelation) {
-      return Relation(relation.operation, Relation(*relation.leftOperand),
-                      std::move(*rightSubRelation));
-    }
-    return std::nullopt;
-  }
-  return std::nullopt;
-}
-
-/* implemented in consitency check when term is added to branch
-optional<Relation> negTopRule(const Relation & relation)
-{
-    if (relation.label && relation.negated && relation.operation == Operation::full)
-    {
-        // special case: rule only for trailing top occurences
-
-    }
-    return nullopt;
-}*/
-/* END RULE IMPLEMENTATIONS */
-
 Tableau::Node::Node(Tableau *tableau, const Relation &&relation)
     : tableau(tableau), relation(relation) {}
 Tableau::Node::Node(Tableau *tableau, const Metastatement &&metastatement)
@@ -356,6 +148,60 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   }
 }
 
+template <>
+bool Tableau::Node::applyRule<ProofRule::propagation>() {
+  bool appliedRule = false;
+  if (metastatement && metastatement->type == MetastatementType::labelEquality) {
+    Tableau::Node *currentNode = parentNode;
+    while (currentNode != nullptr) {
+      if (currentNode->relation && currentNode->relation->negated) {
+        auto rProp = currentNode->relation->applyRuleRecursive<ProofRule::propagation, Relation>(
+            &(*metastatement));
+        if (rProp) {
+          appliedRule = true;
+          rProp->negated = currentNode->relation->negated;
+          appendBranches(*rProp);
+        }
+      }
+      currentNode = currentNode->parentNode;
+    }
+  }
+  return appliedRule;
+}
+
+template <>
+bool Tableau::Node::applyRule<ProofRule::negA>() {
+  bool appliedRule = false;
+  if (metastatement && metastatement->type == MetastatementType::labelRelation) {
+    Tableau::Node *currentNode = parentNode;
+    while (currentNode != nullptr) {
+      if (currentNode->relation && currentNode->relation->negated) {
+        auto rNegA =
+            currentNode->relation->applyRuleRecursive<ProofRule::negA, Relation>(&(*metastatement));
+        if (rNegA) {
+          appliedRule = true;
+          rNegA->negated = currentNode->relation->negated;
+          appendBranches(*rNegA);
+        }
+      }
+      currentNode = currentNode->parentNode;
+    }
+  } else {
+    Tableau::Node *currentMetaNode = parentMetastatement;
+    while (currentMetaNode != nullptr) {
+      auto rNegA = relation->applyRuleRecursive<ProofRule::negA, Relation>(
+          &(*currentMetaNode->metastatement));
+      if (rNegA) {
+        appliedRule = true;
+        rNegA->negated = relation->negated;
+        appendBranches(*rNegA);
+      }
+      currentMetaNode = currentMetaNode->parentMetastatement;
+    }
+  }
+  return appliedRule;
+}
+
 bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
   if (left->relation && right->relation) {
     return left->relation->negated < right->relation->negated;
@@ -386,59 +232,27 @@ Tableau::Tableau(Clause initalRelations) {
 
 // helper
 bool applyDNFRule(Tableau::Node *node) {
-  // Rule::id, Rule::negId
-  auto idRule = [](const Relation &relation) -> std::optional<Relation> {
-    if (relation.operation == Operation::identity) {
-      // Rule::id, Rule::negId
-      Relation r1(Operation::none);  // empty relation
-      r1.label = relation.label;
-      return r1;
-    }
-    return std::nullopt;
-  };
-  auto rId = unaryRule(*node->relation, idRule);
+  auto rId = node->relation->applyRuleRecursive<ProofRule::id, Relation>();
   if (rId) {
     rId->negated = node->relation->negated;
     node->appendBranches(*rId);
     return true;
   }
-  // Rule::composition, Rule::negComposition
-  auto compositionRule = [](const Relation &relation) -> std::optional<Relation> {
-    if (relation.operation == Operation::composition) {
-      // Rule::comnposition, Rule::negComposition
-      Relation r1(*relation.leftOperand);
-      r1.label = relation.label;
-      Relation r2(*relation.rightOperand);
-      return Relation(Operation::composition, std::move(r1), std::move(r2));
-    }
-    return std::nullopt;
-  };
-  auto rComposition = unaryRule(*node->relation, compositionRule);
+  auto rComposition = node->relation->applyRuleRecursive<ProofRule::composition, Relation>();
   if (rComposition) {
     rComposition->negated = node->relation->negated;
     node->appendBranches(*rComposition);
     return true;
   }
-  // Rule::intersection, Rule::negIntersection
-  auto intersectionRule = [](const Relation &relation) -> std::optional<Relation> {
-    if (relation.operation == Operation::intersection) {
-      // Rule::inertsection, Rule::negIntersection
-      Relation r1(*relation.leftOperand);
-      r1.label = relation.label;
-      Relation r2(*relation.rightOperand);
-      r2.label = relation.label;
-      return Relation(Operation::intersection, std::move(r1), std::move(r2));
-    }
-    return std::nullopt;
-  };
-  auto rIntersection = unaryRule(*node->relation, intersectionRule);
+  auto rIntersection = node->relation->applyRuleRecursive<ProofRule::intersection, Relation>();
   if (rIntersection) {
     rIntersection->negated = node->relation->negated;
     node->appendBranches(*rIntersection);
     return true;
   }
   if (!node->relation->negated) {
-    auto rAt = atRule(*node->relation);
+    auto rAt =
+        node->relation->applyRuleRecursive<ProofRule::at, std::tuple<Relation, Metastatement>>();
     if (rAt) {
       auto &[r1, metastatement] = *rAt;
       r1.negated = node->relation->negated;
@@ -447,7 +261,7 @@ bool applyDNFRule(Tableau::Node *node) {
       return true;
     }
   } else {
-    auto rNegAt = negAtRule(*node->relation);
+    auto rNegAt = node->relation->applyRuleRecursive<ProofRule::negAt, Relation>();
     if (rNegAt) {
       auto r1 = *rNegAt;
       r1.negated = node->relation->negated;
@@ -455,20 +269,8 @@ bool applyDNFRule(Tableau::Node *node) {
       return true;
     }
   }
-  // Rule::choice, Rule::negChoice
-  auto choiceRule = [](const Relation &relation) -> std::optional<std::tuple<Relation, Relation>> {
-    if (relation.operation == Operation::choice) {
-      // Rule::choice, Rule::negChoice
-      Relation r1(*relation.leftOperand);
-      r1.label = relation.label;
-      Relation r2(*relation.rightOperand);
-      r2.label = relation.label;
-      std::tuple<Relation, Relation> result{std::move(r1), std::move(r2)};
-      return result;
-    }
-    return std::nullopt;
-  };
-  auto rChoice = binaryRule(*node->relation, choiceRule);
+  auto rChoice =
+      node->relation->applyRuleRecursive<ProofRule::choice, std::tuple<Relation, Relation>>();
   if (rChoice) {
     auto &[r1, r2] = *rChoice;
     r1.negated = node->relation->negated;
@@ -481,25 +283,10 @@ bool applyDNFRule(Tableau::Node *node) {
     }
     return true;
   }
-  // Rule::transitiveClosure, Rule::negTransitiveClosure
-  auto transitiveClosureRule =
-      [](const Relation &relation) -> std::optional<std::tuple<Relation, Relation>> {
-    if (relation.operation == Operation::transitiveClosure) {
-      // Rule::transitiveClosure, Rule::negTransitiveClosure
-      Relation r1(*relation.leftOperand);
-      r1.label = relation.label;
-      Relation r12(relation);
-      r12.label = std::nullopt;
-      r12.negated = false;
-      Relation r2(Operation::none);  // empty relation
-      r2.label = relation.label;
-      std::tuple<Relation, Relation> result{
-          std::move(r2), Relation(Operation::composition, std::move(r1), std::move(r12))};
-      return result;
-    }
-    return std::nullopt;
-  };
-  auto rTransitiveClosure = binaryRule(*node->relation, transitiveClosureRule);
+
+  auto rTransitiveClosure =
+      node->relation
+          ->applyRuleRecursive<ProofRule::transitiveClosure, std::tuple<Relation, Relation>>();
   if (rTransitiveClosure) {
     auto &[r1, r2] = *rTransitiveClosure;
     r1.negated = node->relation->negated;
@@ -515,114 +302,25 @@ bool applyDNFRule(Tableau::Node *node) {
   return false;
 }
 
-// helper
-bool applyRequestRule(Tableau *tableau, Tableau::Node *node) {
-  Tableau::Node *currentNode = node;
-  while (currentNode != nullptr) {
-    if (currentNode->relation && currentNode->relation->negated) {
-      // hack: make shared node to only check the new mteastatement and not all again
-      auto negARule = [node](const Relation &relation) -> std::optional<Relation> {
-        if (relation.operation == Operation::base) {
-          // Rule::negA
-          Relation r1(Operation::none);  // empty relation
-          int label = *relation.label;
-          std::string baseRelation = *relation.identifier;
-          if (node->metastatement &&
-              node->metastatement->type == MetastatementType::labelRelation) {
-            if (node->metastatement->label1 == label &&
-                node->metastatement->baseRelation == baseRelation) {
-              r1.label = node->metastatement->label2;
-              return r1;
-            }
-          }
-        }
-        return std::nullopt;
-      };
-      auto rNegA = unaryRule(*currentNode->relation, negARule);
-      if (rNegA) {
-        rNegA->negated = currentNode->relation->negated;
-        node->appendBranches(*rNegA);
-        // return; // TODO: hack, do not return allow multiple applications of metastatement
-      }
-    }
-    currentNode = currentNode->parentNode;
-  }
-}
-bool applyPropagationRule(Tableau *tableau, Tableau::Node *node) {
-  Tableau::Node *currentNode = node;
-  while (currentNode != nullptr) {
-    if (currentNode->relation && currentNode->relation->negated) {
-      // hack: make shared node to only check the new mteastatement and not all again
-      auto propRule = [node](const Relation &relation) -> std::optional<Relation> {
-        int maxLabel = std::max(node->metastatement->label1, node->metastatement->label2);
-        int minLabel = std::min(node->metastatement->label1, node->metastatement->label2);
-        if (relation.label && *relation.label == maxLabel) {
-          // Rule::prop
-          Relation r1(relation);  // empty relation
-          r1.label = minLabel;
-          return r1;
-        }
-        return std::nullopt;
-      };
-      auto rProp = unaryRule(*currentNode->relation, propRule);
-      if (rProp) {
-        rProp->negated = currentNode->relation->negated;
-        node->appendBranches(*rProp);
-        // return; // TODO: hack, do not return allow multiple applications of metastatement
-      }
-    }
-    currentNode = currentNode->parentNode;
-  }
-}
-bool applyRequestRuleNoMeta(Tableau *tableau, Tableau::Node *node) {
-  Relation r = *node->relation;
-  Tableau::Node *currentMetaNode = node->parentMetastatement;
-  while (currentMetaNode != nullptr) {
-    if (currentMetaNode->metastatement->type == MetastatementType::labelRelation) {
-      // hack: make shared node to only check the new mteastatement and not all again
-      auto negARule = [currentMetaNode](const Relation &relation) -> std::optional<Relation> {
-        if (relation.operation == Operation::base) {
-          // Rule::negA
-          Relation r1(Operation::none);  // empty relation
-          int label = *relation.label;
-          std::string baseRelation = *relation.identifier;
-          if (currentMetaNode->metastatement->label1 == label &&
-              currentMetaNode->metastatement->baseRelation == baseRelation) {
-            r1.label = currentMetaNode->metastatement->label2;
-            return r1;
-          }
-        }
-        return std::nullopt;
-      };
-      auto rNegA = unaryRule(r, negARule);
-      if (rNegA) {
-        rNegA->negated = r.negated;
-        node->appendBranches(*rNegA);
-        // return; // TODO: hack, do not return allow multiple applications of metastatement
-      }
-    }
-    currentMetaNode = currentMetaNode->parentMetastatement;
-  }
-}
-
 bool Tableau::applyRule(Node *node) {
   if (node->metastatement) {
     if (node->metastatement->type == MetastatementType::labelRelation) {
-      applyRequestRule(this, node);
+      node->applyRule<ProofRule::negA>();
       // no rule applicable anymore (metastatement)
       return false;  // TODO: this value may be true
     } else {
-      applyPropagationRule(this, node);
+      node->applyRule<ProofRule::propagation>();
       return true;
     }
   } else if (node->relation) {
     if (node->relation->isNormal()) {
       if (node->relation->negated) {
-        if (applyRequestRuleNoMeta(this, node)) {
+        if (node->applyRule<ProofRule::negA>()) {
           return true;
         }
       } else {
-        auto rA = aRule(*node->relation);
+        auto rA =
+            node->relation->applyRuleRecursive<ProofRule::a, std::tuple<Relation, Metastatement>>();
         if (rA) {
           auto &[r1, metastatement] = *rA;
           r1.negated = node->relation->negated;
@@ -692,7 +390,7 @@ std::vector<Clause> Tableau::DNF() {
     // TODO: remove exportProof("dnfcalc");
     if (currentNode->metastatement) {
       // only equality meatstatement possible
-      applyPropagationRule(this, currentNode);
+      currentNode->applyRule<ProofRule::propagation>();
     } else {
       applyDNFRule(currentNode);
     }
@@ -720,15 +418,17 @@ Clause Tableau::calcReuqest() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
-      if (applyRequestRule(this, currentNode)) {
+      if (currentNode->applyRule<ProofRule::negA>()) {
         break;  // metastatement found and all requests calculated
       }
     } else if (currentNode->relation && currentNode->relation->negated) {
-      if (applyRequestRuleNoMeta(this, currentNode)) {
+      if (currentNode->applyRule<ProofRule::negA>()) {
         break;
       }
     }
   }
+
+  exportProof("requestcalc");
 
   // exrtact terms for new node
   Node *node = rootNode.get();

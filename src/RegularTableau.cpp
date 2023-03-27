@@ -185,7 +185,6 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
             *assumption.baseRelation == *relation.identifier) {
           Relation leftSide(assumption.relation);
           leftSide.label = relation.label;
-          leftSide.negated = true;
           return leftSide;
         }
       }
@@ -214,11 +213,9 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
   }
   if (rightSaturated) {
     Relation saturated(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
-    saturated.negated = true;
     return saturated;
   }
   Relation saturated(relation.operation, std::move(*leftSaturated));
-  saturated.negated = true;
   return saturated;
 }
 
@@ -235,7 +232,6 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
     Relation assumptionR(assumption.relation);
     assumptionR.label = relation.label;
     Relation r(Operation::composition, std::move(assumptionR), std::move(copy));
-    r.negated = true;
     return r;
   }
 
@@ -273,7 +269,6 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
     rightSaturated = Relation(*relation.rightOperand);
   }
   Relation saturated(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
-  saturated.negated = true;
   return saturated;
 }
 
@@ -285,6 +280,7 @@ void RegularTableau::saturate(Clause &clause) {
     if (literal.negated) {
       std::optional<Relation> saturated = saturateRelation(literal);
       if (saturated) {
+        saturated->negated = true;
         saturatedRelations.push_back(std::move(*saturated));
       }
     }
@@ -317,6 +313,7 @@ void RegularTableau::saturate(Clause &clause) {
           if (literal.negated) {
             auto saturated = saturateIdRelation(assumption, literal);
             if (saturated) {
+              saturated->negated = true;
               saturatedRelations.push_back(*saturated);
             }
           }
@@ -327,6 +324,9 @@ void RegularTableau::saturate(Clause &clause) {
   }
 
   clause.insert(clause.end(), saturatedRelations.begin(), saturatedRelations.end());
+  // remove duplicates since it has not been check when inserting
+  sort(clause.begin(), clause.end());
+  clause.erase(unique(clause.begin(), clause.end()), clause.end());
 }
 
 bool RegularTableau::solve() {

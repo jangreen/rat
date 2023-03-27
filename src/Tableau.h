@@ -29,6 +29,8 @@ class Tableau {
     void appendBranches(const Relation &leftRelation, const Relation &rightRelation);
     void appendBranches(const Relation &leftRelation);
     void appendBranches(const Metastatement &metastatement);
+    template <ProofRule::Rule rule>
+    bool applyRule();
 
     void toDotFormat(std::ofstream &output) const;
 
