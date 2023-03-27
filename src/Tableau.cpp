@@ -202,6 +202,74 @@ bool Tableau::Node::applyRule<ProofRule::negA>() {
   return appliedRule;
 }
 
+bool Tableau::Node::applyDNFRule() {
+  auto rId = relation->applyRuleRecursive<ProofRule::id, Relation>();
+  if (rId) {
+    rId->negated = relation->negated;
+    appendBranches(*rId);
+    return true;
+  }
+  auto rComposition = relation->applyRuleRecursive<ProofRule::composition, Relation>();
+  if (rComposition) {
+    rComposition->negated = relation->negated;
+    appendBranches(*rComposition);
+    return true;
+  }
+  auto rIntersection = relation->applyRuleRecursive<ProofRule::intersection, Relation>();
+  if (rIntersection) {
+    rIntersection->negated = relation->negated;
+    appendBranches(*rIntersection);
+    return true;
+  }
+  if (!relation->negated) {
+    auto rAt = relation->applyRuleRecursive<ProofRule::at, std::tuple<Relation, Metastatement>>();
+    if (rAt) {
+      auto &[r1, metastatement] = *rAt;
+      r1.negated = relation->negated;
+      appendBranches(r1);
+      appendBranches(metastatement);
+      return true;
+    }
+  } else {
+    auto rNegAt = relation->applyRuleRecursive<ProofRule::negAt, Relation>();
+    if (rNegAt) {
+      auto r1 = *rNegAt;
+      r1.negated = relation->negated;
+      appendBranches(r1);
+      return true;
+    }
+  }
+  auto rChoice = relation->applyRuleRecursive<ProofRule::choice, std::tuple<Relation, Relation>>();
+  if (rChoice) {
+    auto &[r1, r2] = *rChoice;
+    r1.negated = relation->negated;
+    r2.negated = relation->negated;
+    if (relation->negated) {
+      appendBranches(r1);
+      appendBranches(r2);
+    } else {
+      appendBranches(r1, r2);
+    }
+    return true;
+  }
+
+  auto rTransitiveClosure =
+      relation->applyRuleRecursive<ProofRule::transitiveClosure, std::tuple<Relation, Relation>>();
+  if (rTransitiveClosure) {
+    auto &[r1, r2] = *rTransitiveClosure;
+    r1.negated = relation->negated;
+    r2.negated = relation->negated;
+    if (relation->negated) {
+      appendBranches(r1);
+      appendBranches(r2);
+    } else {
+      appendBranches(r1, r2);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
   if (left->relation && right->relation) {
     return left->relation->negated < right->relation->negated;
@@ -230,78 +298,7 @@ Tableau::Tableau(Clause initalRelations) {
   }
 }
 
-// helper
-bool applyDNFRule(Tableau::Node *node) {
-  auto rId = node->relation->applyRuleRecursive<ProofRule::id, Relation>();
-  if (rId) {
-    rId->negated = node->relation->negated;
-    node->appendBranches(*rId);
-    return true;
-  }
-  auto rComposition = node->relation->applyRuleRecursive<ProofRule::composition, Relation>();
-  if (rComposition) {
-    rComposition->negated = node->relation->negated;
-    node->appendBranches(*rComposition);
-    return true;
-  }
-  auto rIntersection = node->relation->applyRuleRecursive<ProofRule::intersection, Relation>();
-  if (rIntersection) {
-    rIntersection->negated = node->relation->negated;
-    node->appendBranches(*rIntersection);
-    return true;
-  }
-  if (!node->relation->negated) {
-    auto rAt =
-        node->relation->applyRuleRecursive<ProofRule::at, std::tuple<Relation, Metastatement>>();
-    if (rAt) {
-      auto &[r1, metastatement] = *rAt;
-      r1.negated = node->relation->negated;
-      node->appendBranches(r1);
-      node->appendBranches(metastatement);
-      return true;
-    }
-  } else {
-    auto rNegAt = node->relation->applyRuleRecursive<ProofRule::negAt, Relation>();
-    if (rNegAt) {
-      auto r1 = *rNegAt;
-      r1.negated = node->relation->negated;
-      node->appendBranches(r1);
-      return true;
-    }
-  }
-  auto rChoice =
-      node->relation->applyRuleRecursive<ProofRule::choice, std::tuple<Relation, Relation>>();
-  if (rChoice) {
-    auto &[r1, r2] = *rChoice;
-    r1.negated = node->relation->negated;
-    r2.negated = node->relation->negated;
-    if (node->relation->negated) {
-      node->appendBranches(r1);
-      node->appendBranches(r2);
-    } else {
-      node->appendBranches(r1, r2);
-    }
-    return true;
-  }
-
-  auto rTransitiveClosure =
-      node->relation
-          ->applyRuleRecursive<ProofRule::transitiveClosure, std::tuple<Relation, Relation>>();
-  if (rTransitiveClosure) {
-    auto &[r1, r2] = *rTransitiveClosure;
-    r1.negated = node->relation->negated;
-    r2.negated = node->relation->negated;
-    if (node->relation->negated) {
-      node->appendBranches(r1);
-      node->appendBranches(r2);
-    } else {
-      node->appendBranches(r1, r2);
-    }
-    return true;
-  }
-  return false;
-}
-
+// TODO: move in Node class
 bool Tableau::applyRule(Node *node) {
   if (node->metastatement) {
     if (node->metastatement->type == MetastatementType::labelRelation) {
@@ -329,7 +326,7 @@ bool Tableau::applyRule(Node *node) {
           return true;
         }
       }
-    } else if (applyDNFRule(node)) {
+    } else if (node->applyDNFRule()) {
       return true;
     }
   }
@@ -355,52 +352,6 @@ bool Tableau::solve(int bound) {
   }
 }
 
-// helper
-std::vector<Clause> extractDNF(Tableau::Node *node) {
-  if (node == nullptr || node->isClosed()) {
-    return {};
-  }
-  if (node->isLeaf()) {
-    if (node->relation && node->relation->isNormal()) {
-      return {{*node->relation}};
-    }
-    return {};
-  } else {
-    std::vector<Clause> left = extractDNF(node->leftNode.get());
-    std::vector<Clause> right = extractDNF(node->rightNode.get());
-    left.insert(left.end(), right.begin(), right.end());
-    if (node->relation && node->relation->isNormal()) {
-      if (left.empty()) {
-        Clause newClause({*node->relation});
-        left.push_back(std::move(newClause));
-      } else {
-        for (Clause &clause : left) {
-          clause.push_back(*node->relation);
-        }
-      }
-    }
-    return left;
-  }
-}
-
-std::vector<Clause> Tableau::DNF() {
-  while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    // TODO: remove exportProof("dnfcalc");
-    if (currentNode->metastatement) {
-      // only equality meatstatement possible
-      currentNode->applyRule<ProofRule::propagation>();
-    } else {
-      applyDNFRule(currentNode);
-    }
-  }
-
-  exportProof("dnfcalc");
-
-  return extractDNF(rootNode.get());
-}
-
 bool Tableau::applyModalRule() {
   // TODO: hack using that all terms are reduced, s.t. only possible next rule is modal
   while (!unreducedNodes.empty()) {
@@ -418,13 +369,9 @@ Clause Tableau::calcReuqest() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
-      if (currentNode->applyRule<ProofRule::negA>()) {
-        break;  // metastatement found and all requests calculated
-      }
+      currentNode->applyRule<ProofRule::negA>();
     } else if (currentNode->relation && currentNode->relation->negated) {
-      if (currentNode->applyRule<ProofRule::negA>()) {
-        break;
-      }
+      currentNode->applyRule<ProofRule::negA>();
     }
   }
 

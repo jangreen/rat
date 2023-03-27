@@ -31,6 +31,7 @@ class Tableau {
     void appendBranches(const Metastatement &metastatement);
     template <ProofRule::Rule rule>
     bool applyRule();
+    bool applyDNFRule();
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -49,10 +50,68 @@ class Tableau {
   bool solve(int bound = 30);
 
   // methods for regular reasoning
-  std::vector<Clause> DNF();
+  template <typename ClauseType>
+  std::vector<ClauseType> DNF() {
+    while (!unreducedNodes.empty()) {
+      auto currentNode = unreducedNodes.top();
+      unreducedNodes.pop();
+      // TODO: remove exportProof("dnfcalc");
+      if (currentNode->metastatement) {
+        // only equality meatstatement possible
+        currentNode->applyRule<ProofRule::propagation>();
+      } else {
+        currentNode->applyDNFRule();
+      }
+    }
+
+    exportProof("dnfcalc");
+
+    return extractDNF<ClauseType>(rootNode.get());
+  }
   bool applyModalRule();
   Clause calcReuqest();
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;
 };
+
+// helper
+template <typename ClauseType>
+std::vector<ClauseType> extractDNF(Tableau::Node *node) {
+  if (node == nullptr || node->isClosed()) {
+    return {};
+  }
+  if (node->isLeaf()) {
+    if (node->relation && node->relation->isNormal()) {
+      return {{*node->relation}};
+    }
+    if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
+      if (node->metastatement && node->metastatement->type == MetastatementType::labelEquality) {
+        return {{*node->metastatement}};
+      }
+    }
+    return {};
+  } else {
+    auto left = extractDNF<ClauseType>(node->leftNode.get());
+    auto right = extractDNF<ClauseType>(node->rightNode.get());
+    left.insert(left.end(), right.begin(), right.end());
+    if (node->relation && node->relation->isNormal()) {
+      if (left.empty()) {
+        left.push_back({});
+      }
+      for (auto &clause : left) {
+        clause.push_back(*node->relation);
+      }
+    } else if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
+      if (node->metastatement && node->metastatement->type == MetastatementType::labelEquality) {
+        if (left.empty()) {
+          left.push_back({});
+        }
+        for (auto &clause : left) {
+          clause.push_back(*node->metastatement);
+        }
+      }
+    }
+    return left;
+  }
+}

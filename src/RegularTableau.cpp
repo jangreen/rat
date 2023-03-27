@@ -66,7 +66,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
 RegularTableau::RegularTableau(std::initializer_list<Relation> initalRelations)
     : RegularTableau(std::vector(initalRelations)) {}
 RegularTableau::RegularTableau(Clause initalRelations) {
-  auto dnf = DNF(initalRelations);
+  auto dnf = DNF<ExtendedClause>(initalRelations);
   for (auto clause : dnf) {
     addNode(nullptr, clause);
   }
@@ -75,17 +75,12 @@ RegularTableau::RegularTableau(Clause initalRelations) {
 
 std::vector<Assumption> RegularTableau::assumptions;
 
-std::vector<Clause> RegularTableau::DNF(const Clause &clause) {
-  Tableau tableau{clause};
-  return tableau.DNF();
-}
-
 // helper
-std::string calcExpandedRelation(const Tableau &tableau) {
+Metastatement calcExpandedRelation(const Tableau &tableau) {
   Tableau::Node *node = &(*tableau.rootNode);
   while (node != nullptr) {  // exploit that only alpha rules applied
     if (node->metastatement) {
-      return *node->metastatement->baseRelation;
+      return *node->metastatement;
     }
     node = &(*node->leftNode);
   }
@@ -98,7 +93,7 @@ bool RegularTableau::expandNode(Node *node) {
   bool expandable = tableau.applyModalRule();
   if (expandable) {
     // TODO: remove  tableau.exportProof("dnfcalc");  // modal
-    auto baseRelation = calcExpandedRelation(tableau);
+    auto metastatement = calcExpandedRelation(tableau);
     auto request = tableau.calcReuqest();
     // TODO: remove tableau.exportProof("dnfcalc");  // request
     if (tableau.rootNode->isClosed()) {
@@ -106,9 +101,9 @@ bool RegularTableau::expandNode(Node *node) {
       node->closed = true;
       return true;
     }
-    auto dnf = DNF(request);
+    auto dnf = DNF<ExtendedClause>(request);
     for (const auto &clause : dnf) {
-      addNode(node, clause, baseRelation);
+      addNode(node, clause, metastatement);
     }
     if (dnf.empty()) {
       node->closed = true;
@@ -120,18 +115,30 @@ bool RegularTableau::expandNode(Node *node) {
 
 // clause is in normal form
 // parent == nullptr -> rootNode
-void RegularTableau::addNode(Node *parent, Clause clause, std::string expandedBaseRelation) {
+void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
+                             const std::optional<Metastatement> &metastatement) {
+  // filter metastatements
+  std::vector<Metastatement> equalityStatements;
+  Clause clause;
+  for (const auto &literal : extendedClause) {
+    if (literal.index() == 0) {
+      clause.push_back(std::get<Relation>(literal));
+    } else {
+      equalityStatements.push_back(std::get<Metastatement>(literal));
+    }
+  }
+
   // calculate renaming & rename
   std::vector<int> renaming;
-  for (const auto &literal : clause) {
-    if (!literal.negated) {
-      renaming = literal.calculateRenaming();
+  for (auto &relation : clause) {
+    if (!relation.negated) {
+      renaming = relation.calculateRenaming();
       break;
     }
   }
 
-  for (Relation &literal : clause) {
-    literal.rename(renaming);
+  for (auto &relation : clause) {
+    relation.rename(renaming);
   }
 
   // saturation phase
@@ -140,7 +147,11 @@ void RegularTableau::addNode(Node *parent, Clause clause, std::string expandedBa
   for (auto saturatedClause : saturatedDNF) {
     // create node, edges, push to unreduced nodes
     auto newNode = std::make_unique<Node>(saturatedClause);
-    newNode->parentNodeBaseRelation = expandedBaseRelation;
+    if (metastatement) {
+      newNode->parentNodeExpansionMeta = *metastatement;
+    }
+    newNode->parentNodeRenaming = renaming;
+    newNode->parentEquivalences = equalityStatements;
     newNode->parentNode = &(*parent);
 
     auto existingNode = nodes.find(newNode);
@@ -347,10 +358,21 @@ bool RegularTableau::solve() {
 
 void RegularTableau::extractCounterexample(Node *openNode) {
   // TODO: work in progress
-  std::cout << "Counterexample:";
+  std::cout << "Counterexample:\n";
   Node *node = openNode;
-  while (node != nullptr) {
-    std::cout << " " << node->parentNodeBaseRelation;
+  while (node->parentNode != nullptr) {
+    std::cout << node->parentNode << "." << node->parentNodeExpansionMeta->label1 << " "
+              << *node->parentNodeExpansionMeta->baseRelation << " " << node->parentNode << "."
+              << node->parentNodeExpansionMeta->label2 << ":\n\t";
+    for (int i = 0; i < node->parentNodeRenaming.size(); i++) {
+      std::cout << node->parentNode << "." << node->parentNodeRenaming[i] << " == " << node << "."
+                << i << "\n";
+    }
+    for (auto equivalence : node->parentEquivalences) {
+      std::cout << node->parentNode << "." << equivalence.label1 << " == " << node->parentNode
+                << "." << equivalence.label2 << "\n";
+    }
+    std::cout << "\n";
     node = node->parentNode;
   }
   std::cout << std::endl;

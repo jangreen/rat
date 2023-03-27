@@ -109,7 +109,12 @@ std::vector<int> Relation::labels() const {
   auto result = leftOperand->labels();
   if (rightOperand != nullptr) {
     auto right = rightOperand->labels();
-    result.insert(result.end(), right.begin(), right.end());
+    // only unique
+    for (int i : right) {
+      if (std::find(result.begin(), result.end(), i) == result.end()) {
+        result.push_back(i);
+      }
+    }
   }
   return result;
 }

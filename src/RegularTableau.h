@@ -10,6 +10,7 @@
 #include "Assumption.h"
 #include "Metastatement.h"
 #include "Relation.h"
+#include "Tableau.h"
 
 class RegularTableau {
  public:
@@ -21,8 +22,9 @@ class RegularTableau {
     Clause relations;
     std::vector<std::tuple<Node *, std::vector<int>>> childNodes;
     Node *parentNode = nullptr;
-    std::vector<int> parentNodeRenaming;  // TODO
-    std::string parentNodeBaseRelation;   // TODO
+    std::vector<int> parentNodeRenaming;                   // TODO
+    std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
+    std::vector<Metastatement> parentEquivalences;         // TODO
     bool closed = false;
 
     bool printed = false;  // prevent cycling in printing
@@ -47,10 +49,15 @@ class RegularTableau {
   std::stack<Node *> unreducedNodes;
   static std::vector<Assumption> assumptions;
 
-  static std::vector<Clause> DNF(const Clause &clause);
+  template <typename ClauseType = Clause>
+  static std::vector<ClauseType> DNF(const Clause &clause) {
+    Tableau tableau{clause};
+    return tableau.DNF<ClauseType>();
+  }
   bool expandNode(Node *node);
-  void addNode(Node *parent, Clause clause,
-               std::string expandedBaseRelation = "-");  // TODO: move in node class
+  void addNode(Node *parent, ExtendedClause clause,
+               const std::optional<Metastatement> &metastatement =
+                   std::nullopt);  // TODO: move in node class
   std::optional<Relation> saturateRelation(const Relation &relation);
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);

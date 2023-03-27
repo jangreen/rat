@@ -100,4 +100,6 @@ class Relation {
   static int maxLabel;                                         // to create globally unique labels
 };
 
+typedef std::variant<Relation, Metastatement> Literal;
 typedef std::vector<Relation> Clause;
+typedef std::vector<Literal> ExtendedClause;
