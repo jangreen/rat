@@ -4,6 +4,11 @@ include "fences.cat"
 include "filters.cat"
 
 let rfe = rf & ext
+let coe = co & ext
+//let fr = rfinv;co
+//let fre = rfinv;coe
+let fre = fr & ext
+let po-loc = po & loc
 
 (* All communication relations *)
 let com = (co | fr | rf)

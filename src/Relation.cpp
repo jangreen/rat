@@ -78,19 +78,26 @@ bool Relation::operator<(const Relation &otherRelation) const {
   return (toString() < otherRelation.toString());
 }
 
-bool Relation::isNormal() const {
-  if (label && operation != Operation::base && operation != Operation::none) {
+// helper
+bool isNormalHelper(const Relation &relation, bool negated) {
+  if (relation.label && relation.operation != Operation::base &&
+      relation.operation != Operation::none) {
     return false;
-  } else if (leftOperand != nullptr) {  // has children
-    bool leftIsNormal = leftOperand == nullptr || leftOperand->isNormal();
-    bool rightIsNormal = rightOperand == nullptr || rightOperand->isNormal();
-    bool leftRightSpecialCase = leftOperand == nullptr || rightOperand == nullptr ||
-                                leftOperand->operation != Operation::none ||
-                                rightOperand->operation != Operation::none;
+  } else if (relation.leftOperand != nullptr) {  // has children
+    bool leftIsNormal =
+        relation.leftOperand == nullptr || isNormalHelper(*relation.leftOperand, negated);
+    bool rightIsNormal =
+        relation.rightOperand == nullptr || isNormalHelper(*relation.rightOperand, negated);
+    bool leftRightSpecialCase = negated || relation.leftOperand == nullptr ||
+                                relation.rightOperand == nullptr ||
+                                relation.leftOperand->operation != Operation::none ||
+                                relation.rightOperand->operation != Operation::none;
     return leftIsNormal && rightIsNormal && leftRightSpecialCase;
   }
   return true;
 }
+
+bool Relation::isNormal() const { return isNormalHelper(*this, negated); }
 
 std::vector<int> Relation::labels() const {
   if (label) {
