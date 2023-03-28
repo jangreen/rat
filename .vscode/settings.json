@@ -82,7 +82,8 @@
         "future": "cpp",
         "thread": "cpp",
         "queue": "cpp",
-        "memory_resource": "cpp"
+        "memory_resource": "cpp",
+        "typeindex": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

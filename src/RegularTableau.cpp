@@ -1,25 +1,21 @@
 #include "RegularTableau.h"
 
 #include <algorithm>
+#include <boost/functional/hash.hpp>
+#include <boost/pending/disjoint_sets.hpp>
 #include <iostream>
+#include <map>
 #include <tuple>
 #include <utility>
 
 #include "Tableau.h"
-
-// hashing
-// using boost::hash_combine
-template <class T>
-inline void hash_combine(std::size_t &seed, T const &v) {
-  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
 
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
   Clause copy = node.relations;
   sort(copy.begin(), copy.end());
   for (const auto &relation : copy) {
-    hash_combine(seed, relation.toString());  // TODO: use std::string reprstation
+    boost::hash_combine(seed, relation.toString());  // TODO: use std::string reprstation
   }
   return seed;
 }
@@ -360,22 +356,91 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   // TODO: work in progress
   std::cout << "Counterexample:\n";
   Node *node = openNode;
+
+  std::vector<std::string> elements;
+  typedef std::map<std::string, int> rank_t;
+  typedef std::map<std::string, std::string> parent_t;
+  rank_t ranks;
+  parent_t parents;
+  boost::disjoint_sets<boost::associative_property_map<rank_t>,
+                       boost::associative_property_map<parent_t>>
+      dsets(boost::make_assoc_property_map(ranks), boost::make_assoc_property_map(parents));
+  // boost::disjoint_sets<rank_t, parent_t> dsets(ranks, parents);
+
+  // TODO: refactor
   while (node->parentNode != nullptr) {
-    std::cout << node->parentNode << "." << node->parentNodeExpansionMeta->label1 << " "
-              << *node->parentNodeExpansionMeta->baseRelation << " " << node->parentNode << "."
+    std::cout << node->parentNode << "_" << node->parentNodeExpansionMeta->label1 << " "
+              << *node->parentNodeExpansionMeta->baseRelation << " " << node->parentNode << "_"
               << node->parentNodeExpansionMeta->label2 << ":\n\t";
     for (int i = 0; i < node->parentNodeRenaming.size(); i++) {
-      std::cout << node->parentNode << "." << node->parentNodeRenaming[i] << " == " << node << "."
+      std::cout << node->parentNode << "_" << node->parentNodeRenaming[i] << " == " << node << "_"
                 << i << "\n";
+
+      std::stringstream ss1;
+      ss1 << node->parentNode << "_" << node->parentNodeRenaming[i];
+      if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
+        dsets.make_set(ss1.str());
+        elements.push_back(ss1.str());
+      }
+      std::stringstream ss2;
+      ss2 << node << "_" << i;
+      if (std::find(elements.begin(), elements.end(), ss2.str()) == elements.end()) {
+        dsets.make_set(ss2.str());
+        elements.push_back(ss2.str());
+      }
+      dsets.union_set(ss1.str(), ss2.str());
     }
     for (auto equivalence : node->parentEquivalences) {
-      std::cout << node->parentNode << "." << equivalence.label1 << " == " << node->parentNode
-                << "." << equivalence.label2 << "\n";
+      std::cout << node->parentNode << "_" << equivalence.label1 << " == " << node->parentNode
+                << "_" << equivalence.label2 << "\n";
+
+      std::stringstream ss1;
+      ss1 << node->parentNode << "_" << equivalence.label1;
+      if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
+        dsets.make_set(ss1.str());
+        elements.push_back(ss1.str());
+      }
+      std::stringstream ss2;
+      ss2 << node->parentNode << "_" << equivalence.label2;
+      if (std::find(elements.begin(), elements.end(), ss2.str()) == elements.end()) {
+        dsets.make_set(ss2.str());
+        elements.push_back(ss2.str());
+      }
+      dsets.union_set(ss1.str(), ss2.str());
     }
     std::cout << "\n";
     node = node->parentNode;
   }
   std::cout << std::endl;
+  std::cout << dsets.count_sets(elements.begin(), elements.end()) << std::endl;
+
+  /*std::vector<std::string> elementsClasses;
+  for (auto element : elements) {
+    if (std::find(elementsClasses.begin(), elementsClasses.end(), dsets.find_set(element)) ==
+        elementsClasses.end()) {
+      elementsClasses.push_back(dsets.find_set(element));
+    }
+  }*/
+
+  std::ofstream counterexample("counterexample.dot");
+  counterexample << "digraph {" << std::endl;
+  /*for (auto element : elementsClasses) {
+    counterexample << "N" << element << ";" << std::endl;
+  }*/
+  node = openNode;
+  while (node->parentNode != nullptr) {
+    std::stringstream ss1;
+    ss1 << node->parentNode << "_" << node->parentNodeExpansionMeta->label1;
+    std::stringstream ss2;
+    ss2 << node->parentNode << "_" << node->parentNodeExpansionMeta->label2;
+
+    counterexample << "N" << dsets.find_set(ss1.str()) << " -> "
+                   << "N" << dsets.find_set(ss2.str()) << "[label = \""
+                   << *node->parentNodeExpansionMeta->baseRelation << "\"];" << std::endl;
+    node = node->parentNode;
+  }
+  counterexample << "}" << std::endl;
+  counterexample.close();
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output) const {
