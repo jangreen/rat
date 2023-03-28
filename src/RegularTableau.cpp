@@ -353,10 +353,9 @@ bool RegularTableau::solve() {
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {
-  // TODO: work in progress
-  std::cout << "Counterexample:\n";
   Node *node = openNode;
 
+  // calculate equivlence classes
   std::vector<std::string> elements;
   typedef std::map<std::string, int> rank_t;
   typedef std::map<std::string, std::string> parent_t;
@@ -365,17 +364,10 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   boost::disjoint_sets<boost::associative_property_map<rank_t>,
                        boost::associative_property_map<parent_t>>
       dsets(boost::make_assoc_property_map(ranks), boost::make_assoc_property_map(parents));
-  // boost::disjoint_sets<rank_t, parent_t> dsets(ranks, parents);
 
   // TODO: refactor
   while (node->parentNode != nullptr) {
-    std::cout << node->parentNode << "_" << node->parentNodeExpansionMeta->label1 << " "
-              << *node->parentNodeExpansionMeta->baseRelation << " " << node->parentNode << "_"
-              << node->parentNodeExpansionMeta->label2 << ":\n\t";
     for (int i = 0; i < node->parentNodeRenaming.size(); i++) {
-      std::cout << node->parentNode << "_" << node->parentNodeRenaming[i] << " == " << node << "_"
-                << i << "\n";
-
       std::stringstream ss1;
       ss1 << node->parentNode << "_" << node->parentNodeRenaming[i];
       if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
@@ -391,9 +383,6 @@ void RegularTableau::extractCounterexample(Node *openNode) {
       dsets.union_set(ss1.str(), ss2.str());
     }
     for (auto equivalence : node->parentEquivalences) {
-      std::cout << node->parentNode << "_" << equivalence.label1 << " == " << node->parentNode
-                << "_" << equivalence.label2 << "\n";
-
       std::stringstream ss1;
       ss1 << node->parentNode << "_" << equivalence.label1;
       if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
@@ -408,25 +397,11 @@ void RegularTableau::extractCounterexample(Node *openNode) {
       }
       dsets.union_set(ss1.str(), ss2.str());
     }
-    std::cout << "\n";
     node = node->parentNode;
   }
-  std::cout << std::endl;
-  std::cout << dsets.count_sets(elements.begin(), elements.end()) << std::endl;
-
-  /*std::vector<std::string> elementsClasses;
-  for (auto element : elements) {
-    if (std::find(elementsClasses.begin(), elementsClasses.end(), dsets.find_set(element)) ==
-        elementsClasses.end()) {
-      elementsClasses.push_back(dsets.find_set(element));
-    }
-  }*/
 
   std::ofstream counterexample("counterexample.dot");
   counterexample << "digraph {" << std::endl;
-  /*for (auto element : elementsClasses) {
-    counterexample << "N" << element << ";" << std::endl;
-  }*/
   node = openNode;
   while (node->parentNode != nullptr) {
     std::stringstream ss1;
