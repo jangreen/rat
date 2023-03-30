@@ -25,6 +25,7 @@ class RegularTableau {
     std::vector<int> parentNodeRenaming;                   // TODO
     std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
     std::vector<Metastatement> parentEquivalences;         // TODO
+    Node *epsilonChild;
     bool closed = false;
 
     bool printed = false;  // prevent cycling in printing

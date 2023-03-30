@@ -80,6 +80,9 @@ bool Relation::operator<(const Relation &otherRelation) const {
 
 // helper
 bool isNormalHelper(const Relation &relation, bool negated) {
+  if (relation.label && relation.operation == Operation::converse) {
+    return true;  // assume that converse only occurs on base realtions
+  }
   if (relation.label && relation.operation != Operation::base &&
       relation.operation != Operation::none) {
     return false;
@@ -366,6 +369,15 @@ std::optional<Relation> Relation::applyRule<ProofRule::negA>(const Metastatement
     // Rule::negA
     Relation r1(Operation::none);
     r1.label = metastatement->label2;
+    return r1;
+  } else if (operation == Operation::converse &&
+             metastatement->type == MetastatementType::labelRelation &&
+             metastatement->label2 == *label &&
+             metastatement->baseRelation == *leftOperand->identifier) {
+    // assumption: converse occurs only on base relations
+    // Rule::negConverseA
+    Relation r1(Operation::none);
+    r1.label = metastatement->label1;
     return r1;
   }
   return std::nullopt;

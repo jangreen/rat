@@ -39,6 +39,12 @@ class Logic : LogicBaseVisitor {
  public:
   /*std::tuple<std::vector<Assumption>, Assertion>*/ std::any visitStatement(
       LogicParser::StatementContext *ctx) {
+    for (const auto &letDefinition : ctx->letDefinition()) {
+      std::string name = letDefinition->NAME()->getText();
+      Relation derivedRelation(letDefinition->e->getText());
+      Relation::relations.insert({name, derivedRelation});
+    }
+
     std::optional<Assertion> assertion;
     const auto &assertionContext = ctx->assertion();
     if (assertionContext != nullptr) {

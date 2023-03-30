@@ -1,7 +1,8 @@
 grammar Logic;
 import Cat;
 
-statement: hypothesis* (assertion | mmAssertion) EOF;
+statement:
+	letDefinition* hypothesis* (assertion | mmAssertion) EOF;
 
 hypothesis: ASSUME lhs = expression INEQUAL rhs = expression;
 assertion: ASSERT lhs = expression INEQUAL rhs = expression;

@@ -33,7 +33,8 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
     if (definitionContext->letDefinition()) {
       definitionContext->letDefinition()->accept(this);
     } else if (definitionContext->letRecDefinition()) {
-      std::cout << "TODO: recursive definitions" << std::endl;
+      std::cout << "[Parsing] Recursive defitions are not supported." << std::endl;
+      exit(0);
     } else if (definitionContext->axiomDefinition()) {
       Constraint axiom = any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
       constraints.push_back(axiom);
@@ -65,7 +66,6 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 /*void*/ antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx) {
   std::string name = ctx->NAME()->getText();
   Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
-  // Relation::relations[name] = derivedRelation; // TODO: why error?
   Relation::relations.insert({name, derivedRelation});
   return antlrcpp::Any();
 }
@@ -163,6 +163,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   exit(0);
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprOptional(CatParser::ExprOptionalContext *ctx) {
-  std::cout << "[Parsing] Optional expressions are not supported." << std::endl;
-  exit(0);
+  Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+  Relation idR(Operation::identity);
+  return Relation(Operation::choice, std::move(r1), std::move(idR));
 }

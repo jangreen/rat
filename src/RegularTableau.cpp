@@ -34,7 +34,6 @@ RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
 void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "N" << this << "[label=\"";
-  // TODO: remove output << std::hash<Node>()(*this) << std::endl;
   for (const auto &relation : relations) {
     output << relation.toString() << std::endl;
   }
@@ -45,9 +44,11 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   }
   output << "];" << std::endl;
   // edges
-  for (auto &[childNode, edgeLabel] : childNodes) {
+  for (auto &[childNode, edgeLabell] : childNodes) {  // TODO removeedge label
+    auto edgeLabel =
+        childNode->parentNodeExpansionMeta ? childNode->parentNodeExpansionMeta->toString() : "#";
     output << "N" << this << " -> "
-           << "N" << childNode << ";" << std::endl;
+           << "N" << childNode << "[label=\"" << edgeLabel << "\"];" << std::endl;
   }
   printed = true;
 
@@ -66,7 +67,6 @@ RegularTableau::RegularTableau(Clause initalRelations) {
   for (auto clause : dnf) {
     addNode(nullptr, clause);
   }
-  // TODO: remove exportProof("initalized");
 }
 
 std::vector<Assumption> RegularTableau::assumptions;
@@ -85,19 +85,34 @@ Metastatement calcExpandedRelation(const Tableau &tableau) {
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->relations};
-  // TODO: remove  tableau.exportProof("dnfcalc");  // initial
   bool expandable = tableau.applyModalRule();
   if (expandable) {
-    // TODO: remove  tableau.exportProof("dnfcalc");  // modal
-    auto metastatement = calcExpandedRelation(tableau);
-    auto request = tableau.calcReuqest();
-    // TODO: remove tableau.exportProof("dnfcalc");  // request
+    std::optional<Metastatement> metastatement = calcExpandedRelation(tableau);
+    const auto &[request, converseRequest] = tableau.calcReuqest();
+    Clause requestCopy = request;
     if (tableau.rootNode->isClosed()) {
       // can happen with empty hypotheses
       node->closed = true;
       return true;
     }
-    auto dnf = DNF<ExtendedClause>(request);
+    /*/ check if consistent
+    for (const auto &relation : converseRequest) {
+      if (std::find(node->relations.begin(), node->relations.end(), relation) ==
+          node->relations.end()) {
+        std::cout << "INCONSISTENT NODE" << std::endl;
+        std::cout << relation.toString() << std::endl;
+        std::cout << metastatement->toString() << std::endl;
+        // calculate epsilon child
+        requestCopy = node->relations;
+        for (const auto &relation : converseRequest) {
+          if (std::find(requestCopy.begin(), requestCopy.end(), relation) == requestCopy.end()) {
+            requestCopy.push_back(relation);
+          }
+        }
+        metastatement = std::nullopt;  // epsilon edge label
+      }
+    }*/// TODO disabled
+    auto dnf = DNF<ExtendedClause>(requestCopy);
     for (const auto &clause : dnf) {
       addNode(node, clause, metastatement);
     }
@@ -280,7 +295,6 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
 }
 
 void RegularTableau::saturate(Clause &clause) {
-  // return; // TODO remove:
   Clause saturatedRelations;
   // regular assumptions
   for (const Relation &literal : clause) {
@@ -341,7 +355,7 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     /* TODO: remove: */
-    exportProof("regular");
+    exportProof("regular");  // DEBUG
     if (!expandNode(currentNode)) {
       extractCounterexample(&(*currentNode));
       std::cout << "False." << std::endl;
@@ -401,7 +415,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   }
 
   std::ofstream counterexample("counterexample.dot");
-  counterexample << "digraph {" << std::endl;
+  counterexample << "digraph { node[shape=\"point\"]" << std::endl;
   node = openNode;
   while (node->parentNode != nullptr) {
     std::stringstream ss1;

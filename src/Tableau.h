@@ -3,6 +3,7 @@
 #include <memory>
 #include <queue>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "Metastatement.h"
@@ -55,7 +56,6 @@ class Tableau {
     while (!unreducedNodes.empty()) {
       auto currentNode = unreducedNodes.top();
       unreducedNodes.pop();
-      // TODO: remove exportProof("dnfcalc");
       if (currentNode->metastatement) {
         // only equality meatstatement possible
         currentNode->applyRule<ProofRule::propagation>();
@@ -64,12 +64,13 @@ class Tableau {
       }
     }
 
-    exportProof("dnfcalc");
+    exportProof("dnfcalc");  // TODO: remove
 
     return extractDNF<ClauseType>(rootNode.get());
   }
   bool applyModalRule();
-  Clause calcReuqest();
+  std::tuple<Clause, Clause> calcReuqest();
+  std::tuple<Clause, Clause> extractRequest();  // and converse request
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;
