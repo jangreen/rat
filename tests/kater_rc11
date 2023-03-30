@@ -1,0 +1,18 @@
+// Kater 3.7
+// RC11 PLDI 2017 Lahav et.al
+let eco = (rf | mo | fr)+
+let rs = (rf ; rmw)*
+let sw = [REL] ; ([F] ; po)? ; rs ; rf ; (po ; [F])? ; [ACQ]
+let hb1 = (po | sw)+
+
+
+//-------------------------
+// with program trainsformations
+let rpo = [ACQ] ; po | po ; [REL]
+let hb2 = (rpo | sw)+
+
+assume (REL*REL)+ <= REL*REL
+assume ACQ*ACQ <= id
+assume REL*REL <= id
+
+assert hb1 <= hb2 | po

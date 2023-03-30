@@ -14,7 +14,7 @@ Performance CPP
 Utility
 - use nix
 
-
+-assumption transform inverse to atomic
 
 /* void loadTheory(Solver &solver)
 {

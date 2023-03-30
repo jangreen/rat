@@ -1,0 +1,14 @@
+// Kater 3.7
+let sw = x ; [A]
+let hb1 = (po | sw)+
+
+
+//-------------------------
+let rpo = [A] ; po 
+let hb2 = (rpo | sw)+
+
+//assume (REL*REL)+ <= REL*REL
+//assume ACQ*ACQ <= id
+//assume REL*REL <= id
+
+assert hb1 <= hb2 | po

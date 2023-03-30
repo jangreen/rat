@@ -36,6 +36,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *)
 
+let coe = co & ext
+let fre = fr & ext
+let coi = co & int
+let rfi = rf & int
+
 "ARMv8 AArch64"
 
 (*

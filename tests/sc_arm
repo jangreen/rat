@@ -1,0 +1,4 @@
+assume rmw <= 0
+assume data | addr | ctrl <= po
+
+cat assert sc <= aarch64-modified

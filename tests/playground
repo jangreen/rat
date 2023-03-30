@@ -1,0 +1,6 @@
+let lhs = a*
+let rhs = b;(b;b)* | (b;b)*
+
+assume a <= b
+
+assert lhs <= rhs
