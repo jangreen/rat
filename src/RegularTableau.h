@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <map>
 #include <memory>
 #include <stack>
 #include <string>
@@ -12,6 +13,9 @@
 #include "Relation.h"
 #include "Tableau.h"
 
+typedef std::vector<int> Renaming;
+typedef std::optional<std::tuple<Metastatement, Renaming>> EdgeLabel;  // TODO: use
+
 class RegularTableau {
  public:
   class Node {
@@ -20,12 +24,12 @@ class RegularTableau {
     explicit Node(Clause relations);
 
     Clause relations;
-    std::vector<std::tuple<Node *, std::vector<int>>> childNodes;
-    Node *parentNode = nullptr;
+    std::vector<Node *> childNodes;
+    std::map<Node *, EdgeLabel> parentNodes;
+    Node *parentNode = nullptr;                            // TODO: for counterexample first parent
     std::vector<int> parentNodeRenaming;                   // TODO
     std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
     std::vector<Metastatement> parentEquivalences;         // TODO
-    Node *epsilonChild;
     bool closed = false;
 
     bool printed = false;  // prevent cycling in printing
@@ -63,10 +67,11 @@ class RegularTableau {
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);
   void saturate(Clause &clause);
+  bool isInconsistent(Node *node, const Clause &converseRequest);
   bool solve();
   void extractCounterexample(Node *openNode);
 
-  void toDotFormat(std::ofstream &output) const;
+  void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;
 };
 

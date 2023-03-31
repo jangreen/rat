@@ -8,6 +8,7 @@
 
 Performance CPP
 
+- dont extend unnessary due to inconsitent
 - use vectors
 - replace std map/set containers with fast one as boost/robin hood
 - const constexpr etc

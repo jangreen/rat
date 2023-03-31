@@ -137,6 +137,17 @@ void Relation::rename(const std::vector<int> &renaming) {
   }
 }
 
+void Relation::inverseRename(const std::vector<int> &renaming) {
+  if (label) {
+    label = renaming[*label];
+  } else if (leftOperand) {
+    leftOperand->inverseRename(renaming);
+    if (rightOperand) {
+      rightOperand->inverseRename(renaming);
+    }
+  }
+}
+
 std::string Relation::toString() const {
   std::string output;
   if (negated) {

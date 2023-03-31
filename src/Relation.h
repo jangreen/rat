@@ -61,7 +61,8 @@ class Relation {
   bool isNormal() const;                       // true iff all labels are in front of base relations
   std::vector<int> labels() const;             // return all labels of the relation term
   std::vector<int> calculateRenaming() const;  // renaming {2,4,5}: 2->0,4->1,5->2
-  void rename(const std::vector<int> &renaming);         // renames given a renaming function
+  void rename(const std::vector<int> &renaming);  // renames given a renaming function
+  void inverseRename(const std::vector<int> &renaming);
   bool operator==(const Relation &otherRelation) const;  // compares two relation syntactically
   bool operator<(const Relation &otherRelation) const;   // for sorting/hashing
   std::string toString() const;                          // for printing
