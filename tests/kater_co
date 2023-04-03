@@ -5,12 +5,12 @@ let poloc = po & loc
 let co1 = (poloc | rf | fr | co)+ // SC per location
 let co2 = po;eco
 
-assume co2 <= 0
+assume co2 & id <= 0
 assume rfi <= po
 //assume rfi <= loc
 //assume [W];npo-loc+;fr-imm?;[W] <= co
 //assume rf;npo-loc+;[W] <= co
 //assume rf;npo-loc+;fr <= co
 
-assert co1 <= 0
+assert co1 & id <= 0
 

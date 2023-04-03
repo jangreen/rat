@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "CatInferVisitor.h"
+#include "parsing/CatInferVisitor.h"
 #include "Metastatement.h"
 
 Relation::Relation(const Relation &other)

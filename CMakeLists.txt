@@ -21,7 +21,7 @@ set(ANTLR4_WITH_STATIC_CRT OFF) # using /MD flag for antlr4_runtime (for Visual 
 include(ExternalAntlr4Cpp) # build and add runtime for antlr4 -> variable: antlr4_static
 
 # project executable
-file(GLOB CatInfer_SRC "src/*.cpp")
+file(GLOB_RECURSE CatInfer_SRC "src/*.cpp")
 add_executable(${PROJECT_NAME} src/main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS} ${ANTLR_LogicParser_CXX_OUTPUTS})
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_CatParser_OUTPUT_DIR}) # add generated parser files
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_LogicParser_OUTPUT_DIR}) # add generated parser files

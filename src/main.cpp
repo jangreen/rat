@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "LogicVisitor.h"
 #include "RegularTableau.h"
 #include "Tableau.h"
+#include "parsing/LogicVisitor.h"
 
 int main(int argc, const char *argv[]) {
   // parse arguments or ask for arguments

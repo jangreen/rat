@@ -10,10 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "Assumption.h"
+#include "../Assumption.h"
 #include "CatInferVisitor.h"
-#include "RegularTableau.h"
-#include "Relation.h"
+#include "../RegularTableau.h"
+#include "../Relation.h"
 
 // helper
 Relation loadModel(const std::string &file) {
