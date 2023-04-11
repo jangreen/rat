@@ -9,7 +9,7 @@ Antlr tool must be placed at /usr/local/lib/antlr-4.10.1-complete.jar
 
 ```
 cd /usr/local/lib
-curl -O <https://www.antlr.org/download/antlr-4.10.1-complete.jar>
+curl -O https://www.antlr.org/download/antlr-4.10.1-complete.jar
 ```
 
 ### Rendering proofs: Graphviz
