@@ -28,39 +28,6 @@ Tableau::Tableau(Clause initalRelations) {
 }
 
 // TODO: move in Node class
-bool Tableau::applyRule(Node *node) {
-  if (node->metastatement) {
-    if (node->metastatement->type == MetastatementType::labelRelation) {
-      node->applyRule<ProofRule::negA>();
-      // no rule applicable anymore (metastatement)
-      return false;  // TODO: this value may be true
-    } else {
-      node->applyRule<ProofRule::propagation>();
-      return true;
-    }
-  } else if (node->relation) {
-    if (node->relation->isNormal()) {
-      if (node->relation->negated) {
-        if (node->applyRule<ProofRule::negA>()) {
-          return true;
-        }
-      } else {
-        auto rA =
-            node->relation->applyRuleRecursive<ProofRule::a, std::tuple<Relation, Metastatement>>();
-        if (rA) {
-          auto &[r1, metastatement] = *rA;
-          r1.negated = node->relation->negated;
-          node->appendBranches(r1);
-          node->appendBranches(metastatement);
-          return true;
-        }
-      }
-    } else if (node->applyDNFRule()) {
-      return true;
-    }
-  }
-  return false;
-}
 
 bool Tableau::solve(int bound) {
   while (!unreducedNodes.empty() && bound > 0) {
@@ -68,40 +35,54 @@ bool Tableau::solve(int bound) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     // exportProof("infinite"); // TODO: remove
-    applyRule(currentNode);
+    currentNode->applyAnyRule();
   }
 }
 
-bool Tableau::applyModalRule() {
-  // assuming that all terms are reduced, s.t. only possible next rule is modal
+// pops unreduced nodes from stack until rule can be applied
+bool Tableau::apply(const std::initializer_list<ProofRule> rules) {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    if (applyRule(currentNode)) {
-      // if at rule can be applied do it directly
-      // TODO: check this is this the best way to do this? ----
-      Node *node = currentNode;
-      while (node->leftNode != nullptr) {
-        node = &(*node->leftNode);
-      }
-      Node *newNodeAtCheck = node->parentNode;
-      auto atResult =
-          newNodeAtCheck->relation
-              ->applyRuleRecursive<ProofRule::at, std::tuple<Relation, Metastatement>>();
-      if (atResult) {
-        const auto &[relation, metastatement] = *atResult;
-        node->metastatement->label2 = std::min(metastatement.label1, metastatement.label2);
-        node->appendBranches(relation);
-        // TODO dont needed?!: node->appendBranches(metastatement);
-      }
-      // ----
+    if (currentNode->apply(rules)) {
       return true;
     }
   }
   return false;
 }
 
-std::tuple<Clause, Clause> Tableau::extractRequest() {
+std::optional<Metastatement> Tableau::applyRuleA() {
+  while (!unreducedNodes.empty()) {
+    auto currentNode = unreducedNodes.top();
+    unreducedNodes.pop();
+    auto result = currentNode->applyRule<ProofRule::a, std::tuple<Relation, Metastatement>>();
+    if (result) {
+      // TODO: apply at greedy
+      while (currentNode->leftNode != nullptr) {
+        currentNode = currentNode->leftNode.get();
+
+        if (currentNode->leftNode == nullptr) {
+          Node *nodeNeedsCheck = currentNode->parentNode;
+          Node *newRelMetastatement = currentNode;
+          auto atResult = nodeNeedsCheck->relation
+                              ->applyRuleDeep<ProofRule::at, std::tuple<Relation, Metastatement>>();
+          if (atResult) {
+            auto &[newRelation, newEqMetastatement] = *atResult;
+            nodeNeedsCheck->appendBranches(newRelation);
+            nodeNeedsCheck->appendBranches(newEqMetastatement);
+
+            newRelMetastatement->metastatement->label2 =
+                std::min(newEqMetastatement.label1, newEqMetastatement.label2);
+          }
+        }
+      }
+      return std::get<Metastatement>(*result);
+    }
+  }
+  return std::nullopt;
+}
+
+std::tuple<Clause, Clause> Tableau::extractRequest() const {
   // exrtact terms for new node
   Node *node = rootNode.get();
   std::optional<Relation> oldPositive;
@@ -155,20 +136,18 @@ std::tuple<Clause, Clause> Tableau::extractRequest() {
   return result;
 }
 
-std::tuple<Clause, Clause> Tableau::calcReuqest() {
+void Tableau::calcReuqest() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
-      currentNode->applyRule<ProofRule::negA>();
+      currentNode->applyRule<ProofRule::negA, bool>();
     } else if (currentNode->relation && currentNode->relation->negated) {
-      currentNode->applyRule<ProofRule::negA>();
+      currentNode->applyRule<ProofRule::negA, bool>();
     }
   }
 
   exportProof("requestcalc");  // TODO: remove
-
-  return extractRequest();
 }
 
 void Tableau::toDotFormat(std::ofstream &output) const {

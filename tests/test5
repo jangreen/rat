@@ -1,0 +1,3 @@
+assume b;a & id <= 0
+
+assert a;(b & c) & id <= 0

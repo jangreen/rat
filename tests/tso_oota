@@ -1,0 +1,25 @@
+let rfe = rf & ext
+let po-loc = po & loc
+let fr = rf^-1;co
+
+
+// TSO
+let com = (co | fr | rf)
+let uniproc = (po-loc | com)^+ & id
+
+let com-tso = (co | fr | rfe)
+let po-tso = ((po & ((R*M) | (W*W))) | mfence)
+let ghb-tso = (po-tso | com-tso)^+ & id
+
+let tso = ghb-tso | uniproc
+
+// OOTA
+let oota = (dep | rf)^+ & id
+
+// Assumptions
+assume dep <= po
+assume rf;rf <= 0
+
+// Goal
+assume tso <= 0
+assert oota <= 0

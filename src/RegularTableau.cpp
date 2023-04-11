@@ -20,34 +20,24 @@ RegularTableau::RegularTableau(Clause initalRelations) {
 
 std::vector<Assumption> RegularTableau::assumptions;
 
-// helper
-Metastatement calcExpandedRelation(const Tableau &tableau) {
-  Tableau::Node *node = &(*tableau.rootNode);
-  while (node != nullptr) {  // exploit that only alpha rules applied
-    if (node->metastatement) {
-      return *node->metastatement;
-    }
-    node = &(*node->leftNode);
-  }
-}
-
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->relations};
-  bool expandable = tableau.applyModalRule();
-  if (expandable) {
-    std::optional<Metastatement> metastatement = calcExpandedRelation(tableau);
-    const auto &[request, converseRequest] = tableau.calcReuqest();
-    Clause requestCopy = request;
+  auto metastatement = tableau.applyRuleA();
+
+  if (metastatement) {
+    // tableau.apply({ProofRule::at, ProofRule::propagation});  // TODO:
+    tableau.calcReuqest();
+    const auto &[request, converseRequest] = tableau.extractRequest();
     if (tableau.rootNode->isClosed()) {
-      // can happen with empty hypotheses
+      // can happen with emptiness hypotheses
       node->closed = true;
       return true;
     }
     // check if consistent
     bool inconsistent = isInconsistent(node, converseRequest);
     if (!inconsistent) {
-      auto dnf = DNF<ExtendedClause>(requestCopy);
+      auto dnf = DNF<ExtendedClause>(request);
       for (const auto &clause : dnf) {
         addNode(node, clause, metastatement);
       }
@@ -227,6 +217,12 @@ void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
       // equivalent node exists
       if (parent != nullptr) {
         parent->childNodes.push_back(existingNode->get());
+        if (metastatement) {
+          std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
+          existingNode->get()->parentNodes[parent] = edgelabel;
+        } else {
+          existingNode->get()->parentNodes[parent] = std::nullopt;
+        }
       }
     } else {
       // equivalent node does not exist
@@ -510,5 +506,3 @@ void RegularTableau::exportProof(std::string filename) const {
   toDotFormat(file);
   file.close();
 }
-
-

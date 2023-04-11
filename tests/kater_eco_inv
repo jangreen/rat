@@ -1,0 +1,7 @@
+assume co;rf^-1 <= 0
+assume co^+ <= co
+assume rf;rf^-1 <= id
+assume rf;co <= 0
+assume rf;rf <= 0
+
+assert (rf | co | rf^-1;co);(rf | co | rf^-1;co)^* <= rf | (co | rf^-1;co);(rf | id)

@@ -83,7 +83,8 @@
         "thread": "cpp",
         "queue": "cpp",
         "memory_resource": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "tso_oota": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

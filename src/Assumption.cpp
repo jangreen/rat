@@ -23,5 +23,7 @@ void markBaseRelationsAsSaturated(bool identity, Relation &relation) {
 Assumption::Assumption(const AssumptionType type, Relation &&relation,
                        std::optional<std::string> baseRelation)
     : type(type), relation(std::move(relation)), baseRelation(baseRelation) {
-  markBaseRelationsAsSaturated((this->type == AssumptionType::identity), this->relation);
+  if (this->type != AssumptionType::empty) {
+    markBaseRelationsAsSaturated((this->type == AssumptionType::identity), this->relation);
+  }
 }

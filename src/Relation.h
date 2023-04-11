@@ -70,21 +70,20 @@ class Relation {
   template <ProofRule::Rule rule, typename ConclusionType>
   std::optional<ConclusionType> applyRule(const Metastatement *metastatement = nullptr);
   template <ProofRule::Rule rule, typename ConclusionType>
-  std::optional<ConclusionType> applyRuleRecursive(const Metastatement *metastatement = nullptr) {
+  std::optional<ConclusionType> applyRuleDeep(const Metastatement *metastatement = nullptr) {
     auto baseCase = applyRule<rule, ConclusionType>(metastatement);
     if (baseCase) {
       return *baseCase;
     }
     // case: intersection or composition (only cases for labeled terms that can happen)
     if (operation == Operation::composition || operation == Operation::intersection) {
-      auto leftConclusion = leftOperand->applyRuleRecursive<rule, ConclusionType>(metastatement);
+      auto leftConclusion = leftOperand->applyRuleDeep<rule, ConclusionType>(metastatement);
       if (leftConclusion) {
         return substituteLeft<ConclusionType>(std::move(*leftConclusion));
       }
       // case: intersection
       if (operation == Operation::intersection) {
-        auto rightConclusion =
-            rightOperand->applyRuleRecursive<rule, ConclusionType>(metastatement);
+        auto rightConclusion = rightOperand->applyRuleDeep<rule, ConclusionType>(metastatement);
         if (rightConclusion) {
           return substituteRight<ConclusionType>(std::move(*rightConclusion));
         }

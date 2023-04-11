@@ -112,6 +112,98 @@ void Tableau::Node::appendBranches(const Metastatement &metastatement) {
   }
 }
 
+/* RULES */
+template <>
+std::optional<std::tuple<Relation, Metastatement>> Tableau::Node::applyRule<ProofRule::a>() {
+  if (relation && !relation->negated) {
+    auto result = relation->applyRuleDeep<ProofRule::a, std::tuple<Relation, Metastatement>>();
+    if (result) {
+      auto &[newRelation, newMetastatement] = *result;
+      appendBranches(newRelation);
+      appendBranches(newMetastatement);
+      return result;
+    }
+  }
+  return std::nullopt;
+}
+template <>
+std::optional<bool> Tableau::Node::applyRule<ProofRule::id>() {
+  if (relation && !relation->negated) {
+    auto rId = relation->applyRuleDeep<ProofRule::id, Relation>();
+    if (rId) {
+      appendBranches(*rId);
+      return true;
+    }
+  }
+  return std::nullopt;
+}
+template <>
+std::optional<bool> Tableau::Node::applyRule<ProofRule::at>() {
+  if (relation && !relation->negated) {
+    auto atResult = relation->applyRuleDeep<ProofRule::at, std::tuple<Relation, Metastatement>>();
+    if (atResult) {
+      auto &[newRelation, newMetastatement] = *atResult;
+      appendBranches(newRelation);
+      appendBranches(newMetastatement);
+    }
+  }
+  return std::nullopt;
+}
+// TODO: meta statemetn adaption :       node->metastatement->label2 =
+// std::min(metastatement.label1, metastatement.label2);
+template <>
+std::optional<bool> Tableau::Node::applyRule<ProofRule::propagation>() {
+  bool appliedRule = false;
+  if (metastatement && metastatement->type == MetastatementType::labelEquality) {
+    Tableau::Node *currentNode = parentNode;
+    while (currentNode != nullptr) {
+      if (currentNode->relation && currentNode->relation->negated) {
+        auto rProp = currentNode->relation->applyRuleDeep<ProofRule::propagation, Relation>(
+            &(*metastatement));
+        if (rProp) {
+          appliedRule = true;
+          rProp->negated = currentNode->relation->negated;
+          appendBranches(*rProp);
+        }
+      }
+      currentNode = currentNode->parentNode;
+    }
+  }
+  return appliedRule ? std::make_optional(true) : std::nullopt;
+}
+template <>
+std::optional<bool> Tableau::Node::applyRule<ProofRule::negA>() {
+  bool appliedRule = false;
+  if (metastatement && metastatement->type == MetastatementType::labelRelation) {
+    Tableau::Node *currentNode = parentNode;
+    while (currentNode != nullptr) {
+      if (currentNode->relation && currentNode->relation->negated) {
+        auto rNegA =
+            currentNode->relation->applyRuleDeep<ProofRule::negA, Relation>(&(*metastatement));
+        if (rNegA) {
+          appliedRule = true;
+          rNegA->negated = currentNode->relation->negated;
+          appendBranches(*rNegA);
+        }
+      }
+      currentNode = currentNode->parentNode;
+    }
+  } else {
+    Tableau::Node *currentMetaNode = parentMetastatement;
+    while (currentMetaNode != nullptr) {
+      auto rNegA =
+          relation->applyRuleDeep<ProofRule::negA, Relation>(&(*currentMetaNode->metastatement));
+      if (rNegA) {
+        appliedRule = true;
+        rNegA->negated = relation->negated;
+        appendBranches(*rNegA);
+      }
+      currentMetaNode = currentMetaNode->parentMetastatement;
+    }
+  }
+  return appliedRule ? std::make_optional(true) : std::nullopt;
+}
+
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[label=\"";
   if (relation) {
@@ -138,81 +230,27 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   }
 }
 
-template <>
-bool Tableau::Node::applyRule<ProofRule::propagation>() {
-  bool appliedRule = false;
-  if (metastatement && metastatement->type == MetastatementType::labelEquality) {
-    Tableau::Node *currentNode = parentNode;
-    while (currentNode != nullptr) {
-      if (currentNode->relation && currentNode->relation->negated) {
-        auto rProp = currentNode->relation->applyRuleRecursive<ProofRule::propagation, Relation>(
-            &(*metastatement));
-        if (rProp) {
-          appliedRule = true;
-          rProp->negated = currentNode->relation->negated;
-          appendBranches(*rProp);
-        }
-      }
-      currentNode = currentNode->parentNode;
-    }
-  }
-  return appliedRule;
-}
-
-template <>
-bool Tableau::Node::applyRule<ProofRule::negA>() {
-  bool appliedRule = false;
-  if (metastatement && metastatement->type == MetastatementType::labelRelation) {
-    Tableau::Node *currentNode = parentNode;
-    while (currentNode != nullptr) {
-      if (currentNode->relation && currentNode->relation->negated) {
-        auto rNegA =
-            currentNode->relation->applyRuleRecursive<ProofRule::negA, Relation>(&(*metastatement));
-        if (rNegA) {
-          appliedRule = true;
-          rNegA->negated = currentNode->relation->negated;
-          appendBranches(*rNegA);
-        }
-      }
-      currentNode = currentNode->parentNode;
-    }
-  } else {
-    Tableau::Node *currentMetaNode = parentMetastatement;
-    while (currentMetaNode != nullptr) {
-      auto rNegA = relation->applyRuleRecursive<ProofRule::negA, Relation>(
-          &(*currentMetaNode->metastatement));
-      if (rNegA) {
-        appliedRule = true;
-        rNegA->negated = relation->negated;
-        appendBranches(*rNegA);
-      }
-      currentMetaNode = currentMetaNode->parentMetastatement;
-    }
-  }
-  return appliedRule;
-}
-
 bool Tableau::Node::applyDNFRule() {
-  auto rId = relation->applyRuleRecursive<ProofRule::id, Relation>();
+  auto rId = relation->applyRuleDeep<ProofRule::id, Relation>();
   if (rId) {
     rId->negated = relation->negated;
     appendBranches(*rId);
     return true;
   }
-  auto rComposition = relation->applyRuleRecursive<ProofRule::composition, Relation>();
+  auto rComposition = relation->applyRuleDeep<ProofRule::composition, Relation>();
   if (rComposition) {
     rComposition->negated = relation->negated;
     appendBranches(*rComposition);
     return true;
   }
-  auto rIntersection = relation->applyRuleRecursive<ProofRule::intersection, Relation>();
+  auto rIntersection = relation->applyRuleDeep<ProofRule::intersection, Relation>();
   if (rIntersection) {
     rIntersection->negated = relation->negated;
     appendBranches(*rIntersection);
     return true;
   }
   if (!relation->negated) {
-    auto rAt = relation->applyRuleRecursive<ProofRule::at, std::tuple<Relation, Metastatement>>();
+    auto rAt = relation->applyRuleDeep<ProofRule::at, std::tuple<Relation, Metastatement>>();
     if (rAt) {
       auto &[r1, metastatement] = *rAt;
       r1.negated = relation->negated;
@@ -221,7 +259,7 @@ bool Tableau::Node::applyDNFRule() {
       return true;
     }
   } else {
-    auto rNegAt = relation->applyRuleRecursive<ProofRule::negAt, Relation>();
+    auto rNegAt = relation->applyRuleDeep<ProofRule::negAt, Relation>();
     if (rNegAt) {
       auto r1 = *rNegAt;
       r1.negated = relation->negated;
@@ -229,7 +267,7 @@ bool Tableau::Node::applyDNFRule() {
       return true;
     }
   }
-  auto rChoice = relation->applyRuleRecursive<ProofRule::choice, std::tuple<Relation, Relation>>();
+  auto rChoice = relation->applyRuleDeep<ProofRule::choice, std::tuple<Relation, Relation>>();
   if (rChoice) {
     auto &[r1, r2] = *rChoice;
     r1.negated = relation->negated;
@@ -244,7 +282,7 @@ bool Tableau::Node::applyDNFRule() {
   }
 
   auto rTransitiveClosure =
-      relation->applyRuleRecursive<ProofRule::transitiveClosure, std::tuple<Relation, Relation>>();
+      relation->applyRuleDeep<ProofRule::transitiveClosure, std::tuple<Relation, Relation>>();
   if (rTransitiveClosure) {
     auto &[r1, r2] = *rTransitiveClosure;
     r1.negated = relation->negated;
@@ -267,4 +305,83 @@ bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right
     return (!!left->metastatement) < right->relation->negated;
   }
   return true;
+}
+
+bool Tableau::Node::applyAnyRule() {
+  if (metastatement) {
+    if (metastatement->type == MetastatementType::labelRelation) {
+      applyRule<ProofRule::negA, bool>();
+      return false;  // TODO: this value may be true
+    } else {
+      applyRule<ProofRule::propagation, bool>();
+      return true;
+    }
+  } else if (relation) {
+    if (relation->isNormal()) {
+      if (relation->negated) {
+        if (applyRule<ProofRule::negA, bool>()) {
+          return true;
+        }
+      } else if (applyRule<ProofRule::a, std::tuple<Relation, Metastatement>>()) {
+        return true;
+      }
+    } else if (applyDNFRule()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Tableau::Node::apply(const std::initializer_list<ProofRule> rules) {
+  for (const auto &rule : rules) {
+    switch (rule) {
+      case ProofRule::a:
+        if (applyRule<ProofRule::a, std::tuple<Relation, Metastatement>>()) {
+          return true;
+        }
+        break;
+      case ProofRule::at:
+        if (applyRule<ProofRule::at, bool>()) {
+          return true;
+        }
+        break;
+      case ProofRule::bottom:
+        break;
+      case ProofRule::choice:
+        break;
+      case ProofRule::composition:
+        break;
+      case ProofRule::converseA:
+        break;
+      case ProofRule::empty:
+        break;
+      case ProofRule::id:
+        break;
+      case ProofRule::intersection:
+        break;
+      case ProofRule::negA:
+        break;
+      case ProofRule::negAt:
+        break;
+      case ProofRule::negChoice:
+        break;
+      case ProofRule::negComposition:
+        break;
+      case ProofRule::negConverseA:
+        break;
+      case ProofRule::negId:
+        break;
+      case ProofRule::negIntersection:
+        break;
+      case ProofRule::negTransitiveClosure:
+        break;
+      case ProofRule::none:
+        break;
+      case ProofRule::propagation:
+        break;
+      case ProofRule::transitiveClosure:
+        break;
+    }
+  }
+  return false;
 }

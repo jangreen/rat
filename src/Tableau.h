@@ -30,9 +30,14 @@ class Tableau {
     void appendBranches(const Relation &leftRelation, const Relation &rightRelation);
     void appendBranches(const Relation &leftRelation);
     void appendBranches(const Metastatement &metastatement);
-    template <ProofRule::Rule rule>
-    bool applyRule();
+    template <ProofRule::Rule rule, typename ConclusionType>
+    std::optional<ConclusionType> applyRule();
+    bool apply(const std::initializer_list<ProofRule> rules);
+    bool applyAnyRule();
     bool applyDNFRule();
+
+    template <typename ClauseType>
+    std::vector<ClauseType> extractDNF();
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -47,72 +52,83 @@ class Tableau {
   std::unique_ptr<Node> rootNode;
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
-  bool applyRule(Node *node);
   bool solve(int bound = 30);
 
   // methods for regular reasoning
   template <typename ClauseType>
-  std::vector<ClauseType> DNF() {
-    while (!unreducedNodes.empty()) {
-      auto currentNode = unreducedNodes.top();
-      unreducedNodes.pop();
-      if (currentNode->metastatement) {
-        // only equality meatstatement possible
-        currentNode->applyRule<ProofRule::propagation>();
-      } else {
-        currentNode->applyDNFRule();
-      }
-    }
+  std::vector<ClauseType> DNF();
 
-    exportProof("dnfcalc");  // TODO: remove
-
-    return extractDNF<ClauseType>(rootNode.get());
-  }
-  bool applyModalRule();
-  std::tuple<Clause, Clause> calcReuqest();
-  std::tuple<Clause, Clause> extractRequest();  // and converse request
+  bool apply(const std::initializer_list<ProofRule> rules);
+  std::optional<Metastatement> applyRuleA();
+  void calcReuqest();
+  std::tuple<Clause, Clause> extractRequest() const;  // and converse request
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;
 };
 
-// helper
+// template implementations
+
 template <typename ClauseType>
-std::vector<ClauseType> extractDNF(Tableau::Node *node) {
-  if (node == nullptr || node->isClosed()) {
+std::vector<ClauseType> Tableau::DNF() {
+  while (!unreducedNodes.empty()) {
+    auto currentNode = unreducedNodes.top();
+    unreducedNodes.pop();
+    if (currentNode->metastatement) {
+      // only equality meatstatement possible
+      currentNode->applyRule<ProofRule::propagation, bool>();
+    } else {
+      currentNode->applyDNFRule();
+    }
+  }
+
+  exportProof("dnfcalc");  // TODO: remove
+
+  return rootNode->extractDNF<ClauseType>();
+};
+
+template <typename ClauseType>
+std::vector<ClauseType> Tableau::Node::extractDNF() {
+  if (isClosed()) {
     return {};
   }
-  if (node->isLeaf()) {
-    if (node->relation && node->relation->isNormal()) {
-      return {{*node->relation}};
+  if (isLeaf()) {
+    if (relation && relation->isNormal()) {
+      return {{*relation}};
     }
     if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
-      if (node->metastatement && node->metastatement->type == MetastatementType::labelEquality) {
-        return {{*node->metastatement}};
+      if (metastatement && metastatement->type == MetastatementType::labelEquality) {
+        return {{*metastatement}};
       }
     }
     return {};
   } else {
-    auto left = extractDNF<ClauseType>(node->leftNode.get());
-    auto right = extractDNF<ClauseType>(node->rightNode.get());
-    left.insert(left.end(), right.begin(), right.end());
-    if (node->relation && node->relation->isNormal()) {
-      if (left.empty()) {
-        left.push_back({});
+    std::vector<ClauseType> result;
+    if (leftNode != nullptr) {
+      auto left = leftNode->extractDNF<ClauseType>();
+      result.insert(result.end(), left.begin(), left.end());
+    }
+    if (rightNode != nullptr) {
+      auto right = rightNode->extractDNF<ClauseType>();
+      result.insert(result.end(), right.begin(), right.end());
+    }
+    if (relation && relation->isNormal()) {
+      if (result.empty()) {
+        result.push_back({});
       }
-      for (auto &clause : left) {
-        clause.push_back(*node->relation);
+      for (auto &clause : result) {
+        clause.push_back(*relation);
       }
     } else if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
-      if (node->metastatement && node->metastatement->type == MetastatementType::labelEquality) {
-        if (left.empty()) {
-          left.push_back({});
+      if (metastatement && metastatement->type == MetastatementType::labelEquality) {
+        if (result.empty()) {
+          result.push_back({});
         }
-        for (auto &clause : left) {
-          clause.push_back(*node->metastatement);
+        for (auto &clause : result) {
+          clause.push_back(*metastatement);
         }
       }
     }
-    return left;
+    return result;
   }
 }

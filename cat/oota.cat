@@ -1,2 +1,2 @@
-let dep = data | addr | ctrl
-acyclic dep | rf
+let dep = data | addr | ctrl | rf
+acyclic dep //| rf

@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "parsing/CatInferVisitor.h"
 #include "Metastatement.h"
+#include "parsing/CatInferVisitor.h"
 
 Relation::Relation(const Relation &other)
     : operation(other.operation),
@@ -24,7 +24,6 @@ Relation &Relation::operator=(const Relation &other) {
   swap(*this, copy);
   return *this;
 }
-
 Relation::Relation(const std::string &expression) {
   CatInferVisitor visitor;
   *this = visitor.parseRelation(expression);
@@ -206,7 +205,9 @@ Relation Relation::substituteLeft(Relation &&substitutedRelation) {
     substitutedRelation.label = l;
     return substitutedRelation;
   }
-  return Relation(operation, std::move(substitutedRelation), Relation(*rightOperand));
+  Relation result(operation, std::move(substitutedRelation), Relation(*rightOperand));
+  result.negated = negated;
+  return result;
 }
 template <>
 std::tuple<Relation, Relation> Relation::substituteLeft(std::tuple<Relation, Relation> &&newLeft) {
@@ -225,7 +226,9 @@ std::tuple<Relation, Metastatement> Relation::substituteLeft(
 }
 template <>
 Relation Relation::substituteRight(Relation &&newRight) {
-  return Relation(operation, Relation(*leftOperand), std::move(newRight));
+  Relation result(operation, Relation(*leftOperand), std::move(newRight));
+  result.negated = negated;
+  return result;
 }
 template <>
 std::tuple<Relation, Relation> Relation::substituteRight(
@@ -314,6 +317,15 @@ std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule
     Relation::maxLabel++;
     r1.label = Relation::maxLabel;
     Metastatement m(MetastatementType::labelRelation, *label, Relation::maxLabel, *identifier);
+    std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
+    return result;
+  } else if (label && operation == Operation::converse) {
+    // Rule::negA
+    Relation r1(Operation::none);  // empty relation
+    Relation::maxLabel++;
+    r1.label = Relation::maxLabel;
+    Metastatement m(MetastatementType::labelRelation, Relation::maxLabel, *label,
+                    *leftOperand->identifier);
     std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
     return result;
   }

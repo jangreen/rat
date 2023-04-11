@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "../Constraint.h"
+#include "../cat/Constraint.h"
 #include "../Relation.h"
 
 class CatInferVisitor : CatBaseVisitor {

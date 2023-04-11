@@ -2,7 +2,7 @@
 #include <optional>
 #include <string>
 
-#include "Relation.h"
+#include "../Relation.h"
 
 enum class ConstraintType { empty, irreflexive, acyclic };
 
