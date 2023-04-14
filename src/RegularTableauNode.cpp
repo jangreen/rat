@@ -59,6 +59,16 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     output << "N" << this << " -> "
            << "N" << childNode << "[label=\"" << labelString << "\"];" << std::endl;
   }
+  // parents
+  for (const auto parentNode : parentNodes) {
+    output << "N" << this << " -> "
+           << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
+  }
+  // root parents
+  for (const auto parentNode : rootParents) {
+    output << "N" << this << " -> "
+           << "N" << parentNode << "[color=\"brown\"];" << std::endl;
+  }
   printed = true;
 
   // children

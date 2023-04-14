@@ -26,8 +26,9 @@ class RegularTableau {
     Clause relations;
     std::vector<Node *> childNodes;
     std::map<Node *, EdgeLabel> parentNodes;
-    Node *parentNode = nullptr;                            // TODO: for counterexample first parent
-    std::vector<int> parentNodeRenaming;                   // TODO
+    std::vector<Node *> rootParents;      // parent nodes that are reachable by some root node
+    Node *parentNode = nullptr;           // TODO: for counterexample first parent
+    std::vector<int> parentNodeRenaming;  // TODO
     std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
     std::vector<Metastatement> parentEquivalences;         // TODO
     bool closed = false;
@@ -63,6 +64,9 @@ class RegularTableau {
   void addNode(Node *parent, ExtendedClause clause,
                const std::optional<Metastatement> &metastatement =
                    std::nullopt);  // TODO: move in node class
+  void addEdge(Node *parent, Node *child, EdgeLabel label);
+  void updateRootParents(Node *node);
+  void removeEdge(Node *parent, Node *child);
   std::optional<Relation> saturateRelation(const Relation &relation);
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);

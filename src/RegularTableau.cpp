@@ -86,30 +86,29 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
   auto dnf = DNF<ExtendedClause>(nodeCopy);
   for (const auto &clause : dnf) {
     addNode(node, clause);  // epsilon edge label
+    exportProof("regular");
   }
-
   // change incoming edges from parents
-  for (const auto parent : node->parentNodes) {
+  auto parentNodesCopy = node->parentNodes;
+  for (const auto parent : parentNodesCopy) {
     const auto &[parentNode, parentLabel] = parent;
-    parentNode->childNodes.insert(parentNode->childNodes.end(), node->childNodes.begin(),
-                                  node->childNodes.end());
 
     for (const auto childNode : node->childNodes) {
-      // counterexample
-      childNode->parentNodeExpansionMeta = node->parentNodeExpansionMeta;
-      childNode->parentNode = node->parentNode;
-      childNode->parentNodeRenaming = node->parentNodeRenaming;
-      childNode->parentEquivalences = node->parentEquivalences;
-      // fix/change label
-      childNode->parentNodes[parentNode] = parentLabel;
+      if (!childNode->parentNodes[node]) {  // here are all children epsilon
+        // counterexample
+        childNode->parentNodeExpansionMeta = node->parentNodeExpansionMeta;
+        childNode->parentNode = node->parentNode;
+        childNode->parentNodeRenaming = node->parentNodeRenaming;
+        childNode->parentEquivalences = node->parentEquivalences;
+        // add edge
+        addEdge(parentNode, childNode, parentLabel);
+      }
     }
 
     // remove edge from parent to insoncsitent node
-    auto childIt = std::find(parentNode->childNodes.begin(), parentNode->childNodes.end(), node);
-    parentNode->childNodes.erase(childIt);
+    removeEdge(parentNode, node);
+    exportProof("regular");
   }
-  auto parentNodesCopy = node->parentNodes;
-  node->parentNodes.clear();  // TODO clear at end of function?// add new root node if needed
   if (std::find(rootNodes.begin(), rootNodes.end(), node) != rootNodes.end()) {
     for (auto childNode : node->childNodes) {
       if (!childNode->parentNodes[node]) {
@@ -153,14 +152,49 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
       // remove edge
       for (auto child :
            node->childNodes) {  // new epsilon childs (are directly connected to parentNode)
-        auto childIt =
-            std::find(parentNode->childNodes.begin(), parentNode->childNodes.end(), child);
-        parentNode->childNodes.erase(childIt);
-        node->parentNodes.erase(parentNode);
+        removeEdge(parentNode, child);
       }
     }
   }
   return true;
+}
+
+void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
+  parent->childNodes.push_back(child);
+  child->parentNodes[parent] = label;
+  if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+      !parent->rootParents.empty()) {
+    child->rootParents.push_back(parent);
+  }
+  exportProof("regular");
+}
+
+void RegularTableau::updateRootParents(Node *node) {
+  if (std::find(rootNodes.begin(), rootNodes.end(), node) == rootNodes.end() &&
+      node->rootParents.empty()) {
+    for (auto childNode : node->childNodes) {
+      auto foundNode =
+          std::find(childNode->rootParents.begin(), childNode->rootParents.end(), node);
+      if (foundNode != childNode->rootParents.end()) {
+        childNode->rootParents.erase(foundNode);
+        updateRootParents(childNode);
+      }
+    }
+  }
+}
+
+void RegularTableau::removeEdge(Node *parent, Node *child) {
+  auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
+  if (childIt != parent->childNodes.end()) {
+    parent->childNodes.erase(childIt);
+  }
+  child->parentNodes.erase(parent);
+  auto rootParentIt = std::find(child->rootParents.begin(), child->rootParents.end(), parent);
+  if (rootParentIt != child->rootParents.end()) {
+    child->rootParents.erase(rootParentIt);
+  }
+  updateRootParents(child);
+  exportProof("regular");
 }
 
 // clause is in normal form
@@ -209,6 +243,10 @@ void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
         newNode->parentNodes[parent] = edgelabel;
       } else {
         newNode->parentNodes[parent] = std::nullopt;
+      }
+      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+          !parent->rootParents.empty()) {
+        newNode->rootParents.push_back(parent);
       }
     }
 
@@ -405,6 +443,10 @@ bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    if (std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
+        currentNode->rootParents.empty()) {
+      continue;
+    }
     /* TODO: remove: */
     exportProof("regular");  // DEBUG
     if (!expandNode(currentNode)) {

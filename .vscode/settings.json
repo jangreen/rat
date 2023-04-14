@@ -84,7 +84,8 @@
         "queue": "cpp",
         "memory_resource": "cpp",
         "typeindex": "cpp",
-        "tso_oota": "cpp"
+        "tso_oota": "cpp",
+        "__verbose_abort": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,
