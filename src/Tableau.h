@@ -36,8 +36,7 @@ class Tableau {
     bool applyAnyRule();
     bool applyDNFRule();
 
-    template <typename ClauseType>
-    std::vector<ClauseType> extractDNF();
+    std::vector<ExtendedClause> extractDNF();
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -55,8 +54,7 @@ class Tableau {
   bool solve(int bound = 30);
 
   // methods for regular reasoning
-  template <typename ClauseType>
-  std::vector<ClauseType> DNF();
+  std::vector<ExtendedClause> DNF();
 
   bool apply(const std::initializer_list<ProofRule> rules);
   std::optional<Metastatement> applyRuleA();
@@ -66,69 +64,3 @@ class Tableau {
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;
 };
-
-// template implementations
-
-template <typename ClauseType>
-std::vector<ClauseType> Tableau::DNF() {
-  while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    if (currentNode->metastatement) {
-      // only equality meatstatement possible
-      currentNode->applyRule<ProofRule::propagation, bool>();
-    } else {
-      currentNode->applyDNFRule();
-    }
-  }
-
-  exportProof("dnfcalc");  // TODO: remove
-
-  return rootNode->extractDNF<ClauseType>();
-};
-
-template <typename ClauseType>
-std::vector<ClauseType> Tableau::Node::extractDNF() {
-  if (isClosed()) {
-    return {};
-  }
-  if (isLeaf()) {
-    if (relation && relation->isNormal()) {
-      return {{*relation}};
-    }
-    if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
-      if (metastatement && metastatement->type == MetastatementType::labelEquality) {
-        return {{*metastatement}};
-      }
-    }
-    return {};
-  } else {
-    std::vector<ClauseType> result;
-    if (leftNode != nullptr) {
-      auto left = leftNode->extractDNF<ClauseType>();
-      result.insert(result.end(), left.begin(), left.end());
-    }
-    if (rightNode != nullptr) {
-      auto right = rightNode->extractDNF<ClauseType>();
-      result.insert(result.end(), right.begin(), right.end());
-    }
-    if (relation && relation->isNormal()) {
-      if (result.empty()) {
-        result.push_back({});
-      }
-      for (auto &clause : result) {
-        clause.push_back(*relation);
-      }
-    } else if constexpr (std::is_same_v<ClauseType, ExtendedClause>) {
-      if (metastatement && metastatement->type == MetastatementType::labelEquality) {
-        if (result.empty()) {
-          result.push_back({});
-        }
-        for (auto &clause : result) {
-          clause.push_back(*metastatement);
-        }
-      }
-    }
-    return result;
-  }
-}

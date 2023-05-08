@@ -1,3 +1,3 @@
 assume dep <= po
 
-cat assert sc <= oota-modified
+cat assert sc <= oota

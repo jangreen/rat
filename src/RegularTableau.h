@@ -55,10 +55,9 @@ class RegularTableau {
   std::stack<Node *> unreducedNodes;
   static std::vector<Assumption> assumptions;
 
-  template <typename ClauseType = Clause>
-  static std::vector<ClauseType> DNF(const Clause &clause) {
+  static std::vector<ExtendedClause> DNF(const Clause &clause) {
     Tableau tableau{clause};
-    return tableau.DNF<ClauseType>();
+    return tableau.DNF();
   }
   bool expandNode(Node *node);
   void addNode(Node *parent, ExtendedClause clause,

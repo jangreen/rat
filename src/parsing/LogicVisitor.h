@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "../Assumption.h"
-#include "CatInferVisitor.h"
 #include "../RegularTableau.h"
 #include "../Relation.h"
+#include "CatInferVisitor.h"
 
 // helper
 Relation loadModel(const std::string &file) {
@@ -86,6 +86,7 @@ class Logic : LogicBaseVisitor {
     r1.negated = false;
     r2.label = 0;
     r2.negated = true;
+    // TODO: remove  std::cout << r1.toString() << " <= " << r2.toString() << std::endl;
     Assertion response{std::move(r1), std::move(r2)};
     return response;
   }
@@ -96,6 +97,7 @@ class Logic : LogicBaseVisitor {
     auto lhsModel = loadModel(lhs + ".cat");
     auto rhsModel = loadModel(rhs + ".cat");
     lhsModel.negated = true;
+    // TODO: remove std::cout << rhsModel.toString() << " <= " << lhsModel.toString() << std::endl;
     Assertion response{std::move(rhsModel), std::move(lhsModel)};
     return response;
   }

@@ -7,12 +7,10 @@
 #include <tuple>
 #include <utility>
 
-#include "Tableau.h"
-
 RegularTableau::RegularTableau(std::initializer_list<Relation> initalRelations)
     : RegularTableau(std::vector(initalRelations)) {}
 RegularTableau::RegularTableau(Clause initalRelations) {
-  auto dnf = DNF<ExtendedClause>(initalRelations);
+  auto dnf = DNF(initalRelations);
   for (auto clause : dnf) {
     addNode(nullptr, clause);
   }
@@ -37,7 +35,7 @@ bool RegularTableau::expandNode(Node *node) {
     // check if consistent
     bool inconsistent = isInconsistent(node, converseRequest);
     if (!inconsistent) {
-      auto dnf = DNF<ExtendedClause>(request);
+      auto dnf = DNF(request);
       for (const auto &clause : dnf) {
         addNode(node, clause, metastatement);
       }
@@ -83,7 +81,7 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
       missingRelations.push_back(relation);
     }
   }
-  auto dnf = DNF<ExtendedClause>(nodeCopy);
+  auto dnf = DNF(nodeCopy);
   for (const auto &clause : dnf) {
     addNode(node, clause);  // epsilon edge label
     exportProof("regular");
@@ -229,8 +227,16 @@ void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
   saturate(clause);
   auto saturatedDNF = DNF(clause);
   for (auto saturatedClause : saturatedDNF) {
+    // filter clause
+    Clause filteredClause;
+    for (auto &literal : saturatedClause) {
+      auto relation = std::get_if<Relation>(&literal);
+      if (relation) {
+        filteredClause.push_back(*relation);
+      }
+    }
     // create node, edges, push to unreduced nodes
-    auto newNode = std::make_unique<Node>(saturatedClause);
+    auto newNode = std::make_unique<Node>(filteredClause);
     if (metastatement) {
       newNode->parentNodeExpansionMeta = *metastatement;
     }

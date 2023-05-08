@@ -1,0 +1,4 @@
+
+assume rf;rf <= 0
+
+cat assert a <= aa
