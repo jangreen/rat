@@ -1,0 +1,4 @@
+
+//assume a;a <= 0
+
+assert a^+ <= a;a

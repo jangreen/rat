@@ -18,6 +18,17 @@ RegularTableau::RegularTableau(Clause initalRelations) {
 
 std::vector<Assumption> RegularTableau::assumptions;
 
+// helper
+void resetUnreducedNodes(Tableau *tableau, Tableau::Node *node) {
+  tableau->unreducedNodes.push(node);
+  if (node->leftNode != nullptr) {
+    resetUnreducedNodes(tableau, node->leftNode.get());
+  }
+  if (node->rightNode != nullptr) {
+    resetUnreducedNodes(tableau, node->rightNode.get());
+  }
+}
+
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->relations};
@@ -32,6 +43,12 @@ bool RegularTableau::expandNode(Node *node) {
       node->closed = true;
       return true;
     }
+
+    // reset unreduced nodes
+    while (!tableau.unreducedNodes.empty()) {
+      tableau.unreducedNodes.pop();
+    }
+    resetUnreducedNodes(&tableau, tableau.rootNode.get());
 
     auto dnf = tableau.DNF();
     for (const auto &clause : dnf) {
@@ -125,7 +142,6 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
   while (temp != nullptr) {
     if (temp->relation && temp->relation->isNormal()) {
       converseRequest.push_back(*temp->relation);
-      std::cout << temp->relation->toString() << std::endl;
     }
     temp = &(*temp->leftNode);  // exploit only alpha rules applied
   }
@@ -401,7 +417,8 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
 std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption,
                                                            const Relation &relation) {
   if (relation.saturatedId || relation.operation == Operation::identity ||
-      relation.operation == Operation::empty) {
+      relation.operation == Operation::empty ||
+      (relation.operation == Operation::converse && relation.leftOperand->saturatedId)) {
     return std::nullopt;
   }
   if (relation.label) {

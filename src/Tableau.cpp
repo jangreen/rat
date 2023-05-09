@@ -232,26 +232,8 @@ std::tuple<ExtendedClause, Clause> Tableau::extractRequest() const {
 }
 
 void Tableau::calcReuqest() {
-  // remove old positive
-  /*Node *temp = rootNode.get();
-  while (temp != nullptr) {
-    if (temp->relation && !temp->relation->negated) {
-      if (temp->parentNode != nullptr) {
-        Node *parent = temp->parentNode;
-        parent->leftNode = std::move(temp->leftNode);
-        if (parent->leftNode != nullptr) {
-          parent->leftNode->parentNode = parent;
-        }
-      } else {
-        rootNode = std::move(temp->leftNode);
-      }
-
-      break;
-    }
-    temp = temp->leftNode.get();
-  }*/
-
-  while (!unreducedNodes.empty()) {
+  while (unreducedNodes.top()->metastatement ||
+         unreducedNodes.top()->relation->negated) {  //! unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
@@ -274,6 +256,7 @@ void Tableau::calcReuqest() {
 // DNF
 std::vector<ExtendedClause> Tableau::DNF() {
   while (!unreducedNodes.empty()) {
+    exportProof("dnfcalc");  // TODO: remove
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
