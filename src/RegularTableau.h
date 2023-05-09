@@ -70,7 +70,7 @@ class RegularTableau {
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);
   void saturate(Clause &clause);
-  bool isInconsistent(Node *node, const Clause &converseRequest);
+  bool isInconsistent(Node *node, Node *newNode);
   bool solve();
   void extractCounterexample(Node *openNode);
 

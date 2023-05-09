@@ -174,7 +174,7 @@ std::optional<Metastatement> Tableau::applyRuleA() {
   return std::nullopt;
 }
 
-std::tuple<Clause, Clause> Tableau::extractRequest() const {
+std::tuple<ExtendedClause, Clause> Tableau::extractRequest() const {
   // exrtact terms for new node
   Node *node = rootNode.get();
   std::optional<Relation> oldPositive;
@@ -194,7 +194,7 @@ std::tuple<Clause, Clause> Tableau::extractRequest() const {
     node = node->leftNode.get();
   }
 
-  Clause request{*newPositive};
+  ExtendedClause request{*newPositive};
   Clause converseRequest;
   node = rootNode.get();
   while (node != nullptr) {  // exploit that only alpha rules applied
@@ -221,21 +221,50 @@ std::tuple<Clause, Clause> Tableau::extractRequest() const {
       if (allLabelsActiveInOld) {
         converseRequest.push_back(*node->relation);
       }
+    } else if (node->metastatement &&
+               node->metastatement->type == MetastatementType::labelEquality) {
+      request.push_back(*node->metastatement);
     }
     node = node->leftNode.get();
   }
-  std::tuple<Clause, Clause> result{request, converseRequest};
+  std::tuple<ExtendedClause, Clause> result{request, converseRequest};
   return result;
 }
 
 void Tableau::calcReuqest() {
+  // remove old positive
+  /*Node *temp = rootNode.get();
+  while (temp != nullptr) {
+    if (temp->relation && !temp->relation->negated) {
+      if (temp->parentNode != nullptr) {
+        Node *parent = temp->parentNode;
+        parent->leftNode = std::move(temp->leftNode);
+        if (parent->leftNode != nullptr) {
+          parent->leftNode->parentNode = parent;
+        }
+      } else {
+        rootNode = std::move(temp->leftNode);
+      }
+
+      break;
+    }
+    temp = temp->leftNode.get();
+  }*/
+
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
       currentNode->applyRule<ProofRule::negA, bool>();
     } else if (currentNode->relation && currentNode->relation->negated) {
-      currentNode->applyRule<ProofRule::negA, bool>();
+      auto rNegAt = currentNode->relation->applyRuleDeep<ProofRule::negAt, Relation>();
+      if (rNegAt) {
+        auto r1 = *rNegAt;
+        r1.negated = currentNode->relation->negated;
+        currentNode->appendBranches(r1);
+      } else {
+        currentNode->applyRule<ProofRule::negA, bool>();
+      }
     }
   }
 
@@ -258,57 +287,41 @@ std::vector<ExtendedClause> Tableau::DNF() {
   exportProof("dnfcalc");  // TODO: remove
 
   auto dnf = rootNode->extractDNF();
-  // filter redundant terms due to equality statements
+
+  // keep only terms with active labels
   for (auto &clause : dnf) {
-    // calc eqquivalence classes
-    std::vector<std::vector<int>> equivalenceClasses;
-    for (auto &literal : clause) {
-      auto metastatement = std::get_if<Metastatement>(&literal);
-      if (metastatement) {
-        bool alreadyExists = false;
-        for (auto &EquivClass : equivalenceClasses) {
-          bool l1found = std::find(EquivClass.begin(), EquivClass.end(), metastatement->label1) !=
-                         EquivClass.end();
-          bool l2found = std::find(EquivClass.begin(), EquivClass.end(), metastatement->label2) !=
-                         EquivClass.end();
-          if (l1found && !l2found) {
-            EquivClass.push_back(metastatement->label2);
-            alreadyExists = true;
-          }
-          if (!l1found && l2found) {
-            EquivClass.push_back(metastatement->label1);
-            alreadyExists = true;
-          }
-        }
-        if (!alreadyExists) {
-          equivalenceClasses.push_back({metastatement->label1, metastatement->label2});
-        }
-      }
-    }
-    // remove minimal element in each class
-    std::vector<int> forbidden;
-    for (auto &equivClass : equivalenceClasses) {
-      auto minLabel = std::min_element(equivClass.begin(), equivClass.end());
-      equivClass.erase(minLabel);
-      forbidden.insert(forbidden.end(), equivClass.begin(), equivClass.end());
-    }
-    std::sort(forbidden.begin(), forbidden.end());
-    // filter clause: erease terms with non minimal labels
+    // determine active labels & filter terms with non active labels
     auto clauseCopy = clause;
     clause.clear();
+    std::vector<int> activeLabels;
     for (auto &literal : clauseCopy) {
       auto relation = std::get_if<Relation>(&literal);
-      if (relation) {
-        auto labels = relation->labels();
-        std::vector<int> intersection;
-        std::sort(labels.begin(), labels.end());
-        std::set_intersection(labels.begin(), labels.end(), forbidden.begin(), forbidden.end(),
-                              back_inserter(intersection));
-        if (intersection.empty()) {
+      if (relation && !relation->negated) {
+        activeLabels = relation->labels();
+        clause.push_back(literal);
+        std::sort(activeLabels.begin(), activeLabels.end());
+        break;
+      }
+    }
+
+    for (auto &literal : clauseCopy) {
+      auto relation = std::get_if<Relation>(&literal);
+      if (relation && relation->negated) {
+        bool include = true;
+        for (auto label : relation->labels()) {
+          if (std::find(activeLabels.begin(), activeLabels.end(), label) == activeLabels.end()) {
+            include = false;
+            break;
+          }
+        }
+        if (include) {
           clause.push_back(literal);
         }
       } else {
-        clause.push_back(literal);
+        auto metastatement = std::get_if<Metastatement>(&literal);
+        if (metastatement && metastatement->type == MetastatementType::labelEquality) {
+          clause.push_back(literal);
+        }
       }
     }
   }

@@ -26,22 +26,59 @@ bool RegularTableau::expandNode(Node *node) {
   if (metastatement) {
     // tableau.apply({ProofRule::at, ProofRule::propagation});  // TODO:
     tableau.calcReuqest();
-    const auto &[request, converseRequest] = tableau.extractRequest();
-    if (tableau.rootNode->isClosed()) {
+    // const auto &[request, converseRequest] = tableau.extractRequest();
+    if (tableau.rootNode->isClosed()) {  // TODO: when should this be checked?
       // can happen with emptiness hypotheses
       node->closed = true;
       return true;
     }
-    // check if consistent
-    bool inconsistent = isInconsistent(node, converseRequest);
-    if (!inconsistent) {
-      auto dnf = DNF(request);
-      for (const auto &clause : dnf) {
-        addNode(node, clause, metastatement);
+
+    auto dnf = tableau.DNF();
+    for (const auto &clause : dnf) {
+      // TODO: refactor DRY
+      // calculate equivalence class to rename metaststatement
+      std::vector<std::vector<int>> equivalenceClasses;
+      for (auto &literal : clause) {
+        auto metastatement = std::get_if<Metastatement>(&literal);
+        if (metastatement) {
+          bool alreadyExists = false;
+          for (auto &EquivClass : equivalenceClasses) {
+            bool l1found = std::find(EquivClass.begin(), EquivClass.end(), metastatement->label1) !=
+                           EquivClass.end();
+            bool l2found = std::find(EquivClass.begin(), EquivClass.end(), metastatement->label2) !=
+                           EquivClass.end();
+            if (l1found && !l2found) {
+              EquivClass.push_back(metastatement->label2);
+              alreadyExists = true;
+            }
+            if (!l1found && l2found) {
+              EquivClass.push_back(metastatement->label1);
+              alreadyExists = true;
+            }
+          }
+          if (!alreadyExists) {
+            equivalenceClasses.push_back({metastatement->label1, metastatement->label2});
+          }
+        }
       }
-      if (dnf.empty()) {
-        node->closed = true;
+      // fix metatstatement
+      for (auto &equivClass : equivalenceClasses) {
+        if (std::find(equivClass.begin(), equivClass.end(), metastatement->label1) !=
+            equivClass.end()) {
+          auto minLabel = std::min_element(equivClass.begin(), equivClass.end());
+          metastatement->label1 = *minLabel;
+        }
+        if (std::find(equivClass.begin(), equivClass.end(), metastatement->label2) !=
+            equivClass.end()) {
+          auto minLabel = std::min_element(equivClass.begin(), equivClass.end());
+          metastatement->label2 = *minLabel;
+        }
       }
+      // TODO: -------
+      addNode(node, clause, metastatement);
+    }
+    if (dnf.empty()) {
+      node->closed = true;
     }
 
     return true;
@@ -59,9 +96,55 @@ std::vector<int> getActiveLabels(RegularTableau::Node *node) {
   return {};
 }
 
-bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
+bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
+  if (!newNode->parentNodeExpansionMeta) {  // is already alternative node to its parent
+    return false;
+  }
+  // calculate converse request: remove positive, inverse rename
+  Clause converseRequest = newNode->relations;
+  converseRequest.erase(std::remove_if(converseRequest.begin(), converseRequest.end(),
+                                       [](const Relation &r) { return !r.negated; }),
+                        converseRequest.end());
+  for (auto &relation : converseRequest) {
+    relation.inverseRename(newNode->parentNodeRenaming);
+  }
+  // add parent terms to converse request (see test6)
+  converseRequest.insert(converseRequest.end(), node->relations.begin(), node->relations.end());
+  Tableau calcConverseReq(converseRequest);
+  auto edgeLabel = newNode->parentNodes[node];
+  calcConverseReq.rootNode->appendBranches(std::get<Metastatement>(*edgeLabel));
+  calcConverseReq.calcReuqest();
+  if (calcConverseReq.rootNode->isClosed()) {
+    newNode->closed = true;
+    return false;
+  }
+  calcConverseReq.exportProof("converserequestcalc");
+  // extract coverse request
+  Tableau::Node *temp = &(*calcConverseReq.rootNode);
+  converseRequest.clear();
+  while (temp != nullptr) {
+    if (temp->relation && temp->relation->isNormal()) {
+      converseRequest.push_back(*temp->relation);
+      std::cout << temp->relation->toString() << std::endl;
+    }
+    temp = &(*temp->leftNode);  // exploit only alpha rules applied
+  }
+  // filter active labels
+  Clause filtered;
+  auto activeLabels = getActiveLabels(node);
+  std::copy_if(
+      converseRequest.begin(), converseRequest.end(), std::back_inserter(filtered),
+      [activeLabels](Relation &r) {
+        for (auto l : r.labels()) {
+          if (std::find(activeLabels.begin(), activeLabels.end(), l) == activeLabels.end()) {
+            return false;
+          }
+        }
+        return true;
+      });
+  // compare if new
   bool inconsistent = false;
-  for (const auto &relation : converseRequest) {
+  for (const auto &relation : filtered) {
     if (std::find(node->relations.begin(), node->relations.end(), relation) ==
         node->relations.end()) {
       inconsistent = true;
@@ -75,7 +158,7 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
   // calculate epsilon child
   Clause nodeCopy = node->relations;
   Clause missingRelations;
-  for (const auto &relation : converseRequest) {
+  for (const auto &relation : filtered) {
     if (std::find(nodeCopy.begin(), nodeCopy.end(), relation) == nodeCopy.end()) {
       nodeCopy.push_back(relation);
       missingRelations.push_back(relation);
@@ -88,9 +171,7 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
   }
   // change incoming edges from parents
   auto parentNodesCopy = node->parentNodes;
-  for (const auto parent : parentNodesCopy) {
-    const auto &[parentNode, parentLabel] = parent;
-
+  for (const auto &[parentNode, parentLabel] : parentNodesCopy) {
     for (const auto childNode : node->childNodes) {
       if (!childNode->parentNodes[node]) {  // here are all children epsilon
         // counterexample
@@ -115,42 +196,17 @@ bool RegularTableau::isInconsistent(Node *node, const Clause &converseRequest) {
     }
   }
 
-  exportProof("regular");
-
-  // check iteratively for inconsistencies
-  for (auto &relation : missingRelations) {
-    relation.inverseRename(node->parentNodeRenaming);
-  }
-  Tableau calcConverseReq(missingRelations);
-  calcConverseReq.rootNode->appendBranches(*node->parentNodeExpansionMeta);
-  calcConverseReq.calcReuqest();
-  Tableau::Node *temp = &(*calcConverseReq.rootNode);
-  missingRelations.clear();
-  while (temp != nullptr) {
-    if (temp->relation && temp->relation->isNormal()) {
-      missingRelations.push_back(*temp->relation);
-    }
-    temp = &(*temp->leftNode);  // exploit only alpha rules applied
-  }
-
+  // check recursively
   for (auto const &[parentNode, parentLabel] : parentNodesCopy) {
-    Clause filtered;
-    auto activeLabels = getActiveLabels(parentNode);
-    std::copy_if(
-        missingRelations.begin(), missingRelations.end(), std::back_inserter(filtered),
-        [activeLabels](Relation &r) {
-          for (auto l : r.labels()) {
-            if (std::find(activeLabels.begin(), activeLabels.end(), l) == activeLabels.end()) {
-              return false;
-            }
+    for (const auto childNode : node->childNodes) {
+      if (!childNode->parentNodes[node]) {
+        if (isInconsistent(parentNode, childNode)) {
+          // remove edge
+          for (auto child :
+               node->childNodes) {  // new epsilon childs (are directly connected to parentNode)
+            removeEdge(parentNode, child);
           }
-          return true;
-        });
-    if (isInconsistent(parentNode, filtered)) {
-      // remove edge
-      for (auto child :
-           node->childNodes) {  // new epsilon childs (are directly connected to parentNode)
-        removeEdge(parentNode, child);
+        }
       }
     }
   }
@@ -235,7 +291,8 @@ void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
         filteredClause.push_back(*relation);
       }
     }
-    // create node, edges, push to unreduced nodes
+
+    // create node, edges
     auto newNode = std::make_unique<Node>(filteredClause);
     if (metastatement) {
       newNode->parentNodeExpansionMeta = *metastatement;
@@ -255,29 +312,34 @@ void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
         newNode->rootParents.push_back(parent);
       }
     }
-
-    auto existingNode = nodes.find(newNode);
-    if (existingNode != nodes.end()) {
-      // equivalent node exists
-      if (parent != nullptr) {
-        parent->childNodes.push_back(existingNode->get());
-        if (metastatement) {
-          std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
-          existingNode->get()->parentNodes[parent] = edgelabel;
-        } else {
-          existingNode->get()->parentNodes[parent] = std::nullopt;
+    // check if consistent
+    bool inconsistent =
+        parent && isInconsistent(parent, newNode.get());  // parent null if root node
+    if (!inconsistent) {
+      // push to unreduced nodes, add node to proof
+      auto existingNode = nodes.find(newNode);
+      if (existingNode != nodes.end()) {
+        // equivalent node exists
+        if (parent != nullptr) {
+          parent->childNodes.push_back(existingNode->get());
+          if (metastatement) {
+            std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
+            existingNode->get()->parentNodes[parent] = edgelabel;
+          } else {
+            existingNode->get()->parentNodes[parent] = std::nullopt;
+          }
         }
-      }
-    } else {
-      // equivalent node does not exist
-      if (parent != nullptr) {
-        parent->childNodes.push_back(newNode.get());
       } else {
-        // new root node
-        rootNodes.push_back(newNode.get());
+        // equivalent node does not exist
+        if (parent != nullptr) {
+          parent->childNodes.push_back(newNode.get());
+        } else {
+          // new root node
+          rootNodes.push_back(newNode.get());
+        }
+        unreducedNodes.push(newNode.get());
+        nodes.emplace(std::move(newNode));
       }
-      unreducedNodes.push(newNode.get());
-      nodes.emplace(std::move(newNode));
     }
   }
 }
@@ -449,8 +511,9 @@ bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    if (std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
-        currentNode->rootParents.empty()) {
+    if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
+         currentNode->rootParents.empty()) ||
+        currentNode->closed) {
       continue;
     }
     /* TODO: remove: */

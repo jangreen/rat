@@ -43,9 +43,8 @@ Tableau::Node::Node(Tableau *tableau, const Metastatement &&metastatement)
 
 bool Tableau::Node::isClosed() {
   // Lazy evaluated closed nodes
-  bool expanded = leftNode != nullptr;
   closed = closed ||
-           (expanded && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed()));
+           (leftNode && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed()));
   return closed;
 }
 

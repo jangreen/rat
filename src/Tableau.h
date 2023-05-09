@@ -59,7 +59,7 @@ class Tableau {
   bool apply(const std::initializer_list<ProofRule> rules);
   std::optional<Metastatement> applyRuleA();
   void calcReuqest();
-  std::tuple<Clause, Clause> extractRequest() const;  // and converse request
+  std::tuple<ExtendedClause, Clause> extractRequest() const;  // and converse request
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;
