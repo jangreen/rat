@@ -1,1 +1,3 @@
+let dep = data | addr | ctrl
+let rf = rfe | rfi
 acyclic dep | rf

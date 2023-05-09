@@ -1,8 +1,0 @@
-assume (ctrl | addr | data)^+ <= po
-assume rf <= loc
-assume rf;rf <= 0
-assume (ctrl | addr | data) & id <= 0
-assume po & id <= 0
-assume po <= int
-
-cat assert aarch64-modified <= oota

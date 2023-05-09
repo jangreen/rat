@@ -37,7 +37,7 @@ typedef std::tuple<Relation, Relation> Assertion;
 
 class Logic : LogicBaseVisitor {
  public:
-  /*std::tuple<std::vector<Assumption>, Assertion>*/ std::any visitStatement(
+  /*std::tuple<std::vector<Assumption>, std::vector<Assertion>>*/ std::any visitStatement(
       LogicParser::StatementContext *ctx) {
     for (const auto &letDefinition : ctx->letDefinition()) {
       std::string name = letDefinition->NAME()->getText();
@@ -45,13 +45,14 @@ class Logic : LogicBaseVisitor {
       Relation::relations.insert({name, derivedRelation});
     }
 
-    std::optional<Assertion> assertion;
-    const auto &assertionContext = ctx->assertion();
-    if (assertionContext != nullptr) {
-      assertion = any_cast<Assertion>(assertionContext->accept(this));
-    } else {
-      const auto &assertionMmContext = ctx->mmAssertion();
-      assertion = any_cast<Assertion>(assertionMmContext->accept(this));
+    std::vector<Assertion> assertions;
+    for (const auto &assertionContext : ctx->assertion()) {
+      auto assertion = any_cast<Assertion>(assertionContext->accept(this));
+      assertions.push_back(std::move(assertion));
+    }
+    for (const auto &assertionMmContext : ctx->mmAssertion()) {
+      auto assertion = any_cast<Assertion>(assertionMmContext->accept(this));
+      assertions.push_back(std::move(assertion));
     }
 
     std::vector<Assumption> hypotheses;
@@ -59,8 +60,8 @@ class Logic : LogicBaseVisitor {
       auto hypothesis = any_cast<Assumption>(hypothesisContext->accept(this));
       hypotheses.push_back(std::move(hypothesis));
     }
-    std::tuple<std::vector<Assumption>, Assertion> response{std::move(hypotheses),
-                                                            std::move(*assertion)};
+    std::tuple<std::vector<Assumption>, std::vector<Assertion>> response{std::move(hypotheses),
+                                                                         std::move(assertions)};
     return response;
   }
 
@@ -102,7 +103,8 @@ class Logic : LogicBaseVisitor {
     return response;
   }
 
-  static std::tuple<std::vector<Assumption>, Assertion> parse(const std::string &filePath) {
+  static std::tuple<std::vector<Assumption>, std::vector<Assertion>> parse(
+      const std::string &filePath) {
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);
@@ -113,6 +115,7 @@ class Logic : LogicBaseVisitor {
 
     LogicParser::StatementContext *ctx = parser.statement();
     Logic visitor;
-    return any_cast<std::tuple<std::vector<Assumption>, Assertion>>(visitor.visitStatement(ctx));
+    return any_cast<std::tuple<std::vector<Assumption>, std::vector<Assertion>>>(
+        visitor.visitStatement(ctx));
   }
 };

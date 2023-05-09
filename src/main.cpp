@@ -27,15 +27,17 @@ int main(int argc, const char *argv[]) {
   } else {
     path = "../tests/" + programArguments[0];
   }
-  const auto &[assumptions, assertion] = Logic::parse(path);
-  if (programArguments.size() > 1 && programArguments[1] == "infinite") {
-    Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
-    tableau.solve(200);
-    tableau.exportProof("infinite");
-  } else {
-    RegularTableau::assumptions = assumptions;
-    RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
-    tableau.solve();
-    tableau.exportProof("regular");
+  const auto &[assumptions, assertions] = Logic::parse(path);
+  for (auto assertion : assertions) {
+    if (programArguments.size() > 1 && programArguments[1] == "infinite") {
+      Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+      tableau.solve(200);
+      tableau.exportProof("infinite");
+    } else {
+      RegularTableau::assumptions = assumptions;
+      RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+      tableau.solve();
+      tableau.exportProof("regular");
+    }
   }
 }

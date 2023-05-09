@@ -1,0 +1,7 @@
+//assume (ctrl | addr | data)^+ <= po
+assume ctrl <= 0
+assume po-loc | po-nloc | addr | data <= po
+assume rfi <= po-loc
+//assume rf;rf <= 0
+
+cat assert aarch64-modified <= oota-modified

@@ -256,7 +256,6 @@ void Tableau::calcReuqest() {
 // DNF
 std::vector<ExtendedClause> Tableau::DNF() {
   while (!unreducedNodes.empty()) {
-    exportProof("dnfcalc");  // TODO: remove
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if (currentNode->metastatement) {
