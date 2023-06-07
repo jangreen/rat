@@ -25,7 +25,7 @@ int main(int argc, const char *argv[]) {
   if (programArguments[0][0] == '/') {
     path = programArguments[0];
   } else {
-    path = "../tests/" + programArguments[0];
+    path = "../proofs/" + programArguments[0];
   }
   const auto &[assumptions, assertions] = Logic::parse(path);
   for (auto assertion : assertions) {

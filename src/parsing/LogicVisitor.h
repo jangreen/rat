@@ -76,6 +76,8 @@ class Logic : LogicBaseVisitor {
       case Operation::identity:
         return Assumption(AssumptionType::identity, std::move(lhs));
       default:
+        std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
+                  << " <= " << ctx->rhs->getText() << std::endl;
         break;
     }
   }
