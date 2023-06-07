@@ -1,0 +1,3 @@
+assume a;b <= a
+
+assert a;b^* <= a

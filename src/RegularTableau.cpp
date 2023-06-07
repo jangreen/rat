@@ -183,7 +183,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
   auto dnf = DNF(nodeCopy);
   for (const auto &clause : dnf) {
     addNode(node, clause);  // epsilon edge label
-    exportProof("regular");
+    // TODO: remove exportProof("regular");
   }
   // change incoming edges from parents
   auto parentNodesCopy = node->parentNodes;
@@ -202,7 +202,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
 
     // remove edge from parent to insoncsitent node
     removeEdge(parentNode, node);
-    exportProof("regular");
+    // TODO: remove exportProof("regular");
   }
   if (std::find(rootNodes.begin(), rootNodes.end(), node) != rootNodes.end()) {
     for (auto childNode : node->childNodes) {
@@ -236,7 +236,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
       !parent->rootParents.empty()) {
     child->rootParents.push_back(parent);
   }
-  exportProof("regular");
+  // TODO: remove exportProof("regular");
 }
 
 void RegularTableau::updateRootParents(Node *node) {
@@ -264,7 +264,7 @@ void RegularTableau::removeEdge(Node *parent, Node *child) {
     child->rootParents.erase(rootParentIt);
   }
   updateRootParents(child);
-  exportProof("regular");
+  // TODO: remove exportProof("regular");
 }
 
 // clause is in normal form
@@ -497,9 +497,17 @@ void RegularTableau::saturate(Clause &clause) {
           Relation leftSide(assumption.relation);
           Relation full(Operation::full);
           Relation r(Operation::composition, std::move(leftSide), std::move(full));
-          r.saturated = true;
           r.label = label;
           r.negated = true;
+          // TODO: currently: saturate emoty hyptohesis with regular -> simple formulation of
+          // emptiness hypos better: preprocess all hypos ?
+          std::optional<Relation> saturated = saturateRelation(r);
+          if (saturated) {
+            saturated->negated = true;
+            saturated->label = label;
+            saturatedRelations.push_back(std::move(*saturated));
+          }
+          //----
           saturatedRelations.push_back(std::move(r));
         }
         break;
@@ -534,7 +542,7 @@ bool RegularTableau::solve() {
       continue;
     }
     /* TODO: remove: */
-    exportProof("regular");  // DEBUG
+    // TODO: remove exportProof("regular");  // DEBUG
     if (!expandNode(currentNode)) {
       extractCounterexample(&(*currentNode));
       std::cout << "[Solver] False." << std::endl;

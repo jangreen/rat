@@ -1,0 +1,30 @@
+// Kater section 3.6
+let poloc = po & loc
+
+// for second assertion
+let rfe = [W];rfe-typed;[R]
+let rfi = [W];rfi-typed;[R]
+let rf = rfe | rfi
+let fr = [R];fr-typed;[W]
+let co = [W];co-typed;[W]
+
+// standard tso definition
+let eco = (co | rf | fr)+
+let ppo = [R];po;([W] | [R]) | ([W] | [R]);po;[W]
+let tso = (ppo | rfe | co | fr)^+ & id 
+let coherence = (poloc | rf | fr | co)^+ & id
+
+// TSO Lahav 2016
+let hb = (([R] | [W]);po;([R] | [W]) | rf)^+
+let tso2 = (co | [W];hb;[W] | rfe;([R] | [W]);po;([R] | [W]);fr)^+ & id
+
+
+
+
+assume [W] & [R] <= 0 // write an read events disjunct
+assume (rfi | po)^+ <= po // po transitive and rfi in po
+assume po & id <= 0 // po irreflexive
+
+
+assume tso <= 0
+assert tso2 <= 0

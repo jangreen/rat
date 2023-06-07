@@ -250,7 +250,7 @@ void Tableau::calcReuqest() {
     }
   }
 
-  exportProof("requestcalc");  // TODO: remove
+  // TODO: remove exportProof("requestcalc");  // TODO: remove
 }
 
 // DNF
@@ -266,7 +266,7 @@ std::vector<ExtendedClause> Tableau::DNF() {
     }
   }
 
-  exportProof("dnfcalc");  // TODO: remove
+  // TODO: remove exportProof("dnfcalc");  // TODO: remove
 
   auto dnf = rootNode->extractDNF();
 

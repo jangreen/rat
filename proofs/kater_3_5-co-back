@@ -1,0 +1,14 @@
+// coherence, part 3.5 in kater paper
+
+let eco = (co | rf | fr)+
+let poloc = po & loc
+
+// SC per location
+let co1 = (poloc | rf | fr | co)+ & id
+let co2 = po;eco & id
+
+assume co1 <= 0
+assume (rf | fr | co) | (rf^-1 | fr^-1 | co^-1)  <= loc
+
+assert co2 <= 0
+

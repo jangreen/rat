@@ -1,0 +1,13 @@
+let fr = rf^-1;co
+let po-loc = po & loc
+
+assume (loc | loc^-1)+ <= loc
+assume po+ <= po
+assume po+ & id <= 0
+assume [R] | [W] <= M*M
+
+// [M] = M*M & id
+
+// assume cause-write <= co
+// cat assert ptx6 <= ptx6_2
+cat assert ptx6_2_rewrite <= ptx6_rewrite

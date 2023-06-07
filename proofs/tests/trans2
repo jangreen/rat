@@ -1,0 +1,4 @@
+assume a | b <= c
+assume c;c <= 0
+
+assert a;b <= 0

@@ -1,9 +1,13 @@
 // Kater 3.7
+let rf = rfi | rfe
+
 // RC11 PLDI 2017 Lahav et.al
-let eco = (rf | mo | fr)+
-let rs = (rf ; rmw)*
-let sw = [REL] ; ([F] ; po)? ; rs ; rf ; (po ; [F])? ; [ACQ]
-let hb1 = (po | sw)+
+let eco = (rf | co | fr)+
+let sw = [REL] ; ([F] ; po)? ; rf ; (po ; [F])? ; [ACQ]
+let hb = (po | sw)+
+let psc = hb | co | fr
+// acyclic psc
+
 
 // ARM8
 let DMB_SY = [F ; SC] | [F ; REL]
@@ -46,16 +50,10 @@ let bob = po; [dmb.full]
 
 let ppo = (dob | aob | bob)+
 
-let ob = (rfe | mo | fr | ppo)
+let ob = (rfe | co | fr | ppo)
 // acyclic ob
 
+assume [REL] & [ACQ] <= 0
 
-//-------------------------------------
-
-// assume rfi <= po
-// [UR];po <= (ctrl | data),
-assume rfi;[UR];po-imm;[UW] <= mo-imm
-assume rfi;fr-imm <= mo-imm
-// assume rfi <= po-loc
-
-assert psc <= ob*
+assert hb;eco <= po;eco | ob^+
+//assert psc <= ob^+

@@ -1,0 +1,20 @@
+// splitting trick
+let rfe = [W];rfe-typed;[R]
+let rf = [W];rfi;[R] | rfe
+let co = [W];co-typed;[W]
+
+// test
+let hb = (([W] | [R]);po;([W] | [R]) | rf)+
+let ra = hb;(co | fr)?
+
+//ra3
+let ra3 = (co | fr)?;hb
+
+assume (po | rfi)^+ <= po
+
+// cat theory
+assume rf;rf <= 0
+assume [W] & [R] <= 0
+
+assume ra <= 0
+assert ra3 <= 0

@@ -1,0 +1,5 @@
+let po-loc = po & loc
+
+assume cause-write <= co
+
+cat assert ptx7-5_2 <= ptx7-5

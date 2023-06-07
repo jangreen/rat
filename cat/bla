@@ -1,0 +1,69 @@
+type rf : WxR
+
+let coe = co & ext
+let fre = fr & ext
+let coi = co & int
+let rfi = [W]rfi-typed[R]
+let rfe = [W]rfe-typed[R]
+let rf = rfi | rfe
+
+"ARMv8 AArch64"
+include "cos.cat"
+include "aarch64fences.cat"
+//let dsb.full = DSB.ISH | DSB.OSH | DSB.SY
+//let dsb.ld = DSB.ISHLD | DSB.OSHLD | DSB.LD
+//let dsb.st = DSB.ISHST | DSB.OSHST | DSB.ST
+//let dmb.full = DMB.ISH | DMB.OSH | DMB.SY | dsb.full
+//let dmb.ld = DMB.ISHLD | DMB.OSHLD | DMB.LD | dsb.ld
+//let dmb.st = DMB.ISHST | DMB.OSHST | DMB.ST | dsb.st
+
+(* Coherence-after *)
+let ca = fr | co
+
+(* Observed-by *)
+let obs = rfe | fre | coe
+
+(* Dependency-ordered-before *)
+let dob = addr | data
+	| ctrl; [W]
+	| (ctrl | (addr; po)); [ISB]; po; [R]
+	| addr; po; [W]
+	| (ctrl | data); coi
+	| (addr | data); rfi
+
+(* Atomic-ordered-before *)
+//let aob = rmw
+	(* | [range(rmw)]; rfi; [A | Q] *)
+
+(* Barrier-ordered-before *)
+(* let bob = po; [dmb.full]; po
+	| [L]; po; [A]
+	| [R]; po; [dmb.ld]; po
+	| [A | Q]; po
+	| [W]; po; [dmb.st]; po; [W]
+	| po; [L]
+	| po; [L]; coi
+	*)
+
+(* Ordered-before *)
+let ob = obs | dob //| aob | bob
+
+(* Internal visibility requirement *)
+let internal = (po-loc | ca | rf)^+ & id
+
+(* External visibility requirement *)
+let external = ob^+ & id
+
+(* Atomic: Basic LDXR/STXR constraint to forbid intervening writes. *)
+//empty rmw & (fre; coe) as atomic
+
+let dep = data | addr | ctrl//;[W]
+let oota = (dep | rf)^+ & id
+
+assume internal <= 0
+assume external <= 0
+assume [W] & [R] <= 0
+assume dep <= po
+assume po+ & id <= 0 
+//assume dob+ & id <= 0
+assert oota <= 0

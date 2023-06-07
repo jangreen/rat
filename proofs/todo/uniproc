@@ -1,0 +1,10 @@
+let poloc = po & loc
+let rfi = rfi-typed & (po | po^-1 | id)
+let rf = rfi | rfe
+let uniproc = (poloc | rf | fr | co)^+ & id
+
+assume uniproc <= 0
+assume rf | rf^-1 <= loc
+assume po^+ & id <= 0
+
+assert rfi <= po
