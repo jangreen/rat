@@ -81,7 +81,9 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   // treat cartesian product as binary base relation
   std::string r1 = ctx->e1->getText();
   std::string r2 = ctx->e2->getText();
-  return Relation(Operation::base, r1 + "*" + r2);
+  Relation cartesianProduct(Operation::base, r1 + "*" + r2);
+  Relation id(Operation::identity);
+  return Relation(Operation::intersection, std::move(cartesianProduct), std::move(id));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx) {
   std::string name = ctx->NAME()->getText();
