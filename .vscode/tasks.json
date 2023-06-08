@@ -8,7 +8,7 @@
             "type": "shell",
             "command": "${workspaceFolder}/build/CatInfer ${file}",
             "options": {
-                "cwd": "${workspaceFolder}/build"
+                "cwd": "${workspaceFolder}"
             }
         }
     ]

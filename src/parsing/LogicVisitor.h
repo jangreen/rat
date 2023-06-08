@@ -18,7 +18,7 @@
 // helper
 Relation loadModel(const std::string &file) {
   CatInferVisitor visitor;
-  auto sc = visitor.parseMemoryModel("./cat/" + file);
+  auto sc = visitor.parseMemoryModel(file);
   std::optional<Relation> unionR;
   for (auto &constraint : sc) {
     constraint.toEmptyNormalForm();
@@ -29,7 +29,6 @@ Relation loadModel(const std::string &file) {
       unionR = r;
     }
   }
-  unionR->label = 0;
   return *unionR;
 }
 
@@ -99,16 +98,18 @@ class Logic : LogicBaseVisitor {
   }
 
   /*std::Assumption, Assertion>*/ std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
-    std::string lhs(ctx->lhs->getText());
-    std::string rhs(ctx->rhs->getText());
-    auto lhsModel = loadModel(lhs + ".cat");
-    auto rhsModel = loadModel(rhs + ".cat");
-    lhsModel.negated = true;
+    std::string lhsPath(ctx->lhs->getText());
+    std::string rhsPath(ctx->rhs->getText());
+    auto lhsModel = loadModel(lhsPath);
+    auto rhsModel = loadModel(rhsPath);
     // TODO: remove std::cout << rhsModel.toString() << " <= " << lhsModel.toString() << std::endl;
-    Assumption rhsEmpty(AssumptionType::empty, std::move(rhsModel));
+    Assumption lhsEmpty(AssumptionType::empty, std::move(lhsModel));
     Relation emptyR(Operation::empty);
-    Assertion lhsEmpty{std::move(lhsModel), std::move(emptyR)};
-    std::tuple<Assumption, Assertion> response{std::move(rhsEmpty), std::move(lhsEmpty)};
+    emptyR.negated = true;
+    emptyR.label = 0;
+    rhsModel.label = 0;
+    Assertion rhsEmpty{std::move(rhsModel), std::move(emptyR)};
+    std::tuple<Assumption, Assertion> response{std::move(lhsEmpty), std::move(rhsEmpty)};
     return response;
   }
 

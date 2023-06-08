@@ -6,9 +6,10 @@ statement:
 
 hypothesis: ASSUME lhs = expression INEQUAL rhs = expression;
 assertion: ASSERT lhs = expression INEQUAL rhs = expression;
-mmAssertion: CATASSERT lhs = NAME INEQUAL rhs = NAME;
+mmAssertion: CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH;
 
 ASSUME: 'assume';
 ASSERT: 'assert';
 INEQUAL: '<=';
 CATASSERT: 'cat assert';
+FILEPATH: '.'? '/' ~'/' (.)+? '.cat';

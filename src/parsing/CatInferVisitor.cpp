@@ -3,6 +3,7 @@
 #include <utility>
 
 std::vector<Constraint> CatInferVisitor::parseMemoryModel(const std::string &filePath) {
+  std::cout << "[Parsing] Parse file: " << filePath << std::endl;
   std::ifstream stream;
   stream.open(filePath);
   antlr4::ANTLRInputStream input(stream);

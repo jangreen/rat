@@ -601,7 +601,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
     node = node->parentNode;
   }
 
-  std::ofstream counterexample("counterexample.dot");
+  std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
   node = openNode;
   while (node->parentNode != nullptr) {

@@ -1,3 +1,4 @@
 assume dep <= po
 
-cat assert sc <= oota
+//cat assert ./cat/sc.cat <= ./cat/oota-simple.cat
+cat assert ./cat/sc.cat <= ./cat/oota.cat
