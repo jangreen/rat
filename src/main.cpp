@@ -21,12 +21,7 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  std::string path;
-  if (programArguments[0][0] == '/') {
-    path = programArguments[0];
-  } else {
-    path = "./proofs/" + programArguments[0];
-  }
+  std::string path = programArguments[0];
   const auto &[assumptions, assertions] = Logic::parse(path);
   std::cout << "[Status] Parsing done: " << assertions.size() << " goals" << std::endl;
   for (auto assertion : assertions) {
