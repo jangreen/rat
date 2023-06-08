@@ -358,7 +358,8 @@ void Tableau::toDotFormat(std::ofstream &output) const {
 }
 
 void Tableau::exportProof(std::string filename) const {
-  std::ofstream file(filename + ".dot");
+  std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
+  std::ofstream file("./build/" + filename + ".dot");
   toDotFormat(file);
   file.close();
 }

@@ -25,10 +25,13 @@ int main(int argc, const char *argv[]) {
   if (programArguments[0][0] == '/') {
     path = programArguments[0];
   } else {
-    path = "../proofs/" + programArguments[0];
+    path = "./proofs/" + programArguments[0];
   }
   const auto &[assumptions, assertions] = Logic::parse(path);
+  std::cout << "[Status] Parsing done: " << assertions.size() << " goals" << std::endl;
   for (auto assertion : assertions) {
+    std::cout << "[Status] Prove goal:" << std::get<0>(assertion).toString() << " /\\ "
+              << std::get<1>(assertion).toString() << std::endl;
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
       Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
       tableau.solve(200);
