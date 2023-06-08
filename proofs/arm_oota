@@ -1,4 +1,4 @@
-type rf : WxR
+// type rf : WxR
 
 let coe = co & ext
 let fre = fr & ext

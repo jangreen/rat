@@ -1,7 +1,1 @@
-let po-loc = po & loc
-
-assume po+ & id <= 0
-
-// assume cause-write <= co
-// cat assert ptx6 <= ptx6_2
-cat assert ptx6_2 <= ptx6
+cat assert ./cat/ptx6_rewrite.cat <= ./cat/ptx6_rewrite.cat
