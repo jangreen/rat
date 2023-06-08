@@ -46,16 +46,20 @@ class Logic : LogicBaseVisitor {
     }
 
     std::vector<Assertion> assertions;
+    std::vector<Assumption> hypotheses;
+
     for (const auto &assertionContext : ctx->assertion()) {
       auto assertion = any_cast<Assertion>(assertionContext->accept(this));
       assertions.push_back(std::move(assertion));
     }
     for (const auto &assertionMmContext : ctx->mmAssertion()) {
-      auto assertion = any_cast<Assertion>(assertionMmContext->accept(this));
+      auto mm = any_cast<std::tuple<Assumption, Assertion>>(assertionMmContext->accept(this));
+      auto assumption = std::get<Assumption>(mm);
+      auto assertion = std::get<Assertion>(mm);
       assertions.push_back(std::move(assertion));
+      hypotheses.push_back(std::move(assumption));
     }
 
-    std::vector<Assumption> hypotheses;
     for (const auto &hypothesisContext : ctx->hypothesis()) {
       auto hypothesis = any_cast<Assumption>(hypothesisContext->accept(this));
       hypotheses.push_back(std::move(hypothesis));
@@ -94,19 +98,23 @@ class Logic : LogicBaseVisitor {
     return response;
   }
 
-  /*Assertion*/ std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
+  /*std::Assumption, Assertion>*/ std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
     std::string lhs(ctx->lhs->getText());
     std::string rhs(ctx->rhs->getText());
     auto lhsModel = loadModel(lhs + ".cat");
     auto rhsModel = loadModel(rhs + ".cat");
     lhsModel.negated = true;
     // TODO: remove std::cout << rhsModel.toString() << " <= " << lhsModel.toString() << std::endl;
-    Assertion response{std::move(rhsModel), std::move(lhsModel)};
+    Assumption rhsEmpty(AssumptionType::empty, std::move(rhsModel));
+    Relation emptyR(Operation::empty);
+    Assertion lhsEmpty{std::move(lhsModel), std::move(emptyR)};
+    std::tuple<Assumption, Assertion> response{std::move(rhsEmpty), std::move(lhsEmpty)};
     return response;
   }
 
   static std::tuple<std::vector<Assumption>, std::vector<Assertion>> parse(
       const std::string &filePath) {
+    std::cout << "[Parsing] Parse file: " << filePath << std::endl;
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);
