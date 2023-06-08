@@ -18,7 +18,7 @@
 // helper
 Relation loadModel(const std::string &file) {
   CatInferVisitor visitor;
-  auto sc = visitor.parseMemoryModel("../cat/" + file);
+  auto sc = visitor.parseMemoryModel("./cat/" + file);
   std::optional<Relation> unionR;
   for (auto &constraint : sc) {
     constraint.toEmptyNormalForm();
