@@ -1,8 +1,11 @@
 let po-loc = po & loc
 let fr = rf^-1;co
 
-assume cause-write <= co
-assume po+ & id <= 0
+//assume cause-write <= co
+//assume po+ & id <= 0
 
-cat assert ./cat/ptx-v6.0_rewrite.cat <= ./cat/ptx-v6.0.cat
+//cat assert ./cat/ptx-v6.0_rewrite.cat <= ./cat/ptx-v6.0.cat
 //cat assert ./cat/ptx-v6.0.cat <= ./cat/ptx-v6.0_rewrite.cat
+
+assume co;po & rf <= 0
+assert rf^-1;co;po & id <= 0

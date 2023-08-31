@@ -35,15 +35,15 @@ PTX
 // The ASPLOS'19 paper uses the definition below
 // let rec observation = (morally-strong & rf) | (observation; rmw; observation)
 // but the ISCA'22 paper claims the one below is equivalent, thus we avoid the recursion
-let observation = (morally-strong & rf) | rmw
+//let observation = (morally-strong & rf) | rmw
 
-let release-pattern = ([W & REL]; po-loc?; [strong-write]) | ([F & ACQ_REL]; po; [strong-write])
+//let release-pattern = ([W & REL]; po-loc?; [strong-write]) | ([F & ACQ_REL]; po; [strong-write])
 
-let acquire-pattern = ([strong-read]; po-loc?; [R & ACQ]) | ([strong-read]; po; [F & ACQ_REL])
+//let acquire-pattern = ([strong-read]; po-loc?; [R & ACQ]) | ([strong-read]; po; [F & ACQ_REL])
 
-let sync = morally-strong & (release-pattern; observation; acquire-pattern)
-let cause-base = po?; ((sync | sync_fence | sync_barrier); po?)+
-let cause = cause-base | (observation; (cause-base | po-loc)) | po
+//let sync = morally-strong & (release-pattern; observation; acquire-pattern)
+//let cause-base = po?; ((sync | sync_fence | sync_barrier); po?)+
+let cause = po //cause-base | (observation; (cause-base | po-loc)) | po
 
 (******************************)
 (*  PTX Memory Model Axioms   *)
@@ -70,4 +70,6 @@ let cause = cause-base | (observation; (cause-base | po-loc)) | po
 //acyclic ((morally-strong & (rf | co | fr)) | po-loc) as axiom-ScPerLocation
 
 (* Axiom Causality *)
-irreflexive ((rf | fr); cause) as axiom-Causality
+//irreflexive ((rf | fr); cause) as axiom-Causality
+
+empty co;po & rf
