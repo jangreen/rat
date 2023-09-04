@@ -8,37 +8,48 @@ mcm: (NAME)? definition+ EOF;
 definition: axiomDefinition | letDefinition | letRecDefinition;
 
 axiomDefinition:
-	(flag = FLAG)? (negate = NOT)? ACYCLIC e = expression (AS NAME)?
-	| (flag = FLAG)? (negate = NOT)? IRREFLEXIVE e = expression (AS NAME )?
-	| (flag = FLAG)? (negate = NOT)? EMPTY e = expression (AS NAME)?;
+	(flag = FLAG)? (negate = NOT)? ACYCLIC e = relationExpression (
+		AS NAME
+	)?
+	| (flag = FLAG)? (negate = NOT)? IRREFLEXIVE e = relationExpression (
+		AS NAME
+	)?
+	| (flag = FLAG)? (negate = NOT)? EMPTY e = relationExpression (
+		AS NAME
+	)?;
 
-letDefinition: LET n = NAME EQ e = expression;
+letDefinition: LET n = NAME EQ e = relationExpression;
 
 letRecDefinition:
-	LET REC n = NAME EQ e = expression letRecAndDefinition*;
+	LET REC n = NAME EQ e = relationExpression letRecAndDefinition*;
 
-letRecAndDefinition: AND n = NAME EQ e = expression;
+letRecAndDefinition: AND n = NAME EQ e = relationExpression;
 
-expression:
-	e1 = expression STAR e2 = expression			# exprCartesian
-	| e = expression (POW)? STAR					# exprTransRef
-	| e = expression (POW)? PLUS					# exprTransitive
-	| e = expression (POW)? INV						# exprInverse
-	| e = expression OPT							# exprOptional
-	| NOT e = expression							# exprComplement
-	| e1 = expression SEMI e2 = expression			# exprComposition
-	| e1 = expression BAR e2 = expression			# exprUnion
-	| e1 = expression BSLASH e2 = expression		# exprMinus
-	| e1 = expression AMP e2 = expression			# exprIntersection
-	| LBRAC DOMAIN_ LPAR e = expression RPAR RBRAC	# exprDomainIdentity
-	| LBRAC RANGE LPAR e = expression RPAR RBRAC	# exprRangeIdentity
+setExpression:
+	e1 = setExpression BAR e2 = setExpression	# setUnion
+	| e1 = setExpression AMP e2 = setExpression	# setIntersection
+	| n = NAME									# setBasic;
+
+relationExpression:
+	e1 = setExpression STAR e2 = setExpression					# cartesianProduct
+	| e = relationExpression (POW)? STAR						# transReflexiveClosure
+	| e = relationExpression (POW)? PLUS						# transitiveClosure
+	| e = relationExpression (POW)? INV							# relationInverse
+	| e = relationExpression OPT								# relationOptional
+	| NOT e = relationExpression								# relationComplement
+	| e1 = relationExpression SEMI e2 = relationExpression		# relationComposition
+	| e1 = relationExpression BAR e2 = relationExpression		# relationUnion
+	| e1 = relationExpression BSLASH e2 = relationExpression	# relationMinus
+	| e1 = relationExpression AMP e2 = relationExpression		# relationIntersection
+	| LBRAC DOMAIN_ LPAR e = relationExpression RPAR RBRAC		# relationDomainIdentity
+	| LBRAC RANGE LPAR e = relationExpression RPAR RBRAC		# relationRangeIdentity
 	| (
-		TOID LPAR e = expression RPAR
-		| LBRAC e = expression RBRAC
-	)								# exprIdentity
-	| FENCEREL LPAR n = NAME RPAR	# exprFencerel
-	| LPAR e = expression RPAR		# expr
-	| n = NAME						# exprBasic;
+		TOID LPAR e = setExpression RPAR
+		| LBRAC e = setExpression RBRAC
+	)									# relationIdentity
+	| FENCEREL LPAR n = NAME RPAR		# relationFencerel
+	| LPAR e = relationExpression RPAR	# relation
+	| n = NAME							# relationBasic;
 
 LET: 'let';
 REC: 'rec';
@@ -68,7 +79,8 @@ LBRAC: '[';
 RBRAC: ']';
 
 FENCEREL: 'fencerel';
-DOMAIN_:'domain'; // https: //stackoverflow.com/questions/31751723/math-h-macro-collisions
+DOMAIN_: 'domain';
+// https: //stackoverflow.com/questions/31751723/math-h-macro-collisions
 RANGE: 'range';
 
 FLAG: 'flag';
