@@ -149,7 +149,7 @@ std::optional<Metastatement> Tableau::applyRuleA() {
     unreducedNodes.pop();
     auto result = currentNode->applyRule<ProofRule::a, std::tuple<Relation, Metastatement>>();
     if (result) {
-      // TODO: apply at greedy
+      // TODO: apply at-rule greedy
       while (currentNode->leftNode != nullptr) {
         currentNode = currentNode->leftNode.get();
 
@@ -254,12 +254,17 @@ void Tableau::calcReuqest() {
 }
 
 // DNF
-std::vector<ExtendedClause> Tableau::DNF() {
+DNF Tableau::calcDNF() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    if (currentNode->metastatement) {
-      // only equality meatstatement possible
+    if (currentNode->formula->leftOperand->operation == FormulaOperation::literal &&
+        !currentNode->formula->leftOperand->literal->negated &&
+        currentNode->formula->leftOperand->literal->predicate->leftOperand->operation ==
+            SetOperation::singleton &&
+        currentNode->formula->leftOperand->literal->predicate->rightOperand->operation ==
+            SetOperation::singleton) {
+      // case e1.e2
       currentNode->applyRule<ProofRule::propagation, bool>();
     } else {
       currentNode->applyDNFRule();

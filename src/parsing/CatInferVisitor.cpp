@@ -22,7 +22,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   antlr4::CommonTokenStream tokens(&lexer);
   CatParser parser(&tokens);
 
-  CatParser::ExpressionContext *ctx = parser.expression();  // expect expression
+  CatParser::RelationExpressionContext *ctx = parser.relationExpression();  // expect expression
   Relation parsedRelation = any_cast<Relation>(this->visit(ctx));
   return parsedRelation;
 }
@@ -71,102 +71,131 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   return antlrcpp::Any();
 }
 
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExpr(CatParser::ExprContext *ctx) {
+/*Set*/ antlrcpp::Any visitSetBasic(CatParser::SetBasicContext *ctx) {
+  std::string name = ctx->NAME()->getText();
+  if (name == "E") {
+    return Set(SetOperation::full);
+  }
+  if (name == "0") {
+    return Set(SetOperation::empty);
+  }
+  return Set(SetOperation::base, name);
+}
+
+/*Set*/ antlrcpp::Any visitSetIntersection(CatParser::SetBasicContext *ctx) {
+  std::cout << "[Parsing] Set intersection operation is not supported." << std::endl;
+  exit(0);
+}
+
+/*Set*/ antlrcpp::Any visitSetUnion(CatParser::SetBasicContext *ctx) {
+  std::cout << "[Parsing] Set union operation is not supported." << std::endl;
+  exit(0);
+}
+
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelation(CatParser::RelationContext *ctx) {
   // process: (e)
   Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
   return derivedRelation;
 }
 
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprCartesian(
-    CatParser::ExprCartesianContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitCartesianProduct(
+    CatParser::CartesianProductContext *ctx) {
   // treat cartesian product as binary base relation
   std::string r1 = ctx->e1->getText();
   std::string r2 = ctx->e2->getText();
-  Relation cartesianProduct(Operation::base, r1 + "*" + r2);
-  Relation id(Operation::identity);
-  return Relation(Operation::intersection, std::move(cartesianProduct), std::move(id));
+  Relation cartesianProduct(RelationOperation::base, r1 + "*" + r2);
+  Relation id(RelationOperation::identity);
+  return Relation(RelationOperation::intersection, std::move(cartesianProduct), std::move(id));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprBasic(CatParser::ExprBasicContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationBasic(
+    CatParser::RelationBasicContext *ctx) {
   std::string name = ctx->NAME()->getText();
   if (name == "id") {
-    return Relation(Operation::identity);
+    return Relation(RelationOperation::identity);
   }
   if (name == "0") {
-    return Relation(Operation::empty);
+    return Relation(RelationOperation::empty);
   }
   if (Relation::relations.contains(name)) {
     return Relation::relations.at(name);
   }
-  return Relation(Operation::base, name);
+  return Relation(RelationOperation::base, name);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprMinus(CatParser::ExprMinusContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationMinus(
+    CatParser::RelationMinusContext *ctx) {
   std::cout << "[Parsing] Setminus operation is not supported." << std::endl;
   exit(0);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprUnion(CatParser::ExprUnionContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationUnion(
+    CatParser::RelationUnionContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
   Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-  return Relation(Operation::choice, std::move(r1), std::move(r2));
+  return Relation(RelationOperation::choice, std::move(r1), std::move(r2));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprComposition(
-    CatParser::ExprCompositionContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationComposition(
+    CatParser::RelationCompositionContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
   Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-  return Relation(Operation::composition, std::move(r1), std::move(r2));
+  return Relation(RelationOperation::composition, std::move(r1), std::move(r2));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprIntersection(
-    CatParser::ExprIntersectionContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationIntersection(
+    CatParser::RelationIntersectionContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
   Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
-  return Relation(Operation::intersection, std::move(r1), std::move(r2));
+  return Relation(RelationOperation::intersection, std::move(r1), std::move(r2));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprTransitive(
-    CatParser::ExprTransitiveContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitTransitiveClosure(
+    CatParser::TransitiveClosureContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e->accept(this));
   Relation r2(r1);
-  Relation r1Transitive(Operation::transitiveClosure, std::move(r1));
-  return Relation(Operation::composition, std::move(r2), std::move(r1Transitive));
+  Relation r1Transitive(RelationOperation::transitiveClosure, std::move(r1));
+  return Relation(RelationOperation::composition, std::move(r2), std::move(r1Transitive));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprComplement(
-    CatParser::ExprComplementContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationComplement(
+    CatParser::RelationComplementContext *ctx) {
   std::cout << "[Parsing] Complement operation is not supported." << std::endl;
   exit(0);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprInverse(CatParser::ExprInverseContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationInverse(
+    CatParser::RelationInverseContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e->accept(this));
-  return Relation(Operation::converse, std::move(r1));
+  return Relation(RelationOperation::converse, std::move(r1));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprDomainIdentity(
-    CatParser::ExprDomainIdentityContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationDomainIdentity(
+    CatParser::RelationDomainIdentityContext *ctx) {
   std::cout << "[Parsing] Domain identity expressions are not supported." << std::endl;
   exit(0);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprIdentity(CatParser::ExprIdentityContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationIdentity(
+    CatParser::RelationIdentityContext *ctx) {
   if (ctx->TOID() == nullptr) {
     std::string set = ctx->e->getText();
-    Relation r1(Operation::base, set + "*" + set);
-    Relation id(Operation::identity);
-    return Relation(Operation::intersection, std::move(r1), std::move(id));
+    Relation r1(RelationOperation::base, set + "*" + set);
+    Relation id(RelationOperation::identity);
+    return Relation(RelationOperation::intersection, std::move(r1), std::move(id));
   } else {
     std::cout << "[Parsing] 'visitExprIdentity TOID' expressions are not supported." << std::endl;
     exit(0);
   }
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprRangeIdentity(
-    CatParser::ExprRangeIdentityContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationRangeIdentity(
+    CatParser::RelationRangeIdentityContext *ctx) {
   std::cout << "[Parsing] Range identity expressions are not supported." << std::endl;
   exit(0);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprTransRef(CatParser::ExprTransRefContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitTransReflexiveClosure(
+    CatParser::TransReflexiveClosureContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e->accept(this));
-  return Relation(Operation::transitiveClosure, std::move(r1));
+  return Relation(RelationOperation::transitiveClosure, std::move(r1));
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprFencerel(CatParser::ExprFencerelContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationFencerel(
+    CatParser::RelationFencerelContext *ctx) {
   std::cout << "[Parsing] Fence expressions are not supported." << std::endl;
   exit(0);
 }
-/*Relation*/ antlrcpp::Any CatInferVisitor::visitExprOptional(CatParser::ExprOptionalContext *ctx) {
+/*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationOptional(
+    CatParser::RelationOptionalContext *ctx) {
   Relation r1 = any_cast<Relation>(ctx->e->accept(this));
-  Relation idR(Operation::identity);
-  return Relation(Operation::choice, std::move(r1), std::move(idR));
+  Relation idR(RelationOperation::identity);
+  return Relation(RelationOperation::choice, std::move(r1), std::move(idR));
 }

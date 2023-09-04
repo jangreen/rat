@@ -22,19 +22,18 @@ int main(int argc, const char *argv[]) {
   }
 
   std::string path = programArguments[0];
-  const auto &[assumptions, assertions] = Logic::parse(path);
-  std::cout << "[Status] Parsing done: " << assertions.size() << " goals, " << assumptions.size()
+  const auto &[assumptions, goals] = Logic::parse(path);
+  std::cout << "[Status] Parsing done: " << goals.size() << " goals, " << assumptions.size()
             << " assumptions" << std::endl;
-  for (auto assertion : assertions) {
-    std::cout << "[Status] Prove goal:" << std::get<0>(assertion).toString() << " && "
-              << std::get<1>(assertion).toString() << std::endl;
+  for (auto goal : goals) {
+    std::cout << "[Status] Prove goal:" << goal.toString() << std::endl;
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
-      Tableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+      Tableau tableau{goal};
       tableau.solve(200);
       tableau.exportProof("infinite");
     } else {
       RegularTableau::assumptions = assumptions;
-      RegularTableau tableau{std::get<0>(assertion), std::get<1>(assertion)};
+      RegularTableau tableau{goal};
       tableau.solve();
       tableau.exportProof("regular");
     }

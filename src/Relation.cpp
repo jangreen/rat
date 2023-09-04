@@ -7,8 +7,6 @@
 Relation::Relation(const Relation &other)
     : operation(other.operation),
       identifier(other.identifier),
-      label(other.label),
-      negated(other.negated),
       saturated(other.saturated),
       saturatedId(other.saturatedId) {
   if (other.leftOperand != nullptr) {
@@ -27,13 +25,13 @@ Relation::Relation(const std::string &expression) {
   CatInferVisitor visitor;
   *this = visitor.parseRelation(expression);
 }
-Relation::Relation(const Operation operation, const std::optional<std::string> &identifier)
+Relation::Relation(const RelationOperation operation, const std::optional<std::string> &identifier)
     : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
-Relation::Relation(const Operation operation, Relation &&left)
+Relation::Relation(const RelationOperation operation, Relation &&left)
     : operation(operation), identifier(std::nullopt), rightOperand(nullptr) {
   leftOperand = std::make_unique<Relation>(std::move(left));
 }
-Relation::Relation(const Operation operation, Relation &&left, Relation &&right)
+Relation::Relation(const RelationOperation operation, Relation &&left, Relation &&right)
     : operation(operation), identifier(std::nullopt) {
   leftOperand = std::make_unique<Relation>(std::move(left));
   rightOperand = std::make_unique<Relation>(std::move(right));
@@ -57,12 +55,12 @@ bool Relation::operator==(const Relation &otherRelation) const {
     return false;
   }
 
-  if (operation == Operation::base) {
+  if (operation == RelationOperation::base) {
     return *identifier == *otherRelation.identifier;
   }
 
-  if (operation == Operation::none || operation == Operation::identity ||
-      operation == Operation::empty || operation == Operation::full) {
+  if (operation == RelationOperation::identity || operation == RelationOperation::empty ||
+      operation == RelationOperation::full) {
     return true;
   }
 
@@ -78,21 +76,18 @@ bool Relation::operator<(const Relation &otherRelation) const {
 
 // helper
 bool isNormalHelper(const Relation &relation, bool negated) {
-  if (relation.label && relation.operation == Operation::converse) {
+  if (relation.label && relation.operation == RelationOperation::converse) {
     return true;  // assume that converse only occurs on base realtions
   }
-  if (relation.label && relation.operation != Operation::base &&
-      relation.operation != Operation::none) {
+  if (relation.label && relation.operation != RelationOperation::base) {
     return false;
   } else if (relation.leftOperand != nullptr) {  // has children
     bool leftIsNormal =
         relation.leftOperand == nullptr || isNormalHelper(*relation.leftOperand, negated);
     bool rightIsNormal =
         relation.rightOperand == nullptr || isNormalHelper(*relation.rightOperand, negated);
-    bool leftRightSpecialCase = negated || relation.leftOperand == nullptr ||
-                                relation.rightOperand == nullptr ||
-                                relation.leftOperand->operation != Operation::none ||
-                                relation.rightOperand->operation != Operation::none;
+    bool leftRightSpecialCase =
+        negated || relation.leftOperand == nullptr || relation.rightOperand == nullptr;
     return leftIsNormal && rightIsNormal && leftRightSpecialCase;
   }
   return true;
@@ -148,41 +143,33 @@ void Relation::inverseRename(const std::vector<int> &renaming) {
 
 std::string Relation::toString() const {
   std::string output;
-  if (negated) {
-    output += "-";
-  }
-  if (label) {
-    output += "[" + std::to_string(*label) + "]";
-  }
   switch (operation) {
-    case Operation::intersection:
+    case RelationOperation::intersection:
       output += "(" + leftOperand->toString() + " & " + rightOperand->toString() + ")";
       break;
-    case Operation::composition:
+    case RelationOperation::composition:
       output += "(" + leftOperand->toString() + ";" + rightOperand->toString() + ")";
       break;
-    case Operation::choice:
+    case RelationOperation::choice:
       output += "(" + leftOperand->toString() + " | " + rightOperand->toString() + ")";
       break;
-    case Operation::converse:
+    case RelationOperation::converse:
       output += leftOperand->toString() + "^-1";
       break;
-    case Operation::transitiveClosure:
+    case RelationOperation::transitiveClosure:
       output += leftOperand->toString() + "^*";
       break;
-    case Operation::base:
+    case RelationOperation::base:
       output += *identifier;
       break;
-    case Operation::identity:
+    case RelationOperation::identity:
       output += "id";
       break;
-    case Operation::empty:
+    case RelationOperation::empty:
       output += "0";
       break;
-    case Operation::full:
+    case RelationOperation::full:
       output += "1";
-      break;
-    case Operation::none:
       break;
   }
   if (saturated) {
@@ -197,8 +184,8 @@ std::string Relation::toString() const {
 template <>
 Relation Relation::substituteLeft(Relation &&substitutedRelation) {
   // fix label
-  if (operation == Operation::composition && substitutedRelation.operation == Operation::none &&
-      substitutedRelation.label) {
+  if (operation == RelationOperation::composition &&
+      substitutedRelation.operation == RelationOperation::none && substitutedRelation.label) {
     int l = *substitutedRelation.label;
     substitutedRelation = *rightOperand;
     substitutedRelation.label = l;
@@ -248,7 +235,7 @@ std::tuple<Relation, Metastatement> Relation::substituteRight(
 template <>
 std::optional<std::tuple<Relation, Relation>> Relation::applyRule<ProofRule::choice>(
     const Metastatement *metastatement) {
-  if (label && operation == Operation::choice) {
+  if (label && operation == RelationOperation::choice) {
     // Rule::choice, Rule::negChoice
     Relation r1(*leftOperand);
     r1.label = label;
@@ -264,16 +251,16 @@ std::optional<std::tuple<Relation, Relation>> Relation::applyRule<ProofRule::cho
 template <>
 std::optional<std::tuple<Relation, Relation>> Relation::applyRule<ProofRule::transitiveClosure>(
     const Metastatement *metastatement) {
-  if (label && operation == Operation::transitiveClosure) {
+  if (label && operation == RelationOperation::transitiveClosure) {
     // Rule::transitiveClosure, Rule::negTransitiveClosure
     Relation r1(*leftOperand);
     r1.label = label;
     Relation tcCopy(*this);
     tcCopy.label = std::nullopt;
     tcCopy.negated = false;
-    Relation newTC(Operation::composition, std::move(r1), std::move(tcCopy));
+    Relation newTC(RelationOperation::composition, std::move(r1), std::move(tcCopy));
     newTC.negated = negated;
-    Relation r2(Operation::none);  // empty relation
+    Relation r2(RelationOperation::none);  // empty relation
     r2.label = label;
     r2.negated = negated;
     std::tuple<Relation, Relation> result{std::move(r2), std::move(newTC)};
@@ -285,10 +272,11 @@ template <>
 std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule::at>(
     const Metastatement *metastatement) {
   if (leftOperand != nullptr && rightOperand != nullptr &&
-      leftOperand->operation == Operation::none && rightOperand->operation == Operation::none &&
-      operation == Operation::intersection) {
+      leftOperand->operation == RelationOperation::none &&
+      rightOperand->operation == RelationOperation::none &&
+      operation == RelationOperation::intersection) {
     // identify labels
-    Relation r1(Operation::none);
+    Relation r1(RelationOperation::none);
     r1.label = std::min(*leftOperand->label, *rightOperand->label);
     Metastatement m(MetastatementType::labelEquality, *leftOperand->label, *rightOperand->label);
     std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
@@ -299,9 +287,10 @@ std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule
 template <>
 std::optional<Relation> Relation::applyRule<ProofRule::negAt>(const Metastatement *metastatement) {
   if (leftOperand != nullptr && rightOperand != nullptr &&
-      leftOperand->operation == Operation::none && rightOperand->operation == Operation::none &&
-      operation == Operation::intersection && *leftOperand->label == *rightOperand->label) {
-    Relation r1(Operation::none);
+      leftOperand->operation == RelationOperation::none &&
+      rightOperand->operation == RelationOperation::none &&
+      operation == RelationOperation::intersection && *leftOperand->label == *rightOperand->label) {
+    Relation r1(RelationOperation::none);
     r1.label = *leftOperand->label;
     return r1;
   }
@@ -310,17 +299,17 @@ std::optional<Relation> Relation::applyRule<ProofRule::negAt>(const Metastatemen
 template <>
 std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule::a>(
     const Metastatement *metastatement) {
-  if (label && operation == Operation::base) {
+  if (label && operation == RelationOperation::base) {
     // Rule::a
-    Relation r1(Operation::none);  // empty relation
+    Relation r1(RelationOperation::none);  // empty relation
     Relation::maxLabel++;
     r1.label = Relation::maxLabel;
     Metastatement m(MetastatementType::labelRelation, *label, Relation::maxLabel, *identifier);
     std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
     return result;
-  } else if (label && operation == Operation::converse) {
+  } else if (label && operation == RelationOperation::converse) {
     // Rule::negA
-    Relation r1(Operation::none);  // empty relation
+    Relation r1(RelationOperation::none);  // empty relation
     Relation::maxLabel++;
     r1.label = Relation::maxLabel;
     Metastatement m(MetastatementType::labelRelation, Relation::maxLabel, *label,
@@ -333,13 +322,13 @@ std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule
 template <>
 std::optional<Relation> Relation::applyRule<ProofRule::intersection>(
     const Metastatement *metastatement) {
-  if (label && operation == Operation::intersection) {
+  if (label && operation == RelationOperation::intersection) {
     // Rule::inertsection, Rule::negIntersection
     Relation r1(*leftOperand);
     r1.label = label;
     Relation r2(*rightOperand);
     r2.label = label;
-    Relation result(Operation::intersection, std::move(r1), std::move(r2));
+    Relation result(RelationOperation::intersection, std::move(r1), std::move(r2));
     result.negated = negated;
     return result;
   }
@@ -348,12 +337,12 @@ std::optional<Relation> Relation::applyRule<ProofRule::intersection>(
 template <>
 std::optional<Relation> Relation::applyRule<ProofRule::composition>(
     const Metastatement *metastatement) {
-  if (label && operation == Operation::composition) {
+  if (label && operation == RelationOperation::composition) {
     // Rule::composition, Rule::negComposition
     Relation r1(*leftOperand);
     r1.label = label;
     Relation r2(*rightOperand);
-    Relation result(Operation::composition, std::move(r1), std::move(r2));
+    Relation result(RelationOperation::composition, std::move(r1), std::move(r2));
     result.negated = negated;
     return result;
   }
@@ -361,9 +350,9 @@ std::optional<Relation> Relation::applyRule<ProofRule::composition>(
 }
 template <>
 std::optional<Relation> Relation::applyRule<ProofRule::id>(const Metastatement *metastatement) {
-  if (label && operation == Operation::identity) {
+  if (label && operation == RelationOperation::identity) {
     // Rule::id, Rule::negId
-    Relation r1(Operation::none);  // empty relation
+    Relation r1(RelationOperation::none);  // empty relation
     r1.label = label;
     r1.negated = negated;
     return r1;
@@ -386,19 +375,20 @@ std::optional<Relation> Relation::applyRule<ProofRule::propagation>(
 }
 template <>
 std::optional<Relation> Relation::applyRule<ProofRule::negA>(const Metastatement *metastatement) {
-  if (operation == Operation::base && metastatement->type == MetastatementType::labelRelation &&
-      metastatement->label1 == *label && metastatement->baseRelation == *identifier) {
+  if (operation == RelationOperation::base &&
+      metastatement->type == MetastatementType::labelRelation && metastatement->label1 == *label &&
+      metastatement->baseRelation == *identifier) {
     // Rule::negA
-    Relation r1(Operation::none);
+    Relation r1(RelationOperation::none);
     r1.label = metastatement->label2;
     return r1;
-  } else if (operation == Operation::converse &&
+  } else if (operation == RelationOperation::converse &&
              metastatement->type == MetastatementType::labelRelation &&
              metastatement->label2 == *label &&
              metastatement->baseRelation == *leftOperand->identifier) {
     // assumption: converse occurs only on base relations
     // Rule::negConverseA
-    Relation r1(Operation::none);
+    Relation r1(RelationOperation::none);
     r1.label = metastatement->label1;
     return r1;
   }

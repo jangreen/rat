@@ -7,10 +7,10 @@
 #include <tuple>
 #include <utility>
 
-RegularTableau::RegularTableau(std::initializer_list<Relation> initalRelations)
-    : RegularTableau(std::vector(initalRelations)) {}
-RegularTableau::RegularTableau(Clause initalRelations) {
-  auto dnf = DNF(initalRelations);
+RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
+    : RegularTableau(std::vector(initalFormulas)) {}
+RegularTableau::RegularTableau(FormulaSet initalFormulas) {
+  auto dnf = calcDNF(initalFormulas);
   for (auto clause : dnf) {
     addNode(nullptr, clause);
   }
@@ -31,7 +31,7 @@ void resetUnreducedNodes(Tableau *tableau, Tableau::Node *node) {
 
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
-  Tableau tableau{node->relations};
+  Tableau tableau{node->formulas};
   auto metastatement = tableau.applyRuleA();
 
   if (metastatement) {
@@ -105,7 +105,7 @@ bool RegularTableau::expandNode(Node *node) {
 
 // helper
 std::vector<int> getActiveLabels(RegularTableau::Node *node) {
-  for (const auto &relation : node->relations) {
+  for (const auto &relation : node->formulas) {
     if (!relation.negated) {
       return relation.labels();
     }
@@ -118,7 +118,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
     return false;
   }
   // calculate converse request: remove positive, inverse rename
-  Clause converseRequest = newNode->relations;
+  Clause converseRequest = newNode->formulas;
   converseRequest.erase(std::remove_if(converseRequest.begin(), converseRequest.end(),
                                        [](const Relation &r) { return !r.negated; }),
                         converseRequest.end());
@@ -126,7 +126,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
     relation.inverseRename(newNode->parentNodeRenaming);
   }
   // add parent terms to converse request (see test6)
-  converseRequest.insert(converseRequest.end(), node->relations.begin(), node->relations.end());
+  converseRequest.insert(converseRequest.end(), node->formulas.begin(), node->formulas.end());
   Tableau calcConverseReq(converseRequest);
   auto edgeLabel = newNode->parentNodes[node];
   calcConverseReq.rootNode->appendBranches(std::get<Metastatement>(*edgeLabel));
@@ -140,8 +140,8 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
   Tableau::Node *temp = &(*calcConverseReq.rootNode);
   converseRequest.clear();
   while (temp != nullptr) {
-    if (temp->relation && temp->relation->isNormal()) {
-      converseRequest.push_back(*temp->relation);
+    if (temp->formulas && temp->formulas->isNormal()) {
+      converseRequest.push_back(*temp->formulas);
     }
     temp = &(*temp->leftNode);  // exploit only alpha rules applied
   }
@@ -161,8 +161,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
   // compare if new
   bool inconsistent = false;
   for (const auto &relation : filtered) {
-    if (std::find(node->relations.begin(), node->relations.end(), relation) ==
-        node->relations.end()) {
+    if (std::find(node->formulas.begin(), node->formulas.end(), relation) == node->formulas.end()) {
       inconsistent = true;
     }
   }
@@ -172,7 +171,7 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
 
   // calculate alternative
   // calculate epsilon child
-  Clause nodeCopy = node->relations;
+  Clause nodeCopy = node->formulas;
   Clause missingRelations;
   for (const auto &relation : filtered) {
     if (std::find(nodeCopy.begin(), nodeCopy.end(), relation) == nodeCopy.end()) {
@@ -369,11 +368,11 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
   std::optional<Relation> rightSaturated;
 
   switch (relation.operation) {
-    case Operation::none:
-    case Operation::identity:
-    case Operation::empty:
+    case RelationOperation::none:
+    case RelationOperation::identity:
+    case RelationOperation::empty:
       return std::nullopt;
-    case Operation::base:
+    case RelationOperation::base:
       for (const auto &assumption : assumptions) {
         // TODO fast get regular assumption
         if (assumption.type == AssumptionType::regular &&
@@ -384,14 +383,14 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
         }
       }
       return std::nullopt;
-    case Operation::choice:
-    case Operation::intersection:
+    case RelationOperation::choice:
+    case RelationOperation::intersection:
       leftSaturated = saturateRelation(*relation.leftOperand);
       rightSaturated = saturateRelation(*relation.rightOperand);
       break;
-    case Operation::composition:
-    case Operation::converse:
-    case Operation::transitiveClosure:
+    case RelationOperation::composition:
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure:
       leftSaturated = saturateRelation(*relation.leftOperand);
       break;
     default:
@@ -416,9 +415,9 @@ std::optional<Relation> RegularTableau::saturateRelation(const Relation &relatio
 
 std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &assumption,
                                                            const Relation &relation) {
-  if (relation.saturatedId || relation.operation == Operation::identity ||
-      relation.operation == Operation::empty ||
-      (relation.operation == Operation::converse && relation.leftOperand->saturatedId)) {
+  if (relation.saturatedId || relation.operation == RelationOperation::identity ||
+      relation.operation == RelationOperation::empty ||
+      (relation.operation == RelationOperation::converse && relation.leftOperand->saturatedId)) {
     return std::nullopt;
   }
   if (relation.label) {
@@ -427,7 +426,7 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
     copy.negated = false;
     Relation assumptionR(assumption.relation);
     assumptionR.label = relation.label;
-    Relation r(Operation::composition, std::move(assumptionR), std::move(copy));
+    Relation r(RelationOperation::composition, std::move(assumptionR), std::move(copy));
     return r;
   }
 
@@ -435,19 +434,19 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
   std::optional<Relation> rightSaturated;
 
   switch (relation.operation) {
-    case Operation::none:
-    case Operation::identity:
-    case Operation::empty:
-    case Operation::base:
+    case RelationOperation::none:
+    case RelationOperation::identity:
+    case RelationOperation::empty:
+    case RelationOperation::base:
       return std::nullopt;
-    case Operation::choice:
-    case Operation::intersection:
+    case RelationOperation::choice:
+    case RelationOperation::intersection:
       leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
       rightSaturated = saturateIdRelation(assumption, *relation.rightOperand);
       break;
-    case Operation::composition:
-    case Operation::converse:
-    case Operation::transitiveClosure:
+    case RelationOperation::composition:
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure:
       leftSaturated = saturateIdRelation(assumption, *relation.leftOperand);
       break;
     default:
@@ -495,8 +494,8 @@ void RegularTableau::saturate(Clause &clause) {
 
         for (auto label : nodeLabels) {
           Relation leftSide(assumption.relation);
-          Relation full(Operation::full);
-          Relation r(Operation::composition, std::move(leftSide), std::move(full));
+          Relation full(RelationOperation::full);
+          Relation r(RelationOperation::composition, std::move(leftSide), std::move(full));
           r.label = label;
           r.negated = true;
           // TODO: currently: saturate emoty hyptohesis with regular -> simple formulation of
@@ -539,6 +538,7 @@ bool RegularTableau::solve() {
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
          currentNode->rootParents.empty()) ||
         currentNode->closed) {
+      // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
     /* TODO: remove: */

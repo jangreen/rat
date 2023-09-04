@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "../cat/Constraint.h"
 #include "../Relation.h"
+#include "../Set.h"
+#include "../cat/Constraint.h"
 
 class CatInferVisitor : CatBaseVisitor {
  public:
@@ -17,20 +18,27 @@ class CatInferVisitor : CatBaseVisitor {
   /*std::vector<Constraint>*/ antlrcpp::Any visitMcm(CatParser::McmContext *ctx);
   /*void*/ antlrcpp::Any visitLetDefinition(CatParser::LetDefinitionContext *ctx);
   /*Constraint*/ antlrcpp::Any visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExpr(CatParser::ExprContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprCartesian(CatParser::ExprCartesianContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprRangeIdentity(CatParser::ExprRangeIdentityContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprBasic(CatParser::ExprBasicContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprMinus(CatParser::ExprMinusContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprUnion(CatParser::ExprUnionContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprComposition(CatParser::ExprCompositionContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprIntersection(CatParser::ExprIntersectionContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprTransitive(CatParser::ExprTransitiveContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprComplement(CatParser::ExprComplementContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprInverse(CatParser::ExprInverseContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprDomainIdentity(CatParser::ExprDomainIdentityContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprIdentity(CatParser::ExprIdentityContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprTransRef(CatParser::ExprTransRefContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprFencerel(CatParser::ExprFencerelContext *ctx);
-  /*Relation*/ antlrcpp::Any visitExprOptional(CatParser::ExprOptionalContext *ctx);
+  /*Set*/ antlrcpp::Any visitSetBasic(CatParser::SetBasicContext *ctx);
+  /*Set*/ antlrcpp::Any visitSetIntersection(CatParser::SetBasicContext *ctx);
+  /*Set*/ antlrcpp::Any visitSetUnion(CatParser::SetBasicContext *ctx);
+
+  /*Relation*/ antlrcpp::Any visitRelation(CatParser::RelationContext *ctx);
+  /*Relation*/ antlrcpp::Any visitCartesianProduct(CatParser::CartesianProductContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationRangeIdentity(
+      CatParser::RelationRangeIdentityContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationBasic(CatParser::RelationBasicContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationMinus(CatParser::RelationMinusContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationUnion(CatParser::RelationUnionContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationComposition(CatParser::RelationCompositionContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationIntersection(CatParser::RelationIntersectionContext *ctx);
+  /*Relation*/ antlrcpp::Any visitTransitiveClosure(CatParser::TransitiveClosureContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationComplement(CatParser::RelationComplementContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationInverse(CatParser::RelationInverseContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationDomainIdentity(
+      CatParser::RelationDomainIdentityContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationIdentity(CatParser::RelationIdentityContext *ctx);
+  /*Relation*/ antlrcpp::Any visitTransReflexiveClosure(
+      CatParser::TransReflexiveClosureContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationFencerel(CatParser::RelationFencerelContext *ctx);
+  /*Relation*/ antlrcpp::Any visitRelationOptional(CatParser::RelationOptionalContext *ctx);
 };

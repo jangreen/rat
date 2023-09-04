@@ -7,11 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include "Metastatement.h"
 #include "ProofRule.h"
 
-enum class Operation {
-  none,               // no relation, only label
+enum class RelationOperation {
   base,               // nullary function (constant): base relation
   identity,           // nullary function (constant): identity relation
   empty,              // nullary function (constant): empty relation
@@ -20,7 +18,8 @@ enum class Operation {
   intersection,       // binary function
   composition,        // binary function
   transitiveClosure,  // unary function
-  converse            // unary function
+  converse,           // unary function
+  cartesianProduct    // TODO:
 };
 
 class Relation {
@@ -37,24 +36,21 @@ class Relation {
     swap(first.identifier, second.identifier);
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
-    swap(first.label, second.label);
-    swap(first.negated, second.negated);
     swap(first.saturated, second.saturated);
     swap(first.saturatedId, second.saturatedId);
   }
 
   explicit Relation(const std::string &expression);  // parse constructor
-  explicit Relation(const Operation operation,
+  explicit Relation(const RelationOperation operation,
                     const std::optional<std::string> &identifier = std::nullopt);
-  Relation(const Operation operation, Relation &&left);
-  Relation(const Operation operation, Relation &&left, Relation &&right);
+  Relation(const RelationOperation operation, Relation &&left);
+  Relation(const RelationOperation operation, Relation &&left, Relation &&right);
 
-  Operation operation;
+  RelationOperation operation;
   std::optional<std::string> identifier;    // is set iff operation base
   std::unique_ptr<Relation> leftOperand;    // is set iff operation unary/binary
   std::unique_ptr<Relation> rightOperand;   // is set iff operation binary
   std::optional<int> label = std::nullopt;  // is set iff labeled term
-  bool negated = false;                     // propsitional negation
   bool saturated = false;                   // mark base relation
   bool saturatedId = false;
 
@@ -68,22 +64,26 @@ class Relation {
   std::string toString() const;                          // for printing
 
   template <ProofRule::Rule rule, typename ConclusionType>
-  std::optional<ConclusionType> applyRule(const Metastatement *metastatement = nullptr);
+  std::optional<ConclusionType> applyRule();
+  // this function tries to apply a rule deep inside
+  // returns  - false if rule is not applicable
+  //          - result otherwise
   template <ProofRule::Rule rule, typename ConclusionType>
-  std::optional<ConclusionType> applyRuleDeep(const Metastatement *metastatement = nullptr) {
-    auto baseCase = applyRule<rule, ConclusionType>(metastatement);
+  std::optional<ConclusionType> applyRuleDeep() {
+    auto baseCase = applyRule<rule, ConclusionType>();
     if (baseCase) {
       return *baseCase;
     }
     // case: intersection or composition (only cases for labeled terms that can happen)
-    if (operation == Operation::composition || operation == Operation::intersection) {
-      auto leftConclusion = leftOperand->applyRuleDeep<rule, ConclusionType>(metastatement);
+    if (operation == RelationOperation::composition ||
+        operation == RelationOperation::intersection) {
+      auto leftConclusion = leftOperand->applyRuleDeep<rule, ConclusionType>();
       if (leftConclusion) {
         return substituteLeft<ConclusionType>(std::move(*leftConclusion));
       }
       // case: intersection
-      if (operation == Operation::intersection) {
-        auto rightConclusion = rightOperand->applyRuleDeep<rule, ConclusionType>(metastatement);
+      if (operation == RelationOperation::intersection) {
+        auto rightConclusion = rightOperand->applyRuleDeep<rule, ConclusionType>();
         if (rightConclusion) {
           return substituteRight<ConclusionType>(std::move(*rightConclusion));
         }
@@ -99,7 +99,3 @@ class Relation {
   static std::unordered_map<std::string, Relation> relations;  // defined relations
   static int maxLabel;                                         // to create globally unique labels
 };
-
-typedef std::variant<Relation, Metastatement> Literal;
-typedef std::vector<Relation> Clause;
-typedef std::vector<Literal> ExtendedClause;

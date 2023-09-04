@@ -2,7 +2,7 @@
 
 // helper
 bool checkIfClosed(Tableau::Node *node, const Relation &relation) {
-  if (relation.negated && relation.operation == Operation::full) {
+  if (relation.negated && relation.operation == RelationOperation::full) {
     return true;
   }
 
@@ -138,7 +138,7 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
 }
 
 bool Tableau::Node::applyDNFRule() {
-  auto rId = relation->applyRuleDeep<ProofRule::id, Relation>();
+  auto rId = formula->applyRuleDeep<ProofRule::id, Relation>();
   if (rId) {
     rId->negated = relation->negated;
     appendBranches(*rId);

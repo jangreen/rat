@@ -9,21 +9,20 @@
 #include <vector>
 
 #include "Assumption.h"
-#include "Metastatement.h"
-#include "Relation.h"
+#include "Literal.h"
 #include "Tableau.h"
 
 typedef std::vector<int> Renaming;
-typedef std::optional<std::tuple<Metastatement, Renaming>> EdgeLabel;  // TODO: use
+typedef std::optional<std::tuple<Literal, Renaming>> EdgeLabel;  // TODO: use
 
 class RegularTableau {
  public:
   class Node {
    public:
-    Node(std::initializer_list<Relation> relations);
-    explicit Node(Clause relations);
+    Node(std::initializer_list<Formula> formulas);
+    explicit Node(FormulaSet formulas);
 
-    Clause relations;
+    FormulaSet formulas;
     std::vector<Node *> childNodes;
     std::map<Node *, EdgeLabel> parentNodes;
     std::vector<Node *> rootParents;      // parent nodes that are reachable by some root node
@@ -47,22 +46,42 @@ class RegularTableau {
     };
   };
 
-  RegularTableau(std::initializer_list<Relation> initalRelations);
-  explicit RegularTableau(Clause initalRelations);
+  RegularTableau(std::initializer_list<Formula> initalFormulas);
+  explicit RegularTableau(FormulaSet initalFormulas);
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
   std::stack<Node *> unreducedNodes;
   static std::vector<Assumption> assumptions;
 
-  static std::vector<ExtendedClause> DNF(const Clause &clause) {
-    Tableau tableau{clause};
+  // CALCULATE REDUCED DNF
+  static DNF calcDNF(const Formula &initalFormula) {  // used only with clauses
+    // TODO: more direct computation of DNF
+    /*FormulaSet initalConjunction = {initalFormula};
+    std::vector<FormulaSet> disjunction = {initalConjunction};
+    int i = 0;
+    int j = 0;
+    while (i < disjunction.size()) {
+      const auto &formulas = disjunction.at(i);
+      while (j < formulas.size()) {
+        const auto &formula = formulas.at(j);
+
+        const auto reduced = formula.isReduced();
+      }
+    }
+
+    for (const auto formula : formulas) {
+      if (formula.isReduced) {
+        reducedFormulas.push_back(formula);
+      } else {
+      }
+    }*/
+
+    Tableau tableau{initalFormula};
     return tableau.DNF();
   }
   bool expandNode(Node *node);
-  void addNode(Node *parent, ExtendedClause clause,
-               const std::optional<Metastatement> &metastatement =
-                   std::nullopt);  // TODO: move in node class
+  void addNode(Node *parent, Clause clause);  // TODO: move in node class
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void updateRootParents(Node *node);
   void removeEdge(Node *parent, Node *child);

@@ -4,8 +4,10 @@ import Cat;
 statement:
 	letDefinition* hypothesis* (assertion | mmAssertion)* EOF;
 
-hypothesis: ASSUME lhs = expression INEQUAL rhs = expression;
-assertion: ASSERT lhs = expression INEQUAL rhs = expression;
+hypothesis:
+	ASSUME lhs = relationExpression INEQUAL rhs = relationExpression;
+assertion:
+	ASSERT lhs = relationExpression INEQUAL rhs = relationExpression;
 mmAssertion: CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH;
 
 ASSUME: 'assume';

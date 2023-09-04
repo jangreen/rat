@@ -4,7 +4,7 @@
 
 // helper
 void markBaseRelationsAsSaturated(bool identity, Relation &relation) {
-  if (relation.operation == Operation::base) {
+  if (relation.operation == RelationOperation::base) {
     if (identity) {
       relation.saturatedId = true;
     } else {
