@@ -20,7 +20,6 @@ class Tableau {
     std::unique_ptr<Node> leftNode = nullptr;
     std::unique_ptr<Node> rightNode = nullptr;
     Node *parentNode = nullptr;
-    bool closed = false;
 
     bool isClosed();
     bool isLeaf() const;

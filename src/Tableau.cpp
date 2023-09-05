@@ -11,8 +11,9 @@
 /* RULES */
 template <>
 std::optional<std::tuple<Relation, Metastatement>> Tableau::Node::applyRule<ProofRule::a>() {
-  if (relation && !relation->negated) {
-    auto result = relation->applyRuleDeep<ProofRule::a, std::tuple<Relation, Metastatement>>();
+  if (formula && formula->operation == FormulaOperation::literal && !formula->literal->negated) {
+    auto result = formula->literal->predicate
+                      ->applyRuleDeep<ProofRule::a, std::tuple<Relation, Metastatement>>();
     if (result) {
       auto &[newRelation, newMetastatement] = *result;
       appendBranches(newRelation);

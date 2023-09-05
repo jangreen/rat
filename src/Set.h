@@ -7,6 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "Formula.h"
+#include "Literal.h"
+#include "Predicate.h"
 #include "ProofRule.h"
 #include "Relation.h"
 
@@ -61,6 +64,11 @@ class Set {
   bool isNormal() const;                       // true iff all labels are in front of base Sets
   bool operator==(const Set &otherSet) const;  // compares two Set syntactically
   bool operator<(const Set &otherSet) const;   // for sorting/hashing
+
+  // functions for rule applications
+  template <ProofRule::Rule rule, typename ConclusionType>
+  std::optional<ConclusionType> applyRule();
+
   // printing
   std::string toString() const;
 };

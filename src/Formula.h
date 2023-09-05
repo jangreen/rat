@@ -43,8 +43,13 @@ class Formula {
   std::unique_ptr<Formula> rightOperand;  // is set iff binary Formula
   std::unique_ptr<Literal> literal;       // is set iff literal
 
+  // functions for rule applications
+  template <ProofRule::Rule rule>
+  std::optional<GDNF> applyRule();
+
   // printing
   std::string toString() const;
 };
 
 typedef std::vector<Formula> FormulaSet;
+typedef std::vector<FormulaSet> GDNF;

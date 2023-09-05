@@ -297,26 +297,7 @@ std::optional<Relation> Relation::applyRule<ProofRule::negAt>(const Metastatemen
   return std::nullopt;
 }
 template <>
-std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule::a>(
-    const Metastatement *metastatement) {
-  if (label && operation == RelationOperation::base) {
-    // Rule::a
-    Relation r1(RelationOperation::none);  // empty relation
-    Relation::maxLabel++;
-    r1.label = Relation::maxLabel;
-    Metastatement m(MetastatementType::labelRelation, *label, Relation::maxLabel, *identifier);
-    std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
-    return result;
-  } else if (label && operation == RelationOperation::converse) {
-    // Rule::negA
-    Relation r1(RelationOperation::none);  // empty relation
-    Relation::maxLabel++;
-    r1.label = Relation::maxLabel;
-    Metastatement m(MetastatementType::labelRelation, Relation::maxLabel, *label,
-                    *leftOperand->identifier);
-    std::tuple<Relation, Metastatement> result{std::move(r1), std::move(m)};
-    return result;
-  }
+std::optional<std::tuple<Relation, Metastatement>> Relation::applyRule<ProofRule::a>() {
   return std::nullopt;
 }
 template <>

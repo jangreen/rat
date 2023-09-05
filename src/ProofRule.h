@@ -4,7 +4,10 @@
 class ProofRule {
  public:
   enum Rule {
-    none,
+    land,
+    lor,
+    negAnd,
+    negOr,
     bottom,
     empty,
     id,
