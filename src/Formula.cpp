@@ -2,7 +2,7 @@
 
 // RULES
 template <>
-std::optional<std::tuple<Formula, Formula>> Formula::applyRule<ProofRule::land>() {
+std::optional<GDNF> Formula::applyRule<ProofRule::land>() {
   if (operation == FormulaOperation::logicalAnd) {
     // f1 & f2 -> f1 and f2
     std::tuple<Formula, Formula> result{std::move(*leftOperand), std::move(*rightOperand)};
