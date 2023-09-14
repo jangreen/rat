@@ -19,8 +19,9 @@ class CatInferVisitor : CatBaseVisitor {
   /*void*/ antlrcpp::Any visitLetDefinition(CatParser::LetDefinitionContext *ctx);
   /*Constraint*/ antlrcpp::Any visitAxiomDefinition(CatParser::AxiomDefinitionContext *ctx);
   /*Set*/ antlrcpp::Any visitSetBasic(CatParser::SetBasicContext *ctx);
-  /*Set*/ antlrcpp::Any visitSetIntersection(CatParser::SetBasicContext *ctx);
-  /*Set*/ antlrcpp::Any visitSetUnion(CatParser::SetBasicContext *ctx);
+  /*Set*/ antlrcpp::Any visitSingleton(CatParser::SingletonContext *ctx);
+  /*Set*/ antlrcpp::Any visitSetIntersection(CatParser::SetIntersectionContext *ctx);
+  /*Set*/ antlrcpp::Any visitSetUnion(CatParser::SetUnionContext *ctx);
 
   /*Relation*/ antlrcpp::Any visitRelation(CatParser::RelationContext *ctx);
   /*Relation*/ antlrcpp::Any visitCartesianProduct(CatParser::CartesianProductContext *ctx);

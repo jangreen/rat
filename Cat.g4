@@ -28,7 +28,8 @@ letRecAndDefinition: AND n = NAME EQ e = relationExpression;
 setExpression:
 	e1 = setExpression BAR e2 = setExpression	# setUnion
 	| e1 = setExpression AMP e2 = setExpression	# setIntersection
-	| n = NAME									# setBasic;
+	| n = NAME									# setBasic
+	| LCBRAC l = NAME RCBRAC					# singleton;
 
 relationExpression:
 	e1 = setExpression STAR e2 = setExpression					# cartesianProduct
@@ -77,6 +78,8 @@ LPAR: '(';
 RPAR: ')';
 LBRAC: '[';
 RBRAC: ']';
+LCBRAC: '{';
+RCBRAC: '}';
 
 FENCEREL: 'fencerel';
 DOMAIN_: 'domain';

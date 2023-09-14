@@ -2,12 +2,8 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include "ProofRule.h"
 #include "Set.h"
 
 enum class PredicateOperation {

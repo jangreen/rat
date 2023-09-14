@@ -1,5 +1,8 @@
+#include <iostream>
+
 #include "Tableau.h"
 
+/* LEGACY
 // helper
 bool checkIfClosed(Tableau::Node *node, const Relation &relation) {
   if (relation.negated && relation.operation == RelationOperation::full) {
@@ -15,112 +18,114 @@ bool checkIfClosed(Tableau::Node *node, const Relation &relation) {
   }
   return false;
 }
-bool checkIfDuplicate(Tableau::Node *node, const Relation &relation) {
+*/
+
+Tableau::Node::Node(Tableau *tableau, const Formula &&formula)
+    : tableau(tableau), formula(std::move(formula)) {}
+Tableau::Node::Node(Node *parent, const Formula &&formula)
+    : tableau(parent->tableau), formula(std::move(formula)), parentNode(parent) {}
+// TODO: do this here? onlyin base case? newNode.closed = checkIfClosed(parent, relation);
+
+bool Tableau::Node::isClosed() const {
+  // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
+  return leftNode && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed());
+}
+
+bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
+
+bool Tableau::Node::Node::branchContains(const Formula &formula) const {
+  const Node *node = this;
   while (node != nullptr) {
-    if (node->relation && *node->relation == relation) {
+    if (node->formula == formula) {
       return true;
     }
     node = node->parentNode;
   }
   return false;
 }
-std::optional<Tableau::Node> createNode(Tableau::Node *parent, const Relation &relation) {
-  // create new node by copying
-  Tableau::Node newNode(parent->tableau, Relation(relation));
-  newNode.closed = checkIfClosed(parent, relation);
-  if (!newNode.closed && checkIfDuplicate(parent, relation)) {
-    return std::nullopt;
-  }
-  newNode.parentNode = parent;
-  newNode.parentMetastatement = (parent->metastatement) ? parent : parent->parentMetastatement;
-  return newNode;
-}
 
-Tableau::Node::Node(Tableau *tableau, const Relation &&relation)
-    : tableau(tableau), relation(relation) {}
-Tableau::Node::Node(Tableau *tableau, const Metastatement &&metastatement)
-    : tableau(tableau), metastatement(metastatement) {}
-
-bool Tableau::Node::isClosed() {
-  // Lazy evaluated closed nodes
-  closed = closed ||
-           (leftNode && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed()));
-  return closed;
-}
-
-bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
-
-void Tableau::Node::appendBranches(const Relation &leftRelation) {
-  if (!isClosed() && isLeaf()) {
-    auto newNode = createNode(this, leftRelation);
-    if (newNode) {
-      leftNode = std::make_unique<Node>(std::move(*newNode));
-      if (!leftNode->closed) {
-        tableau->unreducedNodes.push(leftNode.get());
+void Tableau::Node::appendBranch(const GDNF &formulas) {
+  if (isLeaf() && !isClosed()) {
+    if (formulas.size() > 2) {
+      std::cout << "[Bug] We would like to support only binary branching" << std::endl;
+    }
+    if (formulas.size() > 1) {
+      for (const auto &formula : formulas[1]) {
+        appendBranch(formula);
+      }
+      rightNode = std::move(leftNode);
+      leftNode = nullptr;
+      for (const auto &formula : formulas[0]) {
+        appendBranch(formula);
       }
     }
+    if (formulas.size() > 0) {
+      for (const auto &formula : formulas[0]) {
+        appendBranch(formula);
+      }
+    }
+
   } else {
     if (leftNode != nullptr) {
-      leftNode->appendBranches(leftRelation);
+      leftNode->appendBranch(formulas);
     }
     if (rightNode != nullptr) {
-      rightNode->appendBranches(leftRelation);
+      rightNode->appendBranch(formulas);
     }
   }
 }
 
-void Tableau::Node::appendBranches(const Relation &leftRelation, const Relation &rightRelation) {
-  if (!isClosed() && isLeaf()) {
-    auto newNodeLeft = createNode(this, leftRelation);
-    auto newNodeRight = createNode(this, rightRelation);
-    if (newNodeLeft) {
-      leftNode = std::make_unique<Node>(std::move(*newNodeLeft));
-      if (!leftNode->closed) {
-        tableau->unreducedNodes.push(leftNode.get());
-      }
-    }
-    if (newNodeRight) {
-      rightNode = std::make_unique<Node>(std::move(*newNodeRight));
-      if (!rightNode->closed) {
-        tableau->unreducedNodes.push(rightNode.get());
-      }
+void Tableau::Node::appendBranch(const Formula &leftFormula) {
+  if (isLeaf() && !isClosed()) {
+    if (!branchContains(leftFormula)) {
+      Node newNode(this, std::move(leftFormula));
+      leftNode = std::make_unique<Node>(std::move(newNode));
+      tableau->unreducedNodes.push(leftNode.get());
     }
   } else {
     if (leftNode != nullptr) {
-      leftNode->appendBranches(leftRelation, rightRelation);
+      leftNode->appendBranch(leftFormula);
     }
     if (rightNode != nullptr) {
-      rightNode->appendBranches(leftRelation, rightRelation);
+      rightNode->appendBranch(leftFormula);
     }
   }
 }
-// TODO DRY
-void Tableau::Node::appendBranches(const Metastatement &metastatement) {
-  if (!isClosed() && isLeaf()) {
-    leftNode = std::make_unique<Node>(tableau, Metastatement(metastatement));
-    leftNode->parentNode = this;
-    leftNode->parentMetastatement = (this->metastatement) ? this : parentMetastatement;
-    tableau->unreducedNodes.push(leftNode.get());
+
+void Tableau::Node::appendBranch(const Formula &leftFormula, const Formula &rightFormula) {
+  if (isLeaf() && !isClosed()) {
+    if (!branchContains(leftFormula)) {
+      Node newNode(this, std::move(leftFormula));
+      leftNode = std::make_unique<Node>(std::move(newNode));
+      tableau->unreducedNodes.push(leftNode.get());
+    }
+    if (!branchContains(rightFormula)) {
+      Node newNode(this, std::move(rightFormula));
+      rightNode = std::make_unique<Node>(std::move(newNode));
+      tableau->unreducedNodes.push(rightNode.get());
+    }
   } else {
     if (leftNode != nullptr) {
-      leftNode->appendBranches(metastatement);
+      leftNode->appendBranch(leftFormula, rightFormula);
     }
     if (rightNode != nullptr) {
-      rightNode->appendBranches(metastatement);
+      rightNode->appendBranch(leftFormula, rightFormula);
     }
+  }
+}
+
+void Tableau::Node::applyRule() {
+  auto result = formula.applyRule();
+  if (result) {
+    auto disjunction = *result;
+    appendBranch(disjunction);
   }
 }
 
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
-  output << "N" << this << "[label=\"";
-  if (relation) {
-    output << relation->toString();
-  } else {
-    output << metastatement->toString();
-  }
-  output << "\"";
+  output << "N" << this << "[label=\"" << formula.toString() << "\"";
   // color closed branches
-  if (closed) {
+  if (isClosed()) {
     output << ", fontcolor=green";
   }
   output << "];" << std::endl;
@@ -137,6 +142,13 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   }
 }
 
+bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
+  return left->formula.toString().length() < right->formula.toString().length();
+  // TODO: define clever measure: should measure alpha beta rules
+  // left.formula->negated < right.formula->negated;
+}
+
+/* LEGACY
 bool Tableau::Node::applyDNFRule() {
   auto rId = formula->applyRuleDeep<ProofRule::id, Relation>();
   if (rId) {
@@ -203,15 +215,6 @@ bool Tableau::Node::applyDNFRule() {
     return true;
   }
   return false;
-}
-
-bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
-  if (left->relation && right->relation) {
-    return left->relation->negated < right->relation->negated;
-  } else if (right->relation) {
-    return (!!left->metastatement) < right->relation->negated;
-  }
-  return true;
 }
 
 bool Tableau::Node::applyAnyRule() {
@@ -292,3 +295,4 @@ bool Tableau::Node::apply(const std::initializer_list<ProofRule> rules) {
   }
   return false;
 }
+*/

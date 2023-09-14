@@ -4,9 +4,28 @@
 #include "Tableau.h"
 #include "parsing/LogicVisitor.h"
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
+  Formula f("{e};{e}");
+  Tableau t{std::move(f)};
+  t.solve();
+  t.exportProof("test");
+  /*Set s1("{e}.(a & b)");
+  std::cout << s1.toString() << std::endl;
+  auto s2 = *s1.applyRule();
+  for (const std::vector<Set::PartialPredicate>& clause : s2) {
+    for (const Set::PartialPredicate& partialPredicate : clause) {
+      const p = std::get_if<Predicate>(partialPredicate);
+      if (p) {
+        std::cout << p->toString() << std::endl;
+      } else {
+        auto s = std::get<Set>(partialPredicate);
+        std::cout << s.toString() << std::endl;
+      }
+    }
+  }*/
+
   // parse arguments or ask for arguments
-  std::string programName = argv[0];
+  /*std::string programName = argv[0];
   std::vector<std::string> programArguments;
   if (argc > 1) {
     programArguments.assign(argv + 1, argv + argc);
@@ -37,5 +56,5 @@ int main(int argc, const char *argv[]) {
       tableau.solve();
       tableau.exportProof("regular");
     }
-  }
+  }*/
 }

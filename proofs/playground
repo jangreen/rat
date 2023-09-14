@@ -1,0 +1,5 @@
+assume a+ <= 0
+assume b <= id
+assume rf & int <= po
+
+assert a;b <= 0

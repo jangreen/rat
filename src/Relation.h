@@ -2,12 +2,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
 #include <vector>
-
-#include "ProofRule.h"
 
 enum class RelationOperation {
   base,               // nullary function (constant): base relation
@@ -36,9 +31,11 @@ class Relation {
     swap(first.identifier, second.identifier);
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
-    swap(first.saturated, second.saturated);
-    swap(first.saturatedId, second.saturatedId);
+    /*swap(first.saturated, second.saturated);
+    swap(first.saturatedId, second.saturatedId);*/
   }
+  bool operator==(const Relation &other) const;  // compares two relation syntactically
+  bool operator<(const Relation &other) const;   // for sorting/hashing
 
   explicit Relation(const std::string &expression);  // parse constructor
   explicit Relation(const RelationOperation operation,
@@ -47,55 +44,13 @@ class Relation {
   Relation(const RelationOperation operation, Relation &&left, Relation &&right);
 
   RelationOperation operation;
-  std::optional<std::string> identifier;    // is set iff operation base
-  std::unique_ptr<Relation> leftOperand;    // is set iff operation unary/binary
-  std::unique_ptr<Relation> rightOperand;   // is set iff operation binary
-  std::optional<int> label = std::nullopt;  // is set iff labeled term
-  bool saturated = false;                   // mark base relation
-  bool saturatedId = false;
+  std::optional<std::string> identifier;   // is set iff operation base
+  std::unique_ptr<Relation> leftOperand;   // is set iff operation unary/binary
+  std::unique_ptr<Relation> rightOperand;  // is set iff operation binary
+  /*bool saturated = false;                   // mark base relation
+  bool saturatedId = false;*/
 
-  bool isNormal() const;                       // true iff all labels are in front of base relations
-  std::vector<int> labels() const;             // return all labels of the relation term
-  std::vector<int> calculateRenaming() const;  // renaming {2,4,5}: 2->0,4->1,5->2
-  void rename(const std::vector<int> &renaming);  // renames given a renaming function
-  void inverseRename(const std::vector<int> &renaming);
-  bool operator==(const Relation &otherRelation) const;  // compares two relation syntactically
-  bool operator<(const Relation &otherRelation) const;   // for sorting/hashing
-  std::string toString() const;                          // for printing
-
-  template <ProofRule::Rule rule, typename ConclusionType>
-  std::optional<ConclusionType> applyRule();
-  // this function tries to apply a rule deep inside
-  // returns  - false if rule is not applicable
-  //          - result otherwise
-  template <ProofRule::Rule rule, typename ConclusionType>
-  std::optional<ConclusionType> applyRuleDeep() {
-    auto baseCase = applyRule<rule, ConclusionType>();
-    if (baseCase) {
-      return *baseCase;
-    }
-    // case: intersection or composition (only cases for labeled terms that can happen)
-    if (operation == RelationOperation::composition ||
-        operation == RelationOperation::intersection) {
-      auto leftConclusion = leftOperand->applyRuleDeep<rule, ConclusionType>();
-      if (leftConclusion) {
-        return substituteLeft<ConclusionType>(std::move(*leftConclusion));
-      }
-      // case: intersection
-      if (operation == RelationOperation::intersection) {
-        auto rightConclusion = rightOperand->applyRuleDeep<rule, ConclusionType>();
-        if (rightConclusion) {
-          return substituteRight<ConclusionType>(std::move(*rightConclusion));
-        }
-      }
-    }
-    return std::nullopt;
-  }
-  template <typename ConclusionType>
-  ConclusionType substituteLeft(ConclusionType &&newLeft);
-  template <typename ConclusionType>
-  ConclusionType substituteRight(ConclusionType &&newRight);
+  std::string toString() const;  // for printing
 
   static std::unordered_map<std::string, Relation> relations;  // defined relations
-  static int maxLabel;                                         // to create globally unique labels
 };

@@ -3,35 +3,32 @@
 #include <memory>
 #include <queue>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "Formula.h"
-#include "Relation.h"
 
 class Tableau {
  public:
   class Node {
    public:
-    Node(Tableau *tableau, const Formula &&relation);
+    Node(Tableau *tableau, const Formula &&formula);
+    Node(Node *parent, const Formula &&formula);
 
     Tableau *tableau;
-    std::optional<Formula> formula = std::nullopt;
+    Formula formula;
     std::unique_ptr<Node> leftNode = nullptr;
     std::unique_ptr<Node> rightNode = nullptr;
     Node *parentNode = nullptr;
 
-    bool isClosed();
+    bool isClosed() const;
     bool isLeaf() const;
-    void appendBranches(const Formula &leftRelation, const Formula &rightRelation);
-    void appendBranches(const Formula &leftRelation);
-    template <ProofRule::Rule rule, typename ConclusionType>
-    std::optional<ConclusionType> applyRule();
-    bool apply(const std::initializer_list<ProofRule> rules);
-    bool applyAnyRule();
-    bool applyDNFRule();
+    bool branchContains(const Formula &formula) const;
+    void appendBranch(const GDNF &formulas);
+    void appendBranch(const Formula &leftFormula);
+    void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
+    void applyRule();
 
-    DNF extractDNF();
+    // TODO: DNF extractDNF() const;
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -49,12 +46,13 @@ class Tableau {
   bool solve(int bound = 30);
 
   // methods for regular reasoning
-  DNF calcDNF();
+  /*DNF calcDNF();
 
   bool apply(const std::initializer_list<ProofRule> rules);
   std::optional<Metastatement> applyRuleA();
   void calcReuqest();
   std::tuple<ExtendedClause, Clause> extractRequest() const;  // and converse request
+  */
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;

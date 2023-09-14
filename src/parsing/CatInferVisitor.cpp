@@ -13,7 +13,7 @@ std::vector<Constraint> CatInferVisitor::parseMemoryModel(const std::string &fil
   CatParser parser(&tokens);
 
   CatParser::McmContext *ctx = parser.mcm();
-  return any_cast<std::vector<Constraint>>(this->visitMcm(ctx));
+  return std::any_cast<std::vector<Constraint>>(this->visitMcm(ctx));
 }
 
 Relation CatInferVisitor::parseRelation(const std::string &relationString) {
@@ -23,7 +23,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   CatParser parser(&tokens);
 
   CatParser::RelationExpressionContext *ctx = parser.relationExpression();  // expect expression
-  Relation parsedRelation = any_cast<Relation>(this->visit(ctx));
+  Relation parsedRelation = std::any_cast<Relation>(this->visit(ctx));
   return parsedRelation;
 }
 
@@ -37,7 +37,8 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
       std::cout << "[Parsing] Recursive defitions are not supported." << std::endl;
       exit(0);
     } else if (definitionContext->axiomDefinition()) {
-      Constraint axiom = any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
+      Constraint axiom =
+          std::any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
       constraints.push_back(axiom);
     }
   }
@@ -60,13 +61,13 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
   } else if (ctx->ACYCLIC()) {
     type = ConstraintType::acyclic;
   }
-  Relation relation = any_cast<Relation>(ctx->e->accept(this));
+  Relation relation = std::any_cast<Relation>(ctx->e->accept(this));
   return Constraint(type, std::move(relation), name);
 }
 
 /*void*/ antlrcpp::Any CatInferVisitor::visitLetDefinition(CatParser::LetDefinitionContext *ctx) {
   std::string name = ctx->NAME()->getText();
-  Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
+  Relation derivedRelation = std::any_cast<Relation>(ctx->e->accept(this));
   Relation::relations.insert({name, derivedRelation});
   return antlrcpp::Any();
 }
@@ -94,7 +95,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelation(CatParser::RelationContext *ctx) {
   // process: (e)
-  Relation derivedRelation = any_cast<Relation>(ctx->e->accept(this));
+  Relation derivedRelation = std::any_cast<Relation>(ctx->e->accept(this));
   return derivedRelation;
 }
 
@@ -128,25 +129,25 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationUnion(
     CatParser::RelationUnionContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
-  Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e1->accept(this));
+  Relation r2 = std::any_cast<Relation>(ctx->e2->accept(this));
   return Relation(RelationOperation::choice, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationComposition(
     CatParser::RelationCompositionContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
-  Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e1->accept(this));
+  Relation r2 = std::any_cast<Relation>(ctx->e2->accept(this));
   return Relation(RelationOperation::composition, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationIntersection(
     CatParser::RelationIntersectionContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e1->accept(this));
-  Relation r2 = any_cast<Relation>(ctx->e2->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e1->accept(this));
+  Relation r2 = std::any_cast<Relation>(ctx->e2->accept(this));
   return Relation(RelationOperation::intersection, std::move(r1), std::move(r2));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitTransitiveClosure(
     CatParser::TransitiveClosureContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e->accept(this));
   Relation r2(r1);
   Relation r1Transitive(RelationOperation::transitiveClosure, std::move(r1));
   return Relation(RelationOperation::composition, std::move(r2), std::move(r1Transitive));
@@ -158,7 +159,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationInverse(
     CatParser::RelationInverseContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e->accept(this));
   return Relation(RelationOperation::converse, std::move(r1));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationDomainIdentity(
@@ -185,7 +186,7 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitTransReflexiveClosure(
     CatParser::TransReflexiveClosureContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e->accept(this));
   return Relation(RelationOperation::transitiveClosure, std::move(r1));
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationFencerel(
@@ -195,7 +196,34 @@ Relation CatInferVisitor::parseRelation(const std::string &relationString) {
 }
 /*Relation*/ antlrcpp::Any CatInferVisitor::visitRelationOptional(
     CatParser::RelationOptionalContext *ctx) {
-  Relation r1 = any_cast<Relation>(ctx->e->accept(this));
+  Relation r1 = std::any_cast<Relation>(ctx->e->accept(this));
   Relation idR(RelationOperation::identity);
   return Relation(RelationOperation::choice, std::move(r1), std::move(idR));
+}
+
+/*Set*/ antlrcpp::Any CatInferVisitor::visitSetBasic(CatParser::SetBasicContext *ctx) {
+  std::string name = ctx->NAME()->getText();
+  Set s(SetOperation::base, name);
+  return s;
+}
+
+/*Set*/ antlrcpp::Any CatInferVisitor::visitSingleton(CatParser::SingletonContext *ctx) {
+  std::string name = ctx->NAME()->getText();
+  Set s(SetOperation::singleton, name);
+  return s;
+}
+
+/*Set*/ antlrcpp::Any CatInferVisitor::visitSetIntersection(
+    CatParser::SetIntersectionContext *ctx) {
+  Set s1 = std::any_cast<Set>(ctx->e1->accept(this));
+  Set s2 = std::any_cast<Set>(ctx->e2->accept(this));
+  Set s(SetOperation::intersection, std::move(s1), std::move(s2));
+  return s;
+}
+
+/*Set*/ antlrcpp::Any CatInferVisitor::visitSetUnion(CatParser::SetUnionContext *ctx) {
+  Set s1 = std::any_cast<Set>(ctx->e1->accept(this));
+  Set s2 = std::any_cast<Set>(ctx->e2->accept(this));
+  Set s(SetOperation::choice, std::move(s1), std::move(s2));
+  return s;
 }

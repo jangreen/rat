@@ -1,24 +1,78 @@
 #include "Formula.h"
 
-// RULES
-template <>
-std::optional<GDNF> Formula::applyRule<ProofRule::land>() {
-  if (operation == FormulaOperation::logicalAnd) {
-    // f1 & f2 -> f1 and f2
-    std::tuple<Formula, Formula> result{std::move(*leftOperand), std::move(*rightOperand)};
-    return result;
+Formula::Formula(const Formula &other) : operation(other.operation) {
+  if (other.leftOperand != nullptr) {
+    leftOperand = std::make_unique<Formula>(*other.leftOperand);
   }
-  return std::nullopt;
+  if (other.rightOperand != nullptr) {
+    rightOperand = std::make_unique<Formula>(*other.rightOperand);
+  }
+  if (other.literal != nullptr) {
+    literal = std::make_unique<Literal>(*other.literal);
+  }
+}
+Formula &Formula::operator=(const Formula &other) {
+  Formula copy(other);
+  swap(*this, copy);
+  return *this;
+}
+Formula::Formula(const std::string &expression) {
+  Logic visitor;
+  *this = visitor.parseFormula(expression);
+}
+Formula::Formula(const FormulaOperation operation, Literal &&literal)
+    : operation(operation), literal(std::make_unique<Literal>(std::move(literal))) {}
+Formula::Formula(const FormulaOperation operation, Formula &&left)
+    : operation(operation), leftOperand(std::make_unique<Formula>(std::move(left))) {}
+Formula::Formula(const FormulaOperation operation, Formula &&left, Formula &&right)
+    : operation(operation),
+      leftOperand(std::make_unique<Formula>(std::move(left))),
+      rightOperand(std::make_unique<Formula>(std::move(right))) {}
+
+bool Formula::operator==(const Formula &other) const {
+  return operation == other.operation && leftOperand == other.leftOperand &&
+         rightOperand == other.rightOperand && literal == other.literal;
 }
 
-template <>
-std::optional<std::tuple<Formula, Formula>> Formula::applyRule<ProofRule::lor>() {
-  if (operation == FormulaOperation::logicalOr) {
-    // f1 | f2 -> f1 or f2
-    std::tuple<Formula, Formula> result{std::move(*leftOperand), std::move(*rightOperand)};
-    return result;
+std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
+  switch (operation) {
+    case FormulaOperation::logicalAnd: {
+      // f1 & f2 -> { f1, f2 }
+      std::vector<std::vector<Formula>> result{{Formula(*leftOperand), Formula(*rightOperand)}};
+      return result;
+    }
+    case FormulaOperation::logicalOr: {
+      // f1 | f2 -> { f1 }, { f2 }
+      std::vector<std::vector<Formula>> result{{Formula(*leftOperand)}, {Formula(*rightOperand)}};
+      return result;
+    }
+    case FormulaOperation::literal:
+      break;
+    case FormulaOperation::negation:
+      switch (leftOperand->operation) {
+        case FormulaOperation::logicalAnd: {
+          // ~(f1 & f2) -> { ~f1 }, { ~f2 }
+          std::vector<std::vector<Formula>> result{
+              {Formula(FormulaOperation::negation, Formula(*leftOperand))},
+              {Formula(FormulaOperation::negation, Formula(*rightOperand))}};
+          return result;
+        }
+        case FormulaOperation::logicalOr: {
+          // ~(f1 | f2) -> { ~f1, ~f2 }
+          std::vector<std::vector<Formula>> result{
+              {Formula(FormulaOperation::negation, Formula(*leftOperand)),
+               Formula(FormulaOperation::negation, Formula(*rightOperand))}};
+          return result;
+        }
+        case FormulaOperation::literal:
+          return std::nullopt;
+        case FormulaOperation::negation: {
+          // ~(~f) -> { f }
+          std::vector<std::vector<Formula>> result{{Formula(*leftOperand)}};
+          return result;
+        }
+      }
   }
-  return std::nullopt;
 }
 
 std::string Formula::toString() const {

@@ -2,14 +2,10 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "Literal.h"
-#include "ProofRule.h"
-#include "Set.h"
+#include "parsing/LogicVisitor.h"
 
 enum class FormulaOperation {
   literal,    // nullary Formula
@@ -32,6 +28,7 @@ class Formula {
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
   }
+  bool operator==(const Formula &other) const;
 
   explicit Formula(const std::string &expression);  // parse constructor
   Formula(const FormulaOperation operation, Literal &&literal);
@@ -44,8 +41,7 @@ class Formula {
   std::unique_ptr<Literal> literal;       // is set iff literal
 
   // functions for rule applications
-  template <ProofRule::Rule rule>
-  std::optional<GDNF> applyRule();
+  std::optional<std::vector<std::vector<Formula>>> applyRule();
 
   // printing
   std::string toString() const;

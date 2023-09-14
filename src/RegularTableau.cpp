@@ -7,7 +7,8 @@
 #include <tuple>
 #include <utility>
 
-RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
+// LEGACY
+/*RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
     : RegularTableau(std::vector(initalFormulas)) {}
 RegularTableau::RegularTableau(FormulaSet initalFormulas) {
   auto dnf = calcDNF(initalFormulas);
@@ -541,7 +542,6 @@ bool RegularTableau::solve() {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
-    /* TODO: remove: */
     // TODO: remove exportProof("regular");  // DEBUG
     if (!expandNode(currentNode)) {
       extractCounterexample(&(*currentNode));
@@ -642,3 +642,4 @@ void RegularTableau::exportProof(std::string filename) const {
   toDotFormat(file);
   file.close();
 }
+*/

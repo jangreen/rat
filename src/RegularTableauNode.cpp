@@ -1,7 +1,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "RegularTableau.h"
-
+/* LEGACY
 RegularTableau::Node::Node(std::initializer_list<Relation> relations) : relations(relations) {}
 RegularTableau::Node::Node(Clause relations) : relations(relations) {}
 
@@ -83,3 +83,4 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     childNode->toDotFormat(output);
   }
 }
+*/

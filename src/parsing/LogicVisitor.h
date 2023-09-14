@@ -18,7 +18,7 @@
 #include "../Set.h"
 #include "CatInferVisitor.h"
 
-// helper
+/*/ helper
 Relation loadModel(const std::string &file) {
   CatInferVisitor visitor;
   auto sc = visitor.parseMemoryModel(file);
@@ -34,11 +34,14 @@ Relation loadModel(const std::string &file) {
   }
   return *unionR;
 }
+*/
 
-class Logic : LogicBaseVisitor {
+// forward declarations
+class Formula;
+
+class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
  public:
-  /*std::tuple<std::vector<Assumption>, std::vector<Formula>>*/ std::any visitStatement(
-      LogicParser::StatementContext *ctx) {
+  /* std::vector<Formula> */ std::any visitProof(LogicParser::ProofContext *ctx) override {
     for (const auto &letDefinition : ctx->letDefinition()) {
       std::string name = letDefinition->NAME()->getText();
       Relation derivedRelation(letDefinition->e->getText());
@@ -46,30 +49,85 @@ class Logic : LogicBaseVisitor {
     }
 
     std::vector<Formula> formulas;
-    std::vector<Assumption> hypotheses;
 
     for (const auto &assertionContext : ctx->assertion()) {
-      auto formula = any_cast<Formula>(assertionContext->accept(this));
+      auto formula = std::any_cast<Formula>(assertionContext->accept(this));
       formulas.push_back(std::move(formula));
-    }
-    for (const auto &assertionMmContext : ctx->mmAssertion()) {
-      auto mm = any_cast<std::tuple<Assumption, Formula>>(assertionMmContext->accept(this));
-      auto assumption = std::get<Assumption>(mm);
-      auto formula = std::get<Formula>(mm);
-      formulas.push_back(std::move(formula));
-      hypotheses.push_back(std::move(assumption));
     }
 
-    for (const auto &hypothesisContext : ctx->hypothesis()) {
-      auto hypothesis = any_cast<Assumption>(hypothesisContext->accept(this));
-      hypotheses.push_back(std::move(hypothesis));
-    }
-    std::tuple<std::vector<Assumption>, std::vector<Formula>> response{std::move(hypotheses),
-                                                                       std::move(formulas)};
-    return response;
+    return formulas;
   }
 
-  /*Assumption*/ std::any visitHypothesis(LogicParser::HypothesisContext *ctx) {
+  /* Formula */ std::any visitAssertion(LogicParser::AssertionContext *ctx) override {
+    Formula f(ctx->f1->getText());
+    return f;
+  }
+
+  /* Formula */ std::any visitFormula(LogicParser::FormulaContext *ctx) override {
+    if (ctx->NOT()) {
+      auto f = std::any_cast<Formula>(ctx->f1->accept(this));
+      Formula not_f(FormulaOperation::negation, std::move(f));
+      return not_f;
+    } else if (ctx->AMP()) {
+      auto f1 = std::any_cast<Formula>(ctx->f1->accept(this));
+      auto f2 = std::any_cast<Formula>(ctx->f2->accept(this));
+      Formula f1_and_f2(FormulaOperation::logicalAnd, std::move(f1), std::move(f2));
+      return f1_and_f2;
+    } else if (ctx->BAR()) {
+      auto f1 = std::any_cast<Formula>(ctx->f1->accept(this));
+      auto f2 = std::any_cast<Formula>(ctx->f2->accept(this));
+      Formula f1_or_f2(FormulaOperation::logicalOr, std::move(f1), std::move(f2));
+      return f1_or_f2;
+    } else {
+      auto p = std::any_cast<Predicate>(ctx->p1->accept(this));
+      Literal l(false, std::move(p));
+      Formula f(FormulaOperation::literal, std::move(l));
+      return f;
+    }
+  }
+
+  /* Predicate */ std::any visitPredicate(LogicParser::PredicateContext *ctx) override {
+    auto s1 = std::any_cast<Set>(ctx->s1->accept(this));
+    auto s2 = std::any_cast<Set>(ctx->s2->accept(this));
+    Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(s1), std::move(s2));
+    return p;
+  }
+
+  /* LEGACY
+    /*std::tuple<std::vector<Assumption>, std::vector<Formula>> std::any visitStatement(
+        LogicParser::StatementContext *ctx) {
+      for (const auto &letDefinition : ctx->letDefinition()) {
+        std::string name = letDefinition->NAME()->getText();
+        Relation derivedRelation(letDefinition->e->getText());
+        Relation::relations.insert({name, derivedRelation});
+      }
+
+      std::vector<Formula> formulas;
+      std::vector<Assumption> hypotheses;
+
+      for (const auto &assertionContext : ctx->assertion()) {
+        auto formula = std::any_cast<Formula>(assertionContext->accept(this));
+        formulas.push_back(std::move(formula));
+      }
+      for (const auto &assertionMmContext : ctx->mmAssertion()) {
+        auto mm = std::any_cast<std::tuple<Assumption, Formula>>(assertionMmContext->accept(this));
+        auto assumption = std::get<Assumption>(mm);
+        auto formula = std::get<Formula>(mm);
+        formulas.push_back(std::move(formula));
+        hypotheses.push_back(std::move(assumption));
+      }
+
+      for (const auto &hypothesisContext : ctx->hypothesis()) {
+        auto hypothesis = std::any_cast<Assumption>(hypothesisContext->accept(this));
+        hypotheses.push_back(std::move(hypothesis));
+      }
+      std::tuple<std::vector<Assumption>, std::vector<Formula>> response{std::move(hypotheses),
+                                                                         std::move(formulas)};
+      return response;
+    }
+
+    /*Assumption
+  std::any visitHypothesis(LogicParser::HypothesisContext *ctx) {
     Relation lhs(ctx->lhs->getText());
     Relation rhs(ctx->rhs->getText());
     switch (rhs.operation) {
@@ -86,7 +144,8 @@ class Logic : LogicBaseVisitor {
     }
   }
 
-  /*Formula*/ std::any visitAssertion(LogicParser::AssertionContext *ctx) {
+  /*Formula
+  std::any visitAssertion(LogicParser::AssertionContext *ctx) {
     Relation r1(ctx->lhs->getText());
     Relation r2(ctx->rhs->getText());
     Set startEvent1(SetOperation::singleton, Set::maxSingletonLabel++);
@@ -107,7 +166,8 @@ class Logic : LogicBaseVisitor {
     return response;
   }
 
-  /*std::Assumption, Formula>*/ std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
+  /*std::Assumption, Formula>
+  std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
     std::string lhsPath(ctx->lhs->getText());
     std::string rhsPath(ctx->rhs->getText());
     auto lhsModel = loadModel(lhsPath);
@@ -125,9 +185,9 @@ class Logic : LogicBaseVisitor {
     std::tuple<Assumption, Formula> response{std::move(lhsEmpty), std::move(f)};
     return response;
   }
+  */
 
-  static std::tuple<std::vector<Assumption>, std::vector<Formula>> parse(
-      const std::string &filePath) {
+  static std::vector<Formula> parse(const std::string &filePath) {
     std::cout << "[Parsing] Parse file: " << filePath << std::endl;
     std::ifstream stream;
     stream.open(filePath);
@@ -137,9 +197,19 @@ class Logic : LogicBaseVisitor {
     antlr4::CommonTokenStream tokens(&lexer);
     LogicParser parser(&tokens);
 
-    LogicParser::StatementContext *ctx = parser.statement();
+    LogicParser::ProofContext *ctx = parser.proof();
     Logic visitor;
-    return any_cast<std::tuple<std::vector<Assumption>, std::vector<Formula>>>(
-        visitor.visitStatement(ctx));
+    return std::any_cast<std::vector<Formula>>(visitor.visitProof(ctx));
+  }
+
+  Formula parseFormula(const std::string &formulaString) {
+    antlr4::ANTLRInputStream input(formulaString);
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::FormulaContext *ctx = parser.formula();  // expect expression
+    Formula formula = std::any_cast<Formula>(this->visit(ctx));
+    return formula;
   }
 };

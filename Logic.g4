@@ -1,17 +1,24 @@
 grammar Logic;
 import Cat;
 
-statement:
-	letDefinition* hypothesis* (assertion | mmAssertion)* EOF;
+proof: letDefinition* assertion* EOF; // TODO: hypothesis*
 
-hypothesis:
-	ASSUME lhs = relationExpression INEQUAL rhs = relationExpression;
-assertion:
-	ASSERT lhs = relationExpression INEQUAL rhs = relationExpression;
-mmAssertion: CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH;
+assertion: ASSERT f1 = formula;
+
+formula:
+	p1 = predicate
+	| f1 = formula AMP f2 = formula
+	| f1 = formula BAR f2 = formula
+	| NOT f1 = formula;
+
+predicate:
+	s1 = setExpression SEMI s2 = setExpression; // intersectionNonEmptiness
+
+/*
+ hypothesis: ASSUME lhs = relationExpression INEQUAL rhs = relationExpression; mmAssertion:
+ CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH
+ */
 
 ASSUME: 'assume';
 ASSERT: 'assert';
-INEQUAL: '<=';
-CATASSERT: 'cat assert';
 FILEPATH: '.'? '/' ~'/' (.)+? '.cat';

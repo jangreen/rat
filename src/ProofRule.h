@@ -38,8 +38,6 @@ class ProofRule {
 
   constexpr std::string_view toString() {
     switch (rule) {
-      case Rule::none:
-        return std::string_view("(none)");
       case Rule::bottom:
         return std::string_view("(bot)");
       case Rule::empty:

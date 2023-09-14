@@ -9,8 +9,14 @@
 #include <vector>
 
 #include "Assumption.h"
+#include "Formula.h"
 #include "Literal.h"
 #include "Tableau.h"
+
+// forward declarations
+class Literal;
+class Formula;
+typedef std::vector<Formula> FormulaSet;
 
 typedef std::vector<int> Renaming;
 typedef std::optional<std::tuple<Literal, Renaming>> EdgeLabel;  // TODO: use
@@ -28,8 +34,8 @@ class RegularTableau {
     std::vector<Node *> rootParents;      // parent nodes that are reachable by some root node
     Node *parentNode = nullptr;           // TODO: for counterexample first parent
     std::vector<int> parentNodeRenaming;  // TODO
-    std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
-    std::vector<Metastatement> parentEquivalences;         // TODO
+    // std::optional<Metastatement> parentNodeExpansionMeta;  // TODO
+    // std::vector<Metastatement> parentEquivalences;         // TODO
     bool closed = false;
 
     bool printed = false;  // prevent cycling in printing
@@ -55,7 +61,7 @@ class RegularTableau {
   static std::vector<Assumption> assumptions;
 
   // CALCULATE REDUCED DNF
-  static DNF calcDNF(const Formula &initalFormula) {  // used only with clauses
+  /*static DNF calcDNF(const Formula &initalFormula) {  // used only with clauses
     // TODO: more direct computation of DNF
     /*FormulaSet initalConjunction = {initalFormula};
     std::vector<FormulaSet> disjunction = {initalConjunction};
@@ -75,11 +81,11 @@ class RegularTableau {
         reducedFormulas.push_back(formula);
       } else {
       }
-    }*/
+    }* /
 
     Tableau tableau{initalFormula};
     return tableau.DNF();
-  }
+  }*/
   bool expandNode(Node *node);
   void addNode(Node *parent, Clause clause);  // TODO: move in node class
   void addEdge(Node *parent, Node *child, EdgeLabel label);

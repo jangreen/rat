@@ -6,9 +6,10 @@
 
 Relation::Relation(const Relation &other)
     : operation(other.operation),
-      identifier(other.identifier),
-      saturated(other.saturated),
-      saturatedId(other.saturatedId) {
+      identifier(other.identifier) /*,
+ saturated(other.saturated),
+ saturatedId(other.saturatedId)*/
+{
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Relation>(*other.leftOperand);
   }
@@ -38,108 +39,12 @@ Relation::Relation(const RelationOperation operation, Relation &&left, Relation 
 }
 
 std::unordered_map<std::string, Relation> Relation::relations;
-int Relation::maxLabel = 0;
 
-bool Relation::operator==(const Relation &otherRelation) const {
-  if (operation != otherRelation.operation) {
-    return false;
-  }
-
-  /* modulo negation if (negated != otherRelation.negated)
-  {
-      return false;
-  }*/
-
-  if ((label.has_value() != otherRelation.label.has_value()) ||
-      (label && *label != *otherRelation.label)) {
-    return false;
-  }
-
-  if (operation == RelationOperation::base) {
-    return *identifier == *otherRelation.identifier;
-  }
-
-  if (operation == RelationOperation::identity || operation == RelationOperation::empty ||
-      operation == RelationOperation::full) {
-    return true;
-  }
-
-  bool leftEqual = *leftOperand == *otherRelation.leftOperand;
-  bool rightNullEqual = (rightOperand == nullptr) == (otherRelation.rightOperand == nullptr);
-  bool rightEqual =
-      rightNullEqual && (rightOperand == nullptr || *rightOperand == *otherRelation.rightOperand);
-  return leftEqual && rightEqual;
+bool Relation::operator==(const Relation &other) const {
+  return operation == other.operation && identifier == other.identifier &&
+         *leftOperand == *other.leftOperand && *rightOperand == *other.rightOperand;
 }
-bool Relation::operator<(const Relation &otherRelation) const {
-  return (toString() < otherRelation.toString());
-}
-
-// helper
-bool isNormalHelper(const Relation &relation, bool negated) {
-  if (relation.label && relation.operation == RelationOperation::converse) {
-    return true;  // assume that converse only occurs on base realtions
-  }
-  if (relation.label && relation.operation != RelationOperation::base) {
-    return false;
-  } else if (relation.leftOperand != nullptr) {  // has children
-    bool leftIsNormal =
-        relation.leftOperand == nullptr || isNormalHelper(*relation.leftOperand, negated);
-    bool rightIsNormal =
-        relation.rightOperand == nullptr || isNormalHelper(*relation.rightOperand, negated);
-    bool leftRightSpecialCase =
-        negated || relation.leftOperand == nullptr || relation.rightOperand == nullptr;
-    return leftIsNormal && rightIsNormal && leftRightSpecialCase;
-  }
-  return true;
-}
-
-bool Relation::isNormal() const { return isNormalHelper(*this, negated); }
-
-std::vector<int> Relation::labels() const {
-  if (label) {
-    return {*label};
-  } else if (leftOperand == nullptr && rightOperand == nullptr) {
-    return {};
-  }
-
-  auto result = leftOperand->labels();
-  if (rightOperand != nullptr) {
-    auto right = rightOperand->labels();
-    // only unique
-    for (int i : right) {
-      if (std::find(result.begin(), result.end(), i) == result.end()) {
-        result.push_back(i);
-      }
-    }
-  }
-  return result;
-}
-
-std::vector<int> Relation::calculateRenaming() const {
-  return labels();  // labels already calculates the renaming
-}
-
-void Relation::rename(const std::vector<int> &renaming) {
-  if (label) {
-    label = distance(renaming.begin(), find(renaming.begin(), renaming.end(), *label));
-  } else if (leftOperand) {
-    leftOperand->rename(renaming);
-    if (rightOperand) {
-      rightOperand->rename(renaming);
-    }
-  }
-}
-
-void Relation::inverseRename(const std::vector<int> &renaming) {
-  if (label) {
-    label = renaming[*label];
-  } else if (leftOperand) {
-    leftOperand->inverseRename(renaming);
-    if (rightOperand) {
-      rightOperand->inverseRename(renaming);
-    }
-  }
-}
+bool Relation::operator<(const Relation &other) const { return toString() < other.toString(); }
 
 std::string Relation::toString() const {
   std::string output;
@@ -172,15 +77,16 @@ std::string Relation::toString() const {
       output += "1";
       break;
   }
-  if (saturated) {
+  /*if (saturated) {
     output += ".";
   }
   if (saturatedId) {
     output += "..";
-  }
+  }*/
   return output;
 }
 
+/* LEGACY
 template <>
 Relation Relation::substituteLeft(Relation &&substitutedRelation) {
   // fix label
@@ -375,3 +281,4 @@ std::optional<Relation> Relation::applyRule<ProofRule::negA>(const Metastatement
   }
   return std::nullopt;
 }
+*/

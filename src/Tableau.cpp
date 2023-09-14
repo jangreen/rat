@@ -7,8 +7,9 @@
 
 #include "ProofRule.h"
 
+/* LEGACY
 // templates
-/* RULES */
+// RULES
 template <>
 std::optional<std::tuple<Relation, Metastatement>> Tableau::Node::applyRule<ProofRule::a>() {
   if (formula && formula->operation == FormulaOperation::literal && !formula->literal->negated) {
@@ -100,19 +101,21 @@ std::optional<bool> Tableau::Node::applyRule<ProofRule::negA>() {
   }
   return appliedRule ? std::make_optional(true) : std::nullopt;
 }
+*/
 
-Tableau::Tableau(std::initializer_list<Relation> initalRelations)
-    : Tableau(std::vector(initalRelations)) {}
-Tableau::Tableau(Clause initalRelations) {
+Tableau::Tableau(std::initializer_list<Formula> initalFormulas)
+    : Tableau(std::vector(initalFormulas)) {}
+Tableau::Tableau(FormulaSet initalFormulas) {
   Node *currentNode = nullptr;
-  for (auto relation : initalRelations) {
-    auto newNode = std::make_unique<Node>(this, Relation(relation));
+  for (const auto &formula : initalFormulas) {
+    auto newNode = std::make_unique<Node>(this, std::move(formula));
     newNode->parentNode = currentNode;
+
     Node *temp = newNode.get();
     if (rootNode == nullptr) {
       rootNode = std::move(newNode);
     } else if (currentNode != nullptr) {
-      currentNode->leftNode = std::move(newNode);
+      newNode->parentNode->leftNode = std::move(newNode);
     }
 
     currentNode = temp;
@@ -120,18 +123,29 @@ Tableau::Tableau(Clause initalRelations) {
   }
 }
 
-// TODO: move in Node class
-
 bool Tableau::solve(int bound) {
   while (!unreducedNodes.empty() && bound > 0) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    // exportProof("infinite"); // TODO: remove
-    currentNode->applyAnyRule();
+    currentNode->applyRule();
   }
 }
 
+void Tableau::toDotFormat(std::ofstream &output) const {
+  output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
+  rootNode->toDotFormat(output);
+  output << "}" << std::endl;
+}
+
+void Tableau::exportProof(std::string filename) const {
+  // std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
+  std::ofstream file("./output/" + filename + ".dot");
+  toDotFormat(file);
+  file.close();
+}
+
+/* LEGACY
 // pops unreduced nodes from stack until rule can be applied
 bool Tableau::apply(const std::initializer_list<ProofRule> rules) {
   while (!unreducedNodes.empty()) {
@@ -356,16 +370,4 @@ std::vector<ExtendedClause> Tableau::Node::extractDNF() {
     return result;
   }
 }
-
-void Tableau::toDotFormat(std::ofstream &output) const {
-  output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
-  rootNode->toDotFormat(output);
-  output << "}" << std::endl;
-}
-
-void Tableau::exportProof(std::string filename) const {
-  // std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
-  std::ofstream file("./output/" + filename + ".dot");
-  toDotFormat(file);
-  file.close();
-}
+*/
