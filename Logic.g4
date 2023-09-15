@@ -12,7 +12,7 @@ formula:
 	| NOT f1 = formula;
 
 predicate:
-	s1 = setExpression SEMI s2 = setExpression; // intersectionNonEmptiness
+	s1 = expression SEMI s2 = expression; // intersectionNonEmptiness
 
 /*
  hypothesis: ASSUME lhs = relationExpression INEQUAL rhs = relationExpression; mmAssertion:

@@ -8,53 +8,50 @@ mcm: /*(NAME)?*/ definition+ EOF;
 definition: axiomDefinition | letDefinition | letRecDefinition;
 
 axiomDefinition:
-	(flag = FLAG)? (negate = NOT)? ACYCLIC e = relationExpression (
+	(flag = FLAG)? (negate = NOT)? ACYCLIC e = expression (
 		AS RELNAME
 	)?
-	| (flag = FLAG)? (negate = NOT)? IRREFLEXIVE e = relationExpression (
+	| (flag = FLAG)? (negate = NOT)? IRREFLEXIVE e = expression (
 		AS RELNAME
 	)?
-	| (flag = FLAG)? (negate = NOT)? EMPTY e = relationExpression (
+	| (flag = FLAG)? (negate = NOT)? EMPTY e = expression (
 		AS RELNAME
 	)?;
 
-letDefinition: LET n = RELNAME EQ e = relationExpression;
+letDefinition: LET n = RELNAME EQ e = expression;
 
 letRecDefinition:
-	LET REC n = RELNAME EQ e = relationExpression letRecAndDefinition*;
+	LET REC n = RELNAME EQ e = expression letRecAndDefinition*;
 
-letRecAndDefinition: AND n = RELNAME EQ e = relationExpression;
+letRecAndDefinition: AND n = RELNAME EQ e = expression;
 
-/* set and relation expressions are defined in one recursive definiton since antlr does not support mutual left-recursion (only direct left-recursion) */
-setExpression:
-	e1 = setExpression BAR e2 = setExpression		# setUnion
-	| e1 = setExpression AMP e2 = setExpression		# setIntersection
+/*
+ set and relation expressions are defined in one recursive definiton since antlr does not support
+ mutual left-recursion (only direct left-recursion) -> have to check type of expression while
+ parsing!
+ */
+expression:
+	e1 = expression BAR e2 = expression				# union // set union, relational union
+	| e1 = expression AMP e2 = expression			# intersection // set intersection, relational intersection
 	| n = SETNAME									# setBasic
-	| LPAR e1 = setExpression RPAR					# set
-	| s = setExpression SEMI r = relationExpression	# setImage
-	| r = relationExpression SEMI s = setExpression	# setDomain
-	| LCBRAC l = SETNAME RCBRAC						# singleton;
-
-relationExpression:
-	e1 = setExpression STAR e2 = setExpression					# cartesianProduct
-	| e = relationExpression (POW)? STAR						# transReflexiveClosure
-	| e = relationExpression (POW)? PLUS						# transitiveClosure
-	| e = relationExpression (POW)? INV							# relationInverse
-	| e = relationExpression OPT								# relationOptional
-	| NOT e = relationExpression								# relationComplement
-	| e1 = relationExpression SEMI e2 = relationExpression		# relationComposition
-	| e1 = relationExpression BAR e2 = relationExpression		# relationUnion
-	| e1 = relationExpression BSLASH e2 = relationExpression	# relationMinus
-	| e1 = relationExpression AMP e2 = relationExpression		# relationIntersection
-	| LBRAC DOMAIN_ LPAR e = relationExpression RPAR RBRAC		# relationDomainIdentity
-	| LBRAC RANGE LPAR e = relationExpression RPAR RBRAC		# relationRangeIdentity
+	| LPAR e1 = expression RPAR						# parentheses
+	| s = expression SEMI r = expression			# composition // domain, image, relational composition
+	| LCBRAC l = SETNAME RCBRAC						# setSingleton
+	| e1 = expression STAR e2 = expression			# cartesianProduct
+	| e = expression (POW)? STAR					# transitiveReflexiveClosure
+	| e = expression (POW)? PLUS					# transitiveClosure
+	| e = expression (POW)? INV						# relationInverse
+	| e = expression OPT							# relationOptional
+	| NOT e = expression							# relationComplement
+	| e1 = expression BSLASH e2 = expression		# relationMinus
+	| LBRAC DOMAIN_ LPAR e = expression RPAR RBRAC	# relationDomainIdentity
+	| LBRAC RANGE LPAR e = expression RPAR RBRAC	# relationRangeIdentity
 	| (
-		TOID LPAR e = setExpression RPAR
-		| LBRAC e = setExpression RBRAC
+		TOID LPAR e = expression RPAR
+		| LBRAC e = expression RBRAC
 	)									# relationIdentity
-	| FENCEREL LPAR n = NAME RPAR		# relationFencerel
-	| LPAR e = relationExpression RPAR	# relation
-	| n = NAME							# relationBasic;
+	| FENCEREL LPAR n = RELNAME RPAR	# relationFencerel
+	| n = RELNAME						# relationBasic;
 
 LET: 'let';
 REC: 'rec';

@@ -35,6 +35,38 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
  public:
   std::vector<Constraint> parseMemoryModel(const std::string &filePath);
   Relation parseRelation(const std::string &relationString);
+
+  std::any visitProof(LogicParser::ProofContext *context) override;
+  std::any visitAssertion(LogicParser::AssertionContext *context) override;
+  std::any visitFormula(LogicParser::FormulaContext *context) override;
+  std::any visitPredicate(LogicParser::PredicateContext *context) override;
+  std::any visitMcm(LogicParser::McmContext *context) override;
+  std::any visitDefinition(LogicParser::DefinitionContext *context) override;
+  std::any visitAxiomDefinition(LogicParser::AxiomDefinitionContext *context) override;
+  std::any visitLetDefinition(LogicParser::LetDefinitionContext *context) override;
+  std::any visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) override;
+  std::any visitLetRecAndDefinition(LogicParser::LetRecAndDefinitionContext *context) override;
+  std::any visitParentheses(LogicParser::ParenthesesContext *context) override;
+  std::any visitTransitiveClosure(LogicParser::TransitiveClosureContext *context) override;
+  std::any visitRelationFencerel(LogicParser::RelationFencerelContext *context) override;
+  std::any visitSetSingleton(LogicParser::SetSingletonContext *context) override;
+  std::any visitRelationBasic(LogicParser::RelationBasicContext *context) override;
+  std::any visitRelationMinus(LogicParser::RelationMinusContext *context) override;
+  std::any visitRelationDomainIdentity(
+      LogicParser::RelationDomainIdentityContext *context) override;
+  std::any visitRelationRangeIdentity(LogicParser::RelationRangeIdentityContext *context) override;
+  std::any visitUnion(LogicParser::UnionContext *context) override;
+  std::any visitRelationInverse(LogicParser::RelationInverseContext *context) override;
+  std::any visitRelationOptional(LogicParser::RelationOptionalContext *context) override;
+  std::any visitRelationIdentity(LogicParser::RelationIdentityContext *context) override;
+  std::any visitCartesianProduct(LogicParser::CartesianProductContext *context) override;
+  std::any visitSetBasic(LogicParser::SetBasicContext *context) override;
+  std::any visitTransitiveReflexiveClosure(
+      LogicParser::TransitiveReflexiveClosureContext *context) override;
+  std::any visitComposition(LogicParser::CompositionContext *context) override;
+  std::any visitIntersection(LogicParser::IntersectionContext *context) override;
+  std::any visitRelationComplement(LogicParser::RelationComplementContext *context) override;
+
   /*std::vector<Constraint>*/ antlrcpp::Any visitMcm(LogicParser::McmContext *ctx) override;
   /*void*/ antlrcpp::Any visitLetDefinition(LogicParser::LetDefinitionContext *ctx) override;
   /*Constraint*/ antlrcpp::Any visitAxiomDefinition(
