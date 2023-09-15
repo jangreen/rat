@@ -47,15 +47,57 @@ Relation Logic::parseRelation(const std::string &relationString) {
 }
 /*Formula*/ std::any Logic::visitFormula(LogicParser::FormulaContext *context) {}
 /*Predicate*/ std::any Logic::visitPredicate(LogicParser::PredicateContext *context) {}
-/*std::vector<Constraint>*/ std::any Logic::visitMcm(LogicParser::McmContext *context) {}
+/*std::vector<Constraint>*/ std::any Logic::visitMcm(LogicParser::McmContext *context) {
+  std::vector<Constraint> constraints;
+
+  for (auto definitionContext : ctx->definition()) {
+    if (definitionContext->letDefinition()) {
+      definitionContext->letDefinition()->accept(this);
+    } else if (definitionContext->letRecDefinition()) {
+      std::cout << "[Parsing] Recursive defitions are not supported." << std::endl;
+      exit(0);
+    } else if (definitionContext->axiomDefinition()) {
+      Constraint axiom =
+          std::any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
+      constraints.push_back(axiom);
+    }
+  }
+  return constraints;
+}
 /*void*/ std::any Logic::visitDefinition(LogicParser::DefinitionContext *context) {}
-/*Constraint*/ std::any Logic::visitAxiomDefinition(LogicParser::AxiomDefinitionContext *context) {}
-/*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {}
+/*Constraint*/ std::any Logic::visitAxiomDefinition(LogicParser::AxiomDefinitionContext *context) {
+  std::string name;
+  if (ctx->NAME()) {
+    name = ctx->NAME()->getText();
+  } else {
+    name = ctx->getText();
+  }
+  ConstraintType type;
+  if (ctx->EMPTY()) {
+    type = ConstraintType::empty;
+  } else if (ctx->IRREFLEXIVE()) {
+    type = ConstraintType::irreflexive;
+  } else if (ctx->ACYCLIC()) {
+    type = ConstraintType::acyclic;
+  }
+  Relation relation = std::any_cast<Relation>(ctx->e->accept(this));
+  return Constraint(type, std::move(relation), name);
+}
+/*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {
+  std::string name = ctx->NAME()->getText();
+  Relation derivedRelation = std::any_cast<Relation>(ctx->e->accept(this));
+  Logic::definedRelations.insert({name, derivedRelation});
+  return antlrcpp::Any();
+}
 /*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {}
 /*void*/ std::any Logic::visitLetRecAndDefinition(
     LogicParser::LetRecAndDefinitionContext *context) {}
 /*std::variant<Set, Relation>*/ std::any Logic::visitParentheses(
-    LogicParser::ParenthesesContext *context) {}
+    LogicParser::ParenthesesContext *context) {
+  // process: (e)
+  Relation derivedRelation = std::any_cast<Relation>(context->e->accept(this));
+  return derivedRelation;
+}
 /*Relation*/ std::any Logic::visitTransitiveClosure(
     LogicParser::TransitiveClosureContext *context) {}
 /*Relation*/ std::any Logic::visitRelationFencerel(LogicParser::RelationFencerelContext *context) {}
@@ -80,56 +122,6 @@ Relation Logic::parseRelation(const std::string &relationString) {
     LogicParser::IntersectionContext *context) {}
 /*Relation*/ std::any Logic::visitRelationComplement(
     LogicParser::RelationComplementContext *context) {}
-
-/*std::vector<Constraint>*/ antlrcpp::Any Logic::visitMcm(LogicParser::McmContext *ctx) {
-  std::vector<Constraint> constraints;
-
-  for (auto definitionContext : ctx->definition()) {
-    if (definitionContext->letDefinition()) {
-      definitionContext->letDefinition()->accept(this);
-    } else if (definitionContext->letRecDefinition()) {
-      std::cout << "[Parsing] Recursive defitions are not supported." << std::endl;
-      exit(0);
-    } else if (definitionContext->axiomDefinition()) {
-      Constraint axiom =
-          std::any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
-      constraints.push_back(axiom);
-    }
-  }
-  return constraints;
-}
-
-/*Constraint*/ antlrcpp::Any Logic::visitAxiomDefinition(LogicParser::AxiomDefinitionContext *ctx) {
-  std::string name;
-  if (ctx->NAME()) {
-    name = ctx->NAME()->getText();
-  } else {
-    name = ctx->getText();
-  }
-  ConstraintType type;
-  if (ctx->EMPTY()) {
-    type = ConstraintType::empty;
-  } else if (ctx->IRREFLEXIVE()) {
-    type = ConstraintType::irreflexive;
-  } else if (ctx->ACYCLIC()) {
-    type = ConstraintType::acyclic;
-  }
-  Relation relation = std::any_cast<Relation>(ctx->e->accept(this));
-  return Constraint(type, std::move(relation), name);
-}
-
-/*void*/ antlrcpp::Any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *ctx) {
-  std::string name = ctx->NAME()->getText();
-  Relation derivedRelation = std::any_cast<Relation>(ctx->e->accept(this));
-  Logic::definedRelations.insert({name, derivedRelation});
-  return antlrcpp::Any();
-}
-
-/*Relation*/ antlrcpp::Any Logic::visitRelation(LogicParser::RelationContext *ctx) {
-  // process: (e)
-  Relation derivedRelation = std::any_cast<Relation>(ctx->e->accept(this));
-  return derivedRelation;
-}
 
 /*Relation*/ antlrcpp::Any Logic::visitCartesianProduct(LogicParser::CartesianProductContext *ctx) {
   // treat cartesian product as binary base relation
