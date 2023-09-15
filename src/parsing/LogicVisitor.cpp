@@ -25,6 +25,62 @@ Relation Logic::parseRelation(const std::string &relationString) {
   return parsedRelation;
 }
 
+/*std::vector<Formula>*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
+  for (const auto &letDefinition : ctx->letDefinition()) {
+    std::string name = letDefinition->NAME()->getText();
+    Relation derivedRelation(letDefinition->e->getText());
+    Logic::definedRelations.insert({name, derivedRelation});
+  }
+
+  std::vector<Formula> formulas;
+
+  for (const auto &assertionContext : ctx->assertion()) {
+    auto formula = std::any_cast<Formula>(this->visitAssertion(assertionContext));
+    formulas.push_back(std::move(formula));
+  }
+
+  return formulas;
+}
+/*Formula*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
+  Formula f(ctx->f1->getText());
+  return f;
+}
+/*Formula*/ std::any Logic::visitFormula(LogicParser::FormulaContext *context) {}
+/*Predicate*/ std::any Logic::visitPredicate(LogicParser::PredicateContext *context) {}
+/*std::vector<Constraint>*/ std::any Logic::visitMcm(LogicParser::McmContext *context) {}
+/*void*/ std::any Logic::visitDefinition(LogicParser::DefinitionContext *context) {}
+/*Constraint*/ std::any Logic::visitAxiomDefinition(LogicParser::AxiomDefinitionContext *context) {}
+/*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {}
+/*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {}
+/*void*/ std::any Logic::visitLetRecAndDefinition(
+    LogicParser::LetRecAndDefinitionContext *context) {}
+/*std::variant<Set, Relation>*/ std::any Logic::visitParentheses(
+    LogicParser::ParenthesesContext *context) {}
+/*Relation*/ std::any Logic::visitTransitiveClosure(
+    LogicParser::TransitiveClosureContext *context) {}
+/*Relation*/ std::any Logic::visitRelationFencerel(LogicParser::RelationFencerelContext *context) {}
+/*Set*/ std::any Logic::visitSetSingleton(LogicParser::SetSingletonContext *context) {}
+/*Relation*/ std::any Logic::visitRelationBasic(LogicParser::RelationBasicContext *context) {}
+/*Relation*/ std::any Logic::visitRelationMinus(LogicParser::RelationMinusContext *context) {}
+/*Relation*/ std::any Logic::visitRelationDomainIdentity(
+    LogicParser::RelationDomainIdentityContext *context) {}
+/*Relation*/ std::any Logic::visitRelationRangeIdentity(
+    LogicParser::RelationRangeIdentityContext *context) {}
+/*std::variant<Set, Relation>*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {}
+/*Relation*/ std::any Logic::visitRelationInverse(LogicParser::RelationInverseContext *context) {}
+/*Relation*/ std::any Logic::visitRelationOptional(LogicParser::RelationOptionalContext *context) {}
+/*Relation*/ std::any Logic::visitRelationIdentity(LogicParser::RelationIdentityContext *context) {}
+/*Relation*/ std::any Logic::visitCartesianProduct(LogicParser::CartesianProductContext *context) {}
+/*Set*/ std::any Logic::visitSetBasic(LogicParser::SetBasicContext *context) {}
+/*Relation*/ std::any Logic::visitTransitiveReflexiveClosure(
+    LogicParser::TransitiveReflexiveClosureContext *context) {}
+/*std::variant<Set, Relation>*/ std::any Logic::visitComposition(
+    LogicParser::CompositionContext *context) {}
+/*std::variant<Set, Relation>*/ std::any Logic::visitIntersection(
+    LogicParser::IntersectionContext *context) {}
+/*Relation*/ std::any Logic::visitRelationComplement(
+    LogicParser::RelationComplementContext *context) {}
+
 /*std::vector<Constraint>*/ antlrcpp::Any Logic::visitMcm(LogicParser::McmContext *ctx) {
   std::vector<Constraint> constraints;
 
@@ -211,28 +267,6 @@ Relation Logic::parseRelation(const std::string &relationString) {
 /*Set*/ antlrcpp::Any Logic::visitSet(LogicParser::SetContext *ctx) {
   // process: (S1)
   return std::any_cast<Set>(ctx->e1->accept(this));
-}
-
-/* std::vector<Formula> */ std::any Logic::visitProof(LogicParser::ProofContext *ctx) {
-  for (const auto &letDefinition : ctx->letDefinition()) {
-    std::string name = letDefinition->NAME()->getText();
-    Relation derivedRelation(letDefinition->e->getText());
-    Logic::definedRelations.insert({name, derivedRelation});
-  }
-
-  std::vector<Formula> formulas;
-
-  for (const auto &assertionContext : ctx->assertion()) {
-    auto formula = std::any_cast<Formula>(this->visitAssertion(assertionContext));
-    formulas.push_back(std::move(formula));
-  }
-
-  return formulas;
-}
-
-/* Formula */ std::any Logic::visitAssertion(LogicParser::AssertionContext *ctx) {
-  Formula f(ctx->f1->getText());
-  return f;
 }
 
 /* Formula */ std::any Logic::visitFormula(LogicParser::FormulaContext *ctx) {
