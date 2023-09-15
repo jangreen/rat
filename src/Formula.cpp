@@ -1,5 +1,7 @@
 #include "Formula.h"
 
+#include "parsing/LogicVisitor.h"
+
 Formula::Formula(const Formula &other) : operation(other.operation) {
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Formula>(*other.leftOperand);
@@ -46,8 +48,15 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
       std::vector<std::vector<Formula>> result{{Formula(*leftOperand)}, {Formula(*rightOperand)}};
       return result;
     }
-    case FormulaOperation::literal:
-      break;
+    case FormulaOperation::literal: {
+      auto literalResult = literal->applyRule();
+      if (literalResult) {
+        auto formula = *literalResult;
+        std::vector<std::vector<Formula>> result{{std::move(formula)}};
+        return result;
+      }
+      return std::nullopt;
+    }
     case FormulaOperation::negation:
       switch (leftOperand->operation) {
         case FormulaOperation::logicalAnd: {

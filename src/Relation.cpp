@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "parsing/CatInferVisitor.h"
+#include "parsing/LogicVisitor.h"
 
 Relation::Relation(const Relation &other)
     : operation(other.operation),
@@ -23,7 +23,7 @@ Relation &Relation::operator=(const Relation &other) {
   return *this;
 }
 Relation::Relation(const std::string &expression) {
-  CatInferVisitor visitor;
+  Logic visitor;
   *this = visitor.parseRelation(expression);
 }
 Relation::Relation(const RelationOperation operation, const std::optional<std::string> &identifier)
@@ -37,8 +37,6 @@ Relation::Relation(const RelationOperation operation, Relation &&left, Relation 
   leftOperand = std::make_unique<Relation>(std::move(left));
   rightOperand = std::make_unique<Relation>(std::move(right));
 }
-
-std::unordered_map<std::string, Relation> Relation::relations;
 
 bool Relation::operator==(const Relation &other) const {
   return operation == other.operation && identifier == other.identifier &&
@@ -76,6 +74,8 @@ std::string Relation::toString() const {
     case RelationOperation::full:
       output += "1";
       break;
+    case RelationOperation::cartesianProduct:
+      output += "TODO";  // "(" + TODO: leftSet + "x" + TODO: rightSet + ")";
   }
   /*if (saturated) {
     output += ".";

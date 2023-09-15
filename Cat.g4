@@ -3,33 +3,37 @@ grammar Cat;
 @header {
 }
 
-mcm: (NAME)? definition+ EOF;
+mcm: /*(NAME)?*/ definition+ EOF;
 
 definition: axiomDefinition | letDefinition | letRecDefinition;
 
 axiomDefinition:
 	(flag = FLAG)? (negate = NOT)? ACYCLIC e = relationExpression (
-		AS NAME
+		AS RELNAME
 	)?
 	| (flag = FLAG)? (negate = NOT)? IRREFLEXIVE e = relationExpression (
-		AS NAME
+		AS RELNAME
 	)?
 	| (flag = FLAG)? (negate = NOT)? EMPTY e = relationExpression (
-		AS NAME
+		AS RELNAME
 	)?;
 
-letDefinition: LET n = NAME EQ e = relationExpression;
+letDefinition: LET n = RELNAME EQ e = relationExpression;
 
 letRecDefinition:
-	LET REC n = NAME EQ e = relationExpression letRecAndDefinition*;
+	LET REC n = RELNAME EQ e = relationExpression letRecAndDefinition*;
 
-letRecAndDefinition: AND n = NAME EQ e = relationExpression;
+letRecAndDefinition: AND n = RELNAME EQ e = relationExpression;
 
+/* set and relation expressions are defined in one recursive definiton since antlr does not support mutual left-recursion (only direct left-recursion) */
 setExpression:
-	e1 = setExpression BAR e2 = setExpression	# setUnion
-	| e1 = setExpression AMP e2 = setExpression	# setIntersection
-	| n = NAME									# setBasic
-	| LCBRAC l = NAME RCBRAC					# singleton;
+	e1 = setExpression BAR e2 = setExpression		# setUnion
+	| e1 = setExpression AMP e2 = setExpression		# setIntersection
+	| n = SETNAME									# setBasic
+	| LPAR e1 = setExpression RPAR					# set
+	| s = setExpression SEMI r = relationExpression	# setImage
+	| r = relationExpression SEMI s = setExpression	# setDomain
+	| LCBRAC l = SETNAME RCBRAC						# singleton;
 
 relationExpression:
 	e1 = setExpression STAR e2 = setExpression					# cartesianProduct
@@ -88,7 +92,8 @@ RANGE: 'range';
 
 FLAG: 'flag';
 
-NAME: [A-Za-z0-9\-_.]+;
+SETNAME: [A-Z0-9\-_.]+;
+RELNAME: [a-z\-_.]+;
 
 LINE_COMMENT: '//' ~[\n]* -> skip;
 

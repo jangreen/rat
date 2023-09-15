@@ -25,6 +25,8 @@ class Literal {
   bool negated;
   std::unique_ptr<Predicate> predicate;
 
+  std::optional<Formula> applyRule();
+
   // printing
   std::string toString() const;
 };

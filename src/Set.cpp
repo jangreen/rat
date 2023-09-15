@@ -1,6 +1,5 @@
-#include "Set.h"
-
-#include "parsing/CatInferVisitor.h"
+#include "Predicate.h"
+#include "parsing/LogicVisitor.h"
 
 int Set::maxSingletonLabel = 0;
 
@@ -22,7 +21,7 @@ Set &Set::operator=(const Set &other) {
   return *this;
 }
 Set::Set(const std::string &expression) {
-  CatInferVisitor visitor;
+  Logic visitor;
   // TODO: *this = visitor.parseSet(expression);
 }
 Set::Set(const SetOperation operation, const std::optional<std::string> &identifier)
@@ -328,7 +327,7 @@ std::string Set::toString() const {
   std::string output;
   switch (operation) {
     case SetOperation::singleton:
-      output += "[" + std::to_string(*label) + "]";
+      output += "{" + std::to_string(*label) + "}";
       break;
     case SetOperation::image:
       output += "(" + leftOperand->toString() + ";" + relation->toString() + ")";

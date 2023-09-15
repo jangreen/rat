@@ -51,6 +51,4 @@ class Relation {
   bool saturatedId = false;*/
 
   std::string toString() const;  // for printing
-
-  static std::unordered_map<std::string, Relation> relations;  // defined relations
 };

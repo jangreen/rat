@@ -638,7 +638,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
 }
 
 void RegularTableau::exportProof(std::string filename) const {
-  std::ofstream file("./output/" + filename + ".dot");
+  std::ofstream file("./../output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
 }

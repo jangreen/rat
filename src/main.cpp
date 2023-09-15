@@ -1,11 +1,11 @@
+#include <fstream>
 #include <iostream>
 
-#include "RegularTableau.h"
 #include "Tableau.h"
-#include "parsing/LogicVisitor.h"
 
 int main(int argc, const char* argv[]) {
-  Formula f("{e};{e}");
+  Formula f("{e};((a;b & c);{e})");
+  std::cout << f.toString() << std::endl;
   Tableau t{std::move(f)};
   t.solve();
   t.exportProof("test");

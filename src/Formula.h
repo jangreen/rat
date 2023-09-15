@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "Literal.h"
-#include "parsing/LogicVisitor.h"
 
 enum class FormulaOperation {
   literal,    // nullary Formula
