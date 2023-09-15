@@ -9,7 +9,8 @@ formula:
 	p1 = predicate
 	| f1 = formula AMP f2 = formula
 	| f1 = formula BAR f2 = formula
-	| NOT f1 = formula;
+	| NOT f1 = formula
+	| LPAR f1 = formula RPAR;
 
 predicate:
 	s1 = expression SEMI s2 = expression; // intersectionNonEmptiness

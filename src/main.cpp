@@ -4,8 +4,8 @@
 #include "Tableau.h"
 
 int main(int argc, const char* argv[]) {
-  Formula f("{e};((a;b & c);{e})");
-  std::cout << f.toString() << std::endl;
+  // Formula f("{0};((a;b & c);{0})");
+  Formula f("{0};a;a;{1} & ~({0};(a*);{1})");
   Tableau t{std::move(f)};
   t.solve();
   t.exportProof("test");

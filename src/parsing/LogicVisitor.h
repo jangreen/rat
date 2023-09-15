@@ -30,7 +30,7 @@ Relation loadModel(const std::string &file) {
   return *unionR;
 }
 */
-
+// TODO: implement precedence rules
 class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
  public:
   std::vector<Constraint> parseMemoryModel(const std::string &filePath);
@@ -41,7 +41,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   /*Formula*/ std::any visitFormula(LogicParser::FormulaContext *context) override;
   /*Predicate*/ std::any visitPredicate(LogicParser::PredicateContext *context) override;
   /*std::vector<Constraint>*/ std::any visitMcm(LogicParser::McmContext *context) override;
-  /*void*/ std::any visitDefinition(LogicParser::DefinitionContext *context) override;
+  // /*void*/ std::any visitDefinition(LogicParser::DefinitionContext *context) override;
   /*Constraint*/ std::any visitAxiomDefinition(
       LogicParser::AxiomDefinitionContext *context) override;
   /*void*/ std::any visitLetDefinition(LogicParser::LetDefinitionContext *context) override;
@@ -50,34 +50,39 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
       LogicParser::LetRecAndDefinitionContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitParentheses(
       LogicParser::ParenthesesContext *context) override;
-  /*Relation*/ std::any visitTransitiveClosure(
+  /*std::variant<Set, Relation>*/ std::any visitTransitiveClosure(
       LogicParser::TransitiveClosureContext *context) override;
-  /*Relation*/ std::any visitRelationFencerel(
+  /*std::variant<Set, Relation>*/ std::any visitRelationFencerel(
       LogicParser::RelationFencerelContext *context) override;
-  /*Set*/ std::any visitSetSingleton(LogicParser::SetSingletonContext *context) override;
-  /*Relation*/ std::any visitRelationBasic(LogicParser::RelationBasicContext *context) override;
-  /*Relation*/ std::any visitRelationMinus(LogicParser::RelationMinusContext *context) override;
-  /*Relation*/ std::any visitRelationDomainIdentity(
+  /*std::variant<Set, Relation>*/ std::any visitSetSingleton(
+      LogicParser::SetSingletonContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitRelationBasic(
+      LogicParser::RelationBasicContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitRelationMinus(
+      LogicParser::RelationMinusContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitRelationDomainIdentity(
       LogicParser::RelationDomainIdentityContext *context) override;
-  /*Relation*/ std::any visitRelationRangeIdentity(
+  /*std::variant<Set, Relation>*/ std::any visitRelationRangeIdentity(
       LogicParser::RelationRangeIdentityContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitUnion(LogicParser::UnionContext *context) override;
-  /*Relation*/ std::any visitRelationInverse(LogicParser::RelationInverseContext *context) override;
-  /*Relation*/ std::any visitRelationOptional(
+  /*std::variant<Set, Relation>*/ std::any visitRelationInverse(
+      LogicParser::RelationInverseContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitRelationOptional(
       LogicParser::RelationOptionalContext *context) override;
-  /*Relation*/ std::any visitRelationIdentity(
+  /*std::variant<Set, Relation>*/ std::any visitRelationIdentity(
       LogicParser::RelationIdentityContext *context) override;
-  /*Relation*/ std::any visitCartesianProduct(
+  /*std::variant<Set, Relation>*/ std::any visitCartesianProduct(
       LogicParser::CartesianProductContext *context) override;
-  /*Set*/ std::any visitSetBasic(LogicParser::SetBasicContext *context) override;
-  /*Relation*/ std::any visitTransitiveReflexiveClosure(
+  /*std::variant<Set, Relation>*/ std::any visitSetBasic(
+      LogicParser::SetBasicContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitTransitiveReflexiveClosure(
       LogicParser::TransitiveReflexiveClosureContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitComposition(
       LogicParser::CompositionContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitIntersection(
       LogicParser::IntersectionContext *context) override;
-  /*Relation*/ std::any visitRelationComplement(
-      LogicParser::RelationComplementContext *context) override;
+  // /*std::variant<Set, Relation>*/ std::any visitRelationComplement(
+  //    LogicParser::RelationComplementContext *context) override;
 
   static std::unordered_map<std::string, Relation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
@@ -188,10 +193,10 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     // TODO: remove std::cout << rhsModel.toString() << " <= " << lhsModel.toString() <<
   std::endl; Assumption lhsEmpty(AssumptionType::empty, std::move(lhsModel)); Relation
   emptyR(RelationOperation::empty); Set startLabel(SetOperation::singleton,
-  Set::maxSingletonLabel++); Set endLabel(SetOperation::singleton, Set::maxSingletonLabel++); Set
-  image(SetOperation::image, std::move(startLabel), std::move(rhsModel)); Predicate
-  p(PredicateOperation::intersectionNonEmptiness, std::move(image), std::move(endLabel)); Literal
-  l(false, std::move(p)); Formula f(FormulaOperation::literal, std::move(l));
+  Set::maxSingletonLabel++); Set endLabel(SetOperation::singleton, Set::maxSingletonLabel++);
+  Set image(SetOperation::image, std::move(startLabel), std::move(rhsModel)); Predicate
+  p(PredicateOperation::intersectionNonEmptiness, std::move(image), std::move(endLabel));
+  Literal l(false, std::move(p)); Formula f(FormulaOperation::literal, std::move(l));
     std::tuple<Assumption, Formula> response{std::move(lhsEmpty), std::move(f)};
     return response;
   }

@@ -37,6 +37,8 @@ bool Formula::operator==(const Formula &other) const {
 }
 
 std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
+  std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
+
   switch (operation) {
     case FormulaOperation::logicalAnd: {
       // f1 & f2 -> { f1, f2 }

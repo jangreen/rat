@@ -110,6 +110,8 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
       if (leftOperand->operation == SetOperation::singleton) {
         switch (relation->operation) {
           case RelationOperation::base: {
+            // TODO: implement (only use if want to)
+            return std::nullopt;  // o rule since it is reduced
             // [e.b] -> { [f], (e.b)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
