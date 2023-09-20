@@ -24,15 +24,32 @@ Predicate::Predicate(const PredicateOperation operation, Set &&left, Set &&right
   rightOperand = std::make_unique<Set>(std::move(right));
 }
 
-// helper
+bool Predicate::operator==(const Predicate &other) const {
+  auto isEqual = operation == other.operation;
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    isEqual = false;
+  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    isEqual = false;
+  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    isEqual = false;
+  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    isEqual = false;
+  }
+  return isEqual;
+}
+
+/*/ helper
 std::optional<Formula> getFormula(
     const std::vector<std::vector<Set::PartialPredicate>> &disjunction) {
+  std::cout << "getF: " << std::endl;
   std::optional<Formula> disjunctionF = std::nullopt;
   for (const auto &conjunction : disjunction) {
+    std::cout << "|" << std::endl;
     std::optional<Formula> conjunctionF = std::nullopt;
     for (const auto &predicate : conjunction) {
       if (std::holds_alternative<Predicate>(predicate)) {
         Predicate p = std::get<Predicate>(predicate);
+        std::cout << p.toString() << std::endl;
         Literal l(false, std::move(p));
         Formula newConjunctionF(FormulaOperation::literal, std::move(l));
 
@@ -55,9 +72,46 @@ std::optional<Formula> getFormula(
     }
   }
   return disjunctionF;
+}*/
+std::optional<Formula> getFormula(
+    const std::vector<std::vector<Set::PartialPredicate>> &disjunction, const Set &leftOperand) {
+  std::optional<Formula> formulaDisjunction = std::nullopt;
+  for (const auto &conjunction : disjunction) {
+    std::optional<Formula> formulaConjunction = std::nullopt;
+    for (const auto &predicate : conjunction) {
+      if (std::holds_alternative<Predicate>(predicate)) {
+        Predicate p = std::get<Predicate>(predicate);
+        Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+        if (!formulaConjunction) {
+          formulaConjunction = newLiteral;
+        } else {
+          formulaConjunction = Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                       std::move(newLiteral));
+        }
+      } else {
+        Set s = std::get<Set>(predicate);
+        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(leftOperand), std::move(s));
+        Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+        if (!formulaConjunction) {
+          formulaConjunction = newLiteral;
+        } else {
+          formulaConjunction = Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                       std::move(newLiteral));
+        }
+      }
+
+      if (!formulaDisjunction) {
+        formulaDisjunction = formulaConjunction;
+      } else {
+        formulaDisjunction = Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
+                                     std::move(*formulaConjunction));
+      }
+    }
+  }
+  return formulaDisjunction;
 }
 
-std::optional<Formula> Predicate::applyRule() {
+std::optional<Formula> Predicate::applyRule(bool modalRules) {
   switch (operation) {
     case PredicateOperation::bottom:
       return std::nullopt;
@@ -103,47 +157,10 @@ std::optional<Formula> Predicate::applyRule() {
           case SetOperation::domain: {
             // {e}.(r.s)
             // 1) try reduce r.s
-            auto rightResult = rightOperand->applyRule();
+            auto rightResult = rightOperand->applyRule(modalRules);
             if (rightResult) {
               auto disjunction = *rightResult;
-              std::optional<Formula> formulaDisjunction = std::nullopt;
-              for (const auto &conjunction : disjunction) {
-                std::optional<Formula> formulaConjunction = std::nullopt;
-                for (const auto &predicate : conjunction) {
-                  if (std::holds_alternative<Predicate>(predicate)) {
-                    Predicate p = std::get<Predicate>(predicate);
-                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
-                    if (!formulaConjunction) {
-                      formulaConjunction = newLiteral;
-                    } else {
-                      formulaConjunction =
-                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
-                                  std::move(newLiteral));
-                    }
-                  } else {
-                    Set s = std::get<Set>(predicate);
-                    Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*leftOperand),
-                                std::move(s));
-                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
-                    if (!formulaConjunction) {
-                      formulaConjunction = newLiteral;
-                    } else {
-                      formulaConjunction =
-                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
-                                  std::move(newLiteral));
-                    }
-                  }
-
-                  if (!formulaDisjunction) {
-                    formulaDisjunction = formulaConjunction;
-                  } else {
-                    formulaDisjunction =
-                        Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
-                                std::move(*formulaConjunction));
-                  }
-                }
-              }
-              return formulaDisjunction;
+              return getFormula(disjunction, *leftOperand);
             }
             // 2) -> ({e}.r).s
             Set er(SetOperation::image, Set(*leftOperand), Relation(*rightOperand->relation));
@@ -198,9 +215,10 @@ std::optional<Formula> Predicate::applyRule() {
           case SetOperation::domain: {
             // (r.s).{e}
             // 1) try reduce r.s
-            auto leftResult = leftOperand->applyRule();
+            auto leftResult = leftOperand->applyRule(modalRules);
             if (leftResult) {
               auto disjunction = *leftResult;
+              // TODO: use getFormula
               std::optional<Formula> formulaDisjunction = std::nullopt;
               for (const auto &conjunction : disjunction) {
                 std::optional<Formula> formulaConjunction = std::nullopt;
@@ -249,9 +267,10 @@ std::optional<Formula> Predicate::applyRule() {
           case SetOperation::image: {
             // (s.r).{e}
             // 1) try reduce s.r
-            auto leftResult = leftOperand->applyRule();
+            auto leftResult = leftOperand->applyRule(modalRules);
             if (leftResult) {
               auto disjunction = *leftResult;
+              // TODO: use getFormula
               std::optional<Formula> formulaDisjunction = std::nullopt;
               for (const auto &conjunction : disjunction) {
                 std::optional<Formula> formulaConjunction = std::nullopt;
@@ -299,19 +318,95 @@ std::optional<Formula> Predicate::applyRule() {
           }
         }
       } else {
-        auto leftResult = leftOperand->applyRule();
+        auto leftResult = leftOperand->applyRule(modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
-          return getFormula(disjunction);
+          return getFormula(disjunction, *rightOperand);
         }
-        auto rightResult = rightOperand->applyRule();
+        auto rightResult = rightOperand->applyRule(modalRules);
         if (rightResult) {
           auto disjunction = *rightResult;
-          return getFormula(disjunction);
+          return getFormula(disjunction, *leftOperand);
         }
       }
       return std::nullopt;
   }
+}
+
+bool Predicate::isNormal() const {
+  switch (operation) {
+    case PredicateOperation::bottom:
+      return false;
+    case PredicateOperation::top:
+      return false;
+    case PredicateOperation::intersectionNonEmptiness:
+      if (leftOperand->operation == SetOperation::singleton) {
+        switch (rightOperand->operation) {
+          case SetOperation::singleton:
+            return true;
+          case SetOperation::domain: {
+            auto domainNormal = rightOperand->isNormal();
+            if (domainNormal && rightOperand->leftOperand->operation == SetOperation::singleton) {
+              return true;
+            }
+            return false;
+          }
+          case SetOperation::image: {
+            auto imageNormal = rightOperand->isNormal();
+            if (imageNormal && rightOperand->leftOperand->operation == SetOperation::singleton) {
+              return true;
+            }
+            return false;
+          }
+          default:
+            return false;
+        }
+      } else if (rightOperand->operation == SetOperation::singleton) {
+        switch (leftOperand->operation) {
+          case SetOperation::singleton:
+            return true;
+          case SetOperation::domain: {
+            auto domainNormal = leftOperand->isNormal();
+            if (domainNormal && leftOperand->leftOperand->operation == SetOperation::singleton) {
+              return true;
+            }
+            return false;
+          }
+          case SetOperation::image: {
+            auto imageNormal = leftOperand->isNormal();
+            if (imageNormal && leftOperand->leftOperand->operation == SetOperation::singleton) {
+              return true;
+            }
+            return false;
+          }
+          default:
+            return false;
+        }
+      } else {
+        return leftOperand->isNormal() && rightOperand->isNormal();
+      }
+  }
+}
+
+bool Predicate::isAtomic() const {
+  bool e1_be2 = leftOperand->operation == SetOperation::singleton &&
+                rightOperand->operation == SetOperation::domain &&
+                rightOperand->leftOperand->operation == SetOperation::singleton &&
+                rightOperand->relation->operation == RelationOperation::base;
+  bool e1_e2b = leftOperand->operation == SetOperation::singleton &&
+                rightOperand->operation == SetOperation::image &&
+                rightOperand->leftOperand->operation == SetOperation::singleton &&
+                rightOperand->relation->operation == RelationOperation::base;
+  bool e1b_e2 = rightOperand->operation == SetOperation::singleton &&
+                leftOperand->operation == SetOperation::image &&
+                leftOperand->leftOperand->operation == SetOperation::singleton &&
+                leftOperand->relation->operation == RelationOperation::base;
+  bool be1_e2 = rightOperand->operation == SetOperation::singleton &&
+                leftOperand->operation == SetOperation::domain &&
+                leftOperand->leftOperand->operation == SetOperation::singleton &&
+                leftOperand->relation->operation == RelationOperation::base;
+  bool isAtomic = e1_be2 || e1_e2b || e1b_e2 || be1_e2;
+  return operation == PredicateOperation::intersectionNonEmptiness && isAtomic;
 }
 
 std::string Predicate::toString() const {

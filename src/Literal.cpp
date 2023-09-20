@@ -16,8 +16,18 @@ Literal::Literal(const bool negated, Predicate &&predicate) : negated(negated) {
   this->predicate = std::make_unique<Predicate>(std::move(predicate));
 }
 
-std::optional<Formula> Literal::applyRule() {
-  auto predicateResult = predicate->applyRule();
+bool Literal::operator==(const Literal &other) const {
+  auto isEqual = negated == other.negated;
+  if ((predicate == nullptr) != (other.predicate == nullptr)) {
+    isEqual = false;
+  } else if (predicate != nullptr && *predicate != *other.predicate) {
+    isEqual = false;
+  }
+  return isEqual;
+}
+
+std::optional<Formula> Literal::applyRule(bool modalRules) {
+  auto predicateResult = predicate->applyRule(bool modalRules);
   if (predicateResult) {
     auto formula = *predicateResult;
     if (negated) {
@@ -29,6 +39,8 @@ std::optional<Formula> Literal::applyRule() {
   }
   return std::nullopt;
 }
+
+bool Literal::isNormal() const { return predicate->isNormal(); }
 
 std::string Literal::toString() const {
   std::string output;

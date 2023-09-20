@@ -26,9 +26,10 @@ class Tableau {
     void appendBranch(const GDNF &formulas);
     void appendBranch(const Formula &leftFormula);
     void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
-    void applyRule();
+    std::optional<GDNF> applyRule(bool modalRule = false);
 
-    // TODO: DNF extractDNF() const;
+    // this method assumes that tableau is already reduced
+    std::vector<std::vector<Formula>> extractDNF() const;
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -46,10 +47,10 @@ class Tableau {
   bool solve(int bound = 30);
 
   // methods for regular reasoning
-  /*DNF calcDNF();
+  std::optional<Formula> applyRuleA();
 
+  /*DNF calcDNF();
   bool apply(const std::initializer_list<ProofRule> rules);
-  std::optional<Metastatement> applyRuleA();
   void calcReuqest();
   std::tuple<ExtendedClause, Clause> extractRequest() const;  // and converse request
   */

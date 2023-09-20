@@ -40,7 +40,8 @@ class Formula {
   std::unique_ptr<Literal> literal;       // is set iff literal
 
   // functions for rule applications
-  std::optional<std::vector<std::vector<Formula>>> applyRule();
+  std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
+  bool isNormal() const;
 
   // printing
   std::string toString() const;

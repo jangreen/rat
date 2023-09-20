@@ -4,12 +4,13 @@
 #include <string>
 #include <vector>
 
-#include "Set.h"
+#include "Relation.h"
 
 // forward declareation
 class Set;
 class Formula;
 
+// TODO: move bottom, top into FormulaOperation?
 enum class PredicateOperation {
   bottom,                   // nullary predicate
   top,                      // nullary predicate
@@ -30,6 +31,7 @@ class Predicate {
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
   }
+  bool operator==(const Predicate &other) const;
 
   explicit Predicate(const std::string &expression);  // parse constructor
   Predicate(const PredicateOperation operation);
@@ -39,7 +41,9 @@ class Predicate {
   std::unique_ptr<Set> leftOperand;   // is set iff binary predicate
   std::unique_ptr<Set> rightOperand;  // is set iff binary predicate
 
-  std::optional<Formula> applyRule();
+  std::optional<Formula> applyRule(bool modalRules = false);
+  bool isNormal() const;
+  bool isAtomic() const;
 
   // printing
   std::string toString() const;
@@ -74,6 +78,8 @@ class Set {
     /*swap(first.saturated, second.saturated);
     swap(first.saturatedId, second.saturatedId);*/
   }
+  bool operator==(const Set &other) const;
+  bool operator<(const Set &otherSet) const;  // for sorting/hashing
 
   explicit Set(const std::string &expression);  // parse constructor
   explicit Set(const SetOperation operation,
@@ -92,20 +98,18 @@ class Set {
 
   static int maxSingletonLabel;  // to create globally unique labels
 
-  bool isNormal() const;  // true iff all labels are in front of base Sets
   /*
   std::vector<int> labels() const;                // return all labels of the relation term
   std::vector<int> calculateRenaming() const;     // renaming {2,4,5}: 2->0,4->1,5->2
   void rename(const std::vector<int> &renaming);  // renames given a renaming function
   void inverseRename(const std::vector<int> &renaming);
 */
-  bool operator==(const Set &otherSet) const;  // compares two Set syntactically
-  bool operator<(const Set &otherSet) const;   // for sorting/hashing
 
   // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
   // predicate for a given context
   typedef std::variant<Set, Predicate> PartialPredicate;
-  std::optional<std::vector<std::vector<PartialPredicate>>> applyRule();
+  std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
+  bool isNormal() const;  // true iff all labels are in front of base Sets
 
   // printing
   std::string toString() const;

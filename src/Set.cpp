@@ -39,6 +39,32 @@ Set::Set(const SetOperation operation, Set &&left, Relation &&relation) : operat
   this->relation = std::make_unique<Relation>(std::move(relation));
 }
 
+bool Set::operator==(const Set &other) const {
+  auto isEqual = operation == other.operation;
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    isEqual = false;
+  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    isEqual = false;
+  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    isEqual = false;
+  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    isEqual = false;
+  } else if ((relation == nullptr) != (other.relation == nullptr)) {
+    isEqual = false;
+  } else if (relation != nullptr && *relation != *other.relation) {
+    isEqual = false;
+  } else if (label.has_value() != other.label.has_value()) {
+    isEqual = false;
+  } else if (label.has_value() && *label != *other.label) {
+    isEqual = false;
+  } else if (identifier.has_value() != other.identifier.has_value()) {
+    isEqual = false;
+  } else if (identifier.has_value() && *identifier != *other.identifier) {
+    isEqual = false;
+  }
+  return isEqual;
+}
+
 bool Set::isNormal() const {
   switch (operation) {
     case SetOperation::choice:
@@ -68,7 +94,7 @@ bool Set::isNormal() const {
   }
 }
 
-std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() {
+std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bool modalRules) {
   std::vector<std::vector<PartialPredicate>> result;
   switch (operation) {
     case SetOperation::singleton:
@@ -111,7 +137,9 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
         switch (relation->operation) {
           case RelationOperation::base: {
             // TODO: implement (only use if want to)
-            return std::nullopt;  // o rule since it is reduced
+            if (!modalRules) {
+              return std::nullopt;
+            }
             // [e.b] -> { [f], (e.b)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
@@ -173,7 +201,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
           }
         }
       } else {
-        auto leftOperandResultOptional = leftOperand->applyRule();
+        auto leftOperandResultOptional = leftOperand->applyRule(modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {
@@ -201,7 +229,10 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
         switch (relation->operation) {
           case RelationOperation::base: {
             // TODO: implement (only use if want to)
-            return std::nullopt;  // o rule since it is reduced
+            if (!modalRules) {
+              return std::nullopt;
+            }
+
             // [b.e] -> { [f], (b.e)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
@@ -263,7 +294,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
           }
         }
       } else {
-        auto leftOperandResultOptional = leftOperand->applyRule();
+        auto leftOperandResultOptional = leftOperand->applyRule(modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {

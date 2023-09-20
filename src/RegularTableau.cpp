@@ -7,52 +7,136 @@
 #include <tuple>
 #include <utility>
 
-// LEGACY
-/*RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
+GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
+  // TODO: more direct computation of DNF
+  GDNF disjunction = {conjunction};
+  Formula dummyRoot(FormulaOperation::literal, Literal(false, Predicate(PredicateOperation::top)));
+  Tableau tableau{std::move(dummyRoot)};
+  tableau.rootNode->appendBranch(disjunction);
+  tableau.solve();  // TODO: use dedicated function
+  return tableau.rootNode->extractDNF();
+}
+
+RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
     : RegularTableau(std::vector(initalFormulas)) {}
 RegularTableau::RegularTableau(FormulaSet initalFormulas) {
-  auto dnf = calcDNF(initalFormulas);
-  for (auto clause : dnf) {
-    addNode(nullptr, clause);
+  auto dnf = calclateDNF(initalFormulas);
+  for (const auto &clause : dnf) {
+    auto newNode = addNode(clause);
+    rootNodes.push_back(newNode);
   }
 }
 
-std::vector<Assumption> RegularTableau::assumptions;
+// assumptions:
+// clause is in normal form
+// parent == nullptr -> rootNode
+RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
+  // calculate renaming & rename
+  // TODO: do for more than one positive literal
+  Renaming renaming;
+  for (auto &formula : clause) {
+    if (!formula.literal->negated) {
+      renaming = formula.literal->predicate->calculateRenaming();
+      break;
+    }
+  }
 
-// helper
-void resetUnreducedNodes(Tableau *tableau, Tableau::Node *node) {
-  tableau->unreducedNodes.push(node);
-  if (node->leftNode != nullptr) {
-    resetUnreducedNodes(tableau, node->leftNode.get());
+  for (auto &formula : clause) {
+    formula.rename(renaming);
   }
-  if (node->rightNode != nullptr) {
-    resetUnreducedNodes(tableau, node->rightNode.get());
+
+  // create node, check if it is duplicate
+  auto newNode = std::make_unique<Node>(clause);
+  auto existingNode = nodes.find(newNode);
+  if (existingNode != nodes.end()) {
+    // equivalent node exists
+    auto oldNode = existingNode->get();
+    return oldNode;
+  } else {
+    unreducedNodes.push(newNode.get());
+    nodes.emplace(std::move(newNode));
+    return newNode.get();
   }
+
+  // saturation phase
+  /*saturate(clause);
+  auto saturatedDNF = DNF(clause);
+  for (auto saturatedClause : saturatedDNF) {
+    // filter clause
+    Clause filteredClause;
+    for (auto &literal : saturatedClause) {
+      auto relation = std::get_if<Relation>(&literal);
+      if (relation) {
+        filteredClause.push_back(*relation);
+      }
+    }
+
+    // PREVIOUSLY HERE WAS THE ACTUAL CREATION
+    // create node, edges
+    auto newNode = std::make_unique<Node>(filteredClause);
+    ....
+    // ENDOF PREVIOUSLY HERE WAS THE ACTUAL CREATION
+
+    // check if consistent
+    bool inconsistent =
+        parent && isInconsistent(parent, newNode.get());  // parent null if root node
+    if (!inconsistent) {
+      // push to unreduced nodes, add node to proof
+
+    }
+  }*/
 }
 
+bool RegularTableau::solve() {
+  while (!unreducedNodes.empty()) {
+    auto currentNode = unreducedNodes.top();
+    unreducedNodes.pop();
+    if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
+         currentNode->rootParents.empty()) ||
+        currentNode->closed) {
+      // skip already closed nodes and nodes that cannot be reached by a root node
+      continue;
+    }
+
+    if (!expandNode(currentNode)) {
+      extractCounterexample(currentNode);
+      std::cout << "[Solver] False." << std::endl;
+      return false;
+    }
+  }
+  std::cout << "[Solver] True." << std::endl;
+  return true;
+}
+
+// assumptions:
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->formulas};
-  auto metastatement = tableau.applyRuleA();
+  auto atomicFormula = tableau.applyRuleA();
 
-  if (metastatement) {
-    // tableau.apply({ProofRule::at, ProofRule::propagation});  // TODO:
-    tableau.calcReuqest();
-    // const auto &[request, converseRequest] = tableau.extractRequest();
-    if (tableau.rootNode->isClosed()) {  // TODO: when should this be checked?
+  if (atomicFormula) {
+    // tableau.calculateRequest();
+    tableau.solve();
+    if (tableau.rootNode->isClosed()) {
       // can happen with emptiness hypotheses
       node->closed = true;
       return true;
     }
 
-    // reset unreduced nodes
-    while (!tableau.unreducedNodes.empty()) {
-      tableau.unreducedNodes.pop();
+    // extract DNF and remove atomicFormula
+    auto dnf = tableau.rootNode->extractDNF();
+    GDNF newDNF;
+    for (auto &clause : dnf) {
+      FormulaSet newClause;
+      for (auto &formula : clause) {
+        if (formula != *atomicFormula) {
+          newClause.emplace_back(formula);
+        }
+      }
+      newDNF.emplace_back(newClause);
     }
-    resetUnreducedNodes(&tableau, tableau.rootNode.get());
 
-    auto dnf = tableau.DNF();
-    for (const auto &clause : dnf) {
+    /*for (const auto &clause : dnf) {
       // TODO: refactor DRY
       // calculate equivalence class to rename metaststatement
       std::vector<std::vector<int>> equivalenceClasses;
@@ -94,14 +178,35 @@ bool RegularTableau::expandNode(Node *node) {
       }
       // TODO: -------
       addNode(node, clause, metastatement);
-    }
+    }*/
     if (dnf.empty()) {
       node->closed = true;
+    } else {
+      for (auto &clause : dnf) {
+        addNode(clause);
+        // TODO: connect edges, renaming, inconsistency check
+      }
     }
 
     return true;
   }
   return false;
+}
+
+// LEGACY
+/*
+
+std::vector<Assumption> RegularTableau::assumptions;
+
+// helper
+void resetUnreducedNodes(Tableau *tableau, Tableau::Node *node) {
+  tableau->unreducedNodes.push(node);
+  if (node->leftNode != nullptr) {
+    resetUnreducedNodes(tableau, node->leftNode.get());
+  }
+  if (node->rightNode != nullptr) {
+    resetUnreducedNodes(tableau, node->rightNode.get());
+  }
 }
 
 // helper
@@ -237,6 +342,25 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
     child->rootParents.push_back(parent);
   }
   // TODO: remove exportProof("regular");
+  / *
+  newNode->parentNodes.insert({
+      parent,
+  });
+  newNode->parentNodeRenaming = renaming;
+  newNode->parentEquivalences = equalityStatements;
+  newNode->parentNode = parent;
+  if (parent != nullptr) {
+    if (metastatement) {
+      std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
+      newNode->parentNodes[parent] = edgelabel;
+    } else {
+      newNode->parentNodes[parent] = std::nullopt;
+    }
+    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+        !parent->rootParents.empty()) {
+      newNode->rootParents.push_back(parent);
+    }
+  }
 }
 
 void RegularTableau::updateRootParents(Node *node) {
@@ -265,99 +389,6 @@ void RegularTableau::removeEdge(Node *parent, Node *child) {
   }
   updateRootParents(child);
   // TODO: remove exportProof("regular");
-}
-
-// clause is in normal form
-// parent == nullptr -> rootNode
-void RegularTableau::addNode(Node *parent, ExtendedClause extendedClause,
-                             const std::optional<Metastatement> &metastatement) {
-  // filter metastatements
-  std::vector<Metastatement> equalityStatements;
-  Clause clause;
-  for (const auto &literal : extendedClause) {
-    if (literal.index() == 0) {
-      clause.push_back(std::get<Relation>(literal));
-    } else {
-      equalityStatements.push_back(std::get<Metastatement>(literal));
-    }
-  }
-
-  // calculate renaming & rename
-  std::vector<int> renaming;
-  for (auto &relation : clause) {
-    if (!relation.negated) {
-      renaming = relation.calculateRenaming();
-      break;
-    }
-  }
-
-  for (auto &relation : clause) {
-    relation.rename(renaming);
-  }
-
-  // saturation phase
-  saturate(clause);
-  auto saturatedDNF = DNF(clause);
-  for (auto saturatedClause : saturatedDNF) {
-    // filter clause
-    Clause filteredClause;
-    for (auto &literal : saturatedClause) {
-      auto relation = std::get_if<Relation>(&literal);
-      if (relation) {
-        filteredClause.push_back(*relation);
-      }
-    }
-
-    // create node, edges
-    auto newNode = std::make_unique<Node>(filteredClause);
-    if (metastatement) {
-      newNode->parentNodeExpansionMeta = *metastatement;
-    }
-    newNode->parentNodeRenaming = renaming;
-    newNode->parentEquivalences = equalityStatements;
-    newNode->parentNode = parent;
-    if (parent != nullptr) {
-      if (metastatement) {
-        std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
-        newNode->parentNodes[parent] = edgelabel;
-      } else {
-        newNode->parentNodes[parent] = std::nullopt;
-      }
-      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-          !parent->rootParents.empty()) {
-        newNode->rootParents.push_back(parent);
-      }
-    }
-    // check if consistent
-    bool inconsistent =
-        parent && isInconsistent(parent, newNode.get());  // parent null if root node
-    if (!inconsistent) {
-      // push to unreduced nodes, add node to proof
-      auto existingNode = nodes.find(newNode);
-      if (existingNode != nodes.end()) {
-        // equivalent node exists
-        if (parent != nullptr) {
-          parent->childNodes.push_back(existingNode->get());
-          if (metastatement) {
-            std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
-            existingNode->get()->parentNodes[parent] = edgelabel;
-          } else {
-            existingNode->get()->parentNodes[parent] = std::nullopt;
-          }
-        }
-      } else {
-        // equivalent node does not exist
-        if (parent != nullptr) {
-          parent->childNodes.push_back(newNode.get());
-        } else {
-          // new root node
-          rootNodes.push_back(newNode.get());
-        }
-        unreducedNodes.push(newNode.get());
-        nodes.emplace(std::move(newNode));
-      }
-    }
-  }
 }
 
 std::optional<Relation> RegularTableau::saturateRelation(const Relation &relation) {
@@ -530,27 +561,6 @@ void RegularTableau::saturate(Clause &clause) {
   // remove duplicates since it has not been check when inserting
   sort(clause.begin(), clause.end());
   clause.erase(unique(clause.begin(), clause.end()), clause.end());
-}
-
-bool RegularTableau::solve() {
-  while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
-         currentNode->rootParents.empty()) ||
-        currentNode->closed) {
-      // skip already closed nodes and nodes that cannot be reached by a root node
-      continue;
-    }
-    // TODO: remove exportProof("regular");  // DEBUG
-    if (!expandNode(currentNode)) {
-      extractCounterexample(&(*currentNode));
-      std::cout << "[Solver] False." << std::endl;
-      return false;
-    }
-  }
-  std::cout << "[Solver] True." << std::endl;
-  return true;
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {

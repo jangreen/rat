@@ -132,6 +132,61 @@ bool Tableau::solve(int bound) {
   }
 }
 
+std::vector<std::vector<Formula>> Tableau::Node::extractDNF() const {
+  if (isClosed()) {
+    return {};
+  }
+  if (isLeaf()) {
+    if (formula.isNormal()) {
+      return {{formula}};
+    }
+    return {};
+  } else {
+    std::vector<std::vector<Formula>> result;
+    if (leftNode != nullptr) {
+      auto left = leftNode->extractDNF();
+      result.insert(result.end(), left.begin(), left.end());
+    }
+    if (rightNode != nullptr) {
+      auto right = rightNode->extractDNF();
+      result.insert(result.end(), right.begin(), right.end());
+    }
+    if (formula.isNormal()) {
+      if (result.empty()) {
+        result.push_back({});
+      }
+      for (auto &clause : result) {
+        clause.push_back(formula);
+      }
+    }
+    return result;
+  }
+}
+
+std::optional<Formula> Tableau::applyRuleA() {
+  while (!unreducedNodes.empty()) {
+    auto currentNode = unreducedNodes.top();
+    unreducedNodes.pop();
+
+    auto result = currentNode->applyRule(true);
+    if (result) {
+      auto modalResult = *result;
+
+      // find atomic
+      for (const auto &clause : modalResult) {
+        // should be only one clause
+        for (const auto &formula : clause) {
+          if (formula.operation == FormulaOperation::literal &&
+              formula.literal->predicate->isAtomic()) {
+            return formula;
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 void Tableau::toDotFormat(std::ofstream &output) const {
   output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
   rootNode->toDotFormat(output);
@@ -156,37 +211,6 @@ bool Tableau::apply(const std::initializer_list<ProofRule> rules) {
     }
   }
   return false;
-}
-
-std::optional<Metastatement> Tableau::applyRuleA() {
-  while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    auto result = currentNode->applyRule<ProofRule::a, std::tuple<Relation, Metastatement>>();
-    if (result) {
-      // TODO: apply at-rule greedy
-      while (currentNode->leftNode != nullptr) {
-        currentNode = currentNode->leftNode.get();
-
-        if (currentNode->leftNode == nullptr) {
-          Node *nodeNeedsCheck = currentNode->parentNode;
-          Node *newRelMetastatement = currentNode;
-          auto atResult = nodeNeedsCheck->relation
-                              ->applyRuleDeep<ProofRule::at, std::tuple<Relation, Metastatement>>();
-          if (atResult) {
-            auto &[newRelation, newEqMetastatement] = *atResult;
-            nodeNeedsCheck->appendBranches(newRelation);
-            nodeNeedsCheck->appendBranches(newEqMetastatement);
-
-            newRelMetastatement->metastatement->label2 =
-                std::min(newEqMetastatement.label1, newEqMetastatement.label2);
-          }
-        }
-      }
-      return std::get<Metastatement>(*result);
-    }
-  }
-  return std::nullopt;
 }
 
 std::tuple<ExtendedClause, Clause> Tableau::extractRequest() const {
@@ -329,45 +353,4 @@ DNF Tableau::calcDNF() {
   }
   return dnf;
 };
-
-std::vector<ExtendedClause> Tableau::Node::extractDNF() {
-  if (isClosed()) {
-    return {};
-  }
-  if (isLeaf()) {
-    if (relation && relation->isNormal()) {
-      return {{*relation}};
-    }
-    if (metastatement && metastatement->type == MetastatementType::labelEquality) {
-      return {{*metastatement}};
-    }
-    return {};
-  } else {
-    std::vector<ExtendedClause> result;
-    if (leftNode != nullptr) {
-      auto left = leftNode->extractDNF();
-      result.insert(result.end(), left.begin(), left.end());
-    }
-    if (rightNode != nullptr) {
-      auto right = rightNode->extractDNF();
-      result.insert(result.end(), right.begin(), right.end());
-    }
-    if (relation && relation->isNormal()) {
-      if (result.empty()) {
-        result.push_back({});
-      }
-      for (auto &clause : result) {
-        clause.push_back(*relation);
-      }
-    } else if (metastatement && metastatement->type == MetastatementType::labelEquality) {
-      if (result.empty()) {
-        result.push_back({});
-      }
-      for (auto &clause : result) {
-        clause.push_back(*metastatement);
-      }
-    }
-    return result;
-  }
-}
 */

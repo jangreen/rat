@@ -32,11 +32,24 @@ Formula::Formula(const FormulaOperation operation, Formula &&left, Formula &&rig
       rightOperand(std::make_unique<Formula>(std::move(right))) {}
 
 bool Formula::operator==(const Formula &other) const {
-  return operation == other.operation && leftOperand == other.leftOperand &&
-         rightOperand == other.rightOperand && literal == other.literal;
+  auto isEqual = operation == other.operation;
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    isEqual = false;
+  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    isEqual = false;
+  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    isEqual = false;
+  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    isEqual = false;
+  } else if ((literal == nullptr) != (other.literal == nullptr)) {
+    isEqual = false;
+  } else if (literal != nullptr && *literal != *other.literal) {
+    isEqual = false;
+  }
+  return isEqual;
 }
 
-std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
+std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRules) {
   std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
 
   switch (operation) {
@@ -51,7 +64,7 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
       return result;
     }
     case FormulaOperation::literal: {
-      auto literalResult = literal->applyRule();
+      auto literalResult = literal->applyRule(modalRules);
       if (literalResult) {
         auto formula = *literalResult;
         std::vector<std::vector<Formula>> result{{std::move(formula)}};
@@ -89,6 +102,10 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
         }
       }
   }
+}
+
+bool Formula::isNormal() const {
+  return operation == FormulaOperation::literal && literal->isNormal();
 }
 
 std::string Formula::toString() const {

@@ -114,12 +114,14 @@ void Tableau::Node::appendBranch(const Formula &leftFormula, const Formula &righ
   }
 }
 
-void Tableau::Node::applyRule() {
-  auto result = formula.applyRule();
+std::optional<GDNF> Tableau::Node::applyRule(bool modalRule) {
+  auto result = formula.applyRule(modalRule);
   if (result) {
     auto disjunction = *result;
     appendBranch(disjunction);
+    return disjunction;
   }
+  return std::nullopt;
 }
 
 void Tableau::Node::toDotFormat(std::ofstream &output) const {

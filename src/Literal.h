@@ -19,13 +19,15 @@ class Literal {
     swap(first.negated, second.negated);
     swap(first.predicate, second.predicate);
   }
+  bool operator==(const Literal &other) const;
 
   Literal(const bool negated, Predicate &&predicate);
 
   bool negated;
   std::unique_ptr<Predicate> predicate;
 
-  std::optional<Formula> applyRule();
+  std::optional<Formula> applyRule(bool modalRules = false);
+  bool isNormal() const;
 
   // printing
   std::string toString() const;
