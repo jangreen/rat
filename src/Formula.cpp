@@ -64,22 +64,27 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule() {
         case FormulaOperation::logicalAnd: {
           // ~(f1 & f2) -> { ~f1 }, { ~f2 }
           std::vector<std::vector<Formula>> result{
-              {Formula(FormulaOperation::negation, Formula(*leftOperand))},
-              {Formula(FormulaOperation::negation, Formula(*rightOperand))}};
+              {Formula(FormulaOperation::negation, Formula(*leftOperand->leftOperand))},
+              {Formula(FormulaOperation::negation, Formula(*leftOperand->rightOperand))}};
           return result;
         }
         case FormulaOperation::logicalOr: {
           // ~(f1 | f2) -> { ~f1, ~f2 }
           std::vector<std::vector<Formula>> result{
-              {Formula(FormulaOperation::negation, Formula(*leftOperand)),
-               Formula(FormulaOperation::negation, Formula(*rightOperand))}};
+              {Formula(FormulaOperation::negation, Formula(*leftOperand->leftOperand)),
+               Formula(FormulaOperation::negation, Formula(*leftOperand->rightOperand))}};
           return result;
         }
-        case FormulaOperation::literal:
-          return std::nullopt;
+        case FormulaOperation::literal: {
+          // ~(l1) -> { nl1 } (nl1 is negated literal)
+          Formula f(FormulaOperation::literal,
+                    Literal(true, Predicate(*leftOperand->literal->predicate)));
+          std::vector<std::vector<Formula>> result{{std::move(f)}};
+          return result;
+        }
         case FormulaOperation::negation: {
           // ~(~f) -> { f }
-          std::vector<std::vector<Formula>> result{{Formula(*leftOperand)}};
+          std::vector<std::vector<Formula>> result{{Formula(*leftOperand->leftOperand)}};
           return result;
         }
       }
@@ -99,7 +104,7 @@ std::string Formula::toString() const {
       output += "(" + leftOperand->toString() + " | " + rightOperand->toString() + ")";
       break;
     case FormulaOperation::negation:
-      output += "~" + leftOperand->toString();
+      output += "~(" + leftOperand->toString() + ")";
       break;
   }
   return output;

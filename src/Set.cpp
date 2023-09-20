@@ -166,7 +166,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
             // [e.r*] -> { [(e.r)r*] }, { [e] }
             Set er(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             Set err_star(SetOperation::image, std::move(er), Relation(*relation));
-            Set e(SetOperation::singleton, Set(*leftOperand));
+            Set e(*leftOperand);
 
             result = {{std::move(err_star)}, {std::move(e)}};
             return result;
@@ -200,6 +200,8 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
       if (leftOperand->operation == SetOperation::singleton) {
         switch (relation->operation) {
           case RelationOperation::base: {
+            // TODO: implement (only use if want to)
+            return std::nullopt;  // o rule since it is reduced
             // [b.e] -> { [f], (b.e)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
@@ -254,7 +256,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule() 
             // [r*.e] -> { [r*.(r.e)] }, { [e] }
             Set re(SetOperation::domain, Set(*leftOperand), Relation(*relation->leftOperand));
             Set r_star_re(SetOperation::domain, std::move(re), Relation(*relation));
-            Set e(SetOperation::singleton, Set(*rightOperand));
+            Set e(*leftOperand);
 
             result = {{std::move(r_star_re)}, {std::move(e)}};
             return result;

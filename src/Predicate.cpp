@@ -160,21 +160,153 @@ std::optional<Formula> Predicate::applyRule() {
           }
         }
       } else if (rightOperand->operation == SetOperation::singleton) {
-        std::cout << "[Reasoning] Rules for S.{e} are not implemented: " << toString() << std::endl;
-        return std::nullopt;
+        switch (leftOperand->operation) {
+          case SetOperation::choice: {
+            // (s1 | s2).{e} -> s1{e}. | s2{e}.
+            Predicate s1e(PredicateOperation::intersectionNonEmptiness,
+                          Set(*rightOperand->leftOperand), Set(*leftOperand));
+            Predicate s2e(PredicateOperation::intersectionNonEmptiness,
+                          Set(*rightOperand->rightOperand), Set(*leftOperand));
+            Formula f1(FormulaOperation::literal, Literal(false, std::move(s1e)));
+            Formula f2(FormulaOperation::literal, Literal(false, std::move(s2e)));
+            Formula s1e_or_s2e(FormulaOperation::logicalOr, std::move(f1), std::move(f2));
+            return s1e_or_s2e;
+          }
+          case SetOperation::intersection: {
+            // (s1 & s2).{e} -> s1.{e} & s2.{e}
+            Predicate s1e(PredicateOperation::intersectionNonEmptiness,
+                          Set(*rightOperand->leftOperand), Set(*leftOperand));
+            Predicate s2e(PredicateOperation::intersectionNonEmptiness,
+                          Set(*rightOperand->rightOperand), Set(*leftOperand));
+            Formula f1(FormulaOperation::literal, Literal(false, std::move(s1e)));
+            Formula f2(FormulaOperation::literal, Literal(false, std::move(s2e)));
+            Formula s1e_and_s2e(FormulaOperation::logicalAnd, std::move(f1), std::move(f2));
+            return s1e_and_s2e;
+          }
+          case SetOperation::empty:
+            // {e}.0
+            std::cout << "[Reasoning] Rules for 0.{e} are not implemented." << std::endl;
+            return std::nullopt;
+          case SetOperation::full:
+            // {e}.T
+            std::cout << "[Reasoning] Rules for T.{e} are not implemented." << std::endl;
+            return std::nullopt;
+          case SetOperation::singleton:
+            // {e1}.{e2}
+            std::cout << "[Reasoning] Rules for {e1}.{e2} are not implemented." << std::endl;
+            return std::nullopt;
+          case SetOperation::domain: {
+            // (r.s).{e}
+            // 1) try reduce r.s
+            auto leftResult = leftOperand->applyRule();
+            if (leftResult) {
+              auto disjunction = *leftResult;
+              std::optional<Formula> formulaDisjunction = std::nullopt;
+              for (const auto &conjunction : disjunction) {
+                std::optional<Formula> formulaConjunction = std::nullopt;
+                for (const auto &predicate : conjunction) {
+                  if (std::holds_alternative<Predicate>(predicate)) {
+                    Predicate p = std::get<Predicate>(predicate);
+                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+                    if (!formulaConjunction) {
+                      formulaConjunction = newLiteral;
+                    } else {
+                      formulaConjunction =
+                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                  std::move(newLiteral));
+                    }
+                  } else {
+                    Set s = std::get<Set>(predicate);
+                    Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(s),
+                                Set(*rightOperand));
+                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+                    if (!formulaConjunction) {
+                      formulaConjunction = newLiteral;
+                    } else {
+                      formulaConjunction =
+                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                  std::move(newLiteral));
+                    }
+                  }
+
+                  if (!formulaDisjunction) {
+                    formulaDisjunction = formulaConjunction;
+                  } else {
+                    formulaDisjunction =
+                        Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
+                                std::move(*formulaConjunction));
+                  }
+                }
+              }
+              return formulaDisjunction;
+            }
+            // 2) -> ({e}.r).s
+            Set er(SetOperation::image, Set(*rightOperand), Relation(*leftOperand->relation));
+            Predicate ers(PredicateOperation::intersectionNonEmptiness, std::move(er),
+                          Set(*leftOperand->leftOperand));
+            return Formula(FormulaOperation::literal, Literal(false, std::move(ers)));
+          }
+          case SetOperation::image: {
+            // (s.r).{e}
+            // 1) try reduce s.r
+            auto leftResult = leftOperand->applyRule();
+            if (leftResult) {
+              auto disjunction = *leftResult;
+              std::optional<Formula> formulaDisjunction = std::nullopt;
+              for (const auto &conjunction : disjunction) {
+                std::optional<Formula> formulaConjunction = std::nullopt;
+                for (const auto &predicate : conjunction) {
+                  if (std::holds_alternative<Predicate>(predicate)) {
+                    Predicate p = std::get<Predicate>(predicate);
+                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+                    if (!formulaConjunction) {
+                      formulaConjunction = newLiteral;
+                    } else {
+                      formulaConjunction =
+                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                  std::move(newLiteral));
+                    }
+                  } else {
+                    Set s = std::get<Set>(predicate);
+                    Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(s),
+                                Set(*rightOperand));
+                    Formula newLiteral(FormulaOperation::literal, Literal(false, std::move(p)));
+                    if (!formulaConjunction) {
+                      formulaConjunction = newLiteral;
+                    } else {
+                      formulaConjunction =
+                          Formula(FormulaOperation::logicalAnd, std::move(*formulaConjunction),
+                                  std::move(newLiteral));
+                    }
+                  }
+
+                  if (!formulaDisjunction) {
+                    formulaDisjunction = formulaConjunction;
+                  } else {
+                    formulaDisjunction =
+                        Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
+                                std::move(*formulaConjunction));
+                  }
+                }
+              }
+              return formulaDisjunction;
+            }
+            // 2) -> s.(r.{e})
+            Set re(SetOperation::domain, Set(*rightOperand), Relation(*leftOperand->relation));
+            Predicate sre(PredicateOperation::intersectionNonEmptiness,
+                          Set(*leftOperand->leftOperand), std::move(re));
+            return Formula(FormulaOperation::literal, Literal(false, std::move(sre)));
+          }
+        }
       } else {
         auto leftResult = leftOperand->applyRule();
         if (leftResult) {
           auto disjunction = *leftResult;
-          std::cout << "l " << leftOperand->toString() << std::endl;
-
           return getFormula(disjunction);
         }
         auto rightResult = rightOperand->applyRule();
         if (rightResult) {
           auto disjunction = *rightResult;
-          std::cout << "r " << rightOperand->toString() << std::endl;
-
           return getFormula(disjunction);
         }
       }
