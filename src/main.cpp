@@ -1,7 +1,19 @@
 #include <fstream>
 #include <iostream>
 
+#include "RegularTableau.h"
 #include "Tableau.h"
+
+void printGDNF(const GDNF& gdnf) {
+  std::cout << "Clauses:";
+  for (auto& clause : gdnf) {
+    std::cout << "\n";
+    for (auto& literal : clause) {
+      std::cout << literal.toString() << " , ";
+    }
+  }
+  std::cout << std::endl;
+}
 
 int main(int argc, const char* argv[]) {
   // Formula f("{0};((a;b & c);{0})");
@@ -9,15 +21,13 @@ int main(int argc, const char* argv[]) {
   Tableau t{std::move(f)};
   t.solve();
   auto dnf = t.rootNode->extractDNF();
-  std::cout << "Clauses:";
-  for (auto& clause : dnf) {
-    std::cout << "\n";
-    for (auto& literal : clause) {
-      std::cout << literal.toString() << " , ";
-    }
-  }
-  std::cout << std::endl;
+  printGDNF(dnf);
   t.exportProof("test");
+
+  Formula f2("{0};a;a;{1} & ~({0};(a*);{1})");
+  RegularTableau rt{std::move(f2)};
+  rt.solve();
+  rt.exportProof("test2");
   /*Set s1("{e}.(a & b)");
   std::cout << s1.toString() << std::endl;
   auto s2 = *s1.applyRule();

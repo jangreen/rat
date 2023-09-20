@@ -143,7 +143,10 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             // [e.b] -> { [f], (e.b)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
-            result = {{std::move(f), p}};
+            // result = {{std::move(f), p}};
+            // currently replace
+            swap(*this, f);
+            result = {{p}};
             return result;
           }
           case RelationOperation::cartesianProduct:
@@ -236,7 +239,10 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             // [b.e] -> { [f], (b.e)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
-            result = {{std::move(f), p}};
+            // result = {{std::move(f), p}};
+            // currently replace
+            swap(*this, f);
+            result = {{p}};
             return result;
           }
           case RelationOperation::cartesianProduct:

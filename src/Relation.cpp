@@ -55,7 +55,8 @@ bool Relation::operator==(const Relation &other) const {
   }
   return isEqual;
 }
-bool Relation::operator<(const Relation &other) const { return toString() < other.toString(); }
+// TODO: remove: bool Relation::operator<(const Relation &other) const { return toString() <
+// other.toString(); }
 
 std::string Relation::toString() const {
   std::string output;

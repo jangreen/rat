@@ -1,18 +1,20 @@
 #include <boost/functional/hash.hpp>
+#include <iostream>
 
 #include "RegularTableau.h"
-/* LEGACY
-RegularTableau::Node::Node(std::initializer_list<Relation> relations) : relations(relations) {}
-RegularTableau::Node::Node(Clause relations) : relations(relations) {}
+
+// TODO: when hashing all sinlgeton sets are equal, when comparing search for renaming
+RegularTableau::Node::Node(std::initializer_list<Formula> formulas) : formulas(formulas) {}
+RegularTableau::Node::Node(FormulaSet formulas) : formulas(formulas) {}
 
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shorcuts
-  if (relations.size() != otherNode.relations.size()) {
+  if (formulas.size() != otherNode.formulas.size()) {
     return false;
   }
   // copy, sort, compare
-  Clause c1 = relations;
-  Clause c2 = otherNode.relations;
+  FormulaSet c1 = formulas;
+  FormulaSet c2 = otherNode.formulas;
   std::sort(c1.begin(), c1.end());
   std::sort(c2.begin(), c2.end());
   return c1 == c2;
@@ -20,10 +22,10 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
 
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
-  Clause copy = node.relations;
-  sort(copy.begin(), copy.end());
-  for (const auto &relation : copy) {
-    boost::hash_combine(seed, relation.toString());
+  FormulaSet copy = node.formulas;
+  std::sort(copy.begin(), copy.end());
+  for (const auto &formula : copy) {
+    boost::hash_combine(seed, formula.toString());
   }
   return seed;
 }
@@ -43,7 +45,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   }
 
   output << "N" << this << "[label=\"";
-  for (const auto &relation : relations) {
+  for (const auto &relation : formulas) {
     output << relation.toString() << std::endl;
   }
   output << "\"";
@@ -55,7 +57,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   // edges
   for (const auto childNode : childNodes) {
     auto edgeLabel = childNode->parentNodes[this];
-    auto labelString = edgeLabel ? std::get<Metastatement>(*edgeLabel).toString() : "#";
+    auto labelString = edgeLabel ? std::get<Formula>(*edgeLabel).toString() : "#";
     std::vector<int> emptyRenaming;
     auto labelRenaming = edgeLabel ? std::get<Renaming>(*edgeLabel) : emptyRenaming;
 
@@ -83,4 +85,3 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     childNode->toDotFormat(output);
   }
 }
-*/

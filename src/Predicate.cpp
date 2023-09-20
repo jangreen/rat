@@ -73,7 +73,7 @@ std::optional<Formula> getFormula(
   }
   return disjunctionF;
 }*/
-std::optional<Formula> getFormula(
+std::optional<Formula> substituteRight(
     const std::vector<std::vector<Set::PartialPredicate>> &disjunction, const Set &leftOperand) {
   std::optional<Formula> formulaDisjunction = std::nullopt;
   for (const auto &conjunction : disjunction) {
@@ -99,13 +99,12 @@ std::optional<Formula> getFormula(
                                        std::move(newLiteral));
         }
       }
-
-      if (!formulaDisjunction) {
-        formulaDisjunction = formulaConjunction;
-      } else {
-        formulaDisjunction = Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
-                                     std::move(*formulaConjunction));
-      }
+    }
+    if (!formulaDisjunction) {
+      formulaDisjunction = formulaConjunction;
+    } else {
+      formulaDisjunction = Formula(FormulaOperation::logicalOr, std::move(*formulaDisjunction),
+                                   std::move(*formulaConjunction));
     }
   }
   return formulaDisjunction;
@@ -160,7 +159,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
             auto rightResult = rightOperand->applyRule(modalRules);
             if (rightResult) {
               auto disjunction = *rightResult;
-              return getFormula(disjunction, *leftOperand);
+              return substituteRight(disjunction, *leftOperand);
             }
             // 2) -> ({e}.r).s
             Set er(SetOperation::image, Set(*leftOperand), Relation(*rightOperand->relation));
@@ -321,12 +320,12 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
         auto leftResult = leftOperand->applyRule(modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
-          return getFormula(disjunction, *rightOperand);
+          return substituteRight(disjunction, *rightOperand);  // TODO: maybe substituteLeft
         }
         auto rightResult = rightOperand->applyRule(modalRules);
         if (rightResult) {
           auto disjunction = *rightResult;
-          return getFormula(disjunction, *leftOperand);
+          return substituteRight(disjunction, *leftOperand);
         }
       }
       return std::nullopt;

@@ -73,8 +73,10 @@ class Set {
     using std::swap;
     swap(first.operation, second.operation);
     swap(first.identifier, second.identifier);
+    swap(first.label, second.label);
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
+    swap(first.relation, second.relation);
     /*swap(first.saturated, second.saturated);
     swap(first.saturatedId, second.saturatedId);*/
   }

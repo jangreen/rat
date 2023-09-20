@@ -26,8 +26,10 @@ class Formula {
     swap(first.operation, second.operation);
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
+    swap(first.literal, second.literal);
   }
   bool operator==(const Formula &other) const;
+  bool operator<(const Formula &other) const;  // for sorting/hashing
 
   explicit Formula(const std::string &expression);  // parse constructor
   Formula(const FormulaOperation operation, Literal &&literal);
@@ -42,6 +44,7 @@ class Formula {
   // functions for rule applications
   std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
   bool isNormal() const;
+  bool isIsomorphTo(const Formula &formula) const;
 
   // printing
   std::string toString() const;

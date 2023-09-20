@@ -49,8 +49,13 @@ bool Formula::operator==(const Formula &other) const {
   return isEqual;
 }
 
+bool Formula::operator<(const Formula &other) const {
+  // sort lexicographically
+  return toString() < other.toString();
+}
+
 std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRules) {
-  std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
+  // std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
 
   switch (operation) {
     case FormulaOperation::logicalAnd: {
@@ -106,6 +111,67 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
 
 bool Formula::isNormal() const {
   return operation == FormulaOperation::literal && literal->isNormal();
+}
+
+// TODO: refactor:
+bool Formula::isIsomorphTo(const Formula &formula) const {
+  int leftLabel, rightLabel;
+  std::string base;
+  if (formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
+    if (formula.literal->predicate->rightOperand->operation == SetOperation::domain) {
+      // e1(be2)
+      leftLabel = *formula.literal->predicate->leftOperand->label;
+      rightLabel = *formula.literal->predicate->rightOperand->leftOperand->label;
+      base = *formula.literal->predicate->rightOperand->identifier;
+    } else if (formula.literal->predicate->rightOperand->operation == SetOperation::image) {
+      // e1(e2b)
+      rightLabel = *formula.literal->predicate->leftOperand->label;
+      leftLabel = *formula.literal->predicate->rightOperand->leftOperand->label;
+      base = *formula.literal->predicate->rightOperand->identifier;
+    }
+  } else if (formula.literal->predicate->rightOperand->operation == SetOperation::singleton) {
+    if (formula.literal->predicate->leftOperand->operation == SetOperation::domain) {
+      // (be2)e1
+      leftLabel = *formula.literal->predicate->rightOperand->label;
+      rightLabel = *formula.literal->predicate->leftOperand->leftOperand->label;
+      base = *formula.literal->predicate->leftOperand->identifier;
+    } else if (formula.literal->predicate->leftOperand->operation == SetOperation::image) {
+      // (e2b)e1
+      rightLabel = *formula.literal->predicate->rightOperand->label;
+      leftLabel = *formula.literal->predicate->leftOperand->leftOperand->label;
+      base = *formula.literal->predicate->leftOperand->identifier;
+    }
+  }
+  // same for this
+  int thisleftLabel, thisrightLabel;
+  std::string thisbase;
+  if (literal->predicate->leftOperand->operation == SetOperation::singleton) {
+    if (literal->predicate->rightOperand->operation == SetOperation::domain) {
+      // e1(be2)
+      thisleftLabel = *literal->predicate->leftOperand->label;
+      thisrightLabel = *literal->predicate->rightOperand->leftOperand->label;
+      thisbase = *literal->predicate->rightOperand->identifier;
+    } else if (literal->predicate->rightOperand->operation == SetOperation::image) {
+      // e1(e2b)
+      thisrightLabel = *literal->predicate->leftOperand->label;
+      thisleftLabel = *literal->predicate->rightOperand->leftOperand->label;
+      thisbase = *literal->predicate->rightOperand->identifier;
+    }
+  } else if (literal->predicate->rightOperand->operation == SetOperation::singleton) {
+    if (literal->predicate->leftOperand->operation == SetOperation::domain) {
+      // (be2)e1
+      thisleftLabel = *literal->predicate->rightOperand->label;
+      thisrightLabel = *literal->predicate->leftOperand->leftOperand->label;
+      thisbase = *literal->predicate->leftOperand->identifier;
+    } else if (literal->predicate->leftOperand->operation == SetOperation::image) {
+      // (e2b)e1
+      thisrightLabel = *literal->predicate->rightOperand->label;
+      thisleftLabel = *literal->predicate->leftOperand->leftOperand->label;
+      thisbase = *literal->predicate->leftOperand->identifier;
+    }
+  }
+
+  return leftLabel == thisleftLabel && rightLabel == thisrightLabel && base == thisbase;
 }
 
 std::string Formula::toString() const {

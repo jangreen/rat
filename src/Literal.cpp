@@ -27,7 +27,7 @@ bool Literal::operator==(const Literal &other) const {
 }
 
 std::optional<Formula> Literal::applyRule(bool modalRules) {
-  auto predicateResult = predicate->applyRule(bool modalRules);
+  auto predicateResult = predicate->applyRule(modalRules && !negated);
   if (predicateResult) {
     auto formula = *predicateResult;
     if (negated) {

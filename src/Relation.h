@@ -35,7 +35,6 @@ class Relation {
     swap(first.saturatedId, second.saturatedId);*/
   }
   bool operator==(const Relation &other) const;  // compares two relation syntactically
-  bool operator<(const Relation &other) const;   // for sorting/hashing
 
   explicit Relation(const std::string &expression);  // parse constructor
   explicit Relation(const RelationOperation operation,
