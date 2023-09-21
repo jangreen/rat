@@ -346,6 +346,31 @@ bool Set::substitute(const Set &search, const Set &replace) {
   }
 }
 
+std::vector<int> Set::labels() const {
+  switch (operation) {
+    case SetOperation::choice: {
+      auto leftLabels = leftOperand->labels();
+      auto rightLabels = rightOperand->labels();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case SetOperation::intersection: {
+      auto leftLabels = leftOperand->labels();
+      auto rightLabels = rightOperand->labels();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case SetOperation::domain:
+      return leftOperand->labels();
+    case SetOperation::image:
+      return leftOperand->labels();
+    case SetOperation::singleton:
+      return {*label};
+    default:
+      return {};
+  }
+}
+
 // RULES
 /* LEGACY
 template <>

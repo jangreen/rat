@@ -74,6 +74,22 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
   }*/
 }
 
+void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
+  parent->childNodes.push_back(child);
+  child->parentNodes[parent] = label;
+
+  // set first parent node if not already set
+  if (child->firstParentNode == nullptr) {
+    child->firstParentNode = parent;
+  }
+
+  // update rootParents of child node
+  if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+      !parent->rootParents.empty()) {
+    child->rootParents.push_back(parent);
+  }
+}
+
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
@@ -96,6 +112,15 @@ bool RegularTableau::solve() {
   return true;
 }
 
+// helper
+// TODO: move into general vector class
+template <typename T>
+bool isSubset(std::vector<T> A, std::vector<T> B) {
+  std::sort(A.begin(), A.end());
+  std::sort(B.begin(), B.end());
+  return std::includes(A.begin(), A.end(), B.begin(), B.end());
+};
+
 // assumptions:
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
@@ -105,7 +130,7 @@ bool RegularTableau::expandNode(Node *node) {
   tableau.exportProof("t");
 
   if (atomicFormula) {
-    // tableau.calculateRequest();
+    // request is calculated within normal form here
     tableau.solve();
     tableau.exportProof("t");
     if (tableau.rootNode->isClosed()) {
@@ -116,15 +141,47 @@ bool RegularTableau::expandNode(Node *node) {
 
     // extract DNF and remove atomicFormula (and ismorphisms of it)
     auto dnf = tableau.rootNode->extractDNF();
-    GDNF newDNF;
-    for (auto &clause : dnf) {
+    GDNF oldCopy = dnf;
+    dnf = {};
+    for (const auto &clause : oldCopy) {
       FormulaSet newClause;
-      for (auto &formula : clause) {
+      for (const auto &formula : clause) {
         if (!formula.isIsomorphTo(*atomicFormula)) {
           newClause.emplace_back(formula);
         }
       }
-      newDNF.emplace_back(newClause);
+      dnf.emplace_back(newClause);
+    }
+
+    // filter none active labels
+    // assume alreday normal
+    // 1) gather all active labels
+    std::vector<int> activeLabels;
+    for (const auto &clause : dnf) {
+      for (const auto &formula : clause) {
+        if (!formula.literal->negated) {
+          auto formulaLabels = formula.literal->predicate->labels();
+          activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+                              std::end(formulaLabels));
+        }
+      }
+    }
+    // 2) filtering
+    oldCopy = dnf;
+    dnf = {};
+    for (const auto &clause : oldCopy) {
+      FormulaSet newClause;
+      for (const auto &formula : clause) {
+        auto formulaLabels = formula.literal->predicate->labels();
+        if (isSubset(formulaLabels, activeLabels)) {
+          newClause.emplace_back(formula);
+        }
+      }
+      dnf.emplace_back(newClause);
+    }
+
+    for (auto &i : activeLabels) {
+      std::cout << i << std::endl;
     }
 
     /*for (const auto &clause : dnf) {
@@ -170,10 +227,10 @@ bool RegularTableau::expandNode(Node *node) {
       // TODO: -------
       addNode(node, clause, metastatement);
     }*/
-    if (newDNF.empty()) {
+    if (dnf.empty()) {
       node->closed = true;
     } else {
-      for (auto &clause : newDNF) {
+      for (auto &clause : dnf) {
         addNode(clause);
         // addEdge();
         //  TODO: connect edges, renaming, inconsistency check
@@ -417,35 +474,6 @@ bool RegularTableau::isInconsistent(Node *node, Node *newNode) {
     }
   }
   return true;
-}
-
-void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
-  parent->childNodes.push_back(child);
-  child->parentNodes[parent] = label;
-  if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-      !parent->rootParents.empty()) {
-    child->rootParents.push_back(parent);
-  }
-  // TODO: remove exportProof("regular");
-  / *
-  newNode->parentNodes.insert({
-      parent,
-  });
-  newNode->parentNodeRenaming = renaming;
-  newNode->parentEquivalences = equalityStatements;
-  newNode->parentNode = parent;
-  if (parent != nullptr) {
-    if (metastatement) {
-      std::tuple<Metastatement, Renaming> edgelabel{*metastatement, renaming};
-      newNode->parentNodes[parent] = edgelabel;
-    } else {
-      newNode->parentNodes[parent] = std::nullopt;
-    }
-    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-        !parent->rootParents.empty()) {
-      newNode->rootParents.push_back(parent);
-    }
-  }
 }
 
 void RegularTableau::updateRootParents(Node *node) {

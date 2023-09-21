@@ -428,6 +428,16 @@ bool Predicate::isAtomic() const {
   return operation == PredicateOperation::intersectionNonEmptiness && isAtomic;
 }
 
+std::vector<int> Predicate::labels() const {
+  if (operation == PredicateOperation::intersectionNonEmptiness) {
+    auto leftLabels = leftOperand->labels();
+    auto rightLabels = rightOperand->labels();
+    leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+    return leftLabels;
+  }
+  return {};
+}
+
 std::string Predicate::toString() const {
   std::string output;
   switch (operation) {

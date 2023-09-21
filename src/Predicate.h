@@ -41,6 +41,7 @@ class Predicate {
   bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;
   bool isAtomic() const;
+  std::vector<int> labels() const;
 
   // printing
   std::string toString() const;
@@ -110,6 +111,7 @@ class Set {
   std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
   bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;  // true iff all labels are in front of base Sets
+  std::vector<int> labels() const;
 
   // printing
   std::string toString() const;
