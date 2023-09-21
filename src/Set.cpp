@@ -326,9 +326,9 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
   }
 }
 
-bool Set::substitute(Set &search, Set &replace) {
+bool Set::substitute(const Set &search, const Set &replace) {
   if (*this == search) {
-    swap(*this, replace);
+    *this = replace;
     return true;
   } else {
     switch (operation) {

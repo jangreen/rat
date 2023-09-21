@@ -25,7 +25,8 @@ int main(int argc, const char* argv[]) {
   t.exportProof("test");*/
 
   Formula f2("{0};a;a;{1} & ~({0};(a*);{1})");
-  RegularTableau rt{std::move(f2)};
+  Formula f3("{0};a;a;a;{1} & ~({0};(a*);{1})");
+  RegularTableau rt{std::move(f3)};
   rt.solve();
   rt.exportProof("test2");
   /*Set s1("{e}.(a & b)");

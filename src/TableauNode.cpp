@@ -170,7 +170,8 @@ void Tableau::Node::inferModalAtomic() {
       // check if inside formula can be something inferred
       Predicate copy = *temp->formula.literal->predicate;
       if (copy.substitute(*atomic, *label)) {
-        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+        Formula f(FormulaOperation::literal, Literal(true, std::move(copy)));
+        appendBranch(std::move(f));
       }
     }
     temp = temp->parentNode;

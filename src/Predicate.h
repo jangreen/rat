@@ -38,7 +38,7 @@ class Predicate {
   std::unique_ptr<Set> rightOperand;  // is set iff binary predicate
 
   std::optional<Formula> applyRule(bool modalRules = false);
-  bool substitute(Set &search, Set &replace);
+  bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;
   bool isAtomic() const;
 
@@ -108,7 +108,7 @@ class Set {
   // predicate for a given context
   typedef std::variant<Set, Predicate> PartialPredicate;
   std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
-  bool substitute(Set &search, Set &replace);
+  bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;  // true iff all labels are in front of base Sets
 
   // printing

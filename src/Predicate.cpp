@@ -388,13 +388,13 @@ bool Predicate::isNormal() const {
   }
 }
 
-bool Predicate::substitute(Set &search, Set &replace) {
+bool Predicate::substitute(const Set &search, const Set &replace) {
   if (operation == PredicateOperation::intersectionNonEmptiness) {
     if (*leftOperand == search) {
-      swap(*leftOperand, replace);
+      *leftOperand = replace;
       return true;
     } else if (*rightOperand == search) {
-      swap(*rightOperand, replace);
+      *rightOperand = replace;
       return true;
     } else {
       return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
