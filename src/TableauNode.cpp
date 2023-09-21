@@ -52,23 +52,22 @@ void Tableau::Node::appendBranch(const GDNF &formulas) {
     if (formulas.size() > 2) {
       // TODO: make this explicit using types
       std::cout << "[Bug] We would like to support only binary branching" << std::endl;
-    }
-    if (formulas.size() > 1) {
+    } else if (formulas.size() > 1) {
+      // trick: lift disjunctive appendBranch to sets
       for (const auto &formula : formulas[1]) {
         appendBranch(formula);
       }
-      rightNode = std::move(leftNode);
+      auto temp = std::move(leftNode);
       leftNode = nullptr;
       for (const auto &formula : formulas[0]) {
         appendBranch(formula);
       }
-    }
-    if (formulas.size() > 0) {
+      rightNode = std::move(temp);
+    } else if (formulas.size() > 0) {
       for (const auto &formula : formulas[0]) {
         appendBranch(formula);
       }
     }
-
   } else {
     if (leftNode != nullptr) {
       leftNode->appendBranch(formulas);

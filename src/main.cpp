@@ -17,19 +17,20 @@ void printGDNF(const GDNF& gdnf) {
 }
 
 int main(int argc, const char* argv[]) {
-  // Formula f("{0};((a;b & c);{0})");
-  Formula f("{0};a;a;{1} & ~({0};(a*);{1})");
-  Tableau t{std::move(f)};
-  /*t.solve();
-  auto dnf = t.rootNode->extractDNF();
-  printGDNF(dnf);
-  t.exportProof("test");*/
-
   Formula f2("{0};a;a;{1} & ~({0};(a*);{1})");
   Formula f3("{0};a;a;a;{1} & ~({0};(a*);{1})");
-  RegularTableau rt{std::move(f3)};
-  rt.solve();
-  rt.exportProof("test2");
+  Formula f4("{0};(a*);{1} & ~({0};(a*);{1})");
+
+  if (true) {
+    Tableau t{std::move(f4)};
+    t.solve(1000);
+    t.exportProof("t");
+  } else {
+    RegularTableau rt{std::move(f4)};
+    rt.solve();
+    rt.exportProof("r");
+  }
+
   /*Set s1("{e}.(a & b)");
   std::cout << s1.toString() << std::endl;
   auto s2 = *s1.applyRule();
