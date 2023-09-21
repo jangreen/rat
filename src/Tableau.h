@@ -27,6 +27,7 @@ class Tableau {
     void appendBranch(const Formula &leftFormula);
     void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
     std::optional<GDNF> applyRule(bool modalRule = false);
+    void inferModal();
 
     // this method assumes that tableau is already reduced
     std::vector<std::vector<Formula>> extractDNF() const;

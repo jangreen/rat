@@ -128,7 +128,10 @@ bool Tableau::solve(int bound) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    currentNode->applyRule();
+    auto result = currentNode->applyRule();
+    if (!result) {
+      currentNode->inferModal();
+    }
   }
 }
 

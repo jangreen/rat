@@ -124,6 +124,15 @@ std::optional<GDNF> Tableau::Node::applyRule(bool modalRule) {
   return std::nullopt;
 }
 
+void Tableau::Node::inferModal() {
+  Node *temp = parentNode;
+  while (temp != nullptr) {
+    if (temp->formula.isNormal() && temp->formula.literal->predicate->isAtomic()) {
+      // TODO: check if inside formula can be something inferred
+    }
+  }
+}
+
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[label=\"" << formula.toString() << "\"";
   // color closed branches
