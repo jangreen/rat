@@ -2,6 +2,7 @@
 
 #include "parsing/LogicVisitor.h"
 
+Formula::Formula(const FormulaOperation operation) : operation(operation) {}
 Formula::Formula(const Formula &other) : operation(other.operation) {
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Formula>(*other.leftOperand);
@@ -58,6 +59,17 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
   // std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
 
   switch (operation) {
+    case FormulaOperation::bottom: {
+      // F -> \emptyset
+      std::vector<std::vector<Formula>> result{};
+
+      return result;
+    }
+    case FormulaOperation::top: {
+      // T -> { }
+      std::vector<std::vector<Formula>> result{{}};
+      return result;
+    }
     case FormulaOperation::logicalAnd: {
       // f1 & f2 -> { f1, f2 }
       std::vector<std::vector<Formula>> result{{Formula(*leftOperand), Formula(*rightOperand)}};
@@ -79,6 +91,17 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
     }
     case FormulaOperation::negation:
       switch (leftOperand->operation) {
+        case FormulaOperation::bottom: {
+          // ~(F) -> { }
+          std::vector<std::vector<Formula>> result{{}};
+          return result;
+        }
+        case FormulaOperation::top: {
+          // ~(T) -> \emptyset
+          // here we use: ~(T) -> { F }
+          std::vector<std::vector<Formula>> result{{Formula(FormulaOperation::bottom)}};
+          return result;
+        }
         case FormulaOperation::logicalAnd: {
           // ~(f1 & f2) -> { ~f1 }, { ~f2 }
           std::vector<std::vector<Formula>> result{
@@ -111,6 +134,11 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
 
 bool Formula::isNormal() const {
   return operation == FormulaOperation::literal && literal->isNormal();
+}
+
+bool Formula::isAtomic() const {
+  return operation == FormulaOperation::literal && !literal->negated &&
+         literal->predicate->isAtomic();
 }
 
 // TODO: refactor:
@@ -177,6 +205,12 @@ bool Formula::isIsomorphTo(const Formula &formula) const {
 std::string Formula::toString() const {
   std::string output;
   switch (operation) {
+    case FormulaOperation::bottom:
+      output += "F";
+      break;
+    case FormulaOperation::top:
+      output += "T";
+      break;
     case FormulaOperation::literal:
       output += literal->toString();
       break;

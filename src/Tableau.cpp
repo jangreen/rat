@@ -5,8 +5,6 @@
 #include <tuple>
 #include <utility>
 
-#include "ProofRule.h"
-
 /* LEGACY
 // templates
 // RULES
@@ -128,11 +126,21 @@ bool Tableau::solve(int bound) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    std::cout << "[Tableau]: Current Node " << currentNode->formula.toString() << std::endl;
     auto result = currentNode->applyRule();
-    if (!result) {
+
+    // next two methods try to apply negated modal rules
+    if (currentNode->formula.isNormal()) {  // (!result) { does not work in case: ~0(b1) -> ~((0b)1)
+                                            // but dont considers replacing b1
       currentNode->inferModal();
     }
+    if (currentNode->formula.isAtomic()) {
+      currentNode->inferModalAtomic();
+    }
+    exportProof("t");
   }
+
+  return rootNode->isClosed();
 }
 
 std::vector<std::vector<Formula>> Tableau::Node::extractDNF() const {
@@ -197,7 +205,7 @@ void Tableau::toDotFormat(std::ofstream &output) const {
 }
 
 void Tableau::exportProof(std::string filename) const {
-  std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
+  // TODO: std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
   std::ofstream file("./../output/" + filename + ".dot");
   toDotFormat(file);
   file.close();

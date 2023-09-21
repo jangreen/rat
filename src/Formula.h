@@ -7,7 +7,9 @@
 #include "Literal.h"
 
 enum class FormulaOperation {
-  literal,    // nullary Formula
+  bottom,     // nullary predicate aka constant
+  top,        // nullary predicate aka constant
+  literal,    // relational predicate
   negation,   // oneary Formula
   logicalOr,  // binary Formula
   logicalAnd
@@ -32,6 +34,7 @@ class Formula {
   bool operator<(const Formula &other) const;  // for sorting/hashing
 
   explicit Formula(const std::string &expression);  // parse constructor
+  Formula(const FormulaOperation operation);
   Formula(const FormulaOperation operation, Literal &&literal);
   Formula(const FormulaOperation operation, Formula &&left);
   Formula(const FormulaOperation operation, Formula &&left, Formula &&right);
@@ -44,6 +47,7 @@ class Formula {
   // functions for rule applications
   std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
   bool isNormal() const;
+  bool isAtomic() const;
   bool isIsomorphTo(const Formula &formula) const;
 
   // printing

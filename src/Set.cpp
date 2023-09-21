@@ -326,6 +326,26 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
   }
 }
 
+bool Set::substitute(Set &search, Set &replace) {
+  if (*this == search) {
+    swap(*this, replace);
+    return true;
+  } else {
+    switch (operation) {
+      case SetOperation::choice:
+        return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
+      case SetOperation::intersection:
+        return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
+      case SetOperation::domain:
+        return leftOperand->substitute(search, replace);
+      case SetOperation::image:
+        return leftOperand->substitute(search, replace);
+      default:
+        return false;
+    }
+  }
+}
+
 // RULES
 /* LEGACY
 template <>

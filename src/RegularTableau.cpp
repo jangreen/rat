@@ -10,7 +10,7 @@
 GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
   // TODO: more direct computation of DNF
   GDNF disjunction = {conjunction};
-  Formula dummyRoot(FormulaOperation::literal, Literal(false, Predicate(PredicateOperation::top)));
+  Formula dummyRoot(FormulaOperation::top);
   Tableau tableau{std::move(dummyRoot)};
   tableau.rootNode->appendBranch(disjunction);
   tableau.solve();  // TODO: use dedicated function
@@ -90,6 +90,7 @@ bool RegularTableau::solve() {
       std::cout << "[Solver] False." << std::endl;
       return false;
     }
+    exportProof("r");
   }
   std::cout << "[Solver] True." << std::endl;
   return true;
@@ -99,11 +100,14 @@ bool RegularTableau::solve() {
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->formulas};
+  tableau.exportProof("t");
   auto atomicFormula = tableau.applyRuleA();
+  tableau.exportProof("t");
 
   if (atomicFormula) {
     // tableau.calculateRequest();
     tableau.solve();
+    tableau.exportProof("t");
     if (tableau.rootNode->isClosed()) {
       // can happen with emptiness hypotheses
       node->closed = true;
@@ -111,7 +115,6 @@ bool RegularTableau::expandNode(Node *node) {
     }
 
     // extract DNF and remove atomicFormula (and ismorphisms of it)
-    std::cout << atomicFormula->toString() << std::endl;
     auto dnf = tableau.rootNode->extractDNF();
     GDNF newDNF;
     for (auto &clause : dnf) {

@@ -17,7 +17,6 @@ Predicate &Predicate::operator=(const Predicate &other) {
   swap(*this, copy);
   return *this;
 }
-Predicate::Predicate(const PredicateOperation operation) : operation(operation) {}
 Predicate::Predicate(const PredicateOperation operation, Set &&left, Set &&right)
     : operation(operation) {
   leftOperand = std::make_unique<Set>(std::move(left));
@@ -112,10 +111,6 @@ std::optional<Formula> substituteRight(
 
 std::optional<Formula> Predicate::applyRule(bool modalRules) {
   switch (operation) {
-    case PredicateOperation::bottom:
-      return std::nullopt;
-    case PredicateOperation::top:
-      return std::nullopt;
     case PredicateOperation::intersectionNonEmptiness:
       if (leftOperand->operation == SetOperation::singleton) {
         switch (rightOperand->operation) {
@@ -151,14 +146,17 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
             return std::nullopt;
           case SetOperation::singleton:
             // {e1}.{e2}
-            std::cout << "[Reasoning] Rules for {e1}.{e2} are not implemented." << std::endl;
-            return std::nullopt;
+            if (*leftOperand == *rightOperand) {
+              return Formula(FormulaOperation::top);
+            } else {
+              return Formula(FormulaOperation::bottom);
+            }
           case SetOperation::domain: {
             // {e}.(r.s)
             // 1) try reduce r.s
-            auto rightResult = rightOperand->applyRule(modalRules);
-            if (rightResult) {
-              auto disjunction = *rightResult;
+            auto domainResult = rightOperand->applyRule(modalRules);
+            if (domainResult) {
+              auto disjunction = *domainResult;
               return substituteRight(disjunction, *leftOperand);
             }
             // 2) -> ({e}.r).s
@@ -170,9 +168,16 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
           case SetOperation::image: {
             // {e}.(s.r)
             // 1) try reduce s.r
+            auto imageResult = rightOperand->applyRule(modalRules);
+            if (imageResult) {
+              auto disjunction = *imageResult;
+              return substituteRight(disjunction, *leftOperand);
+            }
             // 2) -> s.(r.{e})
-            std::cout << "[Reasoning] Rules for {e}.(s.r) are not implemented." << std::endl;
-            return std::nullopt;
+            Set re(SetOperation::domain, Set(*leftOperand), Relation(*rightOperand->relation));
+            Predicate sre(PredicateOperation::intersectionNonEmptiness,
+                          Set(*rightOperand->leftOperand), std::move(re));
+            return Formula(FormulaOperation::literal, Literal(false, std::move(sre)));
           }
         }
       } else if (rightOperand->operation == SetOperation::singleton) {
@@ -334,10 +339,6 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
 
 bool Predicate::isNormal() const {
   switch (operation) {
-    case PredicateOperation::bottom:
-      return false;
-    case PredicateOperation::top:
-      return false;
     case PredicateOperation::intersectionNonEmptiness:
       if (leftOperand->operation == SetOperation::singleton) {
         switch (rightOperand->operation) {
@@ -387,7 +388,26 @@ bool Predicate::isNormal() const {
   }
 }
 
+bool Predicate::substitute(Set &search, Set &replace) {
+  if (operation == PredicateOperation::intersectionNonEmptiness) {
+    if (*leftOperand == search) {
+      swap(*leftOperand, replace);
+      return true;
+    } else if (*rightOperand == search) {
+      swap(*rightOperand, replace);
+      return true;
+    } else {
+      return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
+    }
+  }
+  return false;
+}
+
+// example for atomic: e1(b.e2)
 bool Predicate::isAtomic() const {
+  if (operation != PredicateOperation::intersectionNonEmptiness) {
+    return false;
+  }
   bool e1_be2 = leftOperand->operation == SetOperation::singleton &&
                 rightOperand->operation == SetOperation::domain &&
                 rightOperand->leftOperand->operation == SetOperation::singleton &&
@@ -411,12 +431,6 @@ bool Predicate::isAtomic() const {
 std::string Predicate::toString() const {
   std::string output;
   switch (operation) {
-    case PredicateOperation::bottom:
-      output += "F";
-      break;
-    case PredicateOperation::top:
-      output += "T";
-      break;
     case PredicateOperation::intersectionNonEmptiness:
       output += leftOperand->toString() + ";" + rightOperand->toString();
       break;

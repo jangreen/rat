@@ -19,10 +19,10 @@ int main(int argc, const char* argv[]) {
   // Formula f("{0};((a;b & c);{0})");
   Formula f("{0};a;a;{1} & ~({0};(a*);{1})");
   Tableau t{std::move(f)};
-  t.solve();
+  /*t.solve();
   auto dnf = t.rootNode->extractDNF();
   printGDNF(dnf);
-  t.exportProof("test");
+  t.exportProof("test");*/
 
   Formula f2("{0};a;a;{1} & ~({0};(a*);{1})");
   RegularTableau rt{std::move(f2)};

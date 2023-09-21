@@ -28,6 +28,9 @@ Tableau::Node::Node(Node *parent, const Formula &&formula)
 
 bool Tableau::Node::isClosed() const {
   // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
+  if (formula.operation == FormulaOperation::bottom) {
+    return true;
+  }
   return leftNode && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed());
 }
 
@@ -47,6 +50,7 @@ bool Tableau::Node::Node::branchContains(const Formula &formula) const {
 void Tableau::Node::appendBranch(const GDNF &formulas) {
   if (isLeaf() && !isClosed()) {
     if (formulas.size() > 2) {
+      // TODO: make this explicit using types
       std::cout << "[Bug] We would like to support only binary branching" << std::endl;
     }
     if (formulas.size() > 1) {
@@ -125,11 +129,51 @@ std::optional<GDNF> Tableau::Node::applyRule(bool modalRule) {
 }
 
 void Tableau::Node::inferModal() {
+  if (formula.operation != FormulaOperation::literal || !formula.literal->negated) {
+    return;
+  }
   Node *temp = parentNode;
   while (temp != nullptr) {
-    if (temp->formula.isNormal() && temp->formula.literal->predicate->isAtomic()) {
-      // TODO: check if inside formula can be something inferred
+    if (temp->formula.isNormal() && temp->formula.isAtomic()) {
+      std::optional<Set> label, atomic;
+      if (temp->formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
+        label = *temp->formula.literal->predicate->leftOperand;
+        atomic = *temp->formula.literal->predicate->rightOperand;
+      } else {
+        atomic = *temp->formula.literal->predicate->leftOperand;
+        label = *temp->formula.literal->predicate->rightOperand;
+      }
+
+      // check if inside formula can be something inferred
+      Predicate copy = *formula.literal->predicate;
+      if (copy.substitute(*atomic, *label)) {
+        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+      }
     }
+    temp = temp->parentNode;
+  }
+}
+
+void Tableau::Node::inferModalAtomic() {
+  std::optional<Set> label, atomic;
+  if (formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
+    label = *formula.literal->predicate->leftOperand;
+    atomic = *formula.literal->predicate->rightOperand;
+  } else {
+    atomic = *formula.literal->predicate->leftOperand;
+    label = *formula.literal->predicate->rightOperand;
+  }
+
+  Node *temp = parentNode;
+  while (temp != nullptr) {
+    if (temp->formula.operation == FormulaOperation::literal && temp->formula.literal->negated) {
+      // check if inside formula can be something inferred
+      Predicate copy = *temp->formula.literal->predicate;
+      if (copy.substitute(*atomic, *label)) {
+        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+      }
+    }
+    temp = temp->parentNode;
   }
 }
 

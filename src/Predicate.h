@@ -10,10 +10,7 @@
 class Set;
 class Formula;
 
-// TODO: move bottom, top into FormulaOperation?
 enum class PredicateOperation {
-  bottom,                   // nullary predicate
-  top,                      // nullary predicate
   intersectionNonEmptiness  // binary predicate
 };
 
@@ -34,7 +31,6 @@ class Predicate {
   bool operator==(const Predicate &other) const;
 
   explicit Predicate(const std::string &expression);  // parse constructor
-  Predicate(const PredicateOperation operation);
   Predicate(const PredicateOperation operation, Set &&left, Set &&right);
 
   PredicateOperation operation;
@@ -42,6 +38,7 @@ class Predicate {
   std::unique_ptr<Set> rightOperand;  // is set iff binary predicate
 
   std::optional<Formula> applyRule(bool modalRules = false);
+  bool substitute(Set &search, Set &replace);
   bool isNormal() const;
   bool isAtomic() const;
 
@@ -111,6 +108,7 @@ class Set {
   // predicate for a given context
   typedef std::variant<Set, Predicate> PartialPredicate;
   std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
+  bool substitute(Set &search, Set &replace);
   bool isNormal() const;  // true iff all labels are in front of base Sets
 
   // printing
