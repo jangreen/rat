@@ -22,7 +22,7 @@ Set &Set::operator=(const Set &other) {
 }
 Set::Set(const std::string &expression) {
   Logic visitor;
-  // TODO: *this = visitor.parseSet(expression);
+  *this = visitor.parseSet(expression);
 }
 Set::Set(const SetOperation operation, const std::optional<std::string> &identifier)
     : operation(operation), identifier(identifier) {}

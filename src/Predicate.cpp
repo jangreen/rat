@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Formula.h"
+#include "parsing/LogicVisitor.h"
 
 Predicate::Predicate(const Predicate &other) : operation(other.operation) {
   if (other.leftOperand != nullptr) {
@@ -21,6 +22,10 @@ Predicate::Predicate(const PredicateOperation operation, Set &&left, Set &&right
     : operation(operation) {
   leftOperand = std::make_unique<Set>(std::move(left));
   rightOperand = std::make_unique<Set>(std::move(right));
+}
+Predicate::Predicate(const std::string &expression) {
+  Logic visitor;
+  *this = visitor.parsePredicate(expression);
 }
 
 bool Predicate::operator==(const Predicate &other) const {
@@ -397,7 +402,7 @@ bool Predicate::substitute(const Set &search, const Set &replace) {
       *rightOperand = replace;
       return true;
     } else {
-      return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
+      return leftOperand->substitute(search, replace) || rightOperand->substitute(search, replace);
     }
   }
   return false;

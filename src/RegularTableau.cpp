@@ -180,10 +180,6 @@ bool RegularTableau::expandNode(Node *node) {
       dnf.emplace_back(newClause);
     }
 
-    for (auto &i : activeLabels) {
-      std::cout << i << std::endl;
-    }
-
     /*for (const auto &clause : dnf) {
       // TODO: refactor DRY
       // calculate equivalence class to rename metaststatement
@@ -231,9 +227,10 @@ bool RegularTableau::expandNode(Node *node) {
       node->closed = true;
     } else {
       for (auto &clause : dnf) {
-        addNode(clause);
-        // addEdge();
-        //  TODO: connect edges, renaming, inconsistency check
+        // TODO: check if renaming exists when adding
+        auto newNode = addNode(clause);
+        addEdge(node, newNode, atomicFormula);
+        //  TODO: inconsistency check
       }
     }
 

@@ -57,16 +57,11 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   // edges
   for (const auto childNode : childNodes) {
     auto edgeLabel = childNode->parentNodes[this];
-    auto labelString = edgeLabel ? std::get<Formula>(*edgeLabel).toString() : "#";
-    std::vector<int> emptyRenaming;
-    auto labelRenaming = edgeLabel ? std::get<Renaming>(*edgeLabel) : emptyRenaming;
+    auto labelString = edgeLabel ? edgeLabel->toString() : "#";
 
     output << "N" << this << " -> "
-           << "N" << childNode << "[label=\"" << labelString << "\n";
-    for (auto label : labelRenaming) {
-      output << label << ".";
-    }
-    output << "\"];" << std::endl;
+           << "N" << childNode << "[label=\"" << labelString << "\n"
+           << "\"];" << std::endl;
   }
   // parents
   for (const auto parentNode : parentNodes) {

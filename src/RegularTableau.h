@@ -14,7 +14,7 @@
 
 typedef std::vector<Formula> FormulaSet;
 typedef std::vector<int> Renaming;
-typedef std::optional<std::tuple<Formula, Renaming>> EdgeLabel;  // TODO: use
+typedef std::optional<Formula> EdgeLabel;  // TODO: use
 
 class RegularTableau {
  public:

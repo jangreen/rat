@@ -112,6 +112,28 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     return formula;
   }
 
+  Predicate parsePredicate(const std::string &predicateString) {
+    antlr4::ANTLRInputStream input(predicateString);
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::PredicateContext *ctx = parser.predicate();
+    Predicate predicate = std::any_cast<Predicate>(this->visitPredicate(ctx));
+    return predicate;
+  }
+
+  Set parseSet(const std::string &setString) {
+    antlr4::ANTLRInputStream input(setString);
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::ExpressionContext *ctx = parser.expression();
+    std::variant<Set, Relation> set = std::any_cast<std::variant<Set, Relation>>(this->visit(ctx));
+    return std::get<Set>(set);
+  }
+
   /* LEGACY
     std::tuple<std::vector<Assumption>, std::vector<Formula>> std::any visitStatement(
         LogicParser::StatementContext *ctx) {

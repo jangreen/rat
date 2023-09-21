@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "Predicate.h"
 #include "RegularTableau.h"
 #include "Tableau.h"
 
