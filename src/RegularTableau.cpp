@@ -31,19 +31,14 @@ RegularTableau::RegularTableau(FormulaSet initalFormulas) {
 // clause is in normal form
 // parent == nullptr -> rootNode
 RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
-  // create node, check if it is duplicate
+  // create node, add to nodes (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(clause);
-  auto existingNode = nodes.find(newNode);
-  if (existingNode != nodes.end()) {
-    // equivalent node exists
-    std::cout << "Node already exists." << std::endl;
-    auto oldNode = existingNode->get();
-    return oldNode;
-  } else {
-    unreducedNodes.push(newNode.get());  // TODO: check this line
-    auto insertion = nodes.insert(std::move(newNode));
-    return insertion.first->get();
+  auto insertion = nodes.insert(std::move(newNode));
+  if (insertion.second) {
+    // new node added
+    unreducedNodes.push(insertion.first->get());
   }
+  return insertion.first->get();
 
   // saturation phase
   /*saturate(clause);
