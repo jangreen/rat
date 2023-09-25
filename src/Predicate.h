@@ -10,6 +10,8 @@
 class Set;
 class Formula;
 
+typedef std::vector<int> Renaming;
+
 enum class PredicateOperation {
   intersectionNonEmptiness  // binary predicate
 };
@@ -42,6 +44,7 @@ class Predicate {
   bool isNormal() const;
   bool isAtomic() const;
   std::vector<int> labels() const;
+  void rename(const Renaming &renaming);  // renames given a renaming function
 
   // printing
   std::string toString() const;
@@ -101,7 +104,6 @@ class Set {
   /*
   std::vector<int> labels() const;                // return all labels of the relation term
   std::vector<int> calculateRenaming() const;     // renaming {2,4,5}: 2->0,4->1,5->2
-  void rename(const std::vector<int> &renaming);  // renames given a renaming function
   void inverseRename(const std::vector<int> &renaming);
 */
 
@@ -112,6 +114,7 @@ class Set {
   bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;  // true iff all labels are in front of base Sets
   std::vector<int> labels() const;
+  void rename(const Renaming &renaming);  // renames given a renaming function
 
   // printing
   std::string toString() const;

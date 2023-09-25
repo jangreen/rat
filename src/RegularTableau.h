@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <stack>
@@ -13,7 +14,6 @@
 #include "Tableau.h"
 
 typedef std::vector<Formula> FormulaSet;
-typedef std::vector<int> Renaming;
 typedef std::optional<Formula> EdgeLabel;  // TODO: use
 
 class RegularTableau {
@@ -71,6 +71,18 @@ class RegularTableau {
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;
+
+  // TODO: remove:
+  static void printGDNF(const GDNF &gdnf) {
+    std::cout << "Clauses:";
+    for (auto &clause : gdnf) {
+      std::cout << "\n";
+      for (auto &literal : clause) {
+        std::cout << literal.toString() << " , ";
+      }
+    }
+    std::cout << std::endl;
+  }
 };
 
 namespace std {
@@ -79,3 +91,13 @@ struct hash<RegularTableau::Node> {
   std::size_t operator()(const RegularTableau::Node &node) const;
 };
 }  // namespace std
+
+// helper
+// TODO: move into general vector class
+template <typename T>
+bool isSubset(std::vector<T> smallerSet, std::vector<T> largerSet) {
+  std::sort(largerSet.begin(), largerSet.end());
+  std::sort(smallerSet.begin(), smallerSet.end());
+  smallerSet.erase(unique(smallerSet.begin(), smallerSet.end()), smallerSet.end());
+  return std::includes(largerSet.begin(), largerSet.end(), smallerSet.begin(), smallerSet.end());
+};

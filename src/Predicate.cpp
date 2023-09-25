@@ -443,6 +443,13 @@ std::vector<int> Predicate::labels() const {
   return {};
 }
 
+void Predicate::rename(const Renaming &renaming) {
+  if (operation == PredicateOperation::intersectionNonEmptiness) {
+    leftOperand->rename(renaming);
+    rightOperand->rename(renaming);
+  }
+}
+
 std::string Predicate::toString() const {
   std::string output;
   switch (operation) {

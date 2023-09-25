@@ -36,13 +36,13 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
   auto existingNode = nodes.find(newNode);
   if (existingNode != nodes.end()) {
     // equivalent node exists
+    std::cout << "Node already exists." << std::endl;
     auto oldNode = existingNode->get();
     return oldNode;
   } else {
-    Node *returnValue = newNode.get();
-    unreducedNodes.push(newNode.get());
-    nodes.emplace(std::move(newNode));
-    return returnValue;
+    unreducedNodes.push(newNode.get());  // TODO: check this line
+    auto insertion = nodes.insert(std::move(newNode));
+    return insertion.first->get();
   }
 
   // saturation phase
@@ -91,7 +91,9 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 }
 
 bool RegularTableau::solve() {
-  while (!unreducedNodes.empty()) {
+  int bound = 20;
+  while (!unreducedNodes.empty() && bound > 0) {
+    bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
@@ -111,15 +113,6 @@ bool RegularTableau::solve() {
   std::cout << "[Solver] True." << std::endl;
   return true;
 }
-
-// helper
-// TODO: move into general vector class
-template <typename T>
-bool isSubset(std::vector<T> A, std::vector<T> B) {
-  std::sort(A.begin(), A.end());
-  std::sort(B.begin(), B.end());
-  return std::includes(A.begin(), A.end(), B.begin(), B.end());
-};
 
 // assumptions:
 // node has only normal terms
@@ -141,16 +134,16 @@ bool RegularTableau::expandNode(Node *node) {
 
     // extract DNF and remove atomicFormula (and ismorphisms of it)
     auto dnf = tableau.rootNode->extractDNF();
-    GDNF oldCopy = dnf;
+    GDNF oldCopy = std::move(dnf);
     dnf = {};
     for (const auto &clause : oldCopy) {
       FormulaSet newClause;
       for (const auto &formula : clause) {
         if (!formula.isIsomorphTo(*atomicFormula)) {
-          newClause.emplace_back(formula);
+          newClause.push_back(formula);
         }
       }
-      dnf.emplace_back(newClause);
+      dnf.push_back(newClause);
     }
 
     // filter none active labels
@@ -167,17 +160,17 @@ bool RegularTableau::expandNode(Node *node) {
       }
     }
     // 2) filtering
-    oldCopy = dnf;
+    oldCopy = std::move(dnf);
     dnf = {};
     for (const auto &clause : oldCopy) {
       FormulaSet newClause;
       for (const auto &formula : clause) {
         auto formulaLabels = formula.literal->predicate->labels();
         if (isSubset(formulaLabels, activeLabels)) {
-          newClause.emplace_back(formula);
+          newClause.push_back(formula);
         }
       }
-      dnf.emplace_back(newClause);
+      dnf.push_back(newClause);
     }
 
     /*for (const auto &clause : dnf) {
@@ -228,7 +221,7 @@ bool RegularTableau::expandNode(Node *node) {
     } else {
       for (auto &clause : dnf) {
         // TODO: check if renaming exists when adding
-        auto newNode = addNode(clause);
+        Node *newNode = addNode(clause);
         addEdge(node, newNode, atomicFormula);
         //  TODO: inconsistency check
       }

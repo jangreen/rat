@@ -143,10 +143,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             // [e.b] -> { [f], (e.b)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
-            // result = {{std::move(f), p}};
-            // currently replace
-            swap(*this, f);
-            result = {{p}};
+            result = {{std::move(f), p}};
             return result;
           }
           case RelationOperation::cartesianProduct:
@@ -239,10 +236,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             // [b.e] -> { [f], (b.e)f }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
             Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
-            // result = {{std::move(f), p}};
-            // currently replace
-            swap(*this, f);
-            result = {{p}};
+            result = {{std::move(f), p}};
             return result;
           }
           case RelationOperation::cartesianProduct:
@@ -371,6 +365,17 @@ std::vector<int> Set::labels() const {
   }
 }
 
+void Set::rename(const Renaming &renaming) {
+  if (operation == SetOperation::singleton) {
+    label = std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), *label));
+  } else if (leftOperand) {
+    leftOperand->rename(renaming);
+    if (rightOperand) {
+      rightOperand->rename(renaming);
+    }
+  }
+}
+
 // RULES
 /* LEGACY
 template <>
@@ -463,17 +468,6 @@ std::vector<int> Relation::labels() const {
 
 std::vector<int> Relation::calculateRenaming() const {
   return labels();  // labels already calculates the renaming
-}
-
-void Relation::rename(const std::vector<int> &renaming) {
-  if (label) {
-    label = distance(renaming.begin(), find(renaming.begin(), renaming.end(), *label));
-  } else if (leftOperand) {
-    leftOperand->rename(renaming);
-    if (rightOperand) {
-      rightOperand->rename(renaming);
-    }
-  }
 }
 
 void Relation::inverseRename(const std::vector<int> &renaming) {

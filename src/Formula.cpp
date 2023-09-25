@@ -142,32 +142,32 @@ bool Formula::isAtomic() const {
 }
 
 // TODO: refactor:
-bool Formula::isIsomorphTo(const Formula &formula) const {
+bool Formula::isIsomorphTo(const Formula &atomicFormula) const {
   int leftLabel, rightLabel;
   std::string base;
-  if (formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
-    if (formula.literal->predicate->rightOperand->operation == SetOperation::domain) {
+  if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
+    if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::domain) {
       // e1(be2)
-      leftLabel = *formula.literal->predicate->leftOperand->label;
-      rightLabel = *formula.literal->predicate->rightOperand->leftOperand->label;
-      base = *formula.literal->predicate->rightOperand->identifier;
-    } else if (formula.literal->predicate->rightOperand->operation == SetOperation::image) {
+      leftLabel = *atomicFormula.literal->predicate->leftOperand->label;
+      rightLabel = *atomicFormula.literal->predicate->rightOperand->leftOperand->label;
+      base = *atomicFormula.literal->predicate->rightOperand->relation->identifier;
+    } else if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::image) {
       // e1(e2b)
-      rightLabel = *formula.literal->predicate->leftOperand->label;
-      leftLabel = *formula.literal->predicate->rightOperand->leftOperand->label;
-      base = *formula.literal->predicate->rightOperand->identifier;
+      rightLabel = *atomicFormula.literal->predicate->leftOperand->label;
+      leftLabel = *atomicFormula.literal->predicate->rightOperand->leftOperand->label;
+      base = *atomicFormula.literal->predicate->rightOperand->relation->identifier;
     }
-  } else if (formula.literal->predicate->rightOperand->operation == SetOperation::singleton) {
-    if (formula.literal->predicate->leftOperand->operation == SetOperation::domain) {
+  } else if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::singleton) {
+    if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::domain) {
       // (be2)e1
-      leftLabel = *formula.literal->predicate->rightOperand->label;
-      rightLabel = *formula.literal->predicate->leftOperand->leftOperand->label;
-      base = *formula.literal->predicate->leftOperand->identifier;
-    } else if (formula.literal->predicate->leftOperand->operation == SetOperation::image) {
+      leftLabel = *atomicFormula.literal->predicate->rightOperand->label;
+      rightLabel = *atomicFormula.literal->predicate->leftOperand->leftOperand->label;
+      base = *atomicFormula.literal->predicate->leftOperand->relation->identifier;
+    } else if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::image) {
       // (e2b)e1
-      rightLabel = *formula.literal->predicate->rightOperand->label;
-      leftLabel = *formula.literal->predicate->leftOperand->leftOperand->label;
-      base = *formula.literal->predicate->leftOperand->identifier;
+      rightLabel = *atomicFormula.literal->predicate->rightOperand->label;
+      leftLabel = *atomicFormula.literal->predicate->leftOperand->leftOperand->label;
+      base = *atomicFormula.literal->predicate->leftOperand->relation->identifier;
     }
   }
   // same for this
@@ -178,24 +178,24 @@ bool Formula::isIsomorphTo(const Formula &formula) const {
       // e1(be2)
       thisleftLabel = *literal->predicate->leftOperand->label;
       thisrightLabel = *literal->predicate->rightOperand->leftOperand->label;
-      thisbase = *literal->predicate->rightOperand->identifier;
+      thisbase = *literal->predicate->rightOperand->relation->identifier;
     } else if (literal->predicate->rightOperand->operation == SetOperation::image) {
       // e1(e2b)
       thisrightLabel = *literal->predicate->leftOperand->label;
       thisleftLabel = *literal->predicate->rightOperand->leftOperand->label;
-      thisbase = *literal->predicate->rightOperand->identifier;
+      thisbase = *literal->predicate->rightOperand->relation->identifier;
     }
   } else if (literal->predicate->rightOperand->operation == SetOperation::singleton) {
     if (literal->predicate->leftOperand->operation == SetOperation::domain) {
       // (be2)e1
       thisleftLabel = *literal->predicate->rightOperand->label;
       thisrightLabel = *literal->predicate->leftOperand->leftOperand->label;
-      thisbase = *literal->predicate->leftOperand->identifier;
+      thisbase = *literal->predicate->leftOperand->relation->identifier;
     } else if (literal->predicate->leftOperand->operation == SetOperation::image) {
       // (e2b)e1
       thisrightLabel = *literal->predicate->rightOperand->label;
       thisleftLabel = *literal->predicate->leftOperand->leftOperand->label;
-      thisbase = *literal->predicate->leftOperand->identifier;
+      thisbase = *literal->predicate->leftOperand->relation->identifier;
     }
   }
 

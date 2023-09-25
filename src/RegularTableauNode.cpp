@@ -7,6 +7,23 @@
 RegularTableau::Node::Node(std::initializer_list<Formula> formulas) : formulas(formulas) {}
 RegularTableau::Node::Node(FormulaSet formulas) : formulas(formulas) {}
 
+// helper
+void rename(FormulaSet &formulas) {
+  // calculate renaming
+  Renaming renaming;
+  for (auto &formula : formulas) {
+    for (const auto &l : formula.literal->predicate->labels()) {
+      if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
+        renaming.push_back(l);
+      }
+    }
+  }
+
+  for (auto &formula : formulas) {
+    formula.literal->predicate->rename(renaming);
+  }
+}
+
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shorcuts
   if (formulas.size() != otherNode.formulas.size()) {
@@ -17,6 +34,10 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   FormulaSet c2 = otherNode.formulas;
   std::sort(c1.begin(), c1.end());
   std::sort(c2.begin(), c2.end());
+
+  // rename
+  rename(c1);
+  rename(c2);
   return c1 == c2;
 }
 

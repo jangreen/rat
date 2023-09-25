@@ -126,7 +126,8 @@ bool Tableau::solve(int bound) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    std::cout << "[Tableau]: Current Node " << currentNode->formula.toString() << std::endl;
+    // TODO: remove: std::cout << "[Tableau]: Current Node " << currentNode->formula.toString() <<
+    // std::endl;
     auto result = currentNode->applyRule();
 
     // next two methods try to apply negated modal rules
@@ -183,6 +184,10 @@ std::optional<Formula> Tableau::applyRuleA() {
     if (result) {
       auto modalResult = *result;
 
+      // currently remove node by replacing it with dummy
+      // this is needed for expandNode
+      currentNode->formula = Formula(FormulaOperation::top);
+
       // find atomic
       for (const auto &clause : modalResult) {
         // should be only one clause
@@ -200,7 +205,9 @@ std::optional<Formula> Tableau::applyRuleA() {
 
 void Tableau::toDotFormat(std::ofstream &output) const {
   output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
-  rootNode->toDotFormat(output);
+  if (rootNode != nullptr) {
+    rootNode->toDotFormat(output);
+  }
   output << "}" << std::endl;
 }
 
