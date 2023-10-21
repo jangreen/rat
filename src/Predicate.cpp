@@ -330,11 +330,11 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
 bool Predicate::isNormal() const {
   switch (operation) {
     case PredicateOperation::edge:
-      return true;  // TODO: maybe false!, remove all at once
+      return false;  // TODO: maybe false!, remove all at once
     case PredicateOperation::set:
-      return true;  // TODO: maybe false!
+      return false;  // TODO: maybe false!
     case PredicateOperation::equality:
-      return true;  // TODO: maybe false!
+      return false;  // TODO: maybe false!
     case PredicateOperation::intersectionNonEmptiness:
       if (leftOperand->operation == SetOperation::singleton) {
         switch (rightOperand->operation) {

@@ -14,7 +14,7 @@
 #include "Tableau.h"
 
 typedef std::vector<Formula> FormulaSet;
-typedef std::optional<Formula> EdgeLabel;  // TODO: use
+typedef std::vector<Formula> EdgeLabel;
 
 class RegularTableau {
  public:

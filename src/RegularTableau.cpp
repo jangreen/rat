@@ -112,7 +112,7 @@ bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->formulas};
   auto atomicFormula = tableau.applyRuleA();
 
-  if (atomicFormula) {
+  if (atomicFormula) {  // node is expandable
     // request is calculated within normal form here
     tableau.solve();
     if (tableau.rootNode->isClosed()) {
@@ -121,46 +121,58 @@ bool RegularTableau::expandNode(Node *node) {
       return true;
     }
 
-    // extract DNF and remove atomicFormula (and ismorphisms of it)
+    // extract DNF
     auto dnf = tableau.rootNode->extractDNF();
-    GDNF oldCopy = std::move(dnf);
-    dnf = {};
-    for (const auto &clause : oldCopy) {
+
+    // for each clause: calculate potential child
+    for (auto &clause : dnf) {
+      EdgeLabel edgeLabel;
       FormulaSet newClause;
+
+      // remove edge predicates and put them in the edge label
       for (const auto &formula : clause) {
-        if (formula != *atomicFormula) {
+        if (formula.isEdgePredicate()) {
+          edgeLabel.push_back(formula);
+        } else {
           newClause.push_back(formula);
         }
       }
-      dnf.push_back(newClause);
-    }
 
-    // filter none active labels
-    // assume alreday normal
-    // 1) gather all active labels
-    std::vector<int> activeLabels;
-    for (const auto &clause : dnf) {
-      for (const auto &formula : clause) {
+      // filter none active labels
+      // assume alredy normal
+      // 1) gather all active labels
+      std::vector<int> activeLabels;
+      for (const auto &formula : newClause) {
         if (!formula.literal->negated) {
           auto formulaLabels = formula.literal->predicate->labels();
           activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
                               std::end(formulaLabels));
         }
       }
-    }
-    // 2) filtering
-    oldCopy = std::move(dnf);
-    dnf = {};
-    for (const auto &clause : oldCopy) {
-      FormulaSet newClause;
-      for (const auto &formula : clause) {
+      // 2) filtering
+      FormulaSet copy = std::move(newClause);
+      newClause = {};
+      for (const auto &formula : copy) {
         auto formulaLabels = formula.literal->predicate->labels();
         if (isSubset(formulaLabels, activeLabels)) {
           newClause.push_back(formula);
         }
       }
-      dnf.push_back(newClause);
+
+      // add child
+      // checks if renaming exists when adding and returns already existing node if possible
+      Node *newNode = addNode(newClause);
+      addEdge(node, newNode, edgeLabel);
+      //  TODO: inconsistency check
     }
+
+    // TODO?: check if any clause has been added
+    /*otherwise:
+    if (dnf.empty()) {
+      node->closed = true;
+    }*/
+
+    return true;
 
     /*for (const auto &clause : dnf) {
       // TODO: refactor DRY
@@ -205,18 +217,6 @@ bool RegularTableau::expandNode(Node *node) {
       // TODO: -------
       addNode(node, clause, metastatement);
     }*/
-    if (dnf.empty()) {
-      node->closed = true;
-    } else {
-      for (auto &clause : dnf) {
-        // TODO: check if renaming exists when adding
-        Node *newNode = addNode(clause);
-        addEdge(node, newNode, atomicFormula);
-        //  TODO: inconsistency check
-      }
-    }
-
-    return true;
   }
   return false;
 }
@@ -225,25 +225,13 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
 
-  // extract rest from open node
-  for (const auto &formula : openNode->formulas) {
-    if (formula.isEdgePredicate()) {
-      int left = *formula.literal->predicate->leftOperand->label;
-      int right = *formula.literal->predicate->rightOperand->label;
-      std::string relation = *formula.literal->predicate->identifier;
-
-      counterexample << "N" << left << " -> "
-                     << "N" << right << "[label = \"" << relation << "\"];" << std::endl;
-    }
-  }
-
   Node *node = openNode;
   while (node->firstParentNode != nullptr) {
     auto edgeLabel = node->parentNodes[node->firstParentNode];
-    if (edgeLabel.has_value()) {
-      int left = *edgeLabel->literal->predicate->leftOperand->label;
-      int right = *edgeLabel->literal->predicate->rightOperand->label;
-      std::string relation = *edgeLabel->literal->predicate->identifier;
+    for (const auto &edge : edgeLabel) {
+      int left = *edge.literal->predicate->leftOperand->label;
+      int right = *edge.literal->predicate->rightOperand->label;
+      std::string relation = *edge.literal->predicate->identifier;
 
       counterexample << "N" << left << " -> "
                      << "N" << right << "[label = \"" << relation << "\"];" << std::endl;
