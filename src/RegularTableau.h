@@ -66,7 +66,8 @@ class RegularTableau {
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);
   void saturate(Clause &clause);*/
-  bool isInconsistent(Node *node, Node *newNode);
+  std::optional<FormulaSet> checkInconsistency(Node *parent, const FormulaSet &newFormulas);
+  bool isInconsistent(Node *parent, Node *child);
   void extractCounterexample(Node *openNode);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
