@@ -22,8 +22,9 @@ class Tableau {
 
     bool isClosed() const;
     bool isLeaf() const;
-    bool branchContains(const Formula &formula) const;
+    bool branchContains(const Formula &formula);
     void appendBranch(const GDNF &formulas);
+    bool appendable(const FormulaSet &formulas);
     void appendBranch(const Formula &leftFormula);
     void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
     std::optional<GDNF> applyRule(bool modalRule = false);

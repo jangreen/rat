@@ -62,7 +62,6 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
     case FormulaOperation::bottom: {
       // F -> \emptyset
       std::vector<std::vector<Formula>> result{};
-
       return result;
     }
     case FormulaOperation::top: {
@@ -136,70 +135,9 @@ bool Formula::isNormal() const {
   return operation == FormulaOperation::literal && literal->isNormal();
 }
 
-bool Formula::isAtomic() const {
+bool Formula::isEdgePredicate() const {
   return operation == FormulaOperation::literal && !literal->negated &&
-         literal->predicate->isAtomic();
-}
-
-// TODO: refactor:
-bool Formula::isIsomorphTo(const Formula &atomicFormula) const {
-  int leftLabel, rightLabel;
-  std::string base;
-  if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
-    if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::domain) {
-      // e1(be2)
-      leftLabel = *atomicFormula.literal->predicate->leftOperand->label;
-      rightLabel = *atomicFormula.literal->predicate->rightOperand->leftOperand->label;
-      base = *atomicFormula.literal->predicate->rightOperand->relation->identifier;
-    } else if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::image) {
-      // e1(e2b)
-      rightLabel = *atomicFormula.literal->predicate->leftOperand->label;
-      leftLabel = *atomicFormula.literal->predicate->rightOperand->leftOperand->label;
-      base = *atomicFormula.literal->predicate->rightOperand->relation->identifier;
-    }
-  } else if (atomicFormula.literal->predicate->rightOperand->operation == SetOperation::singleton) {
-    if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::domain) {
-      // (be2)e1
-      leftLabel = *atomicFormula.literal->predicate->rightOperand->label;
-      rightLabel = *atomicFormula.literal->predicate->leftOperand->leftOperand->label;
-      base = *atomicFormula.literal->predicate->leftOperand->relation->identifier;
-    } else if (atomicFormula.literal->predicate->leftOperand->operation == SetOperation::image) {
-      // (e2b)e1
-      rightLabel = *atomicFormula.literal->predicate->rightOperand->label;
-      leftLabel = *atomicFormula.literal->predicate->leftOperand->leftOperand->label;
-      base = *atomicFormula.literal->predicate->leftOperand->relation->identifier;
-    }
-  }
-  // same for this
-  int thisleftLabel, thisrightLabel;
-  std::string thisbase;
-  if (literal->predicate->leftOperand->operation == SetOperation::singleton) {
-    if (literal->predicate->rightOperand->operation == SetOperation::domain) {
-      // e1(be2)
-      thisleftLabel = *literal->predicate->leftOperand->label;
-      thisrightLabel = *literal->predicate->rightOperand->leftOperand->label;
-      thisbase = *literal->predicate->rightOperand->relation->identifier;
-    } else if (literal->predicate->rightOperand->operation == SetOperation::image) {
-      // e1(e2b)
-      thisrightLabel = *literal->predicate->leftOperand->label;
-      thisleftLabel = *literal->predicate->rightOperand->leftOperand->label;
-      thisbase = *literal->predicate->rightOperand->relation->identifier;
-    }
-  } else if (literal->predicate->rightOperand->operation == SetOperation::singleton) {
-    if (literal->predicate->leftOperand->operation == SetOperation::domain) {
-      // (be2)e1
-      thisleftLabel = *literal->predicate->rightOperand->label;
-      thisrightLabel = *literal->predicate->leftOperand->leftOperand->label;
-      thisbase = *literal->predicate->leftOperand->relation->identifier;
-    } else if (literal->predicate->leftOperand->operation == SetOperation::image) {
-      // (e2b)e1
-      thisrightLabel = *literal->predicate->rightOperand->label;
-      thisleftLabel = *literal->predicate->leftOperand->leftOperand->label;
-      thisbase = *literal->predicate->leftOperand->relation->identifier;
-    }
-  }
-
-  return leftLabel == thisleftLabel && rightLabel == thisrightLabel && base == thisbase;
+         literal->predicate->operation == PredicateOperation::edge;
 }
 
 std::string Formula::toString() const {

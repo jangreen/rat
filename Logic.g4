@@ -3,7 +3,9 @@ import Cat;
 
 proof: letDefinition* assertion* EOF; // TODO: hypothesis*
 
-assertion: ASSERT f1 = formula;
+assertion:
+	ASSERT f1 = formula
+	| ASSERT e1 = expression INEQUAL e2 = expression; // syntactic sugar
 
 formula:
 	p1 = predicate
@@ -22,4 +24,5 @@ predicate:
 
 ASSUME: 'assume';
 ASSERT: 'assert';
+INEQUAL: '<=';
 FILEPATH: '.'? '/' ~'/' (.)+? '.cat';

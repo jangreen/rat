@@ -86,9 +86,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 }
 
 bool RegularTableau::solve() {
-  int bound = 20;
-  while (!unreducedNodes.empty() && bound > 0) {
-    bound--;
+  while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
@@ -97,13 +95,12 @@ bool RegularTableau::solve() {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
-
+    exportProof("regular-debug");
     if (!expandNode(currentNode)) {
       extractCounterexample(currentNode);
       std::cout << "[Solver] False." << std::endl;
       return false;
     }
-    exportProof("r");
   }
   std::cout << "[Solver] True." << std::endl;
   return true;
@@ -113,14 +110,11 @@ bool RegularTableau::solve() {
 // node has only normal terms
 bool RegularTableau::expandNode(Node *node) {
   Tableau tableau{node->formulas};
-  tableau.exportProof("t");
   auto atomicFormula = tableau.applyRuleA();
-  tableau.exportProof("t");
 
   if (atomicFormula) {
     // request is calculated within normal form here
     tableau.solve();
-    tableau.exportProof("t");
     if (tableau.rootNode->isClosed()) {
       // can happen with emptiness hypotheses
       node->closed = true;
@@ -134,7 +128,7 @@ bool RegularTableau::expandNode(Node *node) {
     for (const auto &clause : oldCopy) {
       FormulaSet newClause;
       for (const auto &formula : clause) {
-        if (!formula.isIsomorphTo(*atomicFormula)) {
+        if (formula != *atomicFormula) {
           newClause.push_back(formula);
         }
       }
@@ -228,72 +222,36 @@ bool RegularTableau::expandNode(Node *node) {
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {
-  Node *node = openNode;
-
-  // TODO: do not need this anymore since we have the original labels
-
-  // calculate equivlence classes
-  std::vector<std::string> elements;
-  typedef std::map<std::string, int> rank_t;
-  typedef std::map<std::string, std::string> parent_t;
-  rank_t ranks;
-  parent_t parents;
-  boost::disjoint_sets<boost::associative_property_map<rank_t>,
-                       boost::associative_property_map<parent_t>>
-      dsets(boost::make_assoc_property_map(ranks), boost::make_assoc_property_map(parents));
-
-  /*/ TODO: refactor
-  while (node->firstParentNode != nullptr) {
-    for (int i = 0; i < node->parentNodeRenaming.size(); i++) {
-      std::stringstream ss1;
-      ss1 << node->firstParentNode << "_" << node->parentNodeRenaming[i];
-      if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
-        dsets.make_set(ss1.str());
-        elements.push_back(ss1.str());
-      }
-      std::stringstream ss2;
-      ss2 << node << "_" << i;
-      if (std::find(elements.begin(), elements.end(), ss2.str()) == elements.end()) {
-        dsets.make_set(ss2.str());
-        elements.push_back(ss2.str());
-      }
-      dsets.union_set(ss1.str(), ss2.str());
-    }
-    for (auto equivalence : node->parentEquivalences) {
-      std::stringstream ss1;
-      ss1 << node->firstParentNode << "_" << equivalence.label1;
-      if (std::find(elements.begin(), elements.end(), ss1.str()) == elements.end()) {
-        dsets.make_set(ss1.str());
-        elements.push_back(ss1.str());
-      }
-      std::stringstream ss2;
-      ss2 << node->firstParentNode << "_" << equivalence.label2;
-      if (std::find(elements.begin(), elements.end(), ss2.str()) == elements.end()) {
-        dsets.make_set(ss2.str());
-        elements.push_back(ss2.str());
-      }
-      dsets.union_set(ss1.str(), ss2.str());
-    }
-    node = node->firstParentNode;
-  }
-
   std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
-  node = openNode;
-  while (node->firstParentNode != nullptr) {
-    std::stringstream ss1;
-    ss1 << node->firstParentNode << "_" << node->parentNodeExpansionMeta->label1;
-    std::stringstream ss2;
-    ss2 << node->firstParentNode << "_" << node->parentNodeExpansionMeta->label2;
 
-    counterexample << "N" << dsets.find_set(ss1.str()) << " -> "
-                   << "N" << dsets.find_set(ss2.str()) << "[label = \""
-                   << *node->parentNodeExpansionMeta->baseRelation << "\"];" << std::endl;
+  // extract rest from open node
+  for (const auto &formula : openNode->formulas) {
+    if (formula.isEdgePredicate()) {
+      int left = *formula.literal->predicate->leftOperand->label;
+      int right = *formula.literal->predicate->rightOperand->label;
+      std::string relation = *formula.literal->predicate->identifier;
+
+      counterexample << "N" << left << " -> "
+                     << "N" << right << "[label = \"" << relation << "\"];" << std::endl;
+    }
+  }
+
+  Node *node = openNode;
+  while (node->firstParentNode != nullptr) {
+    auto edgeLabel = node->parentNodes[node->firstParentNode];
+    if (edgeLabel.has_value()) {
+      int left = *edgeLabel->literal->predicate->leftOperand->label;
+      int right = *edgeLabel->literal->predicate->rightOperand->label;
+      std::string relation = *edgeLabel->literal->predicate->identifier;
+
+      counterexample << "N" << left << " -> "
+                     << "N" << right << "[label = \"" << relation << "\"];" << std::endl;
+    }
     node = node->firstParentNode;
   }
   counterexample << "}" << std::endl;
   counterexample.close();
-  */
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
@@ -315,7 +273,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
 }
 
 void RegularTableau::exportProof(std::string filename) const {
-  std::ofstream file("./../output/" + filename + ".dot");
+  std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
 }

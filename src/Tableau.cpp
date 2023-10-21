@@ -126,8 +126,8 @@ bool Tableau::solve(int bound) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    // TODO: remove: std::cout << "[Tableau]: Current Node " << currentNode->formula.toString() <<
-    // std::endl;
+    // TODO: remove:
+    // std::cout << "[Tableau]: Current Node. " << currentNode->formula.toString() << std::endl;
     auto result = currentNode->applyRule();
 
     // next two methods try to apply negated modal rules
@@ -135,10 +135,10 @@ bool Tableau::solve(int bound) {
                                             // but dont considers replacing b1
       currentNode->inferModal();
     }
-    if (currentNode->formula.isAtomic()) {
+    if (currentNode->formula.isEdgePredicate()) {
       currentNode->inferModalAtomic();
     }
-    exportProof("t");
+    exportProof("infinite-debug");
   }
 
   return rootNode->isClosed();
@@ -192,8 +192,7 @@ std::optional<Formula> Tableau::applyRuleA() {
       for (const auto &clause : modalResult) {
         // should be only one clause
         for (const auto &formula : clause) {
-          if (formula.operation == FormulaOperation::literal &&
-              formula.literal->predicate->isAtomic()) {
+          if (formula.operation == FormulaOperation::literal && formula.isEdgePredicate()) {
             return formula;
           }
         }
@@ -213,7 +212,7 @@ void Tableau::toDotFormat(std::ofstream &output) const {
 
 void Tableau::exportProof(std::string filename) const {
   // TODO: std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
-  std::ofstream file("./../output/" + filename + ".dot");
+  std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
 }

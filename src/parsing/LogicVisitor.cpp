@@ -21,8 +21,9 @@ Relation Logic::parseRelation(const std::string &relationString) {
   LogicParser parser(&tokens);
 
   LogicParser::ExpressionContext *context = parser.expression();  // expect expression
-  Relation parsedRelation = std::any_cast<Relation>(this->visit(context));
-  return parsedRelation;
+  std::variant<Set, Relation> parsedRelation =
+      std::any_cast<std::variant<Set, Relation>>(this->visit(context));
+  return std::get<Relation>(parsedRelation);
 }
 
 /*std::vector<Formula>*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
@@ -42,6 +43,24 @@ Relation Logic::parseRelation(const std::string &relationString) {
   return formulas;
 }
 /*Formula*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
+  if (context->INEQUAL()) {
+    // currently only support relations on each side of inequation, otherwise behavuour is undefined
+    Relation lhs(context->e1->getText());
+    Relation rhs(context->e2->getText());
+    Set start(SetOperation::singleton, Set::maxSingletonLabel++);
+    Set end(SetOperation::singleton, Set::maxSingletonLabel++);
+    Set lImage(SetOperation::image, Set(start), std::move(lhs));
+    Set rImage(SetOperation::image, std::move(start), std::move(rhs));
+
+    Predicate lp(PredicateOperation::intersectionNonEmptiness, std::move(lImage), Set(end));
+    Predicate rp(PredicateOperation::intersectionNonEmptiness, std::move(rImage), std::move(end));
+
+    Literal ll(false, std::move(lp));
+    Literal rl(true, std::move(rp));
+    Formula lf(FormulaOperation::literal, std::move(ll));
+    Formula rf(FormulaOperation::literal, std::move(rl));
+    return Formula(FormulaOperation::logicalAnd, std::move(lf), std::move(rf));
+  }
   return Formula(context->f1->getText());
 }
 /*Formula*/ std::any Logic::visitFormula(LogicParser::FormulaContext *context) {
@@ -237,18 +256,30 @@ Relation Logic::parseRelation(const std::string &relationString) {
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationInverse(
     LogicParser::RelationInverseContext *context) {
-  Relation r1 = std::any_cast<Relation>(context->e->accept(this));
-  Relation r(RelationOperation::converse, std::move(r1));
-  std::variant<Set, Relation> result = r;
-  return result;
+  std::variant<Set, Relation> relationExpression =
+      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+  if (std::holds_alternative<Relation>(relationExpression)) {
+    Relation r1 = std::get<Relation>(relationExpression);
+    Relation r(RelationOperation::converse, std::move(r1));
+    std::variant<Set, Relation> result = r;
+    return result;
+  }
+  std::cout << "[Parsing] Type mismatch of the operand of the relation inverse." << std::endl;
+  exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationOptional(
     LogicParser::RelationOptionalContext *context) {
-  Relation r1 = std::any_cast<Relation>(context->e->accept(this));
-  Relation idR(RelationOperation::identity);
-  Relation r(RelationOperation::choice, std::move(r1), std::move(idR));
-  std::variant<Set, Relation> result = r;
-  return result;
+  std::variant<Set, Relation> relationExpression =
+      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+  if (std::holds_alternative<Relation>(relationExpression)) {
+    Relation r1 = std::get<Relation>(relationExpression);
+    Relation idR(RelationOperation::identity);
+    Relation r(RelationOperation::choice, std::move(r1), std::move(idR));
+    std::variant<Set, Relation> result = r;
+    return result;
+  }
+  std::cout << "[Parsing] Type mismatch of the operand of the relation optional." << std::endl;
+  exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationIdentity(
     LogicParser::RelationIdentityContext *context) {

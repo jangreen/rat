@@ -85,7 +85,10 @@
         "memory_resource": "cpp",
         "typeindex": "cpp",
         "tso_oota": "cpp",
-        "__verbose_abort": "cpp"
+        "__verbose_abort": "cpp",
+        "test2f": "cpp",
+        "charconv": "cpp",
+        "source_location": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

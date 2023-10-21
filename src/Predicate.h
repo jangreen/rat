@@ -13,6 +13,9 @@ class Formula;
 typedef std::vector<int> Renaming;
 
 enum class PredicateOperation {
+  edge,                     // (e1, e2) \in a
+  set,                      // e1 \in A
+  equality,                 // e1 = e2
   intersectionNonEmptiness  // binary predicate
 };
 
@@ -29,20 +32,23 @@ class Predicate {
     swap(first.operation, second.operation);
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
+    swap(first.identifier, second.identifier);
   }
   bool operator==(const Predicate &other) const;
 
   explicit Predicate(const std::string &expression);  // parse constructor
   Predicate(const PredicateOperation operation, Set &&left, Set &&right);
+  Predicate(const PredicateOperation operation, Set &&left, std::string identifier);
+  Predicate(const PredicateOperation operation, Set &&left, Set &&right, std::string identifier);
 
   PredicateOperation operation;
-  std::unique_ptr<Set> leftOperand;   // is set iff binary predicate
-  std::unique_ptr<Set> rightOperand;  // is set iff binary predicate
+  std::unique_ptr<Set> leftOperand;       // is set iff binary predicate
+  std::unique_ptr<Set> rightOperand;      // is set iff binary predicate
+  std::optional<std::string> identifier;  // is set iff edge/set predicate
 
   std::optional<Formula> applyRule(bool modalRules = false);
   bool substitute(const Set &search, const Set &replace);
   bool isNormal() const;
-  bool isAtomic() const;
   std::vector<int> labels() const;
   void rename(const Renaming &renaming);  // renames given a renaming function
 

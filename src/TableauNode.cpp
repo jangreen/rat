@@ -36,15 +36,39 @@ bool Tableau::Node::isClosed() const {
 
 bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
 
-bool Tableau::Node::Node::branchContains(const Formula &formula) const {
+bool Tableau::Node::branchContains(const Formula &formula) {
   const Node *node = this;
   while (node != nullptr) {
     if (node->formula == formula) {
       return true;
+    } else if (formula.operation == FormulaOperation::literal &&
+               formula.literal->predicate->operation !=
+                   PredicateOperation::intersectionNonEmptiness) {
+      Formula negatedCopy(formula);
+      negatedCopy.literal->negated = !negatedCopy.literal->negated;
+      // check if p & ~p (only in case of atomic predicate)
+      if (node->formula == negatedCopy) {
+        Node newNode(this, std::move(formula));
+        leftNode = std::make_unique<Node>(std::move(newNode));
+        Node newNode2(leftNode.get(), Formula(FormulaOperation::bottom));
+        leftNode->leftNode = std::make_unique<Node>(std::move(newNode2));
+        return true;
+      }
     }
     node = node->parentNode;
   }
   return false;
+}
+
+// TODO: remove
+void printGDNF(const GDNF &conjuntion) {
+  for (const auto &disjunction : conjuntion) {
+    std::cout << " OR ";
+    for (const auto &formula : disjunction) {
+      std::cout << formula.toString() << ", ";
+    }
+  }
+  std::cout << std::endl;
 }
 
 void Tableau::Node::appendBranch(const GDNF &formulas) {
@@ -53,6 +77,13 @@ void Tableau::Node::appendBranch(const GDNF &formulas) {
       // TODO: make this explicit using types
       std::cout << "[Bug] We would like to support only binary branching" << std::endl;
     } else if (formulas.size() > 1) {
+      // special case: appending X | \emptyset to B would result in B.X and B.nullptr
+      // but B.nullptr should mean here B.emptyset however this is not reflected
+      // Solution: we do not append anything since truth of the empty branch implies truth of B.X
+      if (!appendable(formulas[0]) || !appendable(formulas[1])) {
+        return;
+      }
+
       // trick: lift disjunctive appendBranch to sets
       for (const auto &formula : formulas[1]) {
         appendBranch(formula);
@@ -76,6 +107,20 @@ void Tableau::Node::appendBranch(const GDNF &formulas) {
       rightNode->appendBranch(formulas);
     }
   }
+}
+
+bool Tableau::Node::appendable(const FormulaSet &formulas) {
+  // assume that it is called only on leafs
+  // predicts conjunctive formula appending returns true if it would appended at least some literal
+  if (isLeaf() && !isClosed()) {
+    auto currentLeaf = this;
+    for (const auto &formula : formulas) {
+      if (!branchContains(formula)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void Tableau::Node::appendBranch(const Formula &leftFormula) {
@@ -133,19 +178,19 @@ void Tableau::Node::inferModal() {
   }
   Node *temp = parentNode;
   while (temp != nullptr) {
-    if (temp->formula.isNormal() && temp->formula.isAtomic()) {
-      std::optional<Set> label, atomic;
-      if (temp->formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
-        label = *temp->formula.literal->predicate->leftOperand;
-        atomic = *temp->formula.literal->predicate->rightOperand;
-      } else {
-        atomic = *temp->formula.literal->predicate->leftOperand;
-        label = *temp->formula.literal->predicate->rightOperand;
-      }
-
+    if (temp->formula.isNormal() && temp->formula.isEdgePredicate()) {
       // check if inside formula can be something inferred
       Predicate copy = *formula.literal->predicate;
-      if (copy.substitute(*atomic, *label)) {
+      Predicate edgePredicate = *temp->formula.literal->predicate;
+      Set search1 = Set(SetOperation::image, Set(*edgePredicate.leftOperand),
+                        Relation(RelationOperation::base, edgePredicate.identifier));
+      Set replace1 = Set(*edgePredicate.rightOperand);
+      Set search2 = Set(SetOperation::domain, Set(*edgePredicate.rightOperand),
+                        Relation(RelationOperation::base, edgePredicate.identifier));
+      Set replace2 = Set(*edgePredicate.leftOperand);
+      if (copy.substitute(search1, replace1)) {
+        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+      } else if (copy.substitute(search2, replace2)) {
         appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
       }
     }
@@ -154,23 +199,23 @@ void Tableau::Node::inferModal() {
 }
 
 void Tableau::Node::inferModalAtomic() {
-  std::optional<Set> label, atomic;
-  if (formula.literal->predicate->leftOperand->operation == SetOperation::singleton) {
-    label = *formula.literal->predicate->leftOperand;
-    atomic = *formula.literal->predicate->rightOperand;
-  } else {
-    atomic = *formula.literal->predicate->leftOperand;
-    label = *formula.literal->predicate->rightOperand;
-  }
+  Predicate edgePredicate = *formula.literal->predicate;
+  Set search1 = Set(SetOperation::image, Set(*edgePredicate.leftOperand),
+                    Relation(RelationOperation::base, edgePredicate.identifier));
+  Set replace1 = Set(*edgePredicate.rightOperand);
+  Set search2 = Set(SetOperation::domain, Set(*edgePredicate.rightOperand),
+                    Relation(RelationOperation::base, edgePredicate.identifier));
+  Set replace2 = Set(*edgePredicate.leftOperand);
 
   Node *temp = parentNode;
   while (temp != nullptr) {
     if (temp->formula.operation == FormulaOperation::literal && temp->formula.literal->negated) {
       // check if inside formula can be something inferred
       Predicate copy = *temp->formula.literal->predicate;
-      if (copy.substitute(*atomic, *label)) {
-        Formula f(FormulaOperation::literal, Literal(true, std::move(copy)));
-        appendBranch(std::move(f));
+      if (copy.substitute(search1, replace1)) {
+        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+      } else if (copy.substitute(search2, replace2)) {
+        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
       }
     }
     temp = temp->parentNode;

@@ -126,9 +126,9 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
 
       return std::nullopt;
     case SetOperation::base: {
-      // [B] -> { [f], B.f }
+      // [B] -> { [f], f \in B }
       Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-      Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
+      Predicate p(PredicateOperation::set, Set(f), *identifier);
       result = {{std::move(f), p}};
       return result;
     }
@@ -140,13 +140,14 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             if (!modalRules) {
               return std::nullopt;
             }
-            // [e.b] -> { [f], (e.b)f }
+            // [e.b] -> { [f], (e,f) \in b }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-            Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
+            Predicate p(PredicateOperation::edge, Set(*leftOperand), Set(f), *relation->identifier);
             result = {{std::move(f), p}};
             return result;
           }
           case RelationOperation::cartesianProduct:
+            std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
             return std::nullopt;  // TODO: implement
           case RelationOperation::choice: {
             // [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
@@ -168,14 +169,23 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             result = {{std::move(re)}};
             return result;
           }
-          case RelationOperation::empty:
+          case RelationOperation::empty: {
             // [e.0] -> { [0] }
-            // TODO: implement
+            // assumption needed for soundness: context is union-free
+            Formula f(FormulaOperation::bottom);
+            // TODO:
+            // result = {{std::move(f)}};
+            // return result;
             return std::nullopt;
-          case RelationOperation::full:
+          }
+          case RelationOperation::full: {
             // [e.T] -> { [T] }
-            // TODO: implement
+            Formula f(FormulaOperation::top);
+            // TODO:
+            // result = {{std::move(f)}};
+            // return result;
             return std::nullopt;
+          }
           case RelationOperation::identity: {
             // [e.id] -> { [e] }
             Set e(SetOperation::singleton, Set(*leftOperand));
@@ -233,13 +243,14 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
               return std::nullopt;
             }
 
-            // [b.e] -> { [f], (b.e)f }
+            // [b.e] -> { [f], (f,e) \in b }
             Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-            Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*this), Set(f));
+            Predicate p(PredicateOperation::edge, Set(f), Set(*leftOperand), *relation->identifier);
             result = {{std::move(f), p}};
             return result;
           }
           case RelationOperation::cartesianProduct:
+            std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
             return std::nullopt;  // TODO: implement
           case RelationOperation::choice: {
             // [(r1 | r2).e] -> { [r1.e] }, { [r2.e] }
@@ -261,14 +272,24 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             result = {{std::move(er)}};
             return result;
           }
-          case RelationOperation::empty:
-            // [e.0] -> { [0] }
-            // TODO: implement
+          case RelationOperation::empty: {
+            // [0.e] -> { [0] }
+            // assumption needed for soundness: context is union-free
+            Formula f(FormulaOperation::bottom);
+            // TODO:
+            // result = {{std::move(f)}};
+            // return result;
             return std::nullopt;
-          case RelationOperation::full:
-            // [e.T] -> { [T] }
-            // TODO: implement
+          }
+          case RelationOperation::full: {
+            // [T.e] -> { [T] }
+            // assumption needed for soundness: context is union-free
+            Formula f(FormulaOperation::top);
+            // TODO:
+            // result = {{std::move(f)}};
+            // return result;
             return std::nullopt;
+          }
           case RelationOperation::identity: {
             // [id.e] -> { [e] }
             Set e(SetOperation::singleton, Set(*rightOperand));

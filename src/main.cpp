@@ -1,42 +1,13 @@
 #include <fstream>
 #include <iostream>
 
-#include "Predicate.h"
 #include "RegularTableau.h"
 #include "Tableau.h"
+#include "parsing/LogicVisitor.h"
 
 int main(int argc, const char* argv[]) {
-  Formula f2("{0};a;a;{1} & ~({0};(a*);{1})");
-  Formula f3("{0};a;a;a;{1} & ~({0};(a*);{1})");
-  Formula f4("{0};(a*);{1} & ~({0};(a*);{1})");
-
-  if (false) {
-    Tableau t{std::move(f4)};
-    t.solve();
-    t.exportProof("t");
-  } else {
-    RegularTableau rt{std::move(f4)};
-    rt.solve();
-    rt.exportProof("r");
-  }
-
-  /*Set s1("{e}.(a & b)");
-  std::cout << s1.toString() << std::endl;
-  auto s2 = *s1.applyRule();
-  for (const std::vector<Set::PartialPredicate>& clause : s2) {
-    for (const Set::PartialPredicate& partialPredicate : clause) {
-      const p = std::get_if<Predicate>(partialPredicate);
-      if (p) {
-        std::cout << p->toString() << std::endl;
-      } else {
-        auto s = std::get<Set>(partialPredicate);
-        std::cout << s.toString() << std::endl;
-      }
-    }
-  }*/
-
   // parse arguments or ask for arguments
-  /*std::string programName = argv[0];
+  std::string programName = argv[0];
   std::vector<std::string> programArguments;
   if (argc > 1) {
     programArguments.assign(argv + 1, argv + argc);
@@ -52,9 +23,10 @@ int main(int argc, const char* argv[]) {
   }
 
   std::string path = programArguments[0];
-  const auto &[assumptions, goals] = Logic::parse(path);
-  std::cout << "[Status] Parsing done: " << goals.size() << " goals, " << assumptions.size()
-            << " assumptions" << std::endl;
+  // TODO: const auto& [assumptions, goals] = Logic::parse(path);
+  const auto& goals = Logic::parse(path);
+  std::cout << "[Status] Parsing done: " << goals.size() << " goals, " << std::endl;
+  // assumptions.size() << " assumptions" << std::endl;
   for (auto goal : goals) {
     std::cout << "[Status] Prove goal:" << goal.toString() << std::endl;
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
@@ -62,10 +34,10 @@ int main(int argc, const char* argv[]) {
       tableau.solve(200);
       tableau.exportProof("infinite");
     } else {
-      RegularTableau::assumptions = assumptions;
+      // TODO: RegularTableau::assumptions = assumptions;
       RegularTableau tableau{goal};
       tableau.solve();
       tableau.exportProof("regular");
     }
-  }*/
+  }
 }

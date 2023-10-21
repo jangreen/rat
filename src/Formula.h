@@ -47,8 +47,7 @@ class Formula {
   // functions for rule applications
   std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
   bool isNormal() const;
-  bool isAtomic() const;
-  bool isIsomorphTo(const Formula &formula) const;
+  bool isEdgePredicate() const;
 
   // printing
   std::string toString() const;
