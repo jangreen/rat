@@ -1,2 +1,2 @@
 // Intersections Counterexample
- assert (a;c) & (a;b) <= a;(b & c)
+assert (a;c) & (a;b) <= a;(b & c)

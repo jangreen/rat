@@ -10,6 +10,11 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             }
+        },
+        {
+            "label": "Tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/tests/run.sh",
         }
     ]
 }
