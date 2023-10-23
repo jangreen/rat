@@ -38,9 +38,9 @@ expression:
 	| e = expression (POW)? INV				# relationInverse
 	| e = expression OPT					# relationOptional
 	//| NOT e = expression							# relationComplement
+	| e1 = expression SEMI e2 = expression			# composition // domain, image, relational composition
 	| e1 = expression AMP e2 = expression			# intersection // set intersection, relational intersection
 	| e1 = expression BSLASH e2 = expression		# relationMinus
-	| e1 = expression SEMI e2 = expression			# composition // domain, image, relational composition
 	| e1 = expression BAR e2 = expression			# union // set union, relational union
 	| LBRAC DOMAIN_ LPAR e = expression RPAR RBRAC	# relationDomainIdentity
 	| LBRAC RANGE LPAR e = expression RPAR RBRAC	# relationRangeIdentity
