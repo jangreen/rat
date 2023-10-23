@@ -216,6 +216,13 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
           case SetOperation::image: {
             // {e}.(s.r)
             if (rightOperand->leftOperand->operation == SetOperation::singleton) {
+              if (rightOperand->relation->operation == RelationOperation::base) {
+                // fast path for {e1}.(e2.a) -> (e2,e1) \in a
+                Predicate p(PredicateOperation::edge, Set(*rightOperand->leftOperand),
+                            Set(*leftOperand), *rightOperand->relation->identifier);
+                Literal l(false, std::move(p));
+                return Formula(FormulaOperation::literal, std::move(l));
+              }
               // 1) try reduce s.r
               auto imageResult = rightOperand->applyRule(modalRules);
               if (imageResult) {
@@ -275,21 +282,39 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
             return std::nullopt;
           case SetOperation::domain: {
             // (r.s).{e}
-            // 1) try reduce r.s
-            auto domainResult = leftOperand->applyRule(modalRules);
-            if (domainResult) {
-              auto disjunction = *domainResult;
-              return substituteHelper(false, disjunction, *rightOperand);
+            if (leftOperand->leftOperand->operation == SetOperation::singleton) {
+              if (leftOperand->relation->operation == RelationOperation::base) {
+                // fast path for (a.e2){e1} -> (e1,e2) \in a
+                Predicate p(PredicateOperation::edge, Set(*rightOperand),
+                            Set(*leftOperand->leftOperand), *leftOperand->relation->identifier);
+                Literal l(false, std::move(p));
+                return Formula(FormulaOperation::literal, std::move(l));
+              }
+              // 1) try reduce r.s
+              auto domainResult = leftOperand->applyRule(modalRules);
+              if (domainResult) {
+                auto disjunction = *domainResult;
+                return substituteHelper(false, disjunction, *rightOperand);
+              }
+            } else {
+              // 2) -> ({e}.r).s
+              Set er(SetOperation::image, Set(*rightOperand), Relation(*leftOperand->relation));
+              Predicate ers(PredicateOperation::intersectionNonEmptiness, std::move(er),
+                            Set(*leftOperand->leftOperand));
+              return Formula(FormulaOperation::literal, Literal(false, std::move(ers)));
             }
-            // 2) -> ({e}.r).s
-            Set er(SetOperation::image, Set(*rightOperand), Relation(*leftOperand->relation));
-            Predicate ers(PredicateOperation::intersectionNonEmptiness, std::move(er),
-                          Set(*leftOperand->leftOperand));
-            return Formula(FormulaOperation::literal, Literal(false, std::move(ers)));
+            return std::nullopt;
           }
           case SetOperation::image: {
             // (s.r).{e}
             if (leftOperand->leftOperand->operation == SetOperation::singleton) {
+              if (leftOperand->relation->operation == RelationOperation::base) {
+                // fast path for (e2.a){e1} -> (e2,e1) \in a
+                Predicate p(PredicateOperation::edge, Set(*leftOperand->leftOperand),
+                            Set(*rightOperand), *leftOperand->relation->identifier);
+                Literal l(false, std::move(p));
+                return Formula(FormulaOperation::literal, std::move(l));
+              }
               // 1) try reduce s.r
               auto imageResult = leftOperand->applyRule(modalRules);
               if (imageResult) {
@@ -330,7 +355,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
 bool Predicate::isNormal() const {
   switch (operation) {
     case PredicateOperation::edge:
-      return false;  // TODO: maybe false!, remove all at once
+      return true;  // TODO: maybe false!, remove all at once
     case PredicateOperation::set:
       return false;  // TODO: maybe false!
     case PredicateOperation::equality:
@@ -400,6 +425,7 @@ bool Predicate::isNormal() const {
   }
 }
 
+// TODO: need generalization?
 bool Predicate::substitute(const Set &search, const Set &replace) {
   if (operation == PredicateOperation::intersectionNonEmptiness) {
     if (*leftOperand == search) {
@@ -416,19 +442,48 @@ bool Predicate::substitute(const Set &search, const Set &replace) {
 }
 
 std::vector<int> Predicate::labels() const {
-  if (operation == PredicateOperation::intersectionNonEmptiness) {
-    auto leftLabels = leftOperand->labels();
-    auto rightLabels = rightOperand->labels();
-    leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
-    return leftLabels;
+  switch (operation) {
+    case PredicateOperation::intersectionNonEmptiness: {
+      auto leftLabels = leftOperand->labels();
+      auto rightLabels = rightOperand->labels();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case PredicateOperation::edge: {
+      return {*leftOperand->label, *rightOperand->label};
+    }
+    case PredicateOperation::set: {
+      return {*leftOperand->label};
+    }
+    case PredicateOperation::equality: {
+      return {*leftOperand->label, *rightOperand->label};
+    }
+    default:
+      return {};
   }
-  return {};
 }
 
 void Predicate::rename(const Renaming &renaming) {
-  if (operation == PredicateOperation::intersectionNonEmptiness) {
-    leftOperand->rename(renaming);
-    rightOperand->rename(renaming);
+  switch (operation) {
+    case PredicateOperation::intersectionNonEmptiness: {
+      leftOperand->rename(renaming);
+      rightOperand->rename(renaming);
+      return;
+    }
+    case PredicateOperation::edge: {
+      leftOperand->rename(renaming);
+      rightOperand->rename(renaming);
+      return;
+    }
+    case PredicateOperation::set: {
+      leftOperand->rename(renaming);
+      return;
+    }
+    case PredicateOperation::equality: {
+      leftOperand->rename(renaming);
+      rightOperand->rename(renaming);
+      return;
+    }
   }
 }
 

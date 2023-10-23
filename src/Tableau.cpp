@@ -141,6 +141,11 @@ bool Tableau::solve(int bound) {
     exportProof("infinite-debug");
   }
 
+  // warning if bound is reached
+  if (bound == 0 && !unreducedNodes.empty()) {
+    std::cout << "[Warning] Bonfigured bound is reached. Answer is imprecise." << std::endl;
+  }
+
   return rootNode->isClosed();
 }
 

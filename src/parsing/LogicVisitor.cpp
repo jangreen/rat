@@ -142,6 +142,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
   std::string name = context->RELNAME()->getText();
   Relation derivedRelation = std::any_cast<Relation>(context->e->accept(this));
   Logic::definedRelations.insert({name, derivedRelation});
+  return 0;
 }
 /*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {
   std::cout << "[Parsing] Recursive definitions are currently not supported." << std::endl;
@@ -161,12 +162,20 @@ Relation Logic::parseRelation(const std::string &relationString) {
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitTransitiveClosure(
     LogicParser::TransitiveClosureContext *context) {
-  Relation r1 = std::any_cast<Relation>(context->e->accept(this));
-  Relation r2(r1);
-  Relation r1Transitive(RelationOperation::transitiveClosure, std::move(r1));
-  Relation r(RelationOperation::composition, std::move(r2), std::move(r1Transitive));
-  std::variant<Set, Relation> result = r;
-  return result;
+  std::variant<Set, Relation> relationExpression =
+      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+
+  if (std::holds_alternative<Relation>(relationExpression)) {
+    Relation r1 = std::get<Relation>(relationExpression);
+    Relation r2(r1);
+    Relation r1Transitive(RelationOperation::transitiveClosure, std::move(r1));
+    Relation r(RelationOperation::composition, std::move(r2), std::move(r1Transitive));
+    std::variant<Set, Relation> result = r;
+    return result;
+  }
+  std::cout << "[Parsing] Type mismatch of the operand of the relation transitive closure."
+            << std::endl;
+  exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {

@@ -14,6 +14,7 @@ GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
   Tableau tableau{std::move(dummyRoot)};
   tableau.rootNode->appendBranch(disjunction);
   tableau.solve();  // TODO: use dedicated function
+  tableau.exportProof("infinite-debug");
   return tableau.rootNode->extractDNF();
 }
 

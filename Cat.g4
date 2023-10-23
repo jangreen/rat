@@ -30,20 +30,18 @@ letRecAndDefinition: AND n = RELNAME EQ e = expression;
  mutual left-recursion (only direct left-recursion) -> have to check type of expression while
  parsing!
  */
+// operator precdence is determined by the ordering
 expression:
-	e1 = expression BAR e2 = expression		# union // set union, relational union
-	| e1 = expression AMP e2 = expression	# intersection // set intersection, relational intersection
-	| n = SETNAME							# setBasic
-	| LPAR e1 = expression RPAR				# parentheses
-	| e1 = expression SEMI e2 = expression	# composition // domain, image, relational composition
-	| LCBRAC l = SETNAME RCBRAC				# setSingleton
-	| e1 = expression STAR e2 = expression	# cartesianProduct
+	e1 = expression STAR e2 = expression	# cartesianProduct
 	| e = expression (POW)? STAR			# transitiveReflexiveClosure
 	| e = expression (POW)? PLUS			# transitiveClosure
 	| e = expression (POW)? INV				# relationInverse
 	| e = expression OPT					# relationOptional
 	//| NOT e = expression							# relationComplement
+	| e1 = expression AMP e2 = expression			# intersection // set intersection, relational intersection
 	| e1 = expression BSLASH e2 = expression		# relationMinus
+	| e1 = expression SEMI e2 = expression			# composition // domain, image, relational composition
+	| e1 = expression BAR e2 = expression			# union // set union, relational union
 	| LBRAC DOMAIN_ LPAR e = expression RPAR RBRAC	# relationDomainIdentity
 	| LBRAC RANGE LPAR e = expression RPAR RBRAC	# relationRangeIdentity
 	| (
@@ -51,7 +49,10 @@ expression:
 		| LBRAC e = expression RBRAC
 	)									# relationIdentity
 	| FENCEREL LPAR n = RELNAME RPAR	# relationFencerel
-	| n = RELNAME						# relationBasic;
+	| LPAR e1 = expression RPAR			# parentheses
+	| n = RELNAME						# relationBasic
+	| n = SETNAME						# setBasic
+	| LCBRAC l = SETNAME RCBRAC			# setSingleton;
 
 LET: 'let';
 REC: 'rec';

@@ -209,7 +209,8 @@ void Tableau::Node::inferModalAtomic() {
 
   Node *temp = parentNode;
   while (temp != nullptr) {
-    if (temp->formula.operation == FormulaOperation::literal && temp->formula.literal->negated) {
+    if (temp->formula.operation == FormulaOperation::literal && temp->formula.literal->negated &&
+        temp->formula.isNormal()) {
       // check if inside formula can be something inferred
       Predicate copy = *temp->formula.literal->predicate;
       if (copy.substitute(search1, replace1)) {

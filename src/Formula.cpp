@@ -135,6 +135,7 @@ bool Formula::isNormal() const {
   return operation == FormulaOperation::literal && literal->isNormal();
 }
 
+// TODO: rename: POSTIVIE edge label
 bool Formula::isEdgePredicate() const {
   return operation == FormulaOperation::literal && !literal->negated &&
          literal->predicate->operation == PredicateOperation::edge;

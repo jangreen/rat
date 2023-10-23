@@ -24,6 +24,7 @@ void rename(FormulaSet &formulas) {
   }
 }
 
+// hashing and comparision is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shorcuts
   if (formulas.size() != otherNode.formulas.size()) {
@@ -45,6 +46,7 @@ size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &n
   size_t seed = 0;
   FormulaSet copy = node.formulas;
   std::sort(copy.begin(), copy.end());
+  rename(copy);
   for (const auto &formula : copy) {
     boost::hash_combine(seed, formula.toString());
   }
@@ -66,6 +68,8 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   }
 
   output << "N" << this << "[label=\"";
+  // debug
+  // output << std::hash<Node>()(*this) << std::endl;
   for (const auto &relation : formulas) {
     output << relation.toString() << std::endl;
   }

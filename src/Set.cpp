@@ -94,6 +94,32 @@ bool Set::isNormal() const {
   }
 }
 
+std::vector<std::vector<Set::PartialPredicate>> substituteHelper2(
+    bool substituteRight, const std::vector<std::vector<Set::PartialPredicate>> &disjunction,
+    const Set &otherOperand) {
+  std::vector<std::vector<Set::PartialPredicate>> resultDisjunction;
+  for (const auto &conjunction : disjunction) {
+    std::vector<Set::PartialPredicate> resultConjunction;
+    for (const auto &predicate : conjunction) {
+      if (std::holds_alternative<Predicate>(predicate)) {
+        Predicate p = std::get<Predicate>(predicate);
+        resultConjunction.push_back(p);
+      } else {
+        Set s = std::get<Set>(predicate);
+        // substitute
+        if (substituteRight) {
+          s = Set(SetOperation::intersection, Set(otherOperand), std::move(s));
+        } else {
+          s = Set(SetOperation::intersection, std::move(s), Set(otherOperand));
+        }
+        resultConjunction.push_back(s);
+      }
+    }
+    resultDisjunction.push_back(resultConjunction);
+  }
+  return resultDisjunction;
+}
+
 std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bool modalRules) {
   std::vector<std::vector<PartialPredicate>> result;
   switch (operation) {
@@ -122,6 +148,16 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         return result;
       } else {
         // [S1 & S2]
+        auto leftResult = leftOperand->applyRule(modalRules);
+        if (leftResult) {
+          auto disjunction = *leftResult;
+          return substituteHelper2(false, disjunction, *rightOperand);
+        }
+        auto rightResult = rightOperand->applyRule(modalRules);
+        if (rightResult) {
+          auto disjunction = *rightResult;
+          return substituteHelper2(true, disjunction, *leftOperand);
+        }
       }
 
       return std::nullopt;
@@ -292,7 +328,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
           }
           case RelationOperation::identity: {
             // [id.e] -> { [e] }
-            Set e(SetOperation::singleton, Set(*rightOperand));
+            Set e(SetOperation::singleton, Set(*leftOperand));
             result = {{std::move(e)}};
             return result;
           }
