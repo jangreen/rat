@@ -129,6 +129,7 @@ void Tableau::Node::appendBranch(const Formula &leftFormula) {
       Node newNode(this, std::move(leftFormula));
       leftNode = std::make_unique<Node>(std::move(newNode));
       tableau->unreducedNodes.push(leftNode.get());
+      // std::cout << "[Tableau]: Append Node. " << leftNode->formula.toString() << std::endl;
     }
   } else {
     if (leftNode != nullptr) {

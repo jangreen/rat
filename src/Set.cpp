@@ -224,7 +224,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
           }
           case RelationOperation::identity: {
             // [e.id] -> { [e] }
-            Set e(SetOperation::singleton, Set(*leftOperand));
+            Set e(*leftOperand);
             result = {{std::move(e)}};
             return result;
           }
@@ -328,7 +328,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
           }
           case RelationOperation::identity: {
             // [id.e] -> { [e] }
-            Set e(SetOperation::singleton, Set(*leftOperand));
+            Set e(*leftOperand);
             result = {{std::move(e)}};
             return result;
           }

@@ -11,7 +11,8 @@ test test2 True
 test test3 True
 test test4 True
 test test9 True
-test test2f False
 test hard True
+test test2f False
+
 
 # with assumptions

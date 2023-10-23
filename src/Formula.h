@@ -48,6 +48,7 @@ class Formula {
   std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
   bool isNormal() const;
   bool isEdgePredicate() const;
+  bool isPositiveEqualityPredicate() const;
 
   // printing
   std::string toString() const;

@@ -141,6 +141,11 @@ bool Formula::isEdgePredicate() const {
          literal->predicate->operation == PredicateOperation::edge;
 }
 
+bool Formula::isPositiveEqualityPredicate() const {
+  return operation == FormulaOperation::literal && !literal->negated &&
+         literal->predicate->operation == PredicateOperation::equality;
+}
+
 std::string Formula::toString() const {
   std::string output;
   switch (operation) {

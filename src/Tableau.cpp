@@ -138,6 +138,33 @@ bool Tableau::solve(int bound) {
     if (currentNode->formula.isEdgePredicate()) {
       currentNode->inferModalAtomic();
     }
+
+    if (currentNode->formula.isPositiveEqualityPredicate()) {
+      Predicate equalityPredicate = *currentNode->formula.literal->predicate;
+      std::optional<Set> search, replace;
+      if (*equalityPredicate.leftOperand->label < *equalityPredicate.rightOperand->label) {
+        // e1 = e2 , e1 < e2
+        search = *equalityPredicate.rightOperand;
+        replace = *equalityPredicate.leftOperand;
+      } else {
+        search = *equalityPredicate.leftOperand;
+        replace = *equalityPredicate.rightOperand;
+      }
+
+      Node *temp = currentNode->parentNode;
+      while (temp != nullptr) {
+        // TODO: must replace in formulas?
+        if (temp->formula.operation == FormulaOperation::literal) {
+          // check if inside formula can be something inferred
+          Predicate copy = *temp->formula.literal->predicate;
+          if (copy.substitute(*search, *replace)) {
+            currentNode->appendBranch(
+                Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+          }
+        }
+        temp = temp->parentNode;
+      }
+    }
     exportProof("infinite-debug");
   }
 
