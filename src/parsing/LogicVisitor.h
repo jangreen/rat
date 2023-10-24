@@ -40,6 +40,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   /*Formula*/ std::any visitAssertion(LogicParser::AssertionContext *context) override;
   /*Formula*/ std::any visitFormula(LogicParser::FormulaContext *context) override;
   /*Predicate*/ std::any visitPredicate(LogicParser::PredicateContext *context) override;
+  /*void*/ std::any visitHypothesis(LogicParser::HypothesisContext *ctx) override;
   /*std::vector<Constraint>*/ std::any visitMcm(LogicParser::McmContext *context) override;
   // /*void*/ std::any visitDefinition(LogicParser::DefinitionContext *context) override;
   /*Constraint*/ std::any visitAxiomDefinition(
@@ -167,22 +168,6 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     }
 
     / *Assumption
-  std::any visitHypothesis(LogicParser::HypothesisContext *ctx) {
-    Relation lhs(ctx->lhs->getText());
-    Relation rhs(ctx->rhs->getText());
-    switch (rhs.operation) {
-      case RelationOperation::base:
-        return Assumption(AssumptionType::regular, std::move(lhs), *rhs.identifier);
-      case RelationOperation::empty:
-        return Assumption(AssumptionType::empty, std::move(lhs));
-      case RelationOperation::identity:
-        return Assumption(AssumptionType::identity, std::move(lhs));
-      default:
-        std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
-                  << " <= " << ctx->rhs->getText() << std::endl;
-        break;
-    }
-  }
 
   / *Formula
   std::any visitAssertion(LogicParser::AssertionContext *ctx) {

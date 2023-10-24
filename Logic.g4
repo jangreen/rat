@@ -1,7 +1,7 @@
 grammar Logic;
 import Cat;
 
-proof: letDefinition* assertion* EOF; // TODO: hypothesis*
+proof: letDefinition* hypothesis* assertion* EOF;
 
 assertion:
 	ASSERT f1 = formula
@@ -17,10 +17,9 @@ formula:
 predicate:
 	s1 = expression SEMI s2 = expression; // intersectionNonEmptiness
 
-/*
- hypothesis: ASSUME lhs = relationExpression INEQUAL rhs = relationExpression; mmAssertion:
- CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH
- */
+hypothesis: ASSUME lhs = expression INEQUAL rhs = expression;
+
+// mmAssertion: CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH
 
 ASSUME: 'assume';
 ASSERT: 'assert';

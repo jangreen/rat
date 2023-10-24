@@ -1,4 +1,5 @@
 #include "Predicate.h"
+#include "RegularTableau.h"
 #include "parsing/LogicVisitor.h"
 
 int Set::maxSingletonLabel = 0;
@@ -430,6 +431,36 @@ void Set::rename(const Renaming &renaming) {
     if (rightOperand) {
       rightOperand->rename(renaming);
     }
+  }
+}
+
+void Set::saturate() {
+  switch (operation) {
+    case SetOperation::choice: {
+      return;
+    }
+    case SetOperation::intersection: {
+      leftOperand->saturate();
+      rightOperand->saturate();
+      return;
+    }
+    case SetOperation::domain:
+    case SetOperation::image:
+      if (leftOperand->operation == SetOperation::singleton) {
+        if (relation->operation == RelationOperation::base && !relation->saturated) {
+          // relation is not already saturated
+          auto relationName = *relation->identifier;
+          if (RegularTableau::baseAssumptions.contains(relationName)) {
+            auto assumtion = RegularTableau::baseAssumptions.at(relationName);
+            *relation = assumtion.relation;
+          }
+        }
+      } else {
+        leftOperand->saturate();
+      }
+      return;
+    case SetOperation::singleton:
+      return;
   }
 }
 

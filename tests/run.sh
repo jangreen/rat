@@ -16,5 +16,5 @@ test hard True
 test test-inv True
 test test2f False
 
-
 # with assumptions
+test test0 True

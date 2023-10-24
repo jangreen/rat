@@ -7,6 +7,10 @@
 #include <tuple>
 #include <utility>
 
+std::vector<Assumption> RegularTableau::emptinessAssumptions;
+std::vector<Assumption> RegularTableau::idAssumptions;
+std::map<std::string, Assumption> RegularTableau::baseAssumptions;
+
 GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
   // TODO: more direct computation of DNF
   GDNF disjunction = {conjunction};
@@ -15,7 +19,31 @@ GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
   tableau.rootNode->appendBranch(disjunction);
   tableau.solve();  // TODO: use dedicated function
   tableau.exportProof("infinite-debug");
-  return tableau.rootNode->extractDNF();
+  auto dnf = tableau.rootNode->extractDNF();
+  GDNF saturatedDNF;
+  for (auto &clause : dnf) {
+    // saturation phase
+    // saturate(clause) inlined
+    for (Formula &formula : clause) {
+      if (formula.operation == FormulaOperation::literal) {
+        formula.literal->saturate();
+      }
+    }
+
+    // saturate(clause) inlined end
+    Tableau tableau2{clause};
+    tableau2.solve();
+    if (tableau2.rootNode->isClosed()) {
+      continue;
+    }
+
+    // normal procedure after saturation:
+    auto dnf2 = tableau2.rootNode->extractDNF();
+    for (const auto &clause : dnf2) {
+      saturatedDNF.push_back(clause);
+    }
+  }
+  return saturatedDNF;
 }
 
 RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
@@ -40,22 +68,6 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
     unreducedNodes.push(insertion.first->get());
   }
   return insertion.first->get();
-
-  // saturation phase
-  /*saturate(clause);
-  auto saturatedDNF = DNF(clause);
-  for (auto saturatedClause : saturatedDNF) {
-    // filter clause
-    Clause filteredClause;
-    for (auto &literal : saturatedClause) {
-      auto relation = std::get_if<Relation>(&literal);
-      if (relation) {
-        filteredClause.push_back(*relation);
-      }
-    }
-
-    ...
-  }*/
 }
 
 // TODO: use these functions ... access modifier!
@@ -191,62 +203,74 @@ bool RegularTableau::expandNode(Node *node) {
       node->closed = true;
       return true;
     }
-
     // extract DNF
     auto dnf = tableau.rootNode->extractDNF();
 
-    // for each clause: calculate potential child
+    // saturation phase
     for (auto &clause : dnf) {
-      EdgeLabel edgeLabel;
-      FormulaSet newClause;
-
-      // remove edge predicates and put them in the edge label
-      for (const auto &formula : clause) {
-        if (formula.isEdgePredicate()) {
-          edgeLabel.push_back(formula);
-        } else {
-          newClause.push_back(formula);
-        }
+      // saturation phase
+      saturate(clause);
+      Tableau tableau2{clause};
+      tableau.solve();
+      if (tableau2.rootNode->isClosed()) {
+        continue;
       }
 
-      // filter none active labels
-      // assume alredy normal
-      // 1) gather all active labels
-      std::vector<int> activeLabels;
-      for (const auto &formula : newClause) {
-        if (!formula.literal->negated) {
+      // normal procedure after saturation:
+      auto dnf2 = tableau2.rootNode->extractDNF();
+      // for each clause: calculate potential child
+      for (auto &clause : dnf2) {
+        EdgeLabel edgeLabel;
+        FormulaSet newClause;
+
+        // remove edge predicates and put them in the edge label
+        for (const auto &formula : clause) {
+          if (formula.isEdgePredicate()) {
+            edgeLabel.push_back(formula);
+          } else {
+            newClause.push_back(formula);
+          }
+        }
+
+        // filter none active labels
+        // assume alredy normal
+        // 1) gather all active labels
+        std::vector<int> activeLabels;
+        for (const auto &formula : newClause) {
+          if (!formula.literal->negated) {
+            auto formulaLabels = formula.literal->predicate->labels();
+            activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+                                std::end(formulaLabels));
+          }
+        }
+        // 2) filtering
+        FormulaSet copy = std::move(newClause);
+        newClause = {};
+        FormulaSet droppedFormulas;
+        for (const auto &formula : copy) {
           auto formulaLabels = formula.literal->predicate->labels();
-          activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
-                              std::end(formulaLabels));
+          if (isSubset(formulaLabels, activeLabels)) {
+            newClause.push_back(formula);
+          } else {
+            // check for immediate inconsistencies
+            droppedFormulas.push_back(formula);
+          }
         }
-      }
-      // 2) filtering
-      FormulaSet copy = std::move(newClause);
-      newClause = {};
-      FormulaSet droppedFormulas;
-      for (const auto &formula : copy) {
-        auto formulaLabels = formula.literal->predicate->labels();
-        if (isSubset(formulaLabels, activeLabels)) {
-          newClause.push_back(formula);
-        } else {
-          // check for immediate inconsistencies
-          droppedFormulas.push_back(formula);
+
+        // check if intial inconsistency exists
+        auto alternativeNode = checkInconsistency(node, droppedFormulas);
+        if (alternativeNode) {
+          // create new fixed Node
+          Node *fixedNode = addNode(*alternativeNode);
+          addEdge(node, fixedNode, {});
+          return true;
         }
-      }
 
-      // check if intial inconsistency exists
-      auto alternativeNode = checkInconsistency(node, droppedFormulas);
-      if (alternativeNode) {
-        // create new fixed Node
-        Node *fixedNode = addNode(*alternativeNode);
-        addEdge(node, fixedNode, {});
-        return true;
+        // add child
+        // checks if renaming exists when adding and returns already existing node if possible
+        Node *newNode = addNode(newClause);
+        addEdge(node, newNode, edgeLabel);
       }
-
-      // add child
-      // checks if renaming exists when adding and returns already existing node if possible
-      Node *newNode = addNode(newClause);
-      addEdge(node, newNode, edgeLabel);
     }
 
     // TODO?: check if any clause has been added
@@ -259,7 +283,7 @@ bool RegularTableau::expandNode(Node *node) {
   }
   return false;
 }
-// TODO
+
 bool RegularTableau::isInconsistent(Node *parent, Node *child) {
   EdgeLabel label = child->parentNodes[parent];
   if (label.size() == 0) {  // is already alternative node to its parent
@@ -300,6 +324,53 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child) {
     }
   }
   return true;
+}
+
+void RegularTableau::saturate(FormulaSet &formulas) {
+  // regular assumptions
+  for (Formula &formula : formulas) {
+    if (formula.operation == FormulaOperation::literal) {
+      formula.literal->saturate();
+    }
+  }
+  /*TODO
+  case AssumptionType::empty:
+        for (const auto &literal : clause) {
+          for (auto label : literal.labels()) {
+            if (find(nodeLabels.begin(), nodeLabels.end(), label) == nodeLabels.end()) {
+              nodeLabels.push_back(label);
+            }
+          }
+        }
+
+        for (auto label : nodeLabels) {
+          Relation leftSide(assumption.relation);
+          Relation full(RelationOperation::full);
+          Relation r(RelationOperation::composition, std::move(leftSide), std::move(full));
+          r.label = label;
+          r.negated = true;
+          // TODO: currently: saturate emoty hyptohesis with regular -> simple formulation of
+          // emptiness hypos better: preprocess all hypos ?
+          std::optional<Relation> saturated = saturateRelation(r);
+          if (saturated) {
+            saturated->negated = true;
+            saturated->label = label;
+            saturatedRelations.push_back(std::move(*saturated));
+          }
+          //----
+          saturatedRelations.push_back(std::move(r));
+        }
+        break;
+        case AssumptionType::identity:
+        for (const auto &literal : clause) {
+          if (literal.negated) {
+            auto saturated = saturateIdRelation(assumption, literal);
+            if (saturated) {
+              saturated->negated = true;
+              saturatedRelations.push_back(*saturated);
+            }
+          }
+        }*/
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {
@@ -349,8 +420,6 @@ void RegularTableau::exportProof(std::string filename) const {
 
 // LEGACY
 /*
-
-std::vector<Assumption> RegularTableau::assumptions;
 
 // helper
 void resetUnreducedNodes(Tableau *tableau, Tableau::Node *node) {
@@ -479,70 +548,6 @@ std::optional<Relation> RegularTableau::saturateIdRelation(const Assumption &ass
   }
   Relation saturated(relation.operation, std::move(*leftSaturated), std::move(*rightSaturated));
   return saturated;
-}
-
-void RegularTableau::saturate(Clause &clause) {
-  Clause saturatedRelations;
-  // regular assumptions
-  for (const Relation &literal : clause) {
-    if (literal.negated) {
-      std::optional<Relation> saturated = saturateRelation(literal);
-      if (saturated) {
-        saturated->negated = true;
-        saturatedRelations.push_back(std::move(*saturated));
-      }
-    }
-  }
-
-  for (const auto &assumption : assumptions) {
-    std::vector<int> nodeLabels;
-    switch (assumption.type) {
-      case AssumptionType::empty:
-        for (const auto &literal : clause) {
-          for (auto label : literal.labels()) {
-            if (find(nodeLabels.begin(), nodeLabels.end(), label) == nodeLabels.end()) {
-              nodeLabels.push_back(label);
-            }
-          }
-        }
-
-        for (auto label : nodeLabels) {
-          Relation leftSide(assumption.relation);
-          Relation full(RelationOperation::full);
-          Relation r(RelationOperation::composition, std::move(leftSide), std::move(full));
-          r.label = label;
-          r.negated = true;
-          // TODO: currently: saturate emoty hyptohesis with regular -> simple formulation of
-          // emptiness hypos better: preprocess all hypos ?
-          std::optional<Relation> saturated = saturateRelation(r);
-          if (saturated) {
-            saturated->negated = true;
-            saturated->label = label;
-            saturatedRelations.push_back(std::move(*saturated));
-          }
-          //----
-          saturatedRelations.push_back(std::move(r));
-        }
-        break;
-      case AssumptionType::identity:
-        for (const auto &literal : clause) {
-          if (literal.negated) {
-            auto saturated = saturateIdRelation(assumption, literal);
-            if (saturated) {
-              saturated->negated = true;
-              saturatedRelations.push_back(*saturated);
-            }
-          }
-        }
-      default:
-        break;
-    }
-  }
-
-  clause.insert(clause.end(), saturatedRelations.begin(), saturatedRelations.end());
-  // remove duplicates since it has not been check when inserting
-  sort(clause.begin(), clause.end());
-  clause.erase(unique(clause.begin(), clause.end()), clause.end());
 }
 
 */

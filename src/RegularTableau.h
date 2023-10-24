@@ -50,7 +50,9 @@ class RegularTableau {
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
   std::stack<Node *> unreducedNodes;
-  // static std::vector<Assumption> assumptions;
+  static std::vector<Assumption> emptinessAssumptions;
+  static std::vector<Assumption> idAssumptions;
+  static std::map<std::string, Assumption> baseAssumptions;
 
   static GDNF calclateDNF(const FormulaSet &conjunction);
 
@@ -65,7 +67,8 @@ class RegularTableau {
   /*std::optional<Relation> saturateRelation(const Relation &relation);
   std::optional<Relation> saturateIdRelation(const Assumption &assumption,
                                              const Relation &relation);
-  void saturate(Clause &clause);*/
+                                             */
+  void saturate(FormulaSet &formulas);
   std::optional<FormulaSet> checkInconsistency(Node *parent, const FormulaSet &newFormulas);
   bool isInconsistent(Node *parent, Node *child);
   void extractCounterexample(Node *openNode);

@@ -6,10 +6,9 @@
 
 Relation::Relation(const Relation &other)
     : operation(other.operation),
-      identifier(other.identifier) /*,
- saturated(other.saturated),
- saturatedId(other.saturatedId)*/
-{
+      identifier(other.identifier),
+      saturated(other.saturated),
+      saturatedId(other.saturatedId) {
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Relation>(*other.leftOperand);
   }

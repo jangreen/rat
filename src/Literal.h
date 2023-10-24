@@ -29,6 +29,8 @@ class Literal {
   std::optional<Formula> applyRule(bool modalRules = false);
   bool isNormal() const;
 
+  void saturate();
+
   // printing
   std::string toString() const;
 };

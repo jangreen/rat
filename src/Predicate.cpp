@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Formula.h"
+#include "RegularTableau.h"
 #include "parsing/LogicVisitor.h"
 
 Predicate::Predicate(const Predicate &other)
@@ -484,6 +485,26 @@ void Predicate::rename(const Renaming &renaming) {
       rightOperand->rename(renaming);
       return;
     }
+  }
+}
+
+void Predicate::saturate() {
+  switch (operation) {
+    case PredicateOperation::edge:
+      if (RegularTableau::baseAssumptions.contains(*identifier)) {
+        auto assumption = RegularTableau::baseAssumptions.at(*identifier);
+        Set s(SetOperation::domain, Set(*rightOperand), Relation(assumption.relation));
+        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*leftOperand), std::move(s));
+        swap(*this, p);
+      }
+    case PredicateOperation::set:
+      return;
+    case PredicateOperation::equality:
+      return;
+    case PredicateOperation::intersectionNonEmptiness:
+      leftOperand->saturate();
+      rightOperand->saturate();
+      return;
   }
 }
 

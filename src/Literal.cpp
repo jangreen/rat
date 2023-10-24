@@ -67,6 +67,12 @@ bool Literal::isNormal() const {
          predicate->isNormal();
 }
 
+void Literal::saturate() {
+  if (negated) {
+    predicate->saturate();
+  }
+}
+
 std::string Literal::toString() const {
   std::string output;
   if (negated) {

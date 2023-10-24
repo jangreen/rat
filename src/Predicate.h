@@ -52,6 +52,8 @@ class Predicate {
   std::vector<int> labels() const;
   void rename(const Renaming &renaming);  // renames given a renaming function
 
+  void saturate();
+
   // printing
   std::string toString() const;
 };
@@ -121,6 +123,8 @@ class Set {
   bool isNormal() const;  // true iff all labels are in front of base Sets
   std::vector<int> labels() const;
   void rename(const Renaming &renaming);  // renames given a renaming function
+
+  void saturate();
 
   // printing
   std::string toString() const;

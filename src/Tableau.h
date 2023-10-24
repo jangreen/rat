@@ -51,7 +51,6 @@ class Tableau {
 
   // methods for regular reasoning
   std::optional<Formula> applyRuleA();
-
   /*DNF calcDNF();
   bool apply(const std::initializer_list<ProofRule> rules);
   void calcReuqest();

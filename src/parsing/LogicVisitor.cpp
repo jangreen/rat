@@ -1,5 +1,8 @@
 #include "LogicVisitor.h"
 
+#include "../Assumption.h"
+#include "../RegularTableau.h"
+
 std::vector<Constraint> Logic::parseMemoryModel(const std::string &filePath) {
   std::cout << "[Parsing] Parse file: " << filePath << std::endl;
   std::ifstream stream;
@@ -33,8 +36,12 @@ Relation Logic::parseRelation(const std::string &relationString) {
     Logic::definedRelations.insert({name, derivedRelation});
   }
 
-  std::vector<Formula> formulas;
+  // initalize assumptions
+  for (const auto &assumptionContext : context->hypothesis()) {
+    this->visitHypothesis(assumptionContext);
+  }
 
+  std::vector<Formula> formulas;
   for (const auto &assertionContext : context->assertion()) {
     auto formula = std::any_cast<Formula>(this->visitAssertion(assertionContext));
     formulas.push_back(std::move(formula));
@@ -102,6 +109,34 @@ Relation Logic::parseRelation(const std::string &relationString) {
             << std::endl;
   exit(0);
 }
+
+/*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
+  Relation lhs(ctx->lhs->getText());
+  Relation rhs(ctx->rhs->getText());
+  switch (rhs.operation) {
+    case RelationOperation::base: {
+      Assumption assumption(AssumptionType::regular, std::move(lhs), *rhs.identifier);
+      RegularTableau::baseAssumptions.insert({*assumption.baseRelation, std::move(assumption)});
+      return 0;
+    }
+    case RelationOperation::empty: {
+      Assumption assumption(AssumptionType::empty, std::move(lhs));
+      RegularTableau::emptinessAssumptions.push_back(std::move(assumption));
+      return 0;
+    }
+    case RelationOperation::identity: {
+      Assumption assumption(AssumptionType::identity, std::move(lhs));
+      RegularTableau::idAssumptions.push_back(std::move(assumption));
+      return 0;
+    }
+    default: {
+      std::cout << "[Parser] Ignoring unsupported hypothesis:" << ctx->lhs->getText()
+                << " <= " << ctx->rhs->getText() << std::endl;
+      return 0;
+    }
+  }
+}
+
 /*std::vector<Constraint>*/ std::any Logic::visitMcm(LogicParser::McmContext *context) {
   std::vector<Constraint> constraints;
 
