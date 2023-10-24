@@ -54,7 +54,7 @@ class RegularTableau {
   static std::vector<Assumption> idAssumptions;
   static std::map<std::string, Assumption> baseAssumptions;
 
-  static GDNF calclateDNF(const FormulaSet &conjunction);
+  GDNF calclateDNF(const FormulaSet &conjunction);
 
   Node *addNode(
       FormulaSet clause);  // TODO: enforce Clause instead of FormulaSet, move in node class

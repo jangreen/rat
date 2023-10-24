@@ -23,12 +23,7 @@ GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
   GDNF saturatedDNF;
   for (auto &clause : dnf) {
     // saturation phase
-    // saturate(clause) inlined
-    for (Formula &formula : clause) {
-      if (formula.operation == FormulaOperation::literal) {
-        formula.literal->saturate();
-      }
-    }
+    saturate(clause);
 
     // saturate(clause) inlined end
     Tableau tableau2{clause};
@@ -374,50 +369,48 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child) {
 }
 
 void RegularTableau::saturate(FormulaSet &formulas) {
+  // emptiness assumptions
+  std::vector<int> activeLabels;
+  for (const auto &formula : formulas) {
+    if (!formula.literal->negated) {
+      auto formulaLabels = formula.literal->predicate->labels();
+      activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+                          std::end(formulaLabels));
+    }
+  }
+  std::sort(activeLabels.begin(), activeLabels.end());
+  activeLabels.erase(std::unique(activeLabels.begin(), activeLabels.end()), activeLabels.end());
+  for (const auto &assumption : RegularTableau::emptinessAssumptions) {
+    for (const auto i : activeLabels) {
+      for (const auto j : activeLabels) {
+        Set s(SetOperation::domain, Set(SetOperation::singleton, j), Relation(assumption.relation));
+        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::singleton, i),
+                    std::move(s));
+        Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
+        formulas.push_back(std::move(f));
+      }
+    }
+  }
+
   // regular assumptions
   for (Formula &formula : formulas) {
     if (formula.operation == FormulaOperation::literal) {
       formula.literal->saturate();
     }
   }
-  /*TODO
-  case AssumptionType::empty:
-        for (const auto &literal : clause) {
-          for (auto label : literal.labels()) {
-            if (find(nodeLabels.begin(), nodeLabels.end(), label) == nodeLabels.end()) {
-              nodeLabels.push_back(label);
-            }
-          }
-        }
 
-        for (auto label : nodeLabels) {
-          Relation leftSide(assumption.relation);
-          Relation full(RelationOperation::full);
-          Relation r(RelationOperation::composition, std::move(leftSide), std::move(full));
-          r.label = label;
-          r.negated = true;
-          // TODO: currently: saturate emoty hyptohesis with regular -> simple formulation of
-          // emptiness hypos better: preprocess all hypos ?
-          std::optional<Relation> saturated = saturateRelation(r);
-          if (saturated) {
-            saturated->negated = true;
-            saturated->label = label;
-            saturatedRelations.push_back(std::move(*saturated));
-          }
-          //----
-          saturatedRelations.push_back(std::move(r));
-        }
-        break;
-        case AssumptionType::identity:
-        for (const auto &literal : clause) {
-          if (literal.negated) {
-            auto saturated = saturateIdRelation(assumption, literal);
-            if (saturated) {
-              saturated->negated = true;
-              saturatedRelations.push_back(*saturated);
-            }
-          }
-        }*/
+  /* TODO:
+  // identity assumptions
+  for (const auto &literal : clause) {
+    if (literal.negated) {
+      auto saturated = saturateIdRelation(assumption, literal);
+      if (saturated) {
+        saturated->negated = true;
+        saturatedRelations.push_back(*saturated);
+      }
+    }
+  }
+  */
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {
