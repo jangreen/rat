@@ -51,11 +51,6 @@ class Tableau {
 
   // methods for regular reasoning
   std::optional<Formula> applyRuleA();
-  /*DNF calcDNF();
-  bool apply(const std::initializer_list<ProofRule> rules);
-  void calcReuqest();
-  std::tuple<ExtendedClause, Clause> extractRequest() const;  // and converse request
-  */
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;

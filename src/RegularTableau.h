@@ -64,10 +64,6 @@ class RegularTableau {
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void updateRootParents(Node *node);
   void removeEdge(Node *parent, Node *child);
-  /*std::optional<Relation> saturateRelation(const Relation &relation);
-  std::optional<Relation> saturateIdRelation(const Assumption &assumption,
-                                             const Relation &relation);
-                                             */
   void saturate(FormulaSet &formulas);
   std::optional<FormulaSet> checkInconsistency(Node *parent, const FormulaSet &newFormulas);
   bool isInconsistent(Node *parent, Node *child);

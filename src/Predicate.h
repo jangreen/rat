@@ -109,11 +109,11 @@ class Set {
 
   static int maxSingletonLabel;  // to create globally unique labels
 
-  /*
+  /* TODO: remove
   std::vector<int> labels() const;                // return all labels of the relation term
   std::vector<int> calculateRenaming() const;     // renaming {2,4,5}: 2->0,4->1,5->2
   void inverseRename(const std::vector<int> &renaming);
-*/
+  */
 
   // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
   // predicate for a given context
@@ -129,35 +129,3 @@ class Set {
   // printing
   std::string toString() const;
 };
-
-// LEGACY
-/*bool saturated = false;                 // mark base Set
-  bool saturatedId = false;*/
-
-// this function tries to apply a rule deep inside
-// returns  - false if rule is not applicable
-//          - result otherwise
-/*template <ProofRule::Rule rule>
-std::optional<GDNF> applyRuleDeep() {
-  auto baseCase = applyRule<rule>();
-  if (baseCase) {
-    return *baseCase;
-  }
-  // case: intersection or composition (only cases where we apply rules deep inside)
-  if (operation == SetOperation::composition || operation == RelationOperation::intersection) {
-    auto leftResult = leftOperand->applyRuleDeep<rule>();
-    if (leftResult) {
-      return substituteLeft(std::move(*leftResult));
-    }
-    // case: intersection
-    if (operation == RelationOperation::intersection) {
-      auto rightResult = rightOperand->applyRuleDeep<rule>();
-      if (rightResult) {
-        return substituteRight(std::move(*rightResult));
-      }
-    }
-  }
-  return std::nullopt;
-}
-GDNF substituteLeft(GDNF &&newLeft);
-GDNF substituteRight(GDNF &&newRight);*/

@@ -436,9 +436,6 @@ void Set::rename(const Renaming &renaming) {
 
 void Set::saturate() {
   switch (operation) {
-    case SetOperation::choice: {
-      return;
-    }
     case SetOperation::intersection: {
       leftOperand->saturate();
       rightOperand->saturate();
@@ -459,48 +456,10 @@ void Set::saturate() {
         leftOperand->saturate();
       }
       return;
-    case SetOperation::singleton:
+    default:
       return;
   }
 }
-
-// RULES
-/* LEGACY
-template <>
-std::optional<std::tuple<Set, Formula>> Set::applyRule<ProofRule::a>() {
-  if (operation == SetOperation::domain && leftOperand->operation == SetOperation::singleton &&
-      relation->operation == RelationOperation::base) {
-    // replace (a.e) with (f)
-    Set freshEvent(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set aE(*this);
-
-    Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(freshEvent),
-                std::move(Set(aE)));
-    Literal l(false, p);
-    Formula f(FormulaOperation::literal, std::move(l));
-
-    // construct return value
-    std::tuple<Set, Formula> result{std::move(aE), std::move(f)};
-    return result;
-  } else if (operation == SetOperation::image &&
-             leftOperand->operation == SetOperation::singleton &&
-             relation->operation == RelationOperation::base) {
-    // replace (e.a) with (f)
-    Set freshEvent(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set aE(*this);
-
-    Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(freshEvent),
-                std::move(Set(aE)));
-    Literal l(false, p);
-    Formula f(FormulaOperation::literal, std::move(l));
-
-    // construct return value
-    std::tuple<Set, Formula> result{std::move(aE), std::move(f)};
-    return result;
-  }
-  return std::nullopt;
-}
-*/
 
 std::string Set::toString() const {
   std::string output;
@@ -532,40 +491,3 @@ std::string Set::toString() const {
   }
   return output;
 }
-
-/* LEGACY
-std::vector<int> Relation::labels() const {
-  if (label) {
-    return {*label};
-  } else if (leftOperand == nullptr && rightOperand == nullptr) {
-    return {};
-  }
-
-  auto result = leftOperand->labels();
-  if (rightOperand != nullptr) {
-    auto right = rightOperand->labels();
-    // only unique
-    for (int i : right) {
-      if (std::find(result.begin(), result.end(), i) == result.end()) {
-        result.push_back(i);
-      }
-    }
-  }
-  return result;
-}
-
-std::vector<int> Relation::calculateRenaming() const {
-  return labels();  // labels already calculates the renaming
-}
-
-void Relation::inverseRename(const std::vector<int> &renaming) {
-  if (label) {
-    label = renaming[*label];
-  } else if (leftOperand) {
-    leftOperand->inverseRename(renaming);
-    if (rightOperand) {
-      rightOperand->inverseRename(renaming);
-    }
-  }
-}
-*/

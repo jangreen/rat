@@ -59,41 +59,6 @@ bool Predicate::operator==(const Predicate &other) const {
   return isEqual;
 }
 
-/*/ helper
-std::optional<Formula> getFormula(
-    const std::vector<std::vector<Set::PartialPredicate>> &disjunction) {
-  std::cout << "getF: " << std::endl;
-  std::optional<Formula> disjunctionF = std::nullopt;
-  for (const auto &conjunction : disjunction) {
-    std::cout << "|" << std::endl;
-    std::optional<Formula> conjunctionF = std::nullopt;
-    for (const auto &predicate : conjunction) {
-      if (std::holds_alternative<Predicate>(predicate)) {
-        Predicate p = std::get<Predicate>(predicate);
-        std::cout << p.toString() << std::endl;
-        Literal l(false, std::move(p));
-        Formula newConjunctionF(FormulaOperation::literal, std::move(l));
-
-        if (!conjunctionF) {
-          conjunctionF = std::move(newConjunctionF);
-        } else {
-          conjunctionF = Formula(FormulaOperation::logicalAnd, std::move(*conjunctionF),
-                                 std::move(newConjunctionF));
-        }
-      }
-    }
-
-    if (conjunctionF) {
-      if (!disjunctionF) {
-        disjunctionF = std::move(conjunctionF);
-      } else {
-        disjunctionF = Formula(FormulaOperation::logicalOr, std::move(*disjunctionF),
-                               std::move(*conjunctionF));
-      }
-    }
-  }
-  return disjunctionF;
-}*/
 std::optional<Formula> substituteHelper(
     bool substituteRight, const std::vector<std::vector<Set::PartialPredicate>> &disjunction,
     const Set &otherOperand) {
