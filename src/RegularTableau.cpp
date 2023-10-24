@@ -11,44 +11,11 @@ std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
 
-GDNF RegularTableau::calclateDNF(const FormulaSet &conjunction) {
-  // TODO: more direct computation of DNF
-  GDNF disjunction = {conjunction};
-  Formula dummyRoot(FormulaOperation::top);
-  Tableau tableau{std::move(dummyRoot)};
-  tableau.rootNode->appendBranch(disjunction);
-  tableau.solve();  // TODO: use dedicated function
-  tableau.exportProof("infinite-debug");
-  auto dnf = tableau.rootNode->extractDNF();
-  GDNF saturatedDNF;
-  for (auto &clause : dnf) {
-    // saturation phase
-    saturate(clause);
-
-    // saturate(clause) inlined end
-    Tableau tableau2{clause};
-    tableau2.solve();
-    if (tableau2.rootNode->isClosed()) {
-      continue;
-    }
-
-    // normal procedure after saturation:
-    auto dnf2 = tableau2.rootNode->extractDNF();
-    for (const auto &clause : dnf2) {
-      saturatedDNF.push_back(clause);
-    }
-  }
-  return saturatedDNF;
-}
-
 RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
     : RegularTableau(std::vector(initalFormulas)) {}
 RegularTableau::RegularTableau(FormulaSet initalFormulas) {
-  auto dnf = calclateDNF(initalFormulas);
-  for (const auto &clause : dnf) {
-    auto newNode = addNode(clause);
-    rootNodes.push_back(newNode);
-  }
+  Tableau t{initalFormulas};
+  expandNode(nullptr, &t);
 }
 
 // assumptions:
@@ -98,6 +65,9 @@ void RegularTableau::removeEdge(Node *parent, Node *child) {
 // return fixed node as set, otherwise nullopt if consistent
 std::optional<FormulaSet> RegularTableau::checkInconsistency(Node *parent,
                                                              const FormulaSet &newFormulas) {
+  if (parent == nullptr) {
+    return std::nullopt;
+  }
   // 1) gather parent active labels
   std::vector<int> parentActiveLabels;
   for (const auto &formula : parent->formulas) {
@@ -130,36 +100,41 @@ std::optional<FormulaSet> RegularTableau::checkInconsistency(Node *parent,
 }
 
 void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
-  parent->childNodes.push_back(child);
-  child->parentNodes[parent] = label;
+  if (parent != nullptr) {
+    // not root node
+    parent->childNodes.push_back(child);
+    child->parentNodes[parent] = label;
 
-  // set first parent node if not already set
-  if (child->firstParentNode == nullptr) {
-    child->firstParentNode = parent;
-  }
+    // set first parent node if not already set
+    if (child->firstParentNode == nullptr) {
+      child->firstParentNode = parent;
+    }
 
-  // update rootParents of child node
-  if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-      !parent->rootParents.empty()) {
-    child->rootParents.push_back(parent);
-  }
+    // update rootParents of child node
+    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+        !parent->rootParents.empty()) {
+      child->rootParents.push_back(parent);
+    }
 
-  if (label.size() == 0) {
-    // epsilon edge is added
-    // add shortcuts
-    for (const auto &[grandparentNode, parentLabel] : parent->parentNodes) {
-      addEdge(grandparentNode, child, parentLabel);
+    if (label.size() == 0) {
+      // epsilon edge is added
+      // add shortcuts
+      for (const auto &[grandparentNode, parentLabel] : parent->parentNodes) {
+        addEdge(grandparentNode, child, parentLabel);
 
-      // check recursively
-      if (isInconsistent(grandparentNode, child)) {
-        // remove edge
-        removeEdge(grandparentNode, child);
-        // alternativ child are already added in isInconsistent
-        // TODO: make functions more clear:
-        // checkInconsistency = getInconsistentLiterals
-        // isInconsistent = fixInconsistencies
+        // check recursively
+        if (isInconsistent(grandparentNode, child)) {
+          // remove edge
+          removeEdge(grandparentNode, child);
+          // alternativ child are already added in isInconsistent
+          // TODO: make functions more clear:
+          // checkInconsistency = getInconsistentLiterals
+          // isInconsistent = fixInconsistencies
+        }
       }
     }
+  } else {
+    rootNodes.push_back(child);
   }
 }
 
@@ -174,7 +149,7 @@ bool RegularTableau::solve() {
       continue;
     }
     exportProof("regular-debug");
-    if (!expandNode(currentNode)) {
+    if (!checkAndExpandNode(currentNode)) {
       extractCounterexample(currentNode);
       std::cout << "[Solver] False." << std::endl;
       return false;
@@ -184,146 +159,134 @@ bool RegularTableau::solve() {
   return true;
 }
 
-// assumptions:
-// node has only normal terms
-bool RegularTableau::expandNode(Node *node) {
+bool RegularTableau::checkAndExpandNode(Node *node) {
   Tableau tableau{node->formulas};
   auto atomicFormula = tableau.applyRuleA();  // TODO: make return value boolean
 
-  if (atomicFormula) {  // node is expandable
-    // request is calculated within normal form here
-    tableau.solve();
-    if (tableau.rootNode->isClosed()) {
-      // can happen with emptiness hypotheses
-      node->closed = true;
-      return true;
-    }
-    // extract DNF
-    auto dnf = tableau.rootNode->extractDNF();
-
-    // saturation phase
-    for (auto &clause : dnf) {
-      // saturation phase
-      saturate(clause);
-      Tableau tableau2{clause};
-      tableau.solve();
-      if (tableau2.rootNode->isClosed()) {
-        continue;
-      }
-
-      // normal procedure after saturation:
-      auto dnf2 = tableau2.rootNode->extractDNF();
-      // for each clause: calculate potential child
-      for (auto &clause : dnf2) {
-        EdgeLabel edgeLabel;
-        FormulaSet newClause;
-
-        // remove edge predicates and put them in the edge label
-        for (const auto &formula : clause) {
-          if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
-            edgeLabel.push_back(formula);
-          } else {
-            newClause.push_back(formula);
-          }
-        }
-
-        // filter none active labels
-        // assume alredy normal
-        // 1) gather all active labels
-        std::vector<int> activeLabels;
-        for (const auto &formula : newClause) {
-          if (!formula.literal->negated) {
-            auto formulaLabels = formula.literal->predicate->labels();
-            activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
-                                std::end(formulaLabels));
-          }
-        }
-        // calculate equivalence class
-        std::map<int, int> minimalRepresentants;
-        for (const auto &formula : edgeLabel) {
-          if (formula.isPositiveEqualityPredicate()) {
-            auto predicate = *formula.literal->predicate;
-            int i = *predicate.leftOperand->label;
-            int j = *predicate.rightOperand->label;
-
-            std::optional<int> iMin, jMin;
-            if (minimalRepresentants.contains(i)) {
-              iMin = minimalRepresentants.at(i);
-            } else {
-              iMin = i;
-            }
-            if (minimalRepresentants.contains(j)) {
-              jMin = minimalRepresentants.at(j);
-            } else {
-              jMin = j;
-            }
-            int min = std::min(*iMin, *jMin);
-            minimalRepresentants.insert({i, min});
-            minimalRepresentants.insert({j, min});
-          }
-        }
-        // calculate set of non minimal labels
-        std::vector<int> nonMinimal;
-        for (const auto &[i, representant] : minimalRepresentants) {
-          if (i != representant) {
-            nonMinimal.push_back(i);
-          }
-        }
-        // 2) filtering: non active labels and non minimal labels
-        FormulaSet copy = std::move(newClause);
-        newClause = {};
-        FormulaSet droppedFormulas;
-        for (const auto &formula : copy) {
-          auto formulaLabels = formula.literal->predicate->labels();
-
-          // find intersection
-          bool intersectionNonempty = false;
-          for (const auto nonMin : nonMinimal) {
-            if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) !=
-                formulaLabels.end()) {
-              // contains non Minimal label -> drop it and do not remember
-              intersectionNonempty = true;
-              break;
-            }
-          }
-          if (intersectionNonempty) {
-            continue;
-          }
-
-          if (isSubset(formulaLabels, activeLabels)) {
-            newClause.push_back(formula);
-          } else {
-            // are minimal
-            // check for immediate inconsistencies
-            droppedFormulas.push_back(formula);
-          }
-        }
-
-        // check if intial inconsistency exists
-        auto alternativeNode = checkInconsistency(node, droppedFormulas);
-        if (alternativeNode) {
-          // create new fixed Node
-          Node *fixedNode = addNode(*alternativeNode);
-          addEdge(node, fixedNode, {});
-          return true;
-        }
-
-        // add child
-        // checks if renaming exists when adding and returns already existing node if possible
-        Node *newNode = addNode(newClause);
-        addEdge(node, newNode, edgeLabel);
-      }
-    }
-
-    // TODO?: check if any clause has been added
-    /*otherwise:
-    if (dnf.empty()) {
-      node->closed = true;
-    }*/
-
+  if (atomicFormula) {
+    expandNode(node, &tableau);
     return true;
   }
   return false;
+}
+// assumptions:
+// node has only normal terms
+void RegularTableau::expandNode(Node *node, Tableau *tableau) {
+  // node is expandable
+  auto dnf = tableau->dnf();
+  saturate(dnf);
+
+  // for each clause: calculate potential child
+  for (const auto &clause : dnf) {
+    FormulaSet droppedFormulas;
+    EdgeLabel edgeLabel;
+    auto newClause = purge(clause, droppedFormulas, edgeLabel);
+
+    // check if intial inconsistency exists
+    auto alternativeNode = checkInconsistency(node, droppedFormulas);
+    if (alternativeNode) {
+      // create new fixed Node
+      Node *fixedNode = addNode(*alternativeNode);
+      addEdge(node, fixedNode, {});
+      return;
+    }
+
+    // add child
+    // checks if renaming exists when adding and returns already existing node if possible
+    Node *newNode = addNode(newClause);
+    addEdge(node, newNode, edgeLabel);
+  }
+
+  if (dnf.empty() && node != nullptr) {
+    node->closed = true;
+  }
+}
+
+// assumption: input is dnf clause
+// purges useless literals
+FormulaSet RegularTableau::purge(const FormulaSet &clause, FormulaSet &dropped,
+                                 FormulaSet &label) const {
+  FormulaSet newClause;
+
+  // remove edge predicates and put them in the edge label
+  for (const auto &formula : clause) {
+    if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
+      label.push_back(formula);
+    } else {
+      newClause.push_back(formula);
+    }
+  }
+
+  // filter none active labels
+  // assume alredy normal
+  // 1) gather all active labels
+  std::vector<int> activeLabels;
+  for (const auto &formula : newClause) {
+    if (!formula.literal->negated) {
+      auto formulaLabels = formula.literal->predicate->labels();
+      activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+                          std::end(formulaLabels));
+    }
+  }
+  // calculate equivalence class
+  std::map<int, int> minimalRepresentants;
+  for (const auto &formula : label) {
+    if (formula.isPositiveEqualityPredicate()) {
+      auto predicate = *formula.literal->predicate;
+      int i = *predicate.leftOperand->label;
+      int j = *predicate.rightOperand->label;
+
+      std::optional<int> iMin, jMin;
+      if (minimalRepresentants.contains(i)) {
+        iMin = minimalRepresentants.at(i);
+      } else {
+        iMin = i;
+      }
+      if (minimalRepresentants.contains(j)) {
+        jMin = minimalRepresentants.at(j);
+      } else {
+        jMin = j;
+      }
+      int min = std::min(*iMin, *jMin);
+      minimalRepresentants.insert({i, min});
+      minimalRepresentants.insert({j, min});
+    }
+  }
+  // calculate set of non minimal labels
+  std::vector<int> nonMinimal;
+  for (const auto &[i, representant] : minimalRepresentants) {
+    if (i != representant) {
+      nonMinimal.push_back(i);
+    }
+  }
+  // 2) filtering: non active labels and non minimal labels
+  FormulaSet copy = std::move(newClause);
+  newClause = {};
+  for (const auto &formula : copy) {
+    auto formulaLabels = formula.literal->predicate->labels();
+
+    // find intersection
+    bool intersectionNonempty = false;
+    for (const auto nonMin : nonMinimal) {
+      if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) != formulaLabels.end()) {
+        // contains non Minimal label -> drop it and do not remember
+        intersectionNonempty = true;
+        break;
+      }
+    }
+    if (intersectionNonempty) {
+      continue;
+    }
+
+    if (isSubset(formulaLabels, activeLabels)) {
+      newClause.push_back(formula);
+    } else {
+      // are minimal
+      // check for immediate inconsistencies
+      dropped.push_back(formula);
+    }
+  }
+  return newClause;
 }
 
 bool RegularTableau::isInconsistent(Node *parent, Node *child) {
@@ -366,6 +329,19 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child) {
     }
   }
   return true;
+}
+
+void RegularTableau::saturate(GDNF &dnf) {
+  // saturation phase
+  GDNF copy = dnf;
+  dnf = {};
+  for (auto &clause : copy) {
+    // saturation phase
+    saturate(clause);
+    Tableau saturatedTableau{clause};
+    auto saturatedDnf = saturatedTableau.dnf();
+    dnf.insert(std::end(dnf), std::begin(saturatedDnf), std::end(saturatedDnf));
+  }
 }
 
 void RegularTableau::saturate(FormulaSet &formulas) {

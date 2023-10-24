@@ -51,6 +51,7 @@ class Tableau {
 
   // methods for regular reasoning
   std::optional<Formula> applyRuleA();
+  GDNF dnf();
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;

@@ -54,17 +54,18 @@ class RegularTableau {
   static std::vector<Assumption> idAssumptions;
   static std::map<std::string, Assumption> baseAssumptions;
 
-  GDNF calclateDNF(const FormulaSet &conjunction);
-
   Node *addNode(
       FormulaSet clause);  // TODO: enforce Clause instead of FormulaSet, move in node class
   bool solve();
 
-  bool expandNode(Node *node);
+  bool checkAndExpandNode(Node *node);
+  void expandNode(Node *node, Tableau *tableau);
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void updateRootParents(Node *node);
   void removeEdge(Node *parent, Node *child);
   void saturate(FormulaSet &formulas);
+  void saturate(GDNF &dnf);
+  FormulaSet purge(const FormulaSet &formulas, FormulaSet &dropped, FormulaSet &label) const;
   std::optional<FormulaSet> checkInconsistency(Node *parent, const FormulaSet &newFormulas);
   bool isInconsistent(Node *parent, Node *child);
   void extractCounterexample(Node *openNode);

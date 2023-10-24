@@ -1,10 +1,6 @@
 digraph { node[shape="point"]
 N0 -> N3[label = "a"];
-N3 -> N0[label = "c"];
-N3 -> N0[label = "b"];
-N0 -> N1[label = ""];
-N0 -> N0[label = ""];
+N3 -> N1[label = "b"];
 N0 -> N2[label = "a"];
-N2 -> N1[label = "b"];
 N2 -> N1[label = "c"];
 }

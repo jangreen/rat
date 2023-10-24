@@ -137,6 +137,11 @@ std::optional<Formula> Tableau::applyRuleA() {
   return std::nullopt;
 }
 
+GDNF Tableau::dnf() {
+  solve();
+  return rootNode->extractDNF();
+}
+
 void Tableau::toDotFormat(std::ofstream &output) const {
   output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
   if (rootNode != nullptr) {
