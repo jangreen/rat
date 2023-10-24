@@ -225,7 +225,7 @@ bool RegularTableau::expandNode(Node *node) {
 
         // remove edge predicates and put them in the edge label
         for (const auto &formula : clause) {
-          if (formula.isEdgePredicate()) {
+          if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
             edgeLabel.push_back(formula);
           } else {
             newClause.push_back(formula);
@@ -243,15 +243,62 @@ bool RegularTableau::expandNode(Node *node) {
                                 std::end(formulaLabels));
           }
         }
-        // 2) filtering
+        // calculate equivalence class
+        std::map<int, int> minimalRepresentants;
+        for (const auto &formula : edgeLabel) {
+          if (formula.isPositiveEqualityPredicate()) {
+            auto predicate = *formula.literal->predicate;
+            int i = *predicate.leftOperand->label;
+            int j = *predicate.rightOperand->label;
+
+            std::optional<int> iMin, jMin;
+            if (minimalRepresentants.contains(i)) {
+              iMin = minimalRepresentants.at(i);
+            } else {
+              iMin = i;
+            }
+            if (minimalRepresentants.contains(j)) {
+              jMin = minimalRepresentants.at(j);
+            } else {
+              jMin = j;
+            }
+            int min = std::min(*iMin, *jMin);
+            minimalRepresentants.insert({i, min});
+            minimalRepresentants.insert({j, min});
+          }
+        }
+        // calculate set of non minimal labels
+        std::vector<int> nonMinimal;
+        for (const auto &[i, representant] : minimalRepresentants) {
+          if (i != representant) {
+            nonMinimal.push_back(i);
+          }
+        }
+        // 2) filtering: non active labels and non minimal labels
         FormulaSet copy = std::move(newClause);
         newClause = {};
         FormulaSet droppedFormulas;
         for (const auto &formula : copy) {
           auto formulaLabels = formula.literal->predicate->labels();
+
+          // find intersection
+          bool intersectionNonempty = false;
+          for (const auto nonMin : nonMinimal) {
+            if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) !=
+                formulaLabels.end()) {
+              // contains non Minimal label -> drop it and do not remember
+              intersectionNonempty = true;
+              break;
+            }
+          }
+          if (intersectionNonempty) {
+            continue;
+          }
+
           if (isSubset(formulaLabels, activeLabels)) {
             newClause.push_back(formula);
           } else {
+            // are minimal
             // check for immediate inconsistencies
             droppedFormulas.push_back(formula);
           }

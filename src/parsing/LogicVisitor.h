@@ -66,6 +66,8 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   /*std::variant<Set, Relation>*/ std::any visitRelationRangeIdentity(
       LogicParser::RelationRangeIdentityContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitUnion(LogicParser::UnionContext *context) override;
+  /*std::variant<Set, Relation>*/ std::any visitEmptyset(
+      LogicParser::EmptysetContext *ctx) override;
   /*std::variant<Set, Relation>*/ std::any visitRelationInverse(
       LogicParser::RelationInverseContext *context) override;
   /*std::variant<Set, Relation>*/ std::any visitRelationOptional(

@@ -325,7 +325,7 @@ bool Predicate::isNormal() const {
     case PredicateOperation::set:
       return false;  // TODO: maybe false!
     case PredicateOperation::equality:
-      return false;  // TODO: maybe false!
+      return true;  // TODO: maybe false!
     case PredicateOperation::intersectionNonEmptiness:
       if (leftOperand->operation == SetOperation::singleton) {
         switch (rightOperand->operation) {

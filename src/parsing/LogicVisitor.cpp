@@ -298,6 +298,14 @@ Relation Logic::parseRelation(const std::string &relationString) {
   std::cout << "[Parsing] Type mismatch of two operands of the union operator." << std::endl;
   exit(0);
 }
+
+// TODO: emptyset as set type is not supported
+/*std::variant<Set, Relation>*/ std::any Logic::visitEmptyset(LogicParser::EmptysetContext *ctx) {
+  Relation r(RelationOperation::empty);
+  std::variant<Set, Relation> result = r;
+  return result;
+}
+
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationInverse(
     LogicParser::RelationInverseContext *context) {
   std::variant<Set, Relation> relationExpression =

@@ -50,6 +50,7 @@ expression:
 	)									# relationIdentity
 	| FENCEREL LPAR n = RELNAME RPAR	# relationFencerel
 	| LPAR e1 = expression RPAR			# parentheses
+	| EMPTYSET							# emptyset
 	| n = RELNAME						# relationBasic
 	| n = SETNAME						# setBasic
 	| LCBRAC l = SETNAME RCBRAC			# setSingleton;
@@ -64,6 +65,8 @@ ACYCLIC: 'acyclic';
 IRREFLEXIVE: 'irreflexive';
 EMPTY: 'empty';
 
+// TODO: do other constants as well
+EMPTYSET: '0';
 EQ: '=';
 STAR: '*';
 PLUS: '+';

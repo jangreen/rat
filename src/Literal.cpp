@@ -62,6 +62,10 @@ std::optional<Formula> Literal::applyRule(bool modalRules) {
   return std::nullopt;
 }
 
+bool Literal::substitute(const Set &search, const Set &replace) {
+  return predicate->substitute(search, replace);
+}
+
 bool Literal::isNormal() const {
   return predicate->operation != PredicateOperation::intersectionNonEmptiness ||
          predicate->isNormal();
