@@ -71,9 +71,15 @@ void RegularTableau::updateRootParents(Node *node) {
 // TODO: what are root parents needed for? -> description
 void RegularTableau::removeEdge(Node *parent, Node *child, EdgeLabel label) {
   std::cout << "Remove Edge: " << std::hash<Node>()(*parent) << " -> " << std::hash<Node>()(*child)
-            << std::endl;
+            << ", label: ";
+  printFormulaSet(label);
 
+  printGDNF(child->parentNodes[parent]);
+  std::cout << "Remove label: ";
+  printFormulaSet(label);
   std::erase(child->parentNodes[parent], label);
+  printGDNF(child->parentNodes[parent]);
+
   if (child->parentNodes[parent].size() == 0) {
     std::erase(parent->childNodes, child);
     child->parentNodes.erase(parent);
@@ -86,6 +92,8 @@ void RegularTableau::removeEdge(Node *parent, Node *child, EdgeLabel label) {
   }
 }
 
+// TODO: make functions more clear:
+// checkInconsistency = getInconsistentLiterals
 // return fixed node as set, otherwise nullopt if consistent
 std::optional<FormulaSet> RegularTableau::checkInconsistency(Node *parent,
                                                              const FormulaSet &newFormulas) {
@@ -142,58 +150,43 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
       }
     }
   }
-  // adding edge
-  // only add each child once to child nodes
-  auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
-  if (childIt == parent->childNodes.end()) {
-    parent->childNodes.push_back(child);
-  }
-  child->parentNodes[parent].push_back(label);
 
-  // set first parent node if not already set
-  if (child->firstParentNode == nullptr) {
-    child->firstParentNode = parent;
-    child->firstParentLabel = label;
-  }
+  // check if consistent (otherwise fixed child is created in isInconsistent)
+  // never add inconsistent edges
+  if (label.size() == 0 || !isInconsistent(parent, child, label)) {
+    // adding edge
+    // only add each child once to child nodes
+    auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
+    if (childIt == parent->childNodes.end()) {
+      parent->childNodes.push_back(child);
+    }
+    child->parentNodes[parent].push_back(label);
 
-  // add shortcuts if needed
-  if (label.size() == 0) {
-    // if epsilon edge is added -> add shortcuts
-    for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
-      for (const auto &parentLabel : parentLabels) {
-        std::cout << "Add shortcut:" << std::endl;
-        addEdge(grandparentNode, child, parentLabel);
+    // set first parent node if not already set
+    if (child->firstParentNode == nullptr) {
+      child->firstParentNode = parent;
+      child->firstParentLabel = label;
+    }
 
-        // check recursively
-        if (isInconsistent(grandparentNode, child, parentLabel)) {
-          std::cout << "check recursive " << std::hash<Node>()(*grandparentNode) << " -> "
-                    << std::hash<Node>()(*child) << std::endl;
-          // remove edge
-          removeEdge(grandparentNode, child, parentLabel);
-          // alternativ child are already added in isInconsistent
-          // TODO: make functions more clear:
-          // checkInconsistency = getInconsistentLiterals
-          // isInconsistent = fixInconsistencies
+    if (label.size() == 0) {
+      // if epsilon edge is added -> add shortcuts
+      for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
+        for (const auto &parentLabel : parentLabels) {
+          addEdge(grandparentNode, child, parentLabel);
         }
       }
-    }
-  } else {
-    // update rootParents of child node
-    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-        !parent->rootParents.empty()) {
-      child->rootParents.push_back(parent);
-    }
+    } else {
+      // update rootParents of child node
+      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+          !parent->rootParents.empty()) {
+        child->rootParents.push_back(parent);
+      }
 
-    // if child has epsilon edge -> add shortcuts
-    for (const auto childChild : child->childNodes) {
-      if (childChild->parentNodes[child].size() == 0) {
-        for (const auto &parentLabel : child->parentNodes[parent]) {
-          std::cout << "Add shortcut:" << std::endl;
-          addEdge(parent, childChild, parentLabel);
-          // check recursively
-          if (isInconsistent(parent, childChild, parentLabel)) {
-            // remove edge
-            removeEdge(parent, childChild, parentLabel);
+      // if child has epsilon edge -> add shortcuts
+      for (const auto childChild : child->childNodes) {
+        if (childChild->parentNodes[child].size() == 0) {
+          for (const auto &parentLabel : child->parentNodes[parent]) {
+            addEdge(parent, childChild, parentLabel);
           }
         }
       }
@@ -355,10 +348,10 @@ FormulaSet RegularTableau::purge(const FormulaSet &clause, FormulaSet &dropped,
 }
 
 // input is edge (parent,label,child)
+// must not be part of the proof graph
 bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) {
   std::cout << "isInconsistent" << std::endl;
-  if (label.size() == 0) {  // is already alternative node to its parent
-                            // TODO: should not return but double check?
+  if (label.size() == 0) {  // is already fixed node to its parent (by def inconsistent)
     return false;
   }
 
@@ -371,16 +364,8 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   calcConverseReq.solve();
 
   if (calcConverseReq.rootNode->isClosed()) {
-    // inconsistent
-    removeEdge(parent, child, label);
-    // close parent node if it has no other children
-    // otherwise just return (or create an edge to an empty closed node)
-    if (parent->childNodes.size() < 1) {
-      parent->closed = true;
-    }
-    // child->closed = true;  // This is not sound, child is not true in general but only with the
-    // given context create alt child instead of parent
-    return false;
+    // inconsistent, no need for fixed node
+    return true;
   }
 
   GDNF dnf = calcConverseReq.rootNode->extractDNF();
@@ -401,9 +386,6 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
       addEdge(parent, fixedNode, {});
     }
   }
-  std::cout << "Inconsistent: " << std::hash<Node>()(*parent) << " -> "
-            << std::hash<Node>()(*child);
-  printFormulaSet(label);
   return true;
 }
 
