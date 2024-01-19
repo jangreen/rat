@@ -59,13 +59,11 @@ class RegularTableau {
   bool solve();
   Node *addNode(FormulaSet clause);  // TODO: assert clause
   void addEdge(Node *parent, Node *child, EdgeLabel label);
-
-  bool checkAndExpandNode(Node *node);
   void expandNode(Node *node, Tableau *tableau);
-  void saturate(FormulaSet &formulas);
-  void saturate(GDNF &dnf);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   void extractCounterexample(Node *openNode);
+  void saturate(FormulaSet &formulas);
+  void saturate(GDNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;

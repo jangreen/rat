@@ -249,7 +249,13 @@ bool RegularTableau::solve() {
       continue;
     }
 
-    if (!checkAndExpandNode(currentNode)) {
+    Tableau tableau{currentNode->formulas};
+    auto atomicFormula = tableau.applyRuleA();  // TODO: make return value boolean
+
+    if (atomicFormula) {
+      expandNode(currentNode, &tableau);
+
+    } else {
       extractCounterexample(currentNode);
       std::cout << "[Solver] False." << std::endl;
       return false;
@@ -257,17 +263,6 @@ bool RegularTableau::solve() {
   }
   std::cout << "[Solver] True." << std::endl;
   return true;
-}
-
-bool RegularTableau::checkAndExpandNode(Node *node) {
-  Tableau tableau{node->formulas};
-  auto atomicFormula = tableau.applyRuleA();  // TODO: make return value boolean
-
-  if (atomicFormula) {
-    expandNode(node, &tableau);
-    return true;
-  }
-  return false;
 }
 
 // assumptions:

@@ -119,7 +119,7 @@ std::optional<Formula> Tableau::applyRuleA() {
     if (result) {
       auto modalResult = *result;
 
-      // currently remove node by replacing it with dummy
+      // currently remove currentNode by replacing it with dummy
       // this is needed for expandNode
       currentNode->formula = Formula(FormulaOperation::top);
 
