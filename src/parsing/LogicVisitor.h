@@ -90,7 +90,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   static std::unordered_map<std::string, Relation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
   static std::vector<Formula> parse(const std::string &filePath) {
-    std::cout << "[Parsing] Parse file: " << filePath << std::endl;
+    std::cout << "[Parser] Parse file: " << filePath << std::endl;
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);

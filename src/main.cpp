@@ -25,10 +25,10 @@ int main(int argc, const char *argv[]) {
   std::string path = programArguments[0];
   // TODO: const auto& [assumptions, goals] = Logic::parse(path);
   const auto &goals = Logic::parse(path);
-  std::cout << "[Status] Parsing done: " << goals.size() << " goals, "
+  std::cout << "[Parser] done: " << goals.size() << " goal(s), "
             << (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
                 RegularTableau::emptinessAssumptions.size())
-            << " assumptions" << std::endl;
+            << " assumption(s)" << std::endl;
   for (auto goal : goals) {
     std::cout << "[Status] Prove goal:" << goal.toString() << std::endl;
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {

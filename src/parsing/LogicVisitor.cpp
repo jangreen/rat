@@ -4,7 +4,7 @@
 #include "../RegularTableau.h"
 
 std::vector<Constraint> Logic::parseMemoryModel(const std::string &filePath) {
-  std::cout << "[Parsing] Parse file: " << filePath << std::endl;
+  std::cout << "[Parser] Parse file: " << filePath << std::endl;
   std::ifstream stream;
   stream.open(filePath);
   antlr4::ANTLRInputStream input(stream);
@@ -105,7 +105,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     Set s2 = std::get<Set>(e2);
     return Predicate(PredicateOperation::intersectionNonEmptiness, std::move(s1), std::move(s2));
   }
-  std::cout << "[Parsing] Type mismatch of two operands of the intersectionNonEmptiness predicate."
+  std::cout << "[Parser] Type mismatch of two operands of the intersectionNonEmptiness predicate."
             << std::endl;
   exit(0);
 }
@@ -144,7 +144,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     if (definitionContext->letDefinition()) {
       definitionContext->letDefinition()->accept(this);
     } else if (definitionContext->letRecDefinition()) {
-      std::cout << "[Parsing] Recursive defitions are not supported." << std::endl;
+      std::cout << "[Parser] Recursive defitions are not supported." << std::endl;
       exit(0);
     } else if (definitionContext->axiomDefinition()) {
       Constraint axiom =
@@ -180,12 +180,12 @@ Relation Logic::parseRelation(const std::string &relationString) {
   return 0;
 }
 /*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {
-  std::cout << "[Parsing] Recursive definitions are currently not supported." << std::endl;
+  std::cout << "[Parser] Recursive definitions are currently not supported." << std::endl;
   exit(0);
 }
 /*void*/ std::any Logic::visitLetRecAndDefinition(
     LogicParser::LetRecAndDefinitionContext *context) {
-  std::cout << "[Parsing] Recursive definitions are currently not supported." << std::endl;
+  std::cout << "[Parser] Recursive definitions are currently not supported." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitParentheses(
@@ -208,7 +208,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = r;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of the operand of the relation transitive closure."
+  std::cout << "[Parser] Type mismatch of the operand of the relation transitive closure."
             << std::endl;
   exit(0);
 }
@@ -224,7 +224,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = po1_r_po2;
     return result;
   }
-  std::cout << "[Parsing] Error: fencerel() of unkown relation." << std::endl;
+  std::cout << "[Parser] Error: fencerel() of unkown relation." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitSetSingleton(
@@ -262,17 +262,17 @@ Relation Logic::parseRelation(const std::string &relationString) {
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationMinus(
     LogicParser::RelationMinusContext *context) {
-  std::cout << "[Parsing] Setminus operation is not supported." << std::endl;
+  std::cout << "[Parser] Setminus operation is not supported." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationDomainIdentity(
     LogicParser::RelationDomainIdentityContext *context) {
-  std::cout << "[Parsing] Domain identity expressions are not supported." << std::endl;
+  std::cout << "[Parser] Domain identity expressions are not supported." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationRangeIdentity(
     LogicParser::RelationRangeIdentityContext *context) {
-  std::cout << "[Parsing] Range identity expressions are not supported." << std::endl;
+  std::cout << "[Parser] Range identity expressions are not supported." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
@@ -295,7 +295,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = s;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of two operands of the union operator." << std::endl;
+  std::cout << "[Parser] Type mismatch of two operands of the union operator." << std::endl;
   exit(0);
 }
 
@@ -316,7 +316,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = r;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of the operand of the relation inverse." << std::endl;
+  std::cout << "[Parser] Type mismatch of the operand of the relation inverse." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationOptional(
@@ -330,7 +330,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = r;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of the operand of the relation optional." << std::endl;
+  std::cout << "[Parser] Type mismatch of the operand of the relation optional." << std::endl;
   exit(0);
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitRelationIdentity(
@@ -343,13 +343,13 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = r;
     return result;
   } else {
-    std::cout << "[Parsing] 'visitExprIdentity TOID' expressions are not supported." << std::endl;
+    std::cout << "[Parser] 'visitExprIdentity TOID' expressions are not supported." << std::endl;
     exit(0);
   }
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitCartesianProduct(
     LogicParser::CartesianProductContext *context) {
-  std::cout << "[Parsing] Cartesian products are currently not supported." << std::endl;
+  std::cout << "[Parser] Cartesian products are currently not supported." << std::endl;
   exit(0);
   // treat cartesian product as binary base relation
   std::string r1 = context->e1->getText();
@@ -385,7 +385,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = r;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of operand of the Kleene operator: " << context->getText()
+  std::cout << "[Parser] Type mismatch of operand of the Kleene operator: " << context->getText()
             << std::endl;
   exit(0);
 }
@@ -417,7 +417,7 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = s;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of two operands of the composition operator: "
+  std::cout << "[Parser] Type mismatch of two operands of the composition operator: "
             << context->getText() << std::endl;
   exit(0);
 }
@@ -442,12 +442,12 @@ Relation Logic::parseRelation(const std::string &relationString) {
     std::variant<Set, Relation> result = s;
     return result;
   }
-  std::cout << "[Parsing] Type mismatch of two operands of the intersection operator." << std::endl;
+  std::cout << "[Parser] Type mismatch of two operands of the intersection operator." << std::endl;
   exit(0);
 }
 // /*std::variant<Set, Relation>*/ std::any Logic::visitRelationComplement(
 //     LogicParser::RelationComplementContext *context) {
-//   std::cout << "[Parsing] Complement operation is not supported." << std::endl;
+//   std::cout << "[Parser] Complement operation is not supported." << std::endl;
 //   exit(0);
 // }
 

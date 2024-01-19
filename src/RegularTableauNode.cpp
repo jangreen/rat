@@ -67,9 +67,11 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     return;
   }
 
-  output << "N" << this << "[label=\"";
+  output << "N" << this << "[tooltip=\"";
   // debug
   output << std::hash<Node>()(*this) << std::endl << std::endl;
+  // label/formulas
+  output << "\", label=\"";
   for (const auto &relation : formulas) {
     output << relation.toString() << std::endl;
   }
@@ -85,19 +87,23 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
 
     for (const auto edgeLabel : edgeLabels) {
       output << "N" << this << " -> "
-             << "N" << childNode << "[label=\"";
+             << "N" << childNode << "[";
+      if (edgeLabel.empty()) {
+        output << "color=\"grey\", ";
+      }
+      output << "label =\"";
       for (const auto &edgeValue : edgeLabel) {
         output << edgeValue.toString() << ", ";
       }
       output << "\n\"];" << std::endl;
     }
   }
-  //*/ parents
+  /*/ parents
   for (const auto parentNode : parentNodes) {
     output << "N" << this << " -> "
            << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
   }  //*/
-  //*/ root parents
+  /*/ root parents
   for (const auto parentNode : rootParents) {
     output << "N" << this << " -> "
            << "N" << parentNode << "[color=\"brown\"];" << std::endl;
