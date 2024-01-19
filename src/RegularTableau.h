@@ -64,8 +64,6 @@ class RegularTableau {
   void expandNode(Node *node, Tableau *tableau);
   void saturate(FormulaSet &formulas);
   void saturate(GDNF &dnf);
-  FormulaSet purge(const FormulaSet &formulas, FormulaSet &dropped, FormulaSet &label) const;
-  std::optional<FormulaSet> getInconsistentLiterals(Node *parent, const FormulaSet &newFormulas);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   void extractCounterexample(Node *openNode);
 

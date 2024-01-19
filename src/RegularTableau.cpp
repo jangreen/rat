@@ -25,36 +25,96 @@ void printFormulaSet(const FormulaSet &formulas) {
   }
   std::cout << std::endl;
 }
-// helper end
 
-std::vector<Assumption> RegularTableau::emptinessAssumptions;
-std::vector<Assumption> RegularTableau::idAssumptions;
-std::map<std::string, Assumption> RegularTableau::baseAssumptions;
+// assumption: input is dnf clause
+// purges useless literals
+FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, FormulaSet &label) {
+  FormulaSet newClause;
 
-RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
-    : RegularTableau(std::vector(initalFormulas)) {}
-RegularTableau::RegularTableau(FormulaSet initalFormulas) {
-  Tableau t{initalFormulas};
-  expandNode(nullptr, &t);
-}
-
-// assumptions:
-// clause is in normal form
-// parent == nullptr -> rootNode
-RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
-  // create node, add to nodes (returns pointer to existing node if already exists)
-  auto newNode = std::make_unique<Node>(clause);
-  auto insertion = nodes.insert(std::move(newNode));
-  if (insertion.second) {
-    // new node has been added added (no isomorphic node existed)
-    unreducedNodes.push(insertion.first->get());
+  // remove edge predicates and put them in the edge label
+  for (const auto &formula : clause) {
+    if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
+      label.push_back(formula);
+    } else {
+      newClause.push_back(formula);
+    }
   }
-  return insertion.first->get();
+
+  // filter none active labels
+  // assume alredy normal
+  // 1) gather all active labels
+  std::vector<int> activeLabels;
+  for (const auto &formula : newClause) {
+    if (!formula.literal->negated) {
+      auto formulaLabels = formula.literal->predicate->labels();
+      activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+                          std::end(formulaLabels));
+    }
+  }
+  // calculate equivalence class
+  std::map<int, int> minimalRepresentants;
+  for (const auto &formula : label) {
+    if (formula.isPositiveEqualityPredicate()) {
+      auto predicate = *formula.literal->predicate;
+      int i = *predicate.leftOperand->label;
+      int j = *predicate.rightOperand->label;
+
+      std::optional<int> iMin, jMin;
+      if (minimalRepresentants.contains(i)) {
+        iMin = minimalRepresentants.at(i);
+      } else {
+        iMin = i;
+      }
+      if (minimalRepresentants.contains(j)) {
+        jMin = minimalRepresentants.at(j);
+      } else {
+        jMin = j;
+      }
+      int min = std::min(*iMin, *jMin);
+      minimalRepresentants.insert({i, min});
+      minimalRepresentants.insert({j, min});
+    }
+  }
+  // calculate set of non minimal labels
+  std::vector<int> nonMinimal;
+  for (const auto &[i, representant] : minimalRepresentants) {
+    if (i != representant) {
+      nonMinimal.push_back(i);
+    }
+  }
+  // 2) filtering: non active labels and non minimal labels
+  FormulaSet copy = std::move(newClause);
+  newClause = {};
+  for (const auto &formula : copy) {
+    auto formulaLabels = formula.literal->predicate->labels();
+
+    // find intersection
+    bool intersectionNonempty = false;
+    for (const auto nonMin : nonMinimal) {
+      if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) != formulaLabels.end()) {
+        // contains non Minimal label -> drop it and do not remember
+        intersectionNonempty = true;
+        break;
+      }
+    }
+    if (intersectionNonempty) {
+      continue;
+    }
+
+    if (isSubset(formulaLabels, activeLabels)) {
+      newClause.push_back(formula);
+    } else {
+      // are minimal
+      // check for immediate inconsistencies
+      dropped.push_back(formula);
+    }
+  }
+  return newClause;
 }
 
 // return fixed node as set, otherwise nullopt if consistent
-std::optional<FormulaSet> RegularTableau::getInconsistentLiterals(Node *parent,
-                                                                  const FormulaSet &newFormulas) {
+std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
+                                                  const FormulaSet &newFormulas) {
   if (parent == nullptr) {
     return std::nullopt;
   }
@@ -87,6 +147,32 @@ std::optional<FormulaSet> RegularTableau::getInconsistentLiterals(Node *parent,
     return filteredNewFormulas;
   }
   return std::nullopt;
+}
+// helper end
+
+std::vector<Assumption> RegularTableau::emptinessAssumptions;
+std::vector<Assumption> RegularTableau::idAssumptions;
+std::map<std::string, Assumption> RegularTableau::baseAssumptions;
+
+RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
+    : RegularTableau(std::vector(initalFormulas)) {}
+RegularTableau::RegularTableau(FormulaSet initalFormulas) {
+  Tableau t{initalFormulas};
+  expandNode(nullptr, &t);
+}
+
+// assumptions:
+// clause is in normal form
+// parent == nullptr -> rootNode
+RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
+  // create node, add to nodes (returns pointer to existing node if already exists)
+  auto newNode = std::make_unique<Node>(clause);
+  auto insertion = nodes.insert(std::move(newNode));
+  if (insertion.second) {
+    // new node has been added added (no isomorphic node existed)
+    unreducedNodes.push(insertion.first->get());
+  }
+  return insertion.first->get();
 }
 
 void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
@@ -183,6 +269,7 @@ bool RegularTableau::checkAndExpandNode(Node *node) {
   }
   return false;
 }
+
 // assumptions:
 // node has only normal terms
 void RegularTableau::expandNode(Node *node, Tableau *tableau) {
@@ -216,93 +303,6 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     Node *newNode = addNode(newClause);
     addEdge(node, newNode, edgeLabel);
   }
-}
-
-// assumption: input is dnf clause
-// purges useless literals
-FormulaSet RegularTableau::purge(const FormulaSet &clause, FormulaSet &dropped,
-                                 FormulaSet &label) const {
-  FormulaSet newClause;
-
-  // remove edge predicates and put them in the edge label
-  for (const auto &formula : clause) {
-    if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
-      label.push_back(formula);
-    } else {
-      newClause.push_back(formula);
-    }
-  }
-
-  // filter none active labels
-  // assume alredy normal
-  // 1) gather all active labels
-  std::vector<int> activeLabels;
-  for (const auto &formula : newClause) {
-    if (!formula.literal->negated) {
-      auto formulaLabels = formula.literal->predicate->labels();
-      activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
-                          std::end(formulaLabels));
-    }
-  }
-  // calculate equivalence class
-  std::map<int, int> minimalRepresentants;
-  for (const auto &formula : label) {
-    if (formula.isPositiveEqualityPredicate()) {
-      auto predicate = *formula.literal->predicate;
-      int i = *predicate.leftOperand->label;
-      int j = *predicate.rightOperand->label;
-
-      std::optional<int> iMin, jMin;
-      if (minimalRepresentants.contains(i)) {
-        iMin = minimalRepresentants.at(i);
-      } else {
-        iMin = i;
-      }
-      if (minimalRepresentants.contains(j)) {
-        jMin = minimalRepresentants.at(j);
-      } else {
-        jMin = j;
-      }
-      int min = std::min(*iMin, *jMin);
-      minimalRepresentants.insert({i, min});
-      minimalRepresentants.insert({j, min});
-    }
-  }
-  // calculate set of non minimal labels
-  std::vector<int> nonMinimal;
-  for (const auto &[i, representant] : minimalRepresentants) {
-    if (i != representant) {
-      nonMinimal.push_back(i);
-    }
-  }
-  // 2) filtering: non active labels and non minimal labels
-  FormulaSet copy = std::move(newClause);
-  newClause = {};
-  for (const auto &formula : copy) {
-    auto formulaLabels = formula.literal->predicate->labels();
-
-    // find intersection
-    bool intersectionNonempty = false;
-    for (const auto nonMin : nonMinimal) {
-      if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) != formulaLabels.end()) {
-        // contains non Minimal label -> drop it and do not remember
-        intersectionNonempty = true;
-        break;
-      }
-    }
-    if (intersectionNonempty) {
-      continue;
-    }
-
-    if (isSubset(formulaLabels, activeLabels)) {
-      newClause.push_back(formula);
-    } else {
-      // are minimal
-      // check for immediate inconsistencies
-      dropped.push_back(formula);
-    }
-  }
-  return newClause;
 }
 
 // input is edge (parent,label,child)
