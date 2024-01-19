@@ -480,7 +480,7 @@ std::string Set::toString() const {
       output += "0";
       break;
     case SetOperation::full:
-      output += "E";
+      output += "T";
       break;
     case SetOperation::intersection:
       output += "(" + leftOperand->toString() + " & " + rightOperand->toString() + ")";

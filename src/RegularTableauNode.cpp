@@ -69,7 +69,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
 
   output << "N" << this << "[label=\"";
   // debug
-  // output << std::hash<Node>()(*this) << std::endl;
+  output << std::hash<Node>()(*this) << std::endl << std::endl;
   for (const auto &relation : formulas) {
     output << relation.toString() << std::endl;
   }
@@ -81,25 +81,27 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto childNode : childNodes) {
-    auto edgeLabel = childNode->parentNodes[this];
+    auto edgeLabels = childNode->parentNodes[this];
 
-    output << "N" << this << " -> "
-           << "N" << childNode << "[label=\"";
-    for (const auto &edge : edgeLabel) {
-      output << edge.toString() << ", ";
+    for (const auto edgeLabel : edgeLabels) {
+      output << "N" << this << " -> "
+             << "N" << childNode << "[label=\"";
+      for (const auto &edgeValue : edgeLabel) {
+        output << edgeValue.toString() << ", ";
+      }
+      output << "\n\"];" << std::endl;
     }
-    output << "\n\"];" << std::endl;
   }
-  /*/ parents
+  //*/ parents
   for (const auto parentNode : parentNodes) {
     output << "N" << this << " -> "
            << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
-  }*/
-  /*/ root parents
+  }  //*/
+  //*/ root parents
   for (const auto parentNode : rootParents) {
     output << "N" << this << " -> "
            << "N" << parentNode << "[color=\"brown\"];" << std::endl;
-  }*/
+  }  //*/
   printed = true;
 
   // children

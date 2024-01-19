@@ -25,10 +25,12 @@ class RegularTableau {
 
     FormulaSet formulas;
     std::vector<Node *> childNodes;
-    std::map<Node *, EdgeLabel> parentNodes;
+    std::map<Node *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
+    bool closed = false;
+
     std::vector<Node *> rootParents;  // parent nodes that are reachable by some root node
     Node *firstParentNode = nullptr;  // for counterexample extration
-    bool closed = false;
+    EdgeLabel firstParentLabel;       // for counterexample extration
 
     bool printed = false;  // prevent cycling in printing
     void toDotFormat(std::ofstream &output);
@@ -54,36 +56,23 @@ class RegularTableau {
   static std::vector<Assumption> idAssumptions;
   static std::map<std::string, Assumption> baseAssumptions;
 
-  Node *addNode(
-      FormulaSet clause);  // TODO: enforce Clause instead of FormulaSet, move in node class
   bool solve();
+  Node *addNode(FormulaSet clause);  // TODO: assert clause
+  void addEdge(Node *parent, Node *child, EdgeLabel label);
+  void removeEdge(Node *parent, Node *child, EdgeLabel label);
 
   bool checkAndExpandNode(Node *node);
   void expandNode(Node *node, Tableau *tableau);
-  void addEdge(Node *parent, Node *child, EdgeLabel label);
   void updateRootParents(Node *node);
-  void removeEdge(Node *parent, Node *child);
   void saturate(FormulaSet &formulas);
   void saturate(GDNF &dnf);
   FormulaSet purge(const FormulaSet &formulas, FormulaSet &dropped, FormulaSet &label) const;
   std::optional<FormulaSet> checkInconsistency(Node *parent, const FormulaSet &newFormulas);
-  bool isInconsistent(Node *parent, Node *child);
+  bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   void extractCounterexample(Node *openNode);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;
-
-  // TODO: remove:
-  static void printGDNF(const GDNF &gdnf) {
-    std::cout << "Clauses:";
-    for (auto &clause : gdnf) {
-      std::cout << "\n";
-      for (auto &literal : clause) {
-        std::cout << literal.toString() << " , ";
-      }
-    }
-    std::cout << std::endl;
-  }
 };
 
 namespace std {

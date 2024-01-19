@@ -18,3 +18,5 @@ test test2f False
 
 # with assumptions
 test test0 True
+test test5 True
+test test6 True

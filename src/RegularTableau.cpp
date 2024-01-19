@@ -7,6 +7,26 @@
 #include <tuple>
 #include <utility>
 
+// helper
+void printGDNF(const GDNF &gdnf) {
+  std::cout << "Clauses:";
+  for (auto &clause : gdnf) {
+    std::cout << "\n";
+    for (auto &literal : clause) {
+      std::cout << literal.toString() << " , ";
+    }
+  }
+  std::cout << std::endl;
+}
+
+void printFormulaSet(const FormulaSet &formulas) {
+  for (auto &literal : formulas) {
+    std::cout << literal.toString() << " , ";
+  }
+  std::cout << std::endl;
+}
+// helper end
+
 std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
@@ -49,17 +69,21 @@ void RegularTableau::updateRootParents(Node *node) {
 }
 
 // TODO: what are root parents needed for? -> description
-void RegularTableau::removeEdge(Node *parent, Node *child) {
-  auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
-  if (childIt != parent->childNodes.end()) {
-    parent->childNodes.erase(childIt);
+void RegularTableau::removeEdge(Node *parent, Node *child, EdgeLabel label) {
+  std::cout << "Remove Edge: " << std::hash<Node>()(*parent) << " -> " << std::hash<Node>()(*child)
+            << std::endl;
+
+  std::erase(child->parentNodes[parent], label);
+  if (child->parentNodes[parent].size() == 0) {
+    std::erase(parent->childNodes, child);
+    child->parentNodes.erase(parent);
   }
-  child->parentNodes.erase(parent);
-  auto rootParentIt = std::find(child->rootParents.begin(), child->rootParents.end(), parent);
-  if (rootParentIt != child->rootParents.end()) {
-    child->rootParents.erase(rootParentIt);
+
+  if (child->parentNodes[parent].size() == 0 ||
+      (child->parentNodes[parent].size() == 1 && child->parentNodes[parent].at(0).size() == 0)) {
+    std::erase(child->rootParents, parent);
+    updateRootParents(child);
   }
-  updateRootParents(child);
 }
 
 // return fixed node as set, otherwise nullopt if consistent
@@ -100,32 +124,52 @@ std::optional<FormulaSet> RegularTableau::checkInconsistency(Node *parent,
 }
 
 void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
-  if (parent != nullptr) {
-    // not root node
+  if (parent == nullptr) {
+    // root node
+    rootNodes.push_back(child);
+    return;
+  }
+
+  std::cout << "Add edge " << std::hash<Node>()(*parent) << " -> " << std::hash<Node>()(*child)
+            << ", label: ";
+  printFormulaSet(label);
+  // dont add epsilon edges that already exist
+  // what about other edges(with same label)?
+  if (label.size() == 0) {
+    for (const auto &edgeLabel : child->parentNodes[parent]) {
+      if (edgeLabel.size() == 0) {
+        return;
+      }
+    }
+  }
+  // adding edge
+  // only add each child once to child nodes
+  auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
+  if (childIt == parent->childNodes.end()) {
     parent->childNodes.push_back(child);
-    child->parentNodes[parent] = label;
+  }
+  child->parentNodes[parent].push_back(label);
 
-    // set first parent node if not already set
-    if (child->firstParentNode == nullptr) {
-      child->firstParentNode = parent;
-    }
+  // set first parent node if not already set
+  if (child->firstParentNode == nullptr) {
+    child->firstParentNode = parent;
+    child->firstParentLabel = label;
+  }
 
-    // update rootParents of child node
-    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-        !parent->rootParents.empty()) {
-      child->rootParents.push_back(parent);
-    }
-
-    if (label.size() == 0) {
-      // epsilon edge is added
-      // add shortcuts
-      for (const auto &[grandparentNode, parentLabel] : parent->parentNodes) {
+  // add shortcuts if needed
+  if (label.size() == 0) {
+    // if epsilon edge is added -> add shortcuts
+    for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
+      for (const auto &parentLabel : parentLabels) {
+        std::cout << "Add shortcut:" << std::endl;
         addEdge(grandparentNode, child, parentLabel);
 
         // check recursively
-        if (isInconsistent(grandparentNode, child)) {
+        if (isInconsistent(grandparentNode, child, parentLabel)) {
+          std::cout << "check recursive " << std::hash<Node>()(*grandparentNode) << " -> "
+                    << std::hash<Node>()(*child) << std::endl;
           // remove edge
-          removeEdge(grandparentNode, child);
+          removeEdge(grandparentNode, child, parentLabel);
           // alternativ child are already added in isInconsistent
           // TODO: make functions more clear:
           // checkInconsistency = getInconsistentLiterals
@@ -134,7 +178,26 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
       }
     }
   } else {
-    rootNodes.push_back(child);
+    // update rootParents of child node
+    if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
+        !parent->rootParents.empty()) {
+      child->rootParents.push_back(parent);
+    }
+
+    // if child has epsilon edge -> add shortcuts
+    for (const auto childChild : child->childNodes) {
+      if (childChild->parentNodes[child].size() == 0) {
+        for (const auto &parentLabel : child->parentNodes[parent]) {
+          std::cout << "Add shortcut:" << std::endl;
+          addEdge(parent, childChild, parentLabel);
+          // check recursively
+          if (isInconsistent(parent, childChild, parentLabel)) {
+            // remove edge
+            removeEdge(parent, childChild, parentLabel);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -148,7 +211,7 @@ bool RegularTableau::solve() {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
-    exportProof("regular-debug");
+
     if (!checkAndExpandNode(currentNode)) {
       extractCounterexample(currentNode);
       std::cout << "[Solver] False." << std::endl;
@@ -173,8 +236,13 @@ bool RegularTableau::checkAndExpandNode(Node *node) {
 // node has only normal terms
 void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
+  // calculate normal form
   auto dnf = tableau->dnf();
   saturate(dnf);
+  if (dnf.empty() && node != nullptr) {
+    node->closed = true;
+    return;
+  }
 
   // for each clause: calculate potential child
   for (const auto &clause : dnf) {
@@ -182,7 +250,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     EdgeLabel edgeLabel;
     auto newClause = purge(clause, droppedFormulas, edgeLabel);
 
-    // check if intial inconsistency exists
+    // check if immediate inconsistency exists (inconsistent literals that are immdediatly
+    // dropped)
     auto alternativeNode = checkInconsistency(node, droppedFormulas);
     if (alternativeNode) {
       // create new fixed Node
@@ -195,10 +264,6 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     // checks if renaming exists when adding and returns already existing node if possible
     Node *newNode = addNode(newClause);
     addEdge(node, newNode, edgeLabel);
-  }
-
-  if (dnf.empty() && node != nullptr) {
-    node->closed = true;
   }
 }
 
@@ -289,8 +354,9 @@ FormulaSet RegularTableau::purge(const FormulaSet &clause, FormulaSet &dropped,
   return newClause;
 }
 
-bool RegularTableau::isInconsistent(Node *parent, Node *child) {
-  EdgeLabel label = child->parentNodes[parent];
+// input is edge (parent,label,child)
+bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) {
+  std::cout << "isInconsistent" << std::endl;
   if (label.size() == 0) {  // is already alternative node to its parent
                             // TODO: should not return but double check?
     return false;
@@ -305,8 +371,15 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child) {
   calcConverseReq.solve();
 
   if (calcConverseReq.rootNode->isClosed()) {
-    // TODO: test
-    child->closed = true;
+    // inconsistent
+    removeEdge(parent, child, label);
+    // close parent node if it has no other children
+    // otherwise just return (or create an edge to an empty closed node)
+    if (parent->childNodes.size() < 1) {
+      parent->closed = true;
+    }
+    // child->closed = true;  // This is not sound, child is not true in general but only with the
+    // given context create alt child instead of parent
     return false;
   }
 
@@ -328,6 +401,9 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child) {
       addEdge(parent, fixedNode, {});
     }
   }
+  std::cout << "Inconsistent: " << std::hash<Node>()(*parent) << " -> "
+            << std::hash<Node>()(*child);
+  printFormulaSet(label);
   return true;
 }
 
@@ -367,6 +443,15 @@ void RegularTableau::saturate(FormulaSet &formulas) {
       }
     }
   }
+  /* TODO:
+  for (const auto &assumption : RegularTableau::emptinessAssumptions) {
+    Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
+    Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
+                std::move(s));
+    Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
+    formulas.push_back(std::move(f));
+  }
+  */
 
   // regular assumptions
   for (Formula &formula : formulas) {
@@ -395,8 +480,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
 
   Node *node = openNode;
   while (node->firstParentNode != nullptr) {
-    auto edgeLabel = node->parentNodes[node->firstParentNode];
-    for (const auto &edge : edgeLabel) {
+    for (const auto &edge : node->firstParentLabel) {
       int left = *edge.literal->predicate->leftOperand->label;
       int right = *edge.literal->predicate->rightOperand->label;
       std::string relation = *edge.literal->predicate->identifier;

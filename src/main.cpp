@@ -5,7 +5,7 @@
 #include "Tableau.h"
 #include "parsing/LogicVisitor.h"
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
   // parse arguments or ask for arguments
   std::string programName = argv[0];
   std::vector<std::string> programArguments;
@@ -24,7 +24,7 @@ int main(int argc, const char* argv[]) {
 
   std::string path = programArguments[0];
   // TODO: const auto& [assumptions, goals] = Logic::parse(path);
-  const auto& goals = Logic::parse(path);
+  const auto &goals = Logic::parse(path);
   std::cout << "[Status] Parsing done: " << goals.size() << " goals, "
             << (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
                 RegularTableau::emptinessAssumptions.size())

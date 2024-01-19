@@ -42,17 +42,6 @@ bool Tableau::Node::branchContains(const Formula &formula) {
   return false;
 }
 
-// TODO: remove
-void printGDNF(const GDNF &conjuntion) {
-  for (const auto &disjunction : conjuntion) {
-    std::cout << " OR ";
-    for (const auto &formula : disjunction) {
-      std::cout << formula.toString() << ", ";
-    }
-  }
-  std::cout << std::endl;
-}
-
 void Tableau::Node::appendBranch(const GDNF &formulas) {
   if (isLeaf() && !isClosed()) {
     if (formulas.size() > 2) {
