@@ -15,6 +15,9 @@ test test9 True
 test hard True
 test test-inv True
 test test2f False
+test test3f False
+test test4f False
+test norm True
 
 # with assumptions
 test test0 True

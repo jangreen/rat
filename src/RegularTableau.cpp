@@ -219,6 +219,10 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
           addEdge(grandparentNode, child, parentLabel);
         }
       }
+      // add epsilon child of a root nodes to root nodes
+      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end()) {
+        rootNodes.push_back(child);
+      }
     } else {
       // update rootParents of child node
       if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
@@ -240,6 +244,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
+    exportProof("regular-debug");
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
