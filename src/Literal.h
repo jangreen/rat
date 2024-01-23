@@ -27,7 +27,7 @@ class Literal {
   std::unique_ptr<Predicate> predicate;
 
   std::optional<Formula> applyRule(bool modalRules = false);
-  bool substitute(const Set &search, const Set &replace);
+  int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
 
   void saturate();

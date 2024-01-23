@@ -14,7 +14,7 @@
 #include "Tableau.h"
 
 typedef std::vector<Formula> FormulaSet;
-typedef std::vector<Formula> EdgeLabel;
+typedef std::tuple<std::vector<Formula>, Renaming> EdgeLabel;
 
 class RegularTableau {
  public:
@@ -57,7 +57,7 @@ class RegularTableau {
   static std::map<std::string, Assumption> baseAssumptions;
 
   bool solve();
-  Node *addNode(FormulaSet clause);  // TODO: assert clause
+  Node *addNode(FormulaSet clause, EdgeLabel &label);  // TODO: assert clause
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
@@ -67,6 +67,24 @@ class RegularTableau {
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;
+
+  // helper
+  static Renaming rename(FormulaSet &formulas) {
+    // calculate renaming
+    Renaming renaming;
+    for (auto &formula : formulas) {
+      for (const auto &l : formula.literal->predicate->labels()) {
+        if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
+          renaming.push_back(l);
+        }
+      }
+    }
+
+    for (auto &formula : formulas) {
+      formula.literal->predicate->rename(renaming);
+    }
+    return renaming;
+  }
 };
 
 namespace std {

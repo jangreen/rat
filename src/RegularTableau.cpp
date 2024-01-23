@@ -28,13 +28,13 @@ void printFormulaSet(const FormulaSet &formulas) {
 
 // assumption: input is dnf clause
 // purges useless literals
-FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, FormulaSet &label) {
+FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, EdgeLabel &label) {
   FormulaSet newClause;
 
   // remove edge predicates and put them in the edge label
   for (const auto &formula : clause) {
     if (formula.isEdgePredicate() || formula.isPositiveEqualityPredicate()) {
-      label.push_back(formula);
+      std::get<0>(label).push_back(formula);
     } else {
       newClause.push_back(formula);
     }
@@ -53,7 +53,7 @@ FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, FormulaSet &labe
   }
   // calculate equivalence class
   std::map<int, int> minimalRepresentants;
-  for (const auto &formula : label) {
+  for (const auto &formula : std::get<0>(label)) {
     if (formula.isPositiveEqualityPredicate()) {
       auto predicate = *formula.literal->predicate;
       int i = *predicate.leftOperand->label;
@@ -143,6 +143,10 @@ std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
         filteredNewFormulas.push_back(formula);
       }
     }
+    std::cout << "[Solver] Inconsistent Node " << std::hash<RegularTableau::Node>()(*parent)
+              << std::endl;
+    // TODO: remove:
+    // printFormulaSet(filteredNewFormulas);
     // at this point filteredNewFormulas is the alternative child
     return filteredNewFormulas;
   }
@@ -164,13 +168,19 @@ RegularTableau::RegularTableau(FormulaSet initalFormulas) {
 // assumptions:
 // clause is in normal form
 // parent == nullptr -> rootNode
-RegularTableau::Node *RegularTableau::addNode(FormulaSet clause) {
+RegularTableau::Node *RegularTableau::addNode(FormulaSet clause, EdgeLabel &label) {
+  // rename clause and update edgeLabel // TODO: do sorting inside renaming
+  std::sort(clause.begin(), clause.end());
+  auto renaming = rename(clause);
+  std::get<1>(label) = renaming;
   // create node, add to nodes (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(clause);
   auto insertion = nodes.insert(std::move(newNode));
   if (insertion.second) {
     // new node has been added added (no isomorphic node existed)
     unreducedNodes.push(insertion.first->get());
+
+    std::cout << "[Solver] Add Node " << std::hash<Node>()(*insertion.first->get()) << std::endl;
   }
   return insertion.first->get();
 }
@@ -182,14 +192,11 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
     return;
   }
 
-  std::cout << "[Solver] Add edge " << std::hash<Node>()(*parent) << " -> "
-            << std::hash<Node>()(*child) << ", label: ";
-  printFormulaSet(label);
   // dont add epsilon edges that already exist
   // what about other edges(with same label)?
-  if (label.empty()) {
+  if (std::get<0>(label).empty()) {
     for (const auto &edgeLabel : child->parentNodes[parent]) {
-      if (edgeLabel.empty()) {
+      if (std::get<0>(edgeLabel).empty()) {
         return;
       }
     }
@@ -197,7 +204,10 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 
   // check if consistent (otherwise fixed child is created in isInconsistent)
   // never add inconsistent edges
-  if (label.empty() || !isInconsistent(parent, child, label)) {
+  if (std::get<0>(label).empty() || !isInconsistent(parent, child, label)) {
+    std::cout << "[Solver] Add edge " << std::hash<Node>()(*parent) << " -> "
+              << std::hash<Node>()(*child) << ", label: ";
+    printFormulaSet(std::get<0>(label));
     // adding edge
     // only add each child once to child nodes
     auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
@@ -212,7 +222,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
       child->firstParentLabel = label;
     }
 
-    if (label.empty()) {
+    if (std::get<0>(label).empty()) {
       // if epsilon edge is added -> add shortcuts
       for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
         for (const auto &parentLabel : parentLabels) {
@@ -282,6 +292,9 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     return;
   }
 
+  std::cout << "[Solver] Expand Node " << (node == nullptr ? 0 : std::hash<Node>()(*node))
+            << std::endl;
+
   // for each clause: calculate potential child
   for (const auto &clause : dnf) {
     FormulaSet droppedFormulas;
@@ -293,14 +306,15 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     auto alternativeNode = getInconsistentLiterals(node, droppedFormulas);
     if (alternativeNode) {
       // create new fixed Node
-      Node *fixedNode = addNode(*alternativeNode);
+      Node *fixedNode = addNode(*alternativeNode, edgeLabel);
       addEdge(node, fixedNode, {});
       return;
     }
 
     // add child
     // checks if renaming exists when adding and returns already existing node if possible
-    Node *newNode = addNode(newClause);
+    // updates edge Label with renaming
+    Node *newNode = addNode(newClause, edgeLabel);
     addEdge(node, newNode, edgeLabel);
   }
 }
@@ -308,13 +322,18 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
 // input is edge (parent,label,child)
 // must not be part of the proof graph
 bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) {
-  if (label.empty()) {  // is already fixed node to its parent (by def inconsistent)
-    return false;       // should return true?
+  if (std::get<0>(label).empty()) {  // is already fixed node to its parent (by def inconsistent)
+    return false;                    // should return true?
   }
 
   // calculate converse request
   FormulaSet converseRequest = child->formulas;
-  converseRequest.insert(std::end(converseRequest), std::begin(label), std::end(label));
+  // use parent naming: label has already parent naming, rename child formulas
+  for (auto &formula : converseRequest) {
+    formula.literal->predicate->rename(std::get<1>(label));
+  }
+  converseRequest.insert(std::end(converseRequest), std::begin(std::get<0>(label)),
+                         std::end(std::get<0>(label)));
   // converseRequest is now child node + label
   // try to reduce: all rules but positive modal edge rules
   Tableau calcConverseReq(converseRequest);
@@ -322,7 +341,7 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 
   if (calcConverseReq.rootNode->isClosed()) {
     // inconsistent
-    Node *fixedNode = addNode({});
+    Node *fixedNode = addNode({}, label);
     fixedNode->closed = true;
     addEdge(parent, fixedNode, {});
     return true;
@@ -343,7 +362,7 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
     auto alternativeNode = getInconsistentLiterals(parent, clause);
     if (alternativeNode) {
       // create new fixed Node
-      Node *fixedNode = addNode(*alternativeNode);
+      Node *fixedNode = addNode(*alternativeNode, label);
       addEdge(parent, fixedNode, {});
     }
   }
@@ -423,7 +442,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
 
   Node *node = openNode;
   while (node->firstParentNode != nullptr) {
-    for (const auto &edge : node->firstParentLabel) {
+    for (const auto &edge : std::get<0>(node->firstParentLabel)) {
       int left = *edge.literal->predicate->leftOperand->label;
       int right = *edge.literal->predicate->rightOperand->label;
       std::string relation = *edge.literal->predicate->identifier;

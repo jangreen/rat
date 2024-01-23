@@ -7,23 +7,6 @@
 RegularTableau::Node::Node(std::initializer_list<Formula> formulas) : formulas(formulas) {}
 RegularTableau::Node::Node(FormulaSet formulas) : formulas(formulas) {}
 
-// helper
-void rename(FormulaSet &formulas) {
-  // calculate renaming
-  Renaming renaming;
-  for (auto &formula : formulas) {
-    for (const auto &l : formula.literal->predicate->labels()) {
-      if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
-        renaming.push_back(l);
-      }
-    }
-  }
-
-  for (auto &formula : formulas) {
-    formula.literal->predicate->rename(renaming);
-  }
-}
-
 // hashing and comparision is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shorcuts
@@ -46,7 +29,7 @@ size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &n
   size_t seed = 0;
   FormulaSet copy = node.formulas;
   std::sort(copy.begin(), copy.end());
-  rename(copy);
+  RegularTableau::rename(copy);
   for (const auto &formula : copy) {
     boost::hash_combine(seed, formula.toString());
   }
@@ -88,12 +71,16 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     for (const auto edgeLabel : edgeLabels) {
       output << "N" << this << " -> "
              << "N" << childNode << "[";
-      if (edgeLabel.empty()) {
+      if (std::get<0>(edgeLabel).empty()) {
         output << "color=\"grey\", ";
       }
       output << "label =\"";
-      for (const auto &edgeValue : edgeLabel) {
+      for (const auto &edgeValue : std::get<0>(edgeLabel)) {
         output << edgeValue.toString() << ", ";
+      }
+      output << " | ";
+      for (const auto &v : std::get<1>(edgeLabel)) {
+        output << v << ", ";
       }
       output << "\n\"];" << std::endl;
     }

@@ -47,7 +47,7 @@ class Predicate {
   std::optional<std::string> identifier;  // is set iff edge/set predicate
 
   std::optional<Formula> applyRule(bool modalRules = false);
-  bool substitute(const Set &search, const Set &replace);
+  int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
   std::vector<int> labels() const;
   void rename(const Renaming &renaming);  // renames given a renaming function
@@ -119,7 +119,7 @@ class Set {
   // predicate for a given context
   typedef std::variant<Set, Predicate> PartialPredicate;
   std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
-  bool substitute(const Set &search, const Set &replace);
+  int substitute(const Set &search, const Set &replace, int n);  // returns new n (1 = replace)
   bool isNormal() const;  // true iff all labels are in front of base Sets
   std::vector<int> labels() const;
   void rename(const Renaming &renaming);  // renames given a renaming function

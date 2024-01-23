@@ -378,23 +378,35 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
   }
 }
 
-bool Set::substitute(const Set &search, const Set &replace) {
+int Set::substitute(const Set &search, const Set &replace, int n) {
+  assert(n >= 1);
   if (*this == search) {
-    *this = replace;
-    return true;
-  } else {
-    switch (operation) {
-      case SetOperation::choice:
-        return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
-      case SetOperation::intersection:
-        return leftOperand->substitute(search, replace) || leftOperand->substitute(search, replace);
-      case SetOperation::domain:
-        return leftOperand->substitute(search, replace);
-      case SetOperation::image:
-        return leftOperand->substitute(search, replace);
-      default:
-        return false;
+    if (n == 1) {
+      *this = replace;
+      return 0;
     }
+    n--;
+  }
+
+  switch (operation) {
+    case SetOperation::choice:
+      n = leftOperand->substitute(search, replace, n);
+      if (n == 0) {
+        return 0;
+      }
+      return rightOperand->substitute(search, replace, n);
+    case SetOperation::intersection:
+      n = leftOperand->substitute(search, replace, n);
+      if (n == 0) {
+        return 0;
+      }
+      return rightOperand->substitute(search, replace, n);
+    case SetOperation::domain:
+      return leftOperand->substitute(search, replace, n);
+    case SetOperation::image:
+      return leftOperand->substitute(search, replace, n);
+    default:
+      return n;
   }
 }
 

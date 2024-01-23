@@ -392,19 +392,32 @@ bool Predicate::isNormal() const {
 }
 
 // TODO: need generalization?
-bool Predicate::substitute(const Set &search, const Set &replace) {
+int Predicate::substitute(const Set &search, const Set &replace, int n) {
+  assert(n >= 1);
   if (operation == PredicateOperation::intersectionNonEmptiness) {
     if (*leftOperand == search) {
-      *leftOperand = replace;
-      return true;
-    } else if (*rightOperand == search) {
-      *rightOperand = replace;
-      return true;
-    } else {
-      return leftOperand->substitute(search, replace) || rightOperand->substitute(search, replace);
+      if (n == 1) {
+        *leftOperand = replace;
+        return 0;
+      }
+      n--;
     }
+    if (*rightOperand == search) {
+      if (n == 1) {
+        *rightOperand = replace;
+        return 0;
+      }
+      n--;
+    }
+
+    n = leftOperand->substitute(search, replace, n);
+    if (n == 0) {
+      return 0;
+    }
+    n = rightOperand->substitute(search, replace, n);
+    return n;
   }
-  return false;
+  return n;
 }
 
 std::vector<int> Predicate::labels() const {

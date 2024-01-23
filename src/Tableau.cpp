@@ -60,9 +60,9 @@ bool Tableau::solve(int bound) {
         // TODO: must replace in formulas?
         if (temp->formula.operation == FormulaOperation::literal) {
           // check if inside formula can be something inferred
-          Literal copy = *temp->formula.literal;
-          if (copy.substitute(*search, *replace)) {
-            currentNode->appendBranch(Formula(FormulaOperation::literal, std::move(copy)));
+          auto newLiterals = substitute(*temp->formula.literal, *search, *replace);
+          for (auto &literal : newLiterals) {
+            currentNode->appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
           }
         }
         temp = temp->parentNode;

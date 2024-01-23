@@ -152,7 +152,6 @@ void Tableau::Node::inferModal() {
   while (temp != nullptr) {
     if (temp->formula.isNormal() && temp->formula.isEdgePredicate()) {
       // check if inside formula can be something inferred
-      Predicate copy = *formula.literal->predicate;
       Predicate edgePredicate = *temp->formula.literal->predicate;
       Set search1 = Set(SetOperation::image, Set(*edgePredicate.leftOperand),
                         Relation(RelationOperation::base, edgePredicate.identifier));
@@ -160,10 +159,14 @@ void Tableau::Node::inferModal() {
       Set search2 = Set(SetOperation::domain, Set(*edgePredicate.rightOperand),
                         Relation(RelationOperation::base, edgePredicate.identifier));
       Set replace2 = Set(*edgePredicate.leftOperand);
-      if (copy.substitute(search1, replace1)) {
-        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
-      } else if (copy.substitute(search2, replace2)) {
-        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+
+      auto newLiterals = substitute(*formula.literal, search1, replace1);
+      for (auto &literal : newLiterals) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
+      }
+      auto newLiterals2 = substitute(*formula.literal, search2, replace2);
+      for (auto &literal : newLiterals2) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
       }
     }
     temp = temp->parentNode;
@@ -184,11 +187,13 @@ void Tableau::Node::inferModalAtomic() {
     if (temp->formula.operation == FormulaOperation::literal && temp->formula.literal->negated &&
         temp->formula.isNormal()) {
       // check if inside formula can be something inferred
-      Predicate copy = *temp->formula.literal->predicate;
-      if (copy.substitute(search1, replace1)) {
-        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
-      } else if (copy.substitute(search2, replace2)) {
-        appendBranch(Formula(FormulaOperation::literal, Literal(true, std::move(copy))));
+      auto newLiterals = substitute(*temp->formula.literal, search1, replace1);
+      for (auto &literal : newLiterals) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
+      }
+      auto newLiterals2 = substitute(*temp->formula.literal, search2, replace2);
+      for (auto &literal : newLiterals2) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
       }
     }
     temp = temp->parentNode;
