@@ -48,7 +48,7 @@ class Tableau {
   std::unique_ptr<Node> rootNode;
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
-  bool solve(int bound = 1000);  // TODO: remove bound for regular reasoning since it terminates
+  bool solve(int bound = 2000);  // TODO: remove bound for regular reasoning since it terminates
 
   // methods for regular reasoning
   std::optional<Formula> applyRuleA();

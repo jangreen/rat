@@ -328,17 +328,26 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 
   std::cout << "[Solver] Check consistency " << std::hash<Node>()(*parent) << " -> "
             << std::hash<Node>()(*child) << std::endl;
+  if (child->formulas.empty()) {
+    // empty child not incsonistent
+    return false;
+  }
   // calculate converse request
   FormulaSet converseRequest = child->formulas;
   // use parent naming: label has already parent naming, rename child formulas
   for (auto &formula : converseRequest) {
     formula.literal->predicate->rename(std::get<1>(label), true);
   }
-  converseRequest.insert(std::end(converseRequest), std::begin(std::get<0>(label)),
-                         std::end(std::get<0>(label)));
+
+  Tableau calcConverseReq(converseRequest);
+  // add formulas of label (adding them to converseRequest is incomplete, because inital
+  // contradiction are not checked)
+  for (const auto &formula : std::get<0>(label)) {
+    calcConverseReq.rootNode->appendBranch(formula);
+  }
+
   // converseRequest is now child node + label
   // try to reduce: all rules but positive modal edge rules
-  Tableau calcConverseReq(converseRequest);
   calcConverseReq.solve();
 
   if (calcConverseReq.rootNode->isClosed()) {

@@ -73,7 +73,7 @@ bool Tableau::solve(int bound) {
 
   // warning if bound is reached
   if (bound == 0 && !unreducedNodes.empty()) {
-    std::cout << "[Warning] Bonfigured bound is reached. Answer is imprecise." << std::endl;
+    std::cout << "[Warning] Configured bound is reached. Answer is imprecise." << std::endl;
   }
 
   return rootNode->isClosed();

@@ -7,17 +7,17 @@ test() {
 }
 
 # no assumptions
+test hard True
+test norm True
+test test-inv True
 test test1 True
 test test2 True
-test test3 True
-test test4 True
-test test9 True
-test hard True
-test test-inv True
 test test2f False
+test test3 True
 test test3f False
+test test4 True
 test test4f False
-test norm True
+test test9 True
 
 # with assumptions
 test test0 True
