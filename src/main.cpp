@@ -6,6 +6,11 @@
 #include "parsing/LogicVisitor.h"
 
 int main(int argc, const char *argv[]) {
+#ifdef DEBUG
+  printf("RUNNING DEBUG BUILD");
+#else
+  printf("Running... this is a release build.");
+#endif
   // parse arguments or ask for arguments
   std::string programName = argv[0];
   std::vector<std::string> programArguments;

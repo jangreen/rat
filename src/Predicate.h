@@ -50,7 +50,7 @@ class Predicate {
   int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
   std::vector<int> labels() const;
-  void rename(const Renaming &renaming);  // renames given a renaming function
+  void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
   void saturate();
 
@@ -122,7 +122,8 @@ class Set {
   int substitute(const Set &search, const Set &replace, int n);  // returns new n (1 = replace)
   bool isNormal() const;  // true iff all labels are in front of base Sets
   std::vector<int> labels() const;
-  void rename(const Renaming &renaming);  // renames given a renaming function
+  // TODO: make inverse parameter either compile time constexpr or use templates
+  void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
   void saturate();
 

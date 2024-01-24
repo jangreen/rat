@@ -81,7 +81,7 @@ class RegularTableau {
     }
 
     for (auto &formula : formulas) {
-      formula.literal->predicate->rename(renaming);
+      formula.literal->predicate->rename(renaming, false);
     }
     return renaming;
   }

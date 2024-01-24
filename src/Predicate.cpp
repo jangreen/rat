@@ -442,25 +442,25 @@ std::vector<int> Predicate::labels() const {
   }
 }
 
-void Predicate::rename(const Renaming &renaming) {
+void Predicate::rename(const Renaming &renaming, const bool inverse) {
   switch (operation) {
     case PredicateOperation::intersectionNonEmptiness: {
-      leftOperand->rename(renaming);
-      rightOperand->rename(renaming);
+      leftOperand->rename(renaming, inverse);
+      rightOperand->rename(renaming, inverse);
       return;
     }
     case PredicateOperation::edge: {
-      leftOperand->rename(renaming);
-      rightOperand->rename(renaming);
+      leftOperand->rename(renaming, inverse);
+      rightOperand->rename(renaming, inverse);
       return;
     }
     case PredicateOperation::set: {
-      leftOperand->rename(renaming);
+      leftOperand->rename(renaming, inverse);
       return;
     }
     case PredicateOperation::equality: {
-      leftOperand->rename(renaming);
-      rightOperand->rename(renaming);
+      leftOperand->rename(renaming, inverse);
+      rightOperand->rename(renaming, inverse);
       return;
     }
   }

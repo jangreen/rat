@@ -326,11 +326,13 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
     return false;                    // should return true?
   }
 
+  std::cout << "[Solver] Check consistency " << std::hash<Node>()(*parent) << " -> "
+            << std::hash<Node>()(*child) << std::endl;
   // calculate converse request
   FormulaSet converseRequest = child->formulas;
   // use parent naming: label has already parent naming, rename child formulas
   for (auto &formula : converseRequest) {
-    formula.literal->predicate->rename(std::get<1>(label));
+    formula.literal->predicate->rename(std::get<1>(label), true);
   }
   converseRequest.insert(std::end(converseRequest), std::begin(std::get<0>(label)),
                          std::end(std::get<0>(label)));

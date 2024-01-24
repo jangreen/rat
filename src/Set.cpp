@@ -435,13 +435,17 @@ std::vector<int> Set::labels() const {
   }
 }
 
-void Set::rename(const Renaming &renaming) {
+void Set::rename(const Renaming &renaming, const bool inverse) {
   if (operation == SetOperation::singleton) {
-    label = std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), *label));
+    if (inverse) {
+      label = renaming[*label];
+    } else {
+      label = std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), *label));
+    }
   } else if (leftOperand) {
-    leftOperand->rename(renaming);
+    leftOperand->rename(renaming, inverse);
     if (rightOperand) {
-      rightOperand->rename(renaming);
+      rightOperand->rename(renaming, inverse);
     }
   }
 }
