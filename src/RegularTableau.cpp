@@ -1,7 +1,10 @@
 #include "RegularTableau.h"
 
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
 #include <boost/pending/disjoint_sets.hpp>
+#include <format>
 #include <iostream>
 #include <map>
 #include <tuple>
@@ -143,8 +146,8 @@ std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
         filteredNewFormulas.push_back(formula);
       }
     }
-    std::cout << "[Solver] Inconsistent Node " << std::hash<RegularTableau::Node>()(*parent)
-              << std::endl;
+    spdlog::debug(
+        fmt::format("[Solver] Inconsistent Node  {}", std::hash<RegularTableau::Node>()(*parent)));
     // TODO: remove:
     // printFormulaSet(filteredNewFormulas);
     // at this point filteredNewFormulas is the alternative child
@@ -180,7 +183,7 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause, EdgeLabel &labe
     // new node has been added added (no isomorphic node existed)
     unreducedNodes.push(insertion.first->get());
 
-    std::cout << "[Solver] Add node " << std::hash<Node>()(*insertion.first->get()) << std::endl;
+    spdlog::debug(fmt::format("[Solver] Add node  {}", std::hash<Node>()(*insertion.first->get())));
   }
   return insertion.first->get();
 }
@@ -205,9 +208,8 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
   // check if consistent (otherwise fixed child is created in isInconsistent)
   // never add inconsistent edges
   if (std::get<0>(label).empty() || !isInconsistent(parent, child, label)) {
-    std::cout << "[Solver] Add edge " << std::hash<Node>()(*parent) << " -> "
-              << std::hash<Node>()(*child) << ", label: ";
-    printFormulaSet(std::get<0>(label));
+    spdlog::debug(fmt::format("[Solver] Add edge  {} -> {}", std::hash<Node>()(*parent),
+                              std::hash<Node>()(*child)));
     // adding edge
     // only add each child once to child nodes
     auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
@@ -254,7 +256,9 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
+#if DEBUG
     exportProof("regular-debug");
+#endif
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
@@ -272,11 +276,11 @@ bool RegularTableau::solve() {
 
     } else {
       extractCounterexample(currentNode);
-      std::cout << "[Solver] False." << std::endl;
+      spdlog::info("[Solver] False.");
       return false;
     }
   }
-  std::cout << "[Solver] True." << std::endl;
+  spdlog::info("[Solver] True.");
   return true;
 }
 
@@ -291,9 +295,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     node->closed = true;
     return;
   }
-
-  std::cout << "[Solver] Expand node " << (node == nullptr ? 0 : std::hash<Node>()(*node))
-            << std::endl;
+  spdlog::debug(
+      fmt::format("[Solver] Expand node {} ", (node == nullptr ? 0 : std::hash<Node>()(*node))));
 
   // for each clause: calculate potential child
   for (const auto &clause : dnf) {
@@ -325,9 +328,8 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   if (std::get<0>(label).empty()) {  // is already fixed node to its parent (by def inconsistent)
     return false;                    // should return true?
   }
-
-  std::cout << "[Solver] Check consistency " << std::hash<Node>()(*parent) << " -> "
-            << std::hash<Node>()(*child) << std::endl;
+  spdlog::debug(fmt::format("[Solver] Check consistency {} -> {}", std::hash<Node>()(*parent),
+                            std::hash<Node>()(*child)));
   if (child->formulas.empty()) {
     // empty child not incsonistent
     return false;

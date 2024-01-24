@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 20)
 project(CatInfer LANGUAGES CXX)
+message(STATUS "system: ${CMAKE_SYSTEM_PREFIX_PATH}")
 
 # Boost
 set(Boost_USE_STATIC_LIBS OFF)
@@ -21,13 +22,14 @@ set(ANTLR4_WITH_STATIC_CRT OFF) # using /MD flag for antlr4_runtime (for Visual 
 include(ExternalAntlr4Cpp) # build and add runtime for antlr4 -> variable: antlr4_static
 
 # spdlog
-#find_package(spdlog)
+find_package(spdlog)
 
 # project executable
 file(GLOB_RECURSE CatInfer_SRC "src/*.cpp")
+add_compile_definitions("DEBUG=$<CONFIG:Debug>")
 add_executable(${PROJECT_NAME} src/main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS} ${ANTLR_LogicParser_CXX_OUTPUTS})
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_CatParser_OUTPUT_DIR}) # add generated parser files
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_LogicParser_OUTPUT_DIR}) # add generated parser files
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR4_INCLUDE_DIRS}) # add antrl4cpp artifacts to project environment
 target_link_libraries(${PROJECT_NAME} antlr4_static) # link with antlr runtime
-#target_link_libraries(${PROJECT_NAME} spdlog)
+target_link_libraries(${PROJECT_NAME} spdlog::spdlog_header_only)

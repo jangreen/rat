@@ -1,3 +1,6 @@
+#include <spdlog/spdlog.h>
+
+#include <format>
 #include <fstream>
 #include <iostream>
 
@@ -6,6 +9,9 @@
 #include "parsing/LogicVisitor.h"
 
 int main(int argc, const char *argv[]) {
+#if DEBUG
+  spdlog::set_level(spdlog::level::debug);  // Set global log level to debug
+#endif
   // parse arguments or ask for arguments
   std::string programName = argv[0];
   std::vector<std::string> programArguments;
@@ -25,12 +31,12 @@ int main(int argc, const char *argv[]) {
   std::string path = programArguments[0];
   // TODO: const auto& [assumptions, goals] = Logic::parse(path);
   const auto &goals = Logic::parse(path);
-  std::cout << "[Parser] Done: " << goals.size() << " goal(s), "
-            << (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
-                RegularTableau::emptinessAssumptions.size())
-            << " assumption(s)" << std::endl;
+  spdlog::info(
+      fmt::format("[Parser] Done: {} goal(s), {} assumption(s)", goals.size(),
+                  (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
+                   RegularTableau::emptinessAssumptions.size())));
   for (auto goal : goals) {
-    std::cout << "[Status] Prove goal:" << goal.toString() << std::endl;
+    spdlog::info(fmt::format("[Status] Prove goal: {}", goal.toString()));
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
       Tableau tableau{goal};
       tableau.solve(200);

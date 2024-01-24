@@ -56,8 +56,6 @@ bool Formula::operator<(const Formula &other) const {
 }
 
 std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRules) {
-  // std::cout << "[Solver] Apply rule to formula: " << toString() << std::endl;
-
   switch (operation) {
     case FormulaOperation::bottom: {
       // F -> \emptyset

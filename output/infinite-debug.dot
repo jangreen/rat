@@ -1,24 +1,10 @@
 graph {
 node[shape="plaintext"]
-N0x143f0c3d0[label="({3};b);(a;{0})", fontcolor=green];
-N0x143f0c630[label="~({3};a);(a;{3})", fontcolor=green];
-N0x143f0c890[label="~({3};a);(a;{0})", fontcolor=green];
-N0x143f0caf0[label="~({0};a);(a;{3})", fontcolor=green];
-N0x143f0cd30[label="~({0};a);(a;{0})", fontcolor=green];
-N0x143f0cfc0[label="~a({3},{3})", fontcolor=green];
-N0x143f0d0f0[label="~a({3},{0})", fontcolor=green];
-N0x143f0d220[label="~a({0},{3})", fontcolor=green];
-N0x143f0d350[label="~a({0},{0})", fontcolor=green];
-N0x143f0c2e0[label="a({0},{3})", fontcolor=green];
-N0x143f0c320[label="F", fontcolor=green];
-N0x143f0c2e0 -- N0x143f0c320;
-N0x143f0d350 -- N0x143f0c2e0;
-N0x143f0d220 -- N0x143f0d350;
-N0x143f0d0f0 -- N0x143f0d220;
-N0x143f0cfc0 -- N0x143f0d0f0;
-N0x143f0cd30 -- N0x143f0cfc0;
-N0x143f0caf0 -- N0x143f0cd30;
-N0x143f0c890 -- N0x143f0caf0;
-N0x143f0c630 -- N0x143f0c890;
-N0x143f0c3d0 -- N0x143f0c630;
+N0x14aa11b70[label="(({4};b);b^*);(b;{1})"];
+N0x14aa11e80[label="~(b;{1});(b^-1^*;({4};b))"];
+N0x14aa127d0[label="~b({4},{1})"];
+N0x14aa10ff0[label="b({0},{4})"];
+N0x14aa127d0 -- N0x14aa10ff0;
+N0x14aa11e80 -- N0x14aa127d0;
+N0x14aa11b70 -- N0x14aa11e80;
 }

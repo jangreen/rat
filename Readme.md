@@ -24,3 +24,7 @@ Install Graphviz. For Mac:
 
 This project uses cpplint for linting. the .clang-format file describes lint config. In VS Code you can use 'cpplint' extension (mine) for automatic linting and C/C++ extension (Microsoft) for automatic formatting (enabled in settings.json).
 `$ brew install cpplint`
+
+### Dependencies
+
+Install brew, spdl with homebrew

@@ -68,7 +68,9 @@ bool Tableau::solve(int bound) {
         temp = temp->parentNode;
       }
     }
+#if DEBUG
     exportProof("infinite-debug");
+#endif
   }
 
   // warning if bound is reached
