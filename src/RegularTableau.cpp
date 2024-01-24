@@ -180,7 +180,7 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause, EdgeLabel &labe
     // new node has been added added (no isomorphic node existed)
     unreducedNodes.push(insertion.first->get());
 
-    std::cout << "[Solver] Add Node " << std::hash<Node>()(*insertion.first->get()) << std::endl;
+    std::cout << "[Solver] Add node " << std::hash<Node>()(*insertion.first->get()) << std::endl;
   }
   return insertion.first->get();
 }
@@ -292,7 +292,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     return;
   }
 
-  std::cout << "[Solver] Expand Node " << (node == nullptr ? 0 : std::hash<Node>()(*node))
+  std::cout << "[Solver] Expand node " << (node == nullptr ? 0 : std::hash<Node>()(*node))
             << std::endl;
 
   // for each clause: calculate potential child
