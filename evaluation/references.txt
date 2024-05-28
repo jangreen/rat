@@ -1,0 +1,12 @@
+================ References ================ 
+Release-Acquire chains in LKMM
+	- https://github.com/paulmckrcu/litmus/issues/11
+
+PPO (no) subset of PO:
+	- https://github.com/torvalds/linux/commit/762e9357e713a2025db05bc36a36a7afc248f9d3
+
+Plain accesses carry dependencies (deps over rfi):
+	- https://lore.kernel.org/lkml/20221202125100.30146-1-jonas.oberhauser@huaweicloud.com/
+
+New modelling of RMWs with MB semantics:
+	- https://github.com/herd/herdtools7/pull/865
