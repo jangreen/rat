@@ -211,6 +211,8 @@ void Tableau::Node::inferModalAtomic() {
   Set search2 = Set(SetOperation::domain, Set(*edgePredicate.rightOperand),
                     Relation(RelationOperation::base, edgePredicate.identifier));
   Set replace2 = Set(*edgePredicate.leftOperand);
+  // replace T -> e
+  Set search12 = Set(SetOperation::full);
 
   Node *temp = parentNode;
   while (temp != nullptr) {
@@ -223,6 +225,14 @@ void Tableau::Node::inferModalAtomic() {
       }
       auto newLiterals2 = substitute(*temp->formula.literal, search2, replace2);
       for (auto &literal : newLiterals2) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
+      }
+      auto newLiterals3 = substitute(*temp->formula.literal, search12, replace1);
+      for (auto &literal : newLiterals3) {
+        appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
+      }
+      auto newLiterals4 = substitute(*temp->formula.literal, search12, replace2);
+      for (auto &literal : newLiterals4) {
         appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
       }
     }

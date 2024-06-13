@@ -30,7 +30,8 @@ class Literal {
   int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
 
-  void saturate();
+  void saturateId();
+  void saturateBase();
 
   // printing
   std::string toString() const;

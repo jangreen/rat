@@ -1,0 +1,7 @@
+let x = a;b;a
+let y = a
+
+assume a+ <= a
+assume b <= id
+
+assert x <= y

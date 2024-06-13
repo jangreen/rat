@@ -53,7 +53,8 @@ class Predicate {
   std::vector<int> labels() const;
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
-  void saturate();
+  void saturateId();
+  void saturateBase();
 
   // printing
   std::string toString() const;
@@ -128,7 +129,8 @@ class Set {
   // TODO: make inverse parameter either compile time constexpr or use templates
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
-  void saturate();
+  void saturateId();
+  void saturateBase();
 
   // printing
   std::string toString() const;

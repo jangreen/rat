@@ -32,7 +32,9 @@ bool Tableau::solve(int bound) {
     unreducedNodes.pop();
 
     // 1) Rules that just rewrite a single literal
-    auto result = currentNode->applyRule();
+    if (currentNode->applyRule()) {
+      continue;
+    }
 
     // 2) Rules which require context (only to normalized literals)
     if (!currentNode->formula.isNormal()) {
@@ -46,7 +48,7 @@ bool Tableau::solve(int bound) {
       // Rule (~a)
       currentNode->inferModal();
     } else if (currentNode->formula.isEdgePredicate()) {
-      // Rule (~a)
+      // Rule (~a), Rule (~\top_1)
       currentNode->inferModalAtomic();
     } else if (currentNode->formula.isPositiveEqualityPredicate()) {
       // Rule (\equiv)

@@ -55,6 +55,7 @@ class RegularTableau {
   static std::vector<Assumption> emptinessAssumptions;
   static std::vector<Assumption> idAssumptions;
   static std::map<std::string, Assumption> baseAssumptions;
+  static int saturationBound;
 
   bool solve();
   Node *addNode(FormulaSet clause, EdgeLabel &label);  // TODO: assert clause
@@ -62,7 +63,6 @@ class RegularTableau {
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   void extractCounterexample(Node *openNode);
-  void saturate(FormulaSet &formulas);
   void saturate(GDNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;

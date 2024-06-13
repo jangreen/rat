@@ -477,7 +477,7 @@ void Predicate::rename(const Renaming &renaming, const bool inverse) {
   }
 }
 
-void Predicate::saturate() {
+void Predicate::saturateBase() {
   switch (operation) {
     case PredicateOperation::edge:
       if (RegularTableau::baseAssumptions.contains(*identifier)) {
@@ -486,13 +486,43 @@ void Predicate::saturate() {
         Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*leftOperand), std::move(s));
         swap(*this, p);
       }
+      return;
     case PredicateOperation::set:
       return;
     case PredicateOperation::equality:
       return;
     case PredicateOperation::intersectionNonEmptiness:
-      leftOperand->saturate();
-      rightOperand->saturate();
+      leftOperand->saturateBase();
+      rightOperand->saturateBase();
+      return;
+  }
+}
+void Predicate::saturateId() {
+  switch (operation) {
+    case PredicateOperation::edge: {
+      // construct master identity relation
+      Relation subsetId = Relation(RelationOperation::identity);
+      for (const auto assumption : RegularTableau::idAssumptions) {
+        subsetId =
+            Relation(RelationOperation::choice, std::move(subsetId), Relation(assumption.relation));
+      }
+
+      Relation b = Relation(*identifier);
+      auto leftOperandCopy = Set(*leftOperand);
+      auto leftOperand = Set(SetOperation::image, std::move(leftOperandCopy), std::move(subsetId));
+      Set s(SetOperation::domain, Set(*rightOperand), std::move(b));
+      Predicate p(PredicateOperation::intersectionNonEmptiness, std::move(leftOperand),
+                  std::move(s));
+      swap(*this, p);
+      return;
+    }
+    case PredicateOperation::set:
+      return;
+    case PredicateOperation::equality:
+      return;
+    case PredicateOperation::intersectionNonEmptiness:
+      leftOperand->saturateId();
+      rightOperand->saturateId();
       return;
   }
 }

@@ -160,6 +160,7 @@ std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
 std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
+int RegularTableau::saturationBound = 2;
 
 RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
     : RegularTableau(std::vector(initalFormulas)) {}
@@ -290,7 +291,10 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
-  saturate(dnf);
+  for (size_t i = 0; i <= RegularTableau::saturationBound; i++) {
+    saturate(dnf);  // saturate twice to get immediate id saturation (yield smaller proofs)
+  }
+
   if (dnf.empty() && node != nullptr) {
     node->closed = true;
     return;
@@ -384,57 +388,40 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 
 void RegularTableau::saturate(GDNF &dnf) {
   // saturation phase
-  GDNF copy = dnf;
-  dnf = {};
-  for (auto &clause : copy) {
-    // saturation phase
-    saturate(clause);
-    Tableau saturatedTableau{clause};
-    auto saturatedDnf = saturatedTableau.dnf();
-    dnf.insert(std::end(dnf), std::begin(saturatedDnf), std::end(saturatedDnf));
-  }
-}
-
-void RegularTableau::saturate(FormulaSet &formulas) {
-  // TODO: remove, will be handled by input change
-  // emptiness assumptions
-  // std::vector<int> activeLabels;
-  // for (const auto &formula : formulas) {
-  //   if (!formula.literal->negated) {
-  //     auto formulaLabels = formula.literal->predicate->labels();
-  //     activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
-  //                         std::end(formulaLabels));
-  //   }
-  // }
-  // std::sort(activeLabels.begin(), activeLabels.end());
-  // activeLabels.erase(std::unique(activeLabels.begin(), activeLabels.end()), activeLabels.end());
-  // for (const auto &assumption : RegularTableau::emptinessAssumptions) {
-  //   for (const auto i : activeLabels) {
-  //     for (const auto j : activeLabels) {
-  //       Set s(SetOperation::domain, Set(SetOperation::singleton, j),
-  //       Relation(assumption.relation)); Predicate p(PredicateOperation::intersectionNonEmptiness,
-  //       Set(SetOperation::singleton, i),
-  //                   std::move(s));
-  //       Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
-  //       formulas.push_back(std::move(f));
-  //     }
-  //   }
-  // }
-  /* TODO:
-  for (const auto &assumption : RegularTableau::emptinessAssumptions) {
-    Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
-    Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
-                std::move(s));
-    Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
-    formulas.push_back(std::move(f));
-  }
-  */
-
-  // regular assumptions
-  for (Formula &formula : formulas) {
-    if (formula.operation == FormulaOperation::literal) {
-      formula.literal->saturate();
+  GDNF newDnf = {};
+  if (!RegularTableau::baseAssumptions.empty()) {
+    GDNF copyForBaseSaturation = dnf;
+    for (auto &clause : copyForBaseSaturation) {
+      // saturation phase
+      for (Formula &formula : clause) {
+        if (formula.operation == FormulaOperation::literal) {
+          formula.literal->saturateBase();
+        }
+      }
+      // normalize
+      Tableau saturatedTableau{clause};
+      auto saturatedDnf = saturatedTableau.dnf();
+      newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
     }
+  }
+  if (!RegularTableau::idAssumptions.empty()) {
+    GDNF copyForIdSaturation = dnf;
+
+    for (auto &clause : copyForIdSaturation) {
+      // saturation phase
+      for (Formula &formula : clause) {
+        if (formula.operation == FormulaOperation::literal) {
+          formula.literal->saturateId();
+        }
+      }
+      // normalize
+      Tableau saturatedTableau{clause};
+      auto saturatedDnf = saturatedTableau.dnf();
+      newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
+    }
+  }
+  if (!newDnf.empty()) {
+    swap(dnf, newDnf);
   }
 }
 

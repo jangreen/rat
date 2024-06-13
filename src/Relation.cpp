@@ -5,10 +5,7 @@
 #include "parsing/LogicVisitor.h"
 
 Relation::Relation(const Relation &other)
-    : operation(other.operation),
-      identifier(other.identifier),
-      saturated(other.saturated),
-      saturatedId(other.saturatedId) {
+    : operation(other.operation), identifier(other.identifier), saturated(other.saturated) {
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Relation>(*other.leftOperand);
   }
@@ -87,11 +84,8 @@ std::string Relation::toString() const {
     case RelationOperation::cartesianProduct:
       output += "TODO";  // "(" + TODO: leftSet + "x" + TODO: rightSet + ")";
   }
-  /*if (saturated) {
-    output += ".";
-  }
-  if (saturatedId) {
-    output += "..";
-  }*/
+  // if (saturated > 0) {
+  //   output += "[" + std::to_string(saturated) + "]";
+  // }
   return output;
 }

@@ -71,9 +71,14 @@ bool Literal::isNormal() const {
          predicate->isNormal();
 }
 
-void Literal::saturate() {
+void Literal::saturateId() {
   if (negated) {
-    predicate->saturate();
+    predicate->saturateId();
+  }
+}
+void Literal::saturateBase() {
+  if (negated) {
+    predicate->saturateBase();
   }
 }
 

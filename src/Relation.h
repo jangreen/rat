@@ -32,7 +32,6 @@ class Relation {
     swap(first.leftOperand, second.leftOperand);
     swap(first.rightOperand, second.rightOperand);
     swap(first.saturated, second.saturated);
-    swap(first.saturatedId, second.saturatedId);
   }
   bool operator==(const Relation &other) const;  // compares two relation syntactically
 
@@ -47,8 +46,7 @@ class Relation {
   std::unique_ptr<Relation> leftOperand;   // is set iff operation unary/binary
   std::unique_ptr<Relation> rightOperand;  // is set iff operation binary
 
-  bool saturated = false;  // mark base relation
-  bool saturatedId = false;
+  int saturated = 0;  // mark base relation
 
   std::string toString() const;  // for printing
 };

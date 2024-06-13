@@ -463,37 +463,64 @@ void Set::rename(const Renaming &renaming, const bool inverse) {
   }
 }
 
-void Set::saturate() {
+void Set::saturateBase() {
   switch (operation) {
     case SetOperation::intersection: {
-      leftOperand->saturate();
-      rightOperand->saturate();
+      leftOperand->saturateBase();
+      rightOperand->saturateBase();
       return;
     }
     case SetOperation::domain:
     case SetOperation::image:
       if (leftOperand->operation == SetOperation::singleton) {
         // saturate base relation assumptions
-        if (relation->operation == RelationOperation::base && !relation->saturated) {
+        if (relation->operation == RelationOperation::base &&
+            relation->saturated < RegularTableau::saturationBound) {
           auto relationName = *relation->identifier;
           if (RegularTableau::baseAssumptions.contains(relationName)) {
             auto assumption = RegularTableau::baseAssumptions.at(relationName);
-            *relation = Relation(assumption.relation);
+            Relation b = Relation(RelationOperation::base, relationName);
+            Relation subsetR = Relation(assumption.relation);
+            Relation r = Relation(RelationOperation::choice, std::move(b), std::move(subsetR));
+            Assumption::markBaseRelationsAsSaturated(r, relation->saturated + 1);
+            *relation = std::move(r);
           }
-        }
-        // saturate identity assumptions
-        if (relation->operation == RelationOperation::base && !relation->saturatedId) {
-          // construct master identity relation
-          Relation subsetId = Relation(RelationOperation::identity);
-          for (const auto assumption : RegularTableau::idAssumptions) {
-            subsetId = Relation(RelationOperation::choice, std::move(subsetId),
-                                Relation(assumption.relation));
-          }
-          auto leftOperandCopy = Set(*leftOperand);
-          *leftOperand = Set(SetOperation::image, std::move(leftOperandCopy), std::move(subsetId));
         }
       } else {
-        leftOperand->saturate();
+        leftOperand->saturateBase();
+      }
+      return;
+    default:
+      return;
+  }
+}
+void Set::saturateId() {
+  switch (operation) {
+    case SetOperation::intersection: {
+      leftOperand->saturateId();
+      rightOperand->saturateId();
+      return;
+    }
+    case SetOperation::domain:
+    case SetOperation::image:
+      if (leftOperand->operation == SetOperation::singleton) {
+        // construct master identity relation
+        Relation subsetId = Relation(RelationOperation::identity);
+        for (const auto assumption : RegularTableau::idAssumptions) {
+          subsetId = Relation(RelationOperation::choice, std::move(subsetId),
+                              Relation(assumption.relation));
+        }
+        // saturate identity assumptions
+        if (relation->operation == RelationOperation::base &&
+            relation->saturated < RegularTableau::saturationBound) {
+          // saturate identity assumptions
+          auto leftOperandCopy = Set(*leftOperand);
+          Relation r = std::move(subsetId);
+          Assumption::markBaseRelationsAsSaturated(r, relation->saturated + 1);
+          *leftOperand = Set(SetOperation::image, std::move(leftOperandCopy), std::move(r));
+        }
+      } else {
+        leftOperand->saturateId();
       }
       return;
     default:
