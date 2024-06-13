@@ -21,10 +21,7 @@ Relation &Relation::operator=(const Relation &other) {
   swap(*this, copy);
   return *this;
 }
-Relation::Relation(const std::string &expression) {
-  Logic visitor;
-  *this = visitor.parseRelation(expression);
-}
+Relation::Relation(const std::string &expression) { *this = Logic::parseRelation(expression); }
 Relation::Relation(const RelationOperation operation, const std::optional<std::string> &identifier)
     : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
 Relation::Relation(const RelationOperation operation, Relation &&left)

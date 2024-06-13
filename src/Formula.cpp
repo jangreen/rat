@@ -19,10 +19,7 @@ Formula &Formula::operator=(const Formula &other) {
   swap(*this, copy);
   return *this;
 }
-Formula::Formula(const std::string &expression) {
-  Logic visitor;
-  *this = visitor.parseFormula(expression);
-}
+Formula::Formula(const std::string &expression) { *this = Logic::parseFormula(expression); }
 Formula::Formula(const FormulaOperation operation, Literal &&literal)
     : operation(operation), literal(std::make_unique<Literal>(std::move(literal))) {}
 Formula::Formula(const FormulaOperation operation, Formula &&left)
@@ -131,6 +128,10 @@ std::optional<std::vector<std::vector<Formula>>> Formula::applyRule(bool modalRu
 
 bool Formula::isNormal() const {
   return operation == FormulaOperation::literal && literal->isNormal();
+}
+
+bool Formula::hasTopSet() const {
+  return operation == FormulaOperation::literal && literal->predicate->hasTopSet();
 }
 
 // TODO: rename: POSTIVIE edge label

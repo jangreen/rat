@@ -69,11 +69,13 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     auto edgeLabels = childNode->parentNodes[this];
 
     for (const auto edgeLabel : edgeLabels) {
-      output << "N" << this << " -> "
-             << "N" << childNode << "[";
+      output << "N" << this << " -> " << "N" << childNode << "[";
       if (std::get<0>(edgeLabel).empty()) {
         output << "color=\"grey\", ";
       }
+      // } else if (childNode->firstParentNode == this) {
+      //   output << "color=\"blue\", ";
+      // }
       output << "label =\"";
       for (const auto &edgeValue : std::get<0>(edgeLabel)) {
         output << edgeValue.toString() << ", ";

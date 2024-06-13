@@ -1,4 +1,7 @@
 digraph { node[shape="point"]
-N0 -> N3[label = "a"];
-N3 -> N0[label = "a"];
+N29 -> N32[label = "rfinv"];
+N32 -> N1[label = "co"];
+N23 -> N29[label = "rf"];
+N20 -> N23[label = "co"];
+N0 -> N20[label = "rfinv"];
 }

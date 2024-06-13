@@ -36,10 +36,7 @@ Predicate::Predicate(const PredicateOperation operation, Set &&left, Set &&right
   rightOperand = std::make_unique<Set>(std::move(right));
 }
 
-Predicate::Predicate(const std::string &expression) {
-  Logic visitor;
-  *this = visitor.parsePredicate(expression);
-}
+Predicate::Predicate(const std::string &expression) { *this = Logic::parsePredicate(expression); }
 
 bool Predicate::operator==(const Predicate &other) const {
   auto isEqual = operation == other.operation;
@@ -105,7 +102,7 @@ std::optional<Formula> substituteHelper(
   return formulaDisjunction;
 }
 
-std::optional<Formula> Predicate::applyRule(bool modalRules) {
+std::optional<Formula> Predicate::applyRule(bool negated, bool modalRules) {
   switch (operation) {
     case PredicateOperation::edge: {
       return std::nullopt;
@@ -165,7 +162,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
                 return Formula(FormulaOperation::literal, std::move(l));
               }
               // 1) try reduce r.s
-              auto domainResult = rightOperand->applyRule(modalRules);
+              auto domainResult = rightOperand->applyRule(negated, modalRules);
               if (domainResult) {
                 auto disjunction = *domainResult;
                 return substituteHelper(true, disjunction, *leftOperand);
@@ -190,7 +187,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
                 return Formula(FormulaOperation::literal, std::move(l));
               }
               // 1) try reduce s.r
-              auto imageResult = rightOperand->applyRule(modalRules);
+              auto imageResult = rightOperand->applyRule(negated, modalRules);
               if (imageResult) {
                 auto disjunction = *imageResult;
                 return substituteHelper(true, disjunction, *leftOperand);
@@ -257,7 +254,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
                 return Formula(FormulaOperation::literal, std::move(l));
               }
               // 1) try reduce r.s
-              auto domainResult = leftOperand->applyRule(modalRules);
+              auto domainResult = leftOperand->applyRule(negated, modalRules);
               if (domainResult) {
                 auto disjunction = *domainResult;
                 return substituteHelper(false, disjunction, *rightOperand);
@@ -282,7 +279,7 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
                 return Formula(FormulaOperation::literal, std::move(l));
               }
               // 1) try reduce s.r
-              auto imageResult = leftOperand->applyRule(modalRules);
+              auto imageResult = leftOperand->applyRule(negated, modalRules);
               if (imageResult) {
                 auto disjunction = *imageResult;
                 return substituteHelper(false, disjunction, *rightOperand);
@@ -303,12 +300,12 @@ std::optional<Formula> Predicate::applyRule(bool modalRules) {
           }
         }
       } else {
-        auto leftResult = leftOperand->applyRule(modalRules);
+        auto leftResult = leftOperand->applyRule(negated, modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
           return substituteHelper(false, disjunction, *rightOperand);
         }
-        auto rightResult = rightOperand->applyRule(modalRules);
+        auto rightResult = rightOperand->applyRule(negated, modalRules);
         if (rightResult) {
           auto disjunction = *rightResult;
           return substituteHelper(true, disjunction, *leftOperand);
@@ -388,6 +385,20 @@ bool Predicate::isNormal() const {
       } else {
         return leftOperand->isNormal() && rightOperand->isNormal();
       }
+  }
+}
+
+bool Predicate::hasTopSet() const {
+  switch (operation) {
+    case PredicateOperation::edge:
+      return false;
+    case PredicateOperation::set:
+      return false;
+    case PredicateOperation::equality:
+      return false;
+    case PredicateOperation::intersectionNonEmptiness:
+      return (leftOperand == nullptr || leftOperand->hasTopSet()) &&
+             (rightOperand == nullptr || rightOperand->hasTopSet());
   }
 }
 

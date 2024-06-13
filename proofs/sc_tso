@@ -1,3 +1,8 @@
+include ./cat/sc.cat
+let sc = (hb* & id)
+include ./cat/tso.cat
+let tso = (ghb-tso* & id)
+
 assume mfence <= po
 assume rmw <= 0
 //assume rf;rfinv <= id
@@ -5,5 +10,5 @@ assume rmw <= 0
 //assume rf;W*W <= 0
 //assume rf;co <= 0
 
-cat assert ./cat/sc.cat <= ./cat/tso-modified.cat
+assert sc <= tso
 //cat assert./cat/tso-modified.cat <= ./cat/sc.cat

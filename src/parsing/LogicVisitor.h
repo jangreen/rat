@@ -3,6 +3,7 @@
 #include <LogicLexer.h>
 #include <LogicParser.h>
 #include <antlr4-runtime.h>
+#include <spdlog/spdlog.h>
 
 #include <optional>
 #include <string>
@@ -15,8 +16,7 @@
 
 /*/ helper
 Relation loadModel(const std::string &file) {
-  CatInferVisitor visitor;
-  auto sc = visitor.parseMemoryModel(file);
+  auto sc = Logic::parseMemoryModel(file);
   std::optional<Relation> unionR;
   for (auto &constraint : sc) {
     constraint.toEmptyNormalForm();
@@ -33,10 +33,9 @@ Relation loadModel(const std::string &file) {
 // TODO: implement precedence rules
 class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
  public:
-  std::vector<Constraint> parseMemoryModel(const std::string &filePath);
-  Relation parseRelation(const std::string &relationString);
-
   /*std::vector<Formula>*/ std::any visitProof(LogicParser::ProofContext *context) override;
+  // /*void*/ std::any visitStatement(LogicParser::StatementContext *ctx) override;
+  /*void*/ std::any visitInclusion(LogicParser::InclusionContext *ctx) override;
   /*Formula*/ std::any visitAssertion(LogicParser::AssertionContext *context) override;
   /*Formula*/ std::any visitFormula(LogicParser::FormulaContext *context) override;
   /*Predicate*/ std::any visitPredicate(LogicParser::PredicateContext *context) override;
@@ -90,7 +89,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   static std::unordered_map<std::string, Relation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
   static std::vector<Formula> parse(const std::string &filePath) {
-    std::cout << "[Parser] Parse file: " << filePath << std::endl;
+    spdlog::info(fmt::format("[Parser] Parse file: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);
@@ -103,37 +102,68 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     Logic visitor;
     return std::any_cast<std::vector<Formula>>(visitor.visitProof(ctx));
   }
+  static std::vector<Constraint> parseMemoryModel(const std::string &filePath) {
+    spdlog::info(fmt::format("[Parser] Parse file: {}", filePath));
+    std::ifstream stream;
+    stream.open(filePath);
+    antlr4::ANTLRInputStream input(stream);
 
-  Formula parseFormula(const std::string &formulaString) {
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::McmContext *context = parser.mcm();
+    Logic visitor;
+    return std::any_cast<std::vector<Constraint>>(visitor.visitMcm(context));
+  }
+
+  static Relation parseRelation(const std::string &relationString) {
+    antlr4::ANTLRInputStream input(relationString);
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::ExpressionContext *context = parser.expression();  // expect expression
+    Logic visitor;
+    std::variant<Set, Relation> parsedRelation =
+        std::any_cast<std::variant<Set, Relation>>(visitor.visit(context));
+    return std::get<Relation>(parsedRelation);
+  }
+
+  static Formula parseFormula(const std::string &formulaString) {
     antlr4::ANTLRInputStream input(formulaString);
     LogicLexer lexer(&input);
     antlr4::CommonTokenStream tokens(&lexer);
     LogicParser parser(&tokens);
 
     LogicParser::FormulaContext *ctx = parser.formula();
-    Formula formula = std::any_cast<Formula>(this->visitFormula(ctx));
+    Logic visitor;
+    Formula formula = std::any_cast<Formula>(visitor.visitFormula(ctx));
     return formula;
   }
 
-  Predicate parsePredicate(const std::string &predicateString) {
+  static Predicate parsePredicate(const std::string &predicateString) {
     antlr4::ANTLRInputStream input(predicateString);
     LogicLexer lexer(&input);
     antlr4::CommonTokenStream tokens(&lexer);
     LogicParser parser(&tokens);
 
     LogicParser::PredicateContext *ctx = parser.predicate();
-    Predicate predicate = std::any_cast<Predicate>(this->visitPredicate(ctx));
+    Logic visitor;
+    Predicate predicate = std::any_cast<Predicate>(visitor.visitPredicate(ctx));
     return predicate;
   }
 
-  Set parseSet(const std::string &setString) {
+  static Set parseSet(const std::string &setString) {
     antlr4::ANTLRInputStream input(setString);
     LogicLexer lexer(&input);
     antlr4::CommonTokenStream tokens(&lexer);
     LogicParser parser(&tokens);
 
     LogicParser::ExpressionContext *ctx = parser.expression();
-    std::variant<Set, Relation> set = std::any_cast<std::variant<Set, Relation>>(this->visit(ctx));
+    Logic visitor;
+    std::variant<Set, Relation> set =
+        std::any_cast<std::variant<Set, Relation>>(visitor.visit(ctx));
     return std::get<Set>(set);
   }
 
@@ -190,23 +220,6 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     Formula f1(FormulaOperation::literal, std::move(l1));
     Formula f2(FormulaOperation::literal, std::move(l2));
     Formula response(FormulaOperation::logicalAnd, std::move(f1), std::move(f2));
-    return response;
-  }
-
-  / *std::Assumption, Formula>
-  std::any visitMmAssertion(LogicParser::MmAssertionContext *ctx) {
-    std::string lhsPath(ctx->lhs->getText());
-    std::string rhsPath(ctx->rhs->getText());
-    auto lhsModel = loadModel(lhsPath);
-    auto rhsModel = loadModel(rhsPath);
-    // TODO: remove std::cout << rhsModel.toString() << " <= " << lhsModel.toString() <<
-  std::endl; Assumption lhsEmpty(AssumptionType::empty, std::move(lhsModel)); Relation
-  emptyR(RelationOperation::empty); Set startLabel(SetOperation::singleton,
-  Set::maxSingletonLabel++); Set endLabel(SetOperation::singleton, Set::maxSingletonLabel++);
-  Set image(SetOperation::image, std::move(startLabel), std::move(rhsModel)); Predicate
-  p(PredicateOperation::intersectionNonEmptiness, std::move(image), std::move(endLabel));
-  Literal l(false, std::move(p)); Formula f(FormulaOperation::literal, std::move(l));
-    std::tuple<Assumption, Formula> response{std::move(lhsEmpty), std::move(f)};
     return response;
   }
   */

@@ -1,0 +1,20 @@
+(* Preserved Program Order *)
+//let dep = addr | data
+//let rwdep = (dep | ctrl) ; [W]
+//let overwrite = co | fr
+//let to-w = rwdep | (overwrite & int) | (addr ; [Plain] ; wmb)
+//let to-r = addr | (dep ; [Marked] ; rfi)
+//let ppo = to-r | to-w | fence | (po-unlock-lock-po & int)
+//let ppop = to-r | to-w | (fence & int) | (po-unlock-lock-po & int)
+
+(* Propagation: Ordering from release operations and strong fences. *)
+//let cumul-fence = [Marked] ; ((rfe ; [Marked])? ; (strong-fence | po-rel) | wmb | po-unlock-lock-po) ; [Marked]
+let prop = [Marked] ; (overwrite & ext)? ; cumul-fence* ; [Marked] ; rfe? ; [Marked]
+
+(* TODO: How to avoid difference with id? Intersect with fresh "noid" relation and add "noid & id <= 0"? *)
+let hb = [Marked] ; (ppo | rfe | ((prop & noid) & int)) ; [Marked]
+let hbp = [Marked] ; (ppop | rfe | ((prop & noid) & int)) ; [Marked]
+
+//assume noid & id <= 0
+
+assert hb <= hb

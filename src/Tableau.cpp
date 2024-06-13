@@ -30,20 +30,26 @@ bool Tableau::solve(int bound) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    // TODO: remove:
-    // std::cout << "[Tableau]: Current Node. " << currentNode->formula.toString() << std::endl;
+
+    // 1) Rules that just rewrite a single literal
     auto result = currentNode->applyRule();
 
-    // next two methods try to apply negated modal rules
-    if (currentNode->formula.isNormal()) {  // (!result) { does not work in case: ~0(b1) -> ~((0b)1)
-                                            // but dont considers replacing b1
+    // 2) Rules which require context (only to normalized literals)
+    if (!currentNode->formula.isNormal()) {
+      continue;
+    }
+    if (currentNode->formula.hasTopSet()) {
+      // Rule (~\top_1)
+      currentNode->inferModalTop();
+    } else if (currentNode->formula.literal->predicate->operation ==
+               PredicateOperation::intersectionNonEmptiness) {
+      // Rule (~a)
       currentNode->inferModal();
-    }
-    if (currentNode->formula.isEdgePredicate()) {
+    } else if (currentNode->formula.isEdgePredicate()) {
+      // Rule (~a)
       currentNode->inferModalAtomic();
-    }
-
-    if (currentNode->formula.isPositiveEqualityPredicate()) {
+    } else if (currentNode->formula.isPositiveEqualityPredicate()) {
+      // Rule (\equiv)
       Predicate equalityPredicate = *currentNode->formula.literal->predicate;
       std::optional<Set> search, replace;
       if (*equalityPredicate.leftOperand->label < *equalityPredicate.rightOperand->label) {
@@ -68,6 +74,7 @@ bool Tableau::solve(int bound) {
         temp = temp->parentNode;
       }
     }
+
 #if DEBUG
     exportProof("infinite-debug");
 #endif

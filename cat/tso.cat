@@ -3,6 +3,13 @@ include "cos.cat"
 include "fences.cat"
 include "filters.cat"
 
+let rfe = rf & ext
+let coe = co & ext
+//let fr = rfinv;co
+//let fre = rfinv;coe
+let fre = fr & ext
+let po-loc = po & loc
+
 (* All communication relations *)
 let com = (co | fr | rf)
 
@@ -20,6 +27,6 @@ let com-tso = (co | fr | rfe)
 let po-tso = ((po & ((R*M) | (W*W))) | mfence)
 
 (* TSO global-happens-before *)
-let ghb-tso = po-tso | com-tso | implied
+let ghb-tso = po-tso | com-tso
 
 acyclic ghb-tso as tso

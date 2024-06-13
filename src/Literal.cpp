@@ -38,7 +38,7 @@ std::optional<Formula> Literal::applyRule(bool modalRules) {
     }
     case PredicateOperation::equality: {
       if (negated) {
-        // ~(e1 = e2)
+        // (\neg=): ~(e1 = e2) -> F
         if (*predicate->leftOperand->label == *predicate->rightOperand->label) {
           return Formula(FormulaOperation::bottom);
         }
@@ -46,7 +46,7 @@ std::optional<Formula> Literal::applyRule(bool modalRules) {
       return std::nullopt;  // no rule applicable in case e1 = e2
     }
     case PredicateOperation::intersectionNonEmptiness: {
-      auto predicateResult = predicate->applyRule(modalRules && !negated);
+      auto predicateResult = predicate->applyRule(negated, modalRules && !negated);
       if (predicateResult) {
         auto formula = *predicateResult;
         if (negated) {

@@ -46,9 +46,10 @@ class Predicate {
   std::unique_ptr<Set> rightOperand;      // is set iff binary predicate
   std::optional<std::string> identifier;  // is set iff edge/set predicate
 
-  std::optional<Formula> applyRule(bool modalRules = false);
+  std::optional<Formula> applyRule(bool negated, bool modalRules);
   int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
+  bool hasTopSet() const;
   std::vector<int> labels() const;
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
@@ -118,9 +119,11 @@ class Set {
   // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
   // predicate for a given context
   typedef std::variant<Set, Predicate> PartialPredicate;
-  std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool modalRules = false);
+  std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool negated,
+                                                                      bool modalRules);
   int substitute(const Set &search, const Set &replace, int n);  // returns new n (1 = replace)
   bool isNormal() const;  // true iff all labels are in front of base Sets
+  bool hasTopSet() const;
   std::vector<int> labels() const;
   // TODO: make inverse parameter either compile time constexpr or use templates
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function

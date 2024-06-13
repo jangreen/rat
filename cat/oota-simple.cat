@@ -1,1 +1,2 @@
-acyclic dep | rf
+let hb = dep | rf
+acyclic hb

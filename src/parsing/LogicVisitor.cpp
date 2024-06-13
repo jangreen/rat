@@ -3,55 +3,47 @@
 #include "../Assumption.h"
 #include "../RegularTableau.h"
 
-std::vector<Constraint> Logic::parseMemoryModel(const std::string &filePath) {
-  std::cout << "[Parser] Parse file: " << filePath << std::endl;
-  std::ifstream stream;
-  stream.open(filePath);
-  antlr4::ANTLRInputStream input(stream);
-
-  LogicLexer lexer(&input);
-  antlr4::CommonTokenStream tokens(&lexer);
-  LogicParser parser(&tokens);
-
-  LogicParser::McmContext *context = parser.mcm();
-  return std::any_cast<std::vector<Constraint>>(this->visitMcm(context));
-}
-
-Relation Logic::parseRelation(const std::string &relationString) {
-  antlr4::ANTLRInputStream input(relationString);
-  LogicLexer lexer(&input);
-  antlr4::CommonTokenStream tokens(&lexer);
-  LogicParser parser(&tokens);
-
-  LogicParser::ExpressionContext *context = parser.expression();  // expect expression
-  std::variant<Set, Relation> parsedRelation =
-      std::any_cast<std::variant<Set, Relation>>(this->visit(context));
-  return std::get<Relation>(parsedRelation);
-}
-
 /*std::vector<Formula>*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
-  for (const auto &letDefinition : context->letDefinition()) {
-    std::string name = letDefinition->RELNAME()->getText();
-    Relation derivedRelation(letDefinition->e->getText());
-    Logic::definedRelations.insert({name, derivedRelation});
-  }
-
-  // initalize assumptions
-  for (const auto &assumptionContext : context->hypothesis()) {
-    this->visitHypothesis(assumptionContext);
-  }
-
   std::vector<Formula> formulas;
-  for (const auto &assertionContext : context->assertion()) {
-    auto formula = std::any_cast<Formula>(this->visitAssertion(assertionContext));
-    formulas.push_back(std::move(formula));
+
+  for (auto statementContext : context->statement()) {
+    if (statementContext->letDefinition()) {
+      visitLetDefinition(statementContext->letDefinition());
+    } else if (statementContext->inclusion()) {
+      visitInclusion(statementContext->inclusion());
+    } else if (statementContext->hypothesis()) {
+      visitHypothesis(statementContext->hypothesis());
+    } else if (statementContext->assertion()) {
+      auto untypedFormula = visitAssertion(statementContext->assertion());
+      auto formula = std::any_cast<Formula>(untypedFormula);
+      formulas.push_back(std::move(formula));
+    }
+  }
+
+  // process assumptions
+  // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
+  for (auto &formula : formulas) {
+    for (const auto &assumption : RegularTableau::emptinessAssumptions) {
+      Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
+      Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
+                  std::move(s));
+      Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
+
+      formula = Formula(FormulaOperation::logicalAnd, std::move(formula), std::move(f));
+    }
   }
 
   return formulas;
 }
+/*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *context) {
+  auto _ = Logic::parseMemoryModel(context->FILEPATH()->getText());
+
+  return 0;
+}
 /*Formula*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
   if (context->INEQUAL()) {
-    // currently only support relations on each side of inequation, otherwise behavuour is undefined
+    // currently only support relations on each side of inequation, otherwise behavuour is
+    // undefined
     Relation lhs(context->e1->getText());
     Relation rhs(context->e2->getText());
     Set start(SetOperation::singleton, Set::maxSingletonLabel++);
@@ -105,8 +97,8 @@ Relation Logic::parseRelation(const std::string &relationString) {
     Set s2 = std::get<Set>(e2);
     return Predicate(PredicateOperation::intersectionNonEmptiness, std::move(s1), std::move(s2));
   }
-  std::cout << "[Parser] Type mismatch of two operands of the intersectionNonEmptiness predicate."
-            << std::endl;
+  spdlog::error(
+      "[Parser] Type mismatch of two operands of the intersectionNonEmptiness predicate.");
   exit(0);
 }
 
@@ -142,13 +134,13 @@ Relation Logic::parseRelation(const std::string &relationString) {
 
   for (auto definitionContext : context->definition()) {
     if (definitionContext->letDefinition()) {
-      definitionContext->letDefinition()->accept(this);
+      visitLetDefinition(definitionContext->letDefinition());
     } else if (definitionContext->letRecDefinition()) {
       std::cout << "[Parser] Recursive defitions are not supported." << std::endl;
       exit(0);
     } else if (definitionContext->axiomDefinition()) {
-      Constraint axiom =
-          std::any_cast<Constraint>(definitionContext->axiomDefinition()->accept(this));
+      auto untypedAxiom = visitAxiomDefinition(definitionContext->axiomDefinition());
+      Constraint axiom = std::any_cast<Constraint>(untypedAxiom);
       constraints.push_back(axiom);
     }
   }
@@ -170,13 +162,22 @@ Relation Logic::parseRelation(const std::string &relationString) {
   } else if (context->ACYCLIC()) {
     type = ConstraintType::acyclic;
   }
-  Relation relation = std::any_cast<Relation>(context->e->accept(this));
+  auto relationVariant = std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+  Relation relation = std::get<Relation>(relationVariant);
   return Constraint(type, std::move(relation), name);
 }
 /*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {
-  std::string name = context->RELNAME()->getText();
-  Relation derivedRelation = std::any_cast<Relation>(context->e->accept(this));
-  Logic::definedRelations.insert({name, derivedRelation});
+  if (context->RELNAME()) {
+    std::string name = context->RELNAME()->getText();
+    auto derivedRelationVariant =
+        std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+    Relation derivedRelation = std::get<Relation>(derivedRelationVariant);
+    // overwrite existing definition
+    Logic::definedRelations.insert_or_assign(name, derivedRelation);
+  } else if (context->SETNAME()) {
+    std::string name = context->SETNAME()->getText();
+    // TODO: implement
+  }
   return 0;
 }
 /*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {
@@ -349,14 +350,14 @@ Relation Logic::parseRelation(const std::string &relationString) {
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitCartesianProduct(
     LogicParser::CartesianProductContext *context) {
+  /* TODO:
   std::cout << "[Parser] Cartesian products are currently not supported." << std::endl;
   exit(0);
+  */
   // treat cartesian product as binary base relation
   std::string r1 = context->e1->getText();
   std::string r2 = context->e2->getText();
-  Relation cartesianProduct(RelationOperation::base, r1 + "*" + r2);
-  Relation id(RelationOperation::identity);
-  Relation r(RelationOperation::intersection, std::move(cartesianProduct), std::move(id));
+  Relation r(RelationOperation::base, r1 + "*" + r2);
   std::variant<Set, Relation> result = r;
   return result;
 }

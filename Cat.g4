@@ -1,9 +1,8 @@
 grammar Cat;
 
-@header {
-}
+@header {}
 
-mcm: /*(NAME)?*/ definition+ EOF;
+mcm: definition+ EOF;
 
 definition: axiomDefinition | letDefinition | letRecDefinition;
 
@@ -18,7 +17,9 @@ axiomDefinition:
 		AS RELNAME
 	)?;
 
-letDefinition: LET n = RELNAME EQ e = expression;
+letDefinition:
+	LET n = RELNAME EQ e = expression
+	| LET n = SETNAME EQ e = expression;
 
 letRecDefinition:
 	LET REC n = RELNAME EQ e = expression letRecAndDefinition*;
@@ -93,8 +94,8 @@ RANGE: 'range';
 
 FLAG: 'flag';
 
-SETNAME: [A-Z0-9\-_.]+;
-RELNAME: [a-z\-_.]+;
+RELNAME: [a-z0-9\-_.]+;
+SETNAME: [A-Z] [a-zA-Z0-9\-_.]*;
 
 LINE_COMMENT: '//' ~[\n]* -> skip;
 

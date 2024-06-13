@@ -1,10 +1,8 @@
 graph {
 node[shape="plaintext"]
-N0x14aa11b70[label="(({4};b);b^*);(b;{1})"];
-N0x14aa11e80[label="~(b;{1});(b^-1^*;({4};b))"];
-N0x14aa127d0[label="~b({4},{1})"];
-N0x14aa10ff0[label="b({0},{4})"];
-N0x14aa127d0 -- N0x14aa10ff0;
-N0x14aa11e80 -- N0x14aa127d0;
-N0x14aa11b70 -- N0x14aa11e80;
+N0x14b696630[label="~T;((co;rfinv);T)"];
+N0x14b696520[label="rfinv({0},{32})"];
+N0x14b6965f0[label="co({32},{1})"];
+N0x14b696520 -- N0x14b6965f0;
+N0x14b696630 -- N0x14b696520;
 }

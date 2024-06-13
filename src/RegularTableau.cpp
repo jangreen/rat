@@ -218,8 +218,8 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
     }
     child->parentNodes[parent].push_back(label);
 
-    // set first parent node if not already set
-    if (child->firstParentNode == nullptr) {
+    // set first parent node if not already set & not epslilon
+    if (child->firstParentNode == nullptr && !std::get<0>(label).empty()) {
       child->firstParentNode = parent;
       child->firstParentLabel = label;
     }
@@ -396,28 +396,30 @@ void RegularTableau::saturate(GDNF &dnf) {
 }
 
 void RegularTableau::saturate(FormulaSet &formulas) {
+  // TODO: remove, will be handled by input change
   // emptiness assumptions
-  std::vector<int> activeLabels;
-  for (const auto &formula : formulas) {
-    if (!formula.literal->negated) {
-      auto formulaLabels = formula.literal->predicate->labels();
-      activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
-                          std::end(formulaLabels));
-    }
-  }
-  std::sort(activeLabels.begin(), activeLabels.end());
-  activeLabels.erase(std::unique(activeLabels.begin(), activeLabels.end()), activeLabels.end());
-  for (const auto &assumption : RegularTableau::emptinessAssumptions) {
-    for (const auto i : activeLabels) {
-      for (const auto j : activeLabels) {
-        Set s(SetOperation::domain, Set(SetOperation::singleton, j), Relation(assumption.relation));
-        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::singleton, i),
-                    std::move(s));
-        Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
-        formulas.push_back(std::move(f));
-      }
-    }
-  }
+  // std::vector<int> activeLabels;
+  // for (const auto &formula : formulas) {
+  //   if (!formula.literal->negated) {
+  //     auto formulaLabels = formula.literal->predicate->labels();
+  //     activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
+  //                         std::end(formulaLabels));
+  //   }
+  // }
+  // std::sort(activeLabels.begin(), activeLabels.end());
+  // activeLabels.erase(std::unique(activeLabels.begin(), activeLabels.end()), activeLabels.end());
+  // for (const auto &assumption : RegularTableau::emptinessAssumptions) {
+  //   for (const auto i : activeLabels) {
+  //     for (const auto j : activeLabels) {
+  //       Set s(SetOperation::domain, Set(SetOperation::singleton, j),
+  //       Relation(assumption.relation)); Predicate p(PredicateOperation::intersectionNonEmptiness,
+  //       Set(SetOperation::singleton, i),
+  //                   std::move(s));
+  //       Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
+  //       formulas.push_back(std::move(f));
+  //     }
+  //   }
+  // }
   /* TODO:
   for (const auto &assumption : RegularTableau::emptinessAssumptions) {
     Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
@@ -434,19 +436,6 @@ void RegularTableau::saturate(FormulaSet &formulas) {
       formula.literal->saturate();
     }
   }
-
-  /* TODO:
-  // identity assumptions
-  for (const auto &literal : clause) {
-    if (literal.negated) {
-      auto saturated = saturateIdRelation(assumption, literal);
-      if (saturated) {
-        saturated->negated = true;
-        saturatedRelations.push_back(*saturated);
-      }
-    }
-  }
-  */
 }
 
 void RegularTableau::extractCounterexample(Node *openNode) {
@@ -459,9 +448,25 @@ void RegularTableau::extractCounterexample(Node *openNode) {
       int left = *edge.literal->predicate->leftOperand->label;
       int right = *edge.literal->predicate->rightOperand->label;
       std::string relation = *edge.literal->predicate->identifier;
+      // rename left
+      Node *renameNode = node->firstParentNode;
+      auto currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
+      while (left < currentRenaming.size() && renameNode != nullptr) {
+        currentRenaming = std::get<1>(renameNode->firstParentLabel);
+        left = currentRenaming[left];
+        renameNode = renameNode->firstParentNode;
+      }
+      // rename right
+      renameNode = node->firstParentNode;
+      currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
+      while (right < currentRenaming.size() && renameNode != nullptr) {
+        currentRenaming = std::get<1>(renameNode->firstParentLabel);
+        right = currentRenaming[right];
+        renameNode = renameNode->firstParentNode;
+      }
 
-      counterexample << "N" << left << " -> "
-                     << "N" << right << "[label = \"" << relation << "\"];" << std::endl;
+      counterexample << "N" << left << " -> " << "N" << right << "[label = \"" << relation << "\"];"
+                     << std::endl;
     }
     node = node->firstParentNode;
   }
@@ -476,8 +481,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);
-    output << "root -> "
-           << "N" << rootNode << ";" << std::endl;
+    output << "root -> " << "N" << rootNode << ";" << std::endl;
   }
   if (allNodes) {
     for (const auto &node : nodes) {

@@ -21,10 +21,7 @@ Set &Set::operator=(const Set &other) {
   swap(*this, copy);
   return *this;
 }
-Set::Set(const std::string &expression) {
-  Logic visitor;
-  *this = visitor.parseSet(expression);
-}
+Set::Set(const std::string &expression) { *this = Logic::parseSet(expression); }
 Set::Set(const SetOperation operation, const std::optional<std::string> &identifier)
     : operation(operation), identifier(identifier) {}
 Set::Set(const SetOperation operation, int label) : operation(operation), label(label) {}
@@ -95,6 +92,12 @@ bool Set::isNormal() const {
   }
 }
 
+bool Set::hasTopSet() const {
+  return (SetOperation::full == operation) ||
+         (leftOperand != nullptr && leftOperand->hasTopSet()) ||
+         (rightOperand != nullptr && rightOperand->hasTopSet());
+}
+
 std::vector<std::vector<Set::PartialPredicate>> substituteHelper2(
     bool substituteRight, const std::vector<std::vector<Set::PartialPredicate>> &disjunction,
     const Set &otherOperand) {
@@ -121,15 +124,25 @@ std::vector<std::vector<Set::PartialPredicate>> substituteHelper2(
   return resultDisjunction;
 }
 
-std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bool modalRules) {
+std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bool negated,
+                                                                              bool modalRules) {
   std::vector<std::vector<PartialPredicate>> result;
   switch (operation) {
     case SetOperation::singleton:
+      // no rule applicable to single event constant
       return std::nullopt;
     case SetOperation::empty:  // TODO: handle in choice/intersection/domain/image
+      spdlog::error("Rule (\bot_1) is not implemented.");
       return std::nullopt;
-    case SetOperation::full:  // TODO: handle in choice/intersection/domain/image
-      return std::nullopt;
+    case SetOperation::full: {
+      if (negated) {
+        return std::nullopt;
+      }
+      // [T] -> { [e] } , only if positive
+      Set f(SetOperation::singleton, Set::maxSingletonLabel++);
+      result = {{std::move(f)}};
+      return result;
+    }
     case SetOperation::choice:
       // [A | B] -> { [A] },{ [B] }
       result = {{Set(*leftOperand)}, {Set(*rightOperand)}};
@@ -149,12 +162,12 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         return result;
       } else {
         // [S1 & S2]
-        auto leftResult = leftOperand->applyRule(modalRules);
+        auto leftResult = leftOperand->applyRule(negated, modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
           return substituteHelper2(false, disjunction, *rightOperand);
         }
-        auto rightResult = rightOperand->applyRule(modalRules);
+        auto rightResult = rightOperand->applyRule(negated, modalRules);
         if (rightResult) {
           auto disjunction = *rightResult;
           return substituteHelper2(true, disjunction, *leftOperand);
@@ -248,7 +261,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
           }
         }
       } else {
-        auto leftOperandResultOptional = leftOperand->applyRule(modalRules);
+        auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {
@@ -352,7 +365,7 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
           }
         }
       } else {
-        auto leftOperandResultOptional = leftOperand->applyRule(modalRules);
+        auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {
@@ -460,13 +473,24 @@ void Set::saturate() {
     case SetOperation::domain:
     case SetOperation::image:
       if (leftOperand->operation == SetOperation::singleton) {
+        // saturate base relation assumptions
         if (relation->operation == RelationOperation::base && !relation->saturated) {
-          // relation is not already saturated
           auto relationName = *relation->identifier;
           if (RegularTableau::baseAssumptions.contains(relationName)) {
-            auto assumtion = RegularTableau::baseAssumptions.at(relationName);
-            *relation = assumtion.relation;
+            auto assumption = RegularTableau::baseAssumptions.at(relationName);
+            *relation = Relation(assumption.relation);
           }
+        }
+        // saturate identity assumptions
+        if (relation->operation == RelationOperation::base && !relation->saturatedId) {
+          // construct master identity relation
+          Relation subsetId = Relation(RelationOperation::identity);
+          for (const auto assumption : RegularTableau::idAssumptions) {
+            subsetId = Relation(RelationOperation::choice, std::move(subsetId),
+                                Relation(assumption.relation));
+          }
+          auto leftOperandCopy = Set(*leftOperand);
+          *leftOperand = Set(SetOperation::image, std::move(leftOperandCopy), std::move(subsetId));
         }
       } else {
         leftOperand->saturate();

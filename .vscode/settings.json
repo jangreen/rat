@@ -89,7 +89,15 @@
         "test2f": "cpp",
         "charconv": "cpp",
         "source_location": "cpp",
-        "condition_variable": "cpp"
+        "condition_variable": "cpp",
+        "codecvt": "cpp",
+        "execution": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "span": "cpp",
+        "*.tcc": "cpp",
+        "random": "cpp",
+        "cinttypes": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

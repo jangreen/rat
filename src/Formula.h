@@ -47,6 +47,7 @@ class Formula {
   // functions for rule applications
   std::optional<std::vector<std::vector<Formula>>> applyRule(bool modalRules = false);
   bool isNormal() const;
+  bool hasTopSet() const;
   bool isEdgePredicate() const;
   bool isPositiveEqualityPredicate() const;
 

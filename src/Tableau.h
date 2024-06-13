@@ -30,6 +30,7 @@ class Tableau {
     void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
     std::optional<GDNF> applyRule(bool modalRule = false);
     void inferModal();
+    void inferModalTop();
     void inferModalAtomic();
 
     // this method assumes that tableau is already reduced
@@ -48,7 +49,7 @@ class Tableau {
   std::unique_ptr<Node> rootNode;
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
-  bool solve(int bound = 2000);  // TODO: remove bound for regular reasoning since it terminates
+  bool solve(int bound = 50000);  // TODO: remove bound for regular reasoning since it terminates
 
   // methods for regular reasoning
   std::optional<Formula> applyRuleA();

@@ -173,6 +173,36 @@ void Tableau::Node::inferModal() {
   }
 }
 
+void Tableau::Node::inferModalTop() {
+  if (formula.operation != FormulaOperation::literal || !formula.literal->negated) {
+    return;
+  }
+
+  // get all labels
+  Node *temp = parentNode;
+  std::vector<int> labels;
+  while (temp != nullptr) {
+    if (temp->formula.isNormal() && !temp->formula.literal->negated) {
+      for (auto newLabel : temp->formula.literal->predicate->labels()) {
+        if (std::find(labels.begin(), labels.end(), newLabel) == labels.end()) {
+          labels.push_back(newLabel);
+        }
+      }
+    }
+    temp = temp->parentNode;
+  }
+
+  for (auto label : labels) {
+    // T -> e
+    Set search = Set(SetOperation::full);
+    Set replace = Set(SetOperation::singleton, label);
+
+    auto newLiterals = substitute(*formula.literal, search, replace);
+    for (auto &literal : newLiterals) {
+      appendBranch(Formula(FormulaOperation::literal, std::move(literal)));
+    }
+  }
+}
 void Tableau::Node::inferModalAtomic() {
   Predicate edgePredicate = *formula.literal->predicate;
   Set search1 = Set(SetOperation::image, Set(*edgePredicate.leftOperand),
@@ -210,13 +240,11 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   // children
   if (leftNode != nullptr) {
     leftNode->toDotFormat(output);
-    output << "N" << this << " -- "
-           << "N" << leftNode << ";" << std::endl;
+    output << "N" << this << " -- " << "N" << leftNode << ";" << std::endl;
   }
   if (rightNode != nullptr) {
     rightNode->toDotFormat(output);
-    output << "N" << this << " -- "
-           << "N" << rightNode << ";" << std::endl;
+    output << "N" << this << " -- " << "N" << rightNode << ";" << std::endl;
   }
 }
 

@@ -1,7 +1,11 @@
 grammar Logic;
 import Cat;
 
-proof: letDefinition* hypothesis* assertion* EOF;
+proof: statement* EOF;
+
+statement: letDefinition | inclusion | hypothesis | assertion;
+
+inclusion: FILEINCLUDE FILEPATH;
 
 assertion:
 	ASSERT f1 = formula
@@ -19,8 +23,7 @@ predicate:
 
 hypothesis: ASSUME lhs = expression INEQUAL rhs = expression;
 
-// mmAssertion: CATASSERT lhs = FILEPATH INEQUAL rhs = FILEPATH
-
+FILEINCLUDE: 'include';
 ASSUME: 'assume';
 ASSERT: 'assert';
 INEQUAL: '<=';
