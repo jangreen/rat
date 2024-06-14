@@ -7,12 +7,12 @@
 #include "Literal.h"
 
 enum class FormulaOperation {
-  bottom,     // nullary predicate aka constant
-  top,        // nullary predicate aka constant
-  literal,    // relational predicate
-  negation,   // oneary Formula
-  logicalOr,  // binary Formula
-  logicalAnd
+  bottom,    // nullary predicate aka constant
+  top,       // nullary predicate aka constant
+  literal,   // relational predicate
+  negation,  // oneary Formula
+  // logicalOr,  // binary Formula
+  // logicalAnd
 };
 
 class Formula {

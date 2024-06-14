@@ -453,6 +453,34 @@ std::vector<int> Predicate::labels() const {
   }
 }
 
+std::vector<Set> Predicate::labelBaseCombinations() const {
+  switch (operation) {
+    case PredicateOperation::intersectionNonEmptiness: {
+      auto leftLabels = leftOperand->labelBaseCombinations();
+      auto rightLabels = rightOperand->labelBaseCombinations();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case PredicateOperation::edge: {
+      Set leftLabel = Set(SetOperation::singleton, *leftOperand->label);
+      Set rightLabel = Set(SetOperation::singleton, *rightOperand->label);
+      Relation r1 = Relation(*identifier);
+      Relation r2 = Relation(*identifier);
+
+      return {Set(SetOperation::image, std::move(leftLabel), std::move(r1)),
+              Set(SetOperation::domain, std::move(rightLabel), std::move(r2))};
+    }
+    case PredicateOperation::set: {
+      return {};
+    }
+    case PredicateOperation::equality: {
+      return {};
+    }
+    default:
+      return {};
+  }
+}
+
 void Predicate::rename(const Renaming &renaming, const bool inverse) {
   switch (operation) {
     case PredicateOperation::intersectionNonEmptiness: {

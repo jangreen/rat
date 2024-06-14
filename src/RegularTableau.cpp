@@ -43,15 +43,20 @@ FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, EdgeLabel &label
     }
   }
 
-  // filter none active labels
-  // assume alredy normal
+  // filter none active labels + active (label,baseRel) combinations
+  // assume already normal
   // 1) gather all active labels
   std::vector<int> activeLabels;
+  std::vector<Set> activeLabelBaseCombinations;
   for (const auto &formula : newClause) {
     if (!formula.literal->negated) {
       auto formulaLabels = formula.literal->predicate->labels();
+      auto formulaCobinations = formula.literal->predicate->labelBaseCombinations();
       activeLabels.insert(std::end(activeLabels), std::begin(formulaLabels),
                           std::end(formulaLabels));
+      activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
+                                         std::begin(formulaCobinations),
+                                         std::end(formulaCobinations));
     }
   }
   // calculate equivalence class
@@ -85,13 +90,14 @@ FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, EdgeLabel &label
       nonMinimal.push_back(i);
     }
   }
-  // 2) filtering: non active labels and non minimal labels
+  // 2) filtering: non active labels, non minimal labels, and non active combinations
   FormulaSet copy = std::move(newClause);
   newClause = {};
   for (const auto &formula : copy) {
     auto formulaLabels = formula.literal->predicate->labels();
+    auto formulaCobinations = formula.literal->predicate->labelBaseCombinations();
 
-    // find intersection
+    // find intersection: nonMinimal & formulaLabels
     bool intersectionNonempty = false;
     for (const auto nonMin : nonMinimal) {
       if (std::find(formulaLabels.begin(), formulaLabels.end(), nonMin) != formulaLabels.end()) {
@@ -104,7 +110,19 @@ FormulaSet purge(const FormulaSet &clause, FormulaSet &dropped, EdgeLabel &label
       continue;
     }
 
-    if (isSubset(formulaLabels, activeLabels)) {
+    // TODO: remove:
+    // std::cout << "------ " << formula.toString() << std::endl;
+    // for (auto s : formulaCobinations) {
+    //   std::cout << s.toString() << std::endl;
+    // }
+    // std::cout << "-" << std::endl;
+    // for (auto s : activeLabelBaseCombinations) {
+    //   std::cout << s.toString() << std::endl;
+    // }
+    // std::cout << isSubset(formulaCobinations, activeLabelBaseCombinations) << std::endl;
+
+    if (isSubset(formulaLabels, activeLabels) &&
+        isSubset(formulaCobinations, activeLabelBaseCombinations)) {
       newClause.push_back(formula);
     } else {
       // are minimal
@@ -121,20 +139,49 @@ std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
   if (parent == nullptr) {
     return std::nullopt;
   }
+  // purge also here before adding new literals // TODO: use purge function
+  // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
   // 1) gather parent active labels
   std::vector<int> parentActiveLabels;
+  std::vector<Set> parentActiveLabelBaseCombinations;
   for (const auto &formula : parent->formulas) {
     if (!formula.literal->negated) {
       auto formulaLabels = formula.literal->predicate->labels();
+      auto formulaCobinations = formula.literal->predicate->labelBaseCombinations();
       parentActiveLabels.insert(std::end(parentActiveLabels), std::begin(formulaLabels),
                                 std::end(formulaLabels));
+      parentActiveLabelBaseCombinations.insert(std::end(parentActiveLabelBaseCombinations),
+                                               std::begin(formulaCobinations),
+                                               std::end(formulaCobinations));
     }
   }
+  // (*) above
+  for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
+    for (const auto &parentLabel : parentLabels) {
+      std::vector<Formula> edges = std::get<0>(parentLabel);
+      Renaming renaming = std::get<1>(parentLabel);
+      for (const auto edge : edges) {
+        auto formulaCobinations = edge.literal->predicate->labelBaseCombinations();
+        // only keep combinations with labels that are still there after renaming
+        for (auto combination : formulaCobinations) {
+          if (isSubset(combination.labels(), renaming)) {
+            // push renamed combination (using inverse of renaming)
+            combination.rename(renaming, true);
+            parentActiveLabelBaseCombinations.push_back(combination);
+          }
+        }
+      }
+    }
+  }
+
   // 2) filter newFormulas for parent
   FormulaSet filteredNewFormulas;
   for (const auto &formula : newFormulas) {
     auto formulaLabels = formula.literal->predicate->labels();
-    if (isSubset(formulaLabels, parentActiveLabels)) {
+    auto formulaCobinations = formula.literal->predicate->labelBaseCombinations();
+
+    if (isSubset(formulaLabels, parentActiveLabels) &&
+        isSubset(formulaCobinations, parentActiveLabelBaseCombinations)) {
       filteredNewFormulas.push_back(formula);
     }
   }
@@ -160,24 +207,26 @@ std::optional<FormulaSet> getInconsistentLiterals(RegularTableau::Node *parent,
 std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
-int RegularTableau::saturationBound = 2;
+int RegularTableau::saturationBound = 1;
 
 RegularTableau::RegularTableau(std::initializer_list<Formula> initalFormulas)
     : RegularTableau(std::vector(initalFormulas)) {}
 RegularTableau::RegularTableau(FormulaSet initalFormulas) {
   Tableau t{initalFormulas};
   expandNode(nullptr, &t);
+#if DEBUG
+  exportProof("regular-debug");
+#endif
 }
 
 // assumptions:
 // clause is in normal form
-// parent == nullptr -> rootNode
 RegularTableau::Node *RegularTableau::addNode(FormulaSet clause, EdgeLabel &label) {
-  // rename clause and update edgeLabel // TODO: do sorting inside renaming
-  std::sort(clause.begin(), clause.end());
+  // rename clause events such that two isomorphic nodes are equal after renaming
   auto renaming = rename(clause);
+  // update edge label
   std::get<1>(label) = renaming;
-  // create node, add to nodes (returns pointer to existing node if already exists)
+  // create node, add to "nodes" (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(clause);
   auto insertion = nodes.insert(std::move(newNode));
   if (insertion.second) {
@@ -189,6 +238,7 @@ RegularTableau::Node *RegularTableau::addNode(FormulaSet clause, EdgeLabel &labe
   return insertion.first->get();
 }
 
+// parent == nullptr -> rootNode
 void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
   if (parent == nullptr) {
     // root node
@@ -277,11 +327,11 @@ bool RegularTableau::solve() {
 
     } else {
       extractCounterexample(currentNode);
-      spdlog::info("[Solver] False.");
+      spdlog::info("[Solver] Answer: False");
       return false;
     }
   }
-  spdlog::info("[Solver] True.");
+  spdlog::info("[Solver] Answer: True");
   return true;
 }
 
@@ -306,7 +356,11 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   for (const auto &clause : dnf) {
     FormulaSet droppedFormulas;
     EdgeLabel edgeLabel;
+    std::cout << "------" << std::endl;
+    printFormulaSet(clause);
+    std::cout << "-" << std::endl;
     auto newClause = purge(clause, droppedFormulas, edgeLabel);
+    printFormulaSet(newClause);
 
     // check if immediate inconsistency exists (inconsistent literals that are immdediatly
     // dropped)

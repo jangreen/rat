@@ -44,7 +44,7 @@ int main(int argc, const char *argv[]) {
                   (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
                    RegularTableau::emptinessAssumptions.size())));
   for (auto goal : goals) {
-    spdlog::info(fmt::format("[Status] Prove goal: {}", goal.toString()));
+    spdlog::info(fmt::format("[Status] Goal: {}", goal.toString()));
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
       Tableau tableau{goal};
       tableau.solve(200);

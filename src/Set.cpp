@@ -63,6 +63,11 @@ bool Set::operator==(const Set &other) const {
   return isEqual;
 }
 
+bool Set::operator<(const Set &other) const {
+  // sort lexicographically
+  return toString() < other.toString();
+}
+
 bool Set::isNormal() const {
   switch (operation) {
     case SetOperation::choice:
@@ -443,6 +448,39 @@ std::vector<int> Set::labels() const {
       return leftOperand->labels();
     case SetOperation::singleton:
       return {*label};
+    default:
+      return {};
+  }
+}
+
+std::vector<Set> Set::labelBaseCombinations() const {
+  switch (operation) {
+    case SetOperation::choice: {
+      auto leftLabels = leftOperand->labelBaseCombinations();
+      auto rightLabels = rightOperand->labelBaseCombinations();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case SetOperation::intersection: {
+      auto leftLabels = leftOperand->labelBaseCombinations();
+      auto rightLabels = rightOperand->labelBaseCombinations();
+      leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
+      return leftLabels;
+    }
+    case SetOperation::domain:
+      if (leftOperand->operation == SetOperation::singleton &&
+          relation->operation == RelationOperation::base) {
+        return {Set(*this)};
+      }
+      return leftOperand->labelBaseCombinations();
+    case SetOperation::image:
+      if (leftOperand->operation == SetOperation::singleton &&
+          relation->operation == RelationOperation::base) {
+        return {Set(*this)};
+      }
+      return leftOperand->labelBaseCombinations();
+    case SetOperation::singleton:
+      return {};
     default:
       return {};
   }

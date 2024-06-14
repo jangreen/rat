@@ -51,6 +51,7 @@ class Predicate {
   bool isNormal() const;
   bool hasTopSet() const;
   std::vector<int> labels() const;
+  std::vector<Set> labelBaseCombinations() const;
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 
   void saturateId();
@@ -126,6 +127,7 @@ class Set {
   bool isNormal() const;  // true iff all labels are in front of base Sets
   bool hasTopSet() const;
   std::vector<int> labels() const;
+  std::vector<Set> labelBaseCombinations() const;
   // TODO: make inverse parameter either compile time constexpr or use templates
   void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
 

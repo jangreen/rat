@@ -71,6 +71,7 @@ class RegularTableau {
   // helper
   static Renaming rename(FormulaSet &formulas) {
     // calculate renaming
+    std::sort(formulas.begin(), formulas.end());
     Renaming renaming;
     for (auto &formula : formulas) {
       for (const auto &l : formula.literal->predicate->labels()) {

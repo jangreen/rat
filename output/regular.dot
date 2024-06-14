@@ -1,2316 +1,1016 @@
 digraph {
 node[shape="box"]
-N0x1229076e0[tooltip="5470939024246512254
+N0x14be40100[tooltip="13190125027558769527
 
 ", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rf;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
 ~rf({0},{1})
 "];
-root -> N0x1229076e0;
-N0x122913dd0[tooltip="1216235380140927212
+N0x14be40100 -> N0x15be0cf30[color="grey", label =" | 
+"];
+N0x14be40100 -> N0x15be70400[color="grey", label =" | 
+"];
+N0x14be40100 -> N0x15be2a130[color="grey", label =" | 
+"];
+N0x15be0cf30[tooltip="17054827845104277199
+
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~rf({0},{1})
+"];
+N0x15be0cf30 -> N0x15be70400[color="grey", label =" | 
+"];
+N0x15be0cf30 -> N0x15be2a130[color="grey", label =" | 
+"];
+N0x15be70400[tooltip="15745390240504469780
+
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+~rf({0},{1})
+"];
+N0x15be70400 -> N0x15be2a130[color="grey", label =" | 
+"];
+N0x15be2a130[tooltip="691784475738071828
+
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+~rf({0},{1})
+"];
+N0x15be2a130 -> N0x14d206380[label ="rf({0},{60}),  | 60, 1, 
+"];
+N0x15be2a130 -> N0x15be36bd0[label ="rf({0},{60}),  | 60, 1, 
+"];
+N0x15be2a130 -> N0x14d206470[label ="rf({0},{60}),  | 60, 1, 
+"];
+N0x14d206380[tooltip="13218064110602349747
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(rf;{1})
+~({0};rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+~rf({0},{1})
+", color=green];
+N0x15be36bd0[tooltip="5854131632337391199
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};co);rfinv);T
+~({0};co);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x14d206470[tooltip="3035141637685811674
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x14d206470 -> N0x15be09250[color="grey", label =" | 
+"];
+N0x15be09250[tooltip="5582703809076184123
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{0}))
+~T;(rf;(rf;{1}))
+"];
+root -> N0x14be40100;
+N0x14be3ef20[tooltip="5173597882906976148
 
 ", label="({0};rf);(((rf | co) | (rfinv;co))^*;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-root -> N0x122913dd0;
-N0x122922790[tooltip="5853970633156013362
+N0x14be3ef20 -> N0x15be2be50[color="grey", label =" | 
+"];
+N0x14be3ef20 -> N0x15be46560[color="grey", label =" | 
+"];
+N0x14be3ef20 -> N0x15be187e0[color="grey", label =" | 
+"];
+N0x15be2be50[tooltip="17779691693515514922
 
-", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(co;{1}))
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-root -> N0x122922790;
-N0x122907210[tooltip="13377545361835278450
+N0x15be2be50 -> N0x15be46560[color="grey", label =" | 
+"];
+N0x15be2be50 -> N0x15be187e0[color="grey", label =" | 
+"];
+N0x15be46560[tooltip="2508139749871742270
 
-", label="({0};co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(co;{1}))
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-root -> N0x122907210;
-N0x1229072c0[tooltip="14994561761959452816
+N0x15be46560 -> N0x15be187e0[color="grey", label =" | 
+"];
+N0x15be187e0[tooltip="16746393701435361337
 
-", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(co;{1}))
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
+~({0};rf);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-root -> N0x1229072c0;
-N0x122915e10[tooltip="5393109142402436626
+N0x15be187e0 -> N0x14d113a50[label ="rf({0},{56}),  | 56, 1, 
+"];
+N0x15be187e0 -> N0x14be7cdc0[label ="rf({0},{56}),  | 56, 1, 
+"];
+N0x15be187e0 -> N0x14be7d8f0[label ="rf({0},{56}),  | 56, 1, 
+"];
+N0x14d113a50[tooltip="12565249922658923834
 
-", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(co;{1})
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
+~({0};rf);(co;{1})
+~({0};rf);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
-"];
-root -> N0x122915e10;
-N0x12290b680[tooltip="7587356138160739452
+", color=green];
+N0x14be7cdc0[tooltip="16211160647159228066
 
-", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(co;{1})
 ~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
+~({0};co);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
 ~co({0},{1})
-~rf({0},{1})
-"];
-root -> N0x12290b680;
-N0x12290b2c0[tooltip="4275470293578912569
+", color=green];
+N0x14be7d8f0[tooltip="7854199521215272330
 
-", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-root -> N0x12290b2c0;
-N0x122929950[tooltip="4253056221216941521
+N0x14be7d8f0 -> N0x14be54590[color="grey", label =" | 
+"];
+N0x14be54590[tooltip="1172361102732217065
 
-", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
 ~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 "];
-N0x122929950 -> N0x121f2d0b0[color="grey", label =" | 
+N0x14be54590 -> N0x14bf0f050[label ="rfinv({0},{28}),  | 28, 1, 
 "];
-N0x122929950 -> N0x121ea7c40[color="grey", label =" | 
-"];
-N0x121f2d0b0[tooltip="17911750351461582036
+N0x14bf0f050[tooltip="788801571039339954
 
-", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(co;{1})
 ~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14bf0f050 -> N0x14be65780[color="grey", label =" | 
+"];
+N0x14be65780[tooltip="15685173426052005197
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(co;{1})
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(co;{1}))
+"];
+N0x14be65780 -> N0x14d11cd20[label ="co({0},{24}),  | 24, 1, 
+"];
+N0x14be65780 -> N0x14bf0f050[label ="co({0},{24}),  | 24, 1, 
+"];
+N0x14be65780 -> N0x14bf11a30[label ="co({0},{24}),  | 24, 1, 
+"];
+N0x14be65780 -> N0x14d12cc70[label ="co({24},{1}), co({0},{24}),  | 
+"];
+N0x14be65780 -> N0x14d14a4d0[label ="co({0},{24}),  | 24, 1, 
+"];
+N0x14d11cd20[tooltip="13513760620148564315
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(co;{1})
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
+~({0};rf);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14d11cd20 -> N0x14d14a4d0[color="grey", label =" | 
+"];
+N0x14d14a4d0[tooltip="1391970378410760219
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(co;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
 ~({0};rf);(co;{0})
 ~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
-~({0};rfinv);(co;{1})
-~({1};co);(co^*;(co;{0}))
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(co^*;(co;{0})))
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(co;{0})
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
 ~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~co({1},{0})
-~rf({0},{1})
 "];
-N0x121f2d0b0 -> N0x121f72310[label ="rfinv({0},{4}),  | 4, 1, 
+N0x14d14a4d0 -> N0x14d113a50[label ="rf({0},{26}),  | 26, 1, 
 "];
-N0x121f2d0b0 -> N0x121fd0280[label ="rfinv({0},{4}),  | 4, 1, 
+N0x14d14a4d0 -> N0x14be7cdc0[label ="rf({0},{26}),  | 26, 1, 
 "];
-N0x121f2d0b0 -> N0x121ea7c40[color="grey", label =" | 
+N0x14d14a4d0 -> N0x14be7d8f0[label ="rf({0},{26}),  | 26, 1, 
 "];
-N0x121f72310[tooltip="5136692294880583266
+N0x14d14a4d0 -> N0x14be54590[label ="rf({0},{26}),  | 26, 1, 
+"];
+N0x14bf11a30[tooltip="5525713584549262057
 
-", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-"];
-N0x121f72310 -> N0x121fd0280[color="grey", label =" | 
-"];
-N0x121f72310 -> N0x121e42720[color="grey", label =" | 
-"];
-N0x121fd0280[tooltip="18231091593718784006
-
-", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({1},{0})
-"];
-N0x121fd0280 -> N0x122a932d0[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x122a3de40[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x122a89740[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x122a86a60[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x121e6fe30[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x121f2d990[label ="co({0},{6}),  | 6, 1, 
-"];
-N0x121fd0280 -> N0x121e42720[color="grey", label =" | 
-"];
-N0x122a932d0[tooltip="2829021452362582167
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(co;{1})
 ~({0};rfinv);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
 ~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{1})
-~rfinv({0},{0})
-"];
-N0x122a932d0 -> N0x121f2d990[color="grey", label =" | 
-"];
-N0x122a932d0 -> N0x121f98530[color="grey", label =" | 
-"];
-N0x121f2d990[tooltip="11124608399587576709
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-"];
-N0x121f2d990 -> N0x12280c990[label ="rf({0},{12}),  | 12, 1, 
-"];
-N0x121f2d990 -> N0x122814db0[label ="rf({0},{12}),  | 12, 1, 
-"];
-N0x121f2d990 -> N0x122831830[label ="rf({0},{12}),  | 12, 1, 
-"];
-N0x121f2d990 -> N0x12280c260[label ="rf({0},{12}),  | 12, 1, 
-"];
-N0x121f2d990 -> N0x121f98530[color="grey", label =" | 
-"];
-N0x12280c990[tooltip="975733613247260447
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-"];
-N0x122814db0[tooltip="9949102590698315495
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-"];
-N0x122831830[tooltip="7340842248986679671
-
-", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-"];
-N0x12280c260[tooltip="16583878179323410211
-
-", label="({0};rfinv);(co;{1})
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-"];
-N0x12280c260 -> N0x121f705e0[color="grey", label =" | 
-"];
-N0x121f705e0[tooltip="7269721324067513849
-
-", label="({0};rfinv);(co;{1})
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(co;{0})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(co^*;(co;{0}))
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(co^*;(co;{0})))
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(co;{0})
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~co({1},{0})
-~rf({0},{0})
-~rf({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x121f705e0 -> N0x122913f00[label ="co({36},{1}), rfinv({0},{36}),  | 
-"];
-N0x122913f00[tooltip="16122540315406892770
+", color=green];
+N0x14d12cc70[tooltip="16122540315406892770
 
 ", label="~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
 "];
-N0x121f98530[tooltip="7416776637157708111
+root -> N0x14be3ef20;
+N0x14be40e90[tooltip="14878354649400298228
 
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
 "];
-N0x121f98530 -> N0x122ec9390[label ="rf({0},{22}),  | 22, 1, 
+N0x14be40e90 -> N0x15be39d50[color="grey", label =" | 
 "];
-N0x121f98530 -> N0x1269d9ac0[label ="rf({0},{22}),  | 22, 1, 
+N0x14be40e90 -> N0x14d247ed0[color="grey", label =" | 
 "];
-N0x121f98530 -> N0x122ec5d20[label ="rf({0},{22}),  | 22, 1, 
+N0x14be40e90 -> N0x14d209d10[color="grey", label =" | 
 "];
-N0x121f98530 -> N0x122eba9e0[label ="rf({0},{22}),  | 22, 1, 
-"];
-N0x121f98530 -> N0x121f705e0[label ="rf({0},{22}),  | 22, 1, 
-"];
-N0x121f98530 -> N0x122eaba60[label ="rf({0},{22}),  | 22, 1, 
-"];
-N0x122ec9390[tooltip="17882561012635940122
+N0x15be39d50[tooltip="15785499515237276074
 
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(co^*;(co;{0}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be39d50 -> N0x14d247ed0[color="grey", label =" | 
+"];
+N0x15be39d50 -> N0x14d209d10[color="grey", label =" | 
+"];
+N0x14d247ed0[tooltip="1909282098318632428
+
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14d247ed0 -> N0x14d209d10[color="grey", label =" | 
+"];
+N0x14d209d10[tooltip="8146821759214935153
+
+", label="({0};rf);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
+~(({0};rf);co);T
+~(({0};rf);rf);T
 ~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14d209d10 -> N0x14d109b60[label ="rf({0},{52}),  | 52, 1, 
+"];
+N0x14d209d10 -> N0x14be54790[label ="rf({0},{52}),  | 52, 1, 
+"];
+N0x14d209d10 -> N0x14be56a10[label ="rf({0},{52}),  | 52, 1, 
+"];
+N0x14d209d10 -> N0x14be5f5b0[label ="rf({0},{52}),  | 52, 1, 
+"];
+N0x14d109b60[tooltip="2814730838460488175
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(co;{1})
 ~({0};rf);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
 ~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-~co({0},{0})
-~rf({0},{1})
-~rf({0},{0})
-~rfinv({1},{1})
-~rfinv({1},{0})
 ", color=green];
-N0x1269d9ac0[tooltip="10333836198938254909
+N0x14be54790[tooltip="8216390771406314644
 
 ", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);T
 ~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(co^*;(co;{0}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
 ~({0};co);T
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rf);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
 ~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
 ~co({0},{1})
-~co({0},{0})
-~rf({0},{1})
-~rf({0},{0})
-~rfinv({1},{1})
-~rfinv({1},{0})
 ", color=green];
-N0x122ec5d20[tooltip="16096862100549789247
+N0x14be56a10[tooltip="15163692484628527385
 
 ", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(co^*;(co;{0}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rf);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
 ~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-~co({0},{0})
-~rf({0},{1})
-~rf({0},{0})
-~rfinv({1},{1})
-~rfinv({1},{0})
 "];
-N0x122ec5d20 -> N0x122eaba60[color="grey", label =" | 
-"];
-N0x122eaba60[tooltip="12262665488498573089
-
-", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rf);T
-~({1};co);(co^*;(co;{0}))
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(co^*;(co;{0})))
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(co;{0})
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~co({1},{0})
-~rf({0},{0})
-~rf({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x122eaba60 -> N0x122e516f0[label ="rfinv({0},{25}),  | 25, 1, 
-"];
-N0x122eaba60 -> N0x122e887e0[label ="rfinv({0},{25}),  | 25, 1, 
-"];
-N0x122e516f0[tooltip="3004870739588966036
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~rfinv({1},{1})
-~rfinv({1},{0})
-"];
-N0x122e516f0 -> N0x122e887e0[color="grey", label =" | 
-"];
-N0x122e887e0[tooltip="2718774890995879469
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~rf({0},{0})
-~rf({1},{0})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x122e887e0 -> N0x122e8a670[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e887e0 -> N0x122e900a0[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e887e0 -> N0x122ec44c0[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e887e0 -> N0x122e31600[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e887e0 -> N0x122e378d0[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e887e0 -> N0x126819d60[label ="co({0},{27}),  | 27, 1, 
-"];
-N0x122e8a670[tooltip="18191900906056869738
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~rfinv({1},{1})
-~rfinv({1},{0})
-~rfinv({0},{1})
-~rfinv({0},{0})
-"];
-N0x122e8a670 -> N0x126819d60[color="grey", label =" | 
-"];
-N0x126819d60[tooltip="3934669460407036234
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~rf({0},{0})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x126819d60 -> N0x122ec9390[label ="rf({0},{33}),  | 33, 1, 
-"];
-N0x126819d60 -> N0x1269d9ac0[label ="rf({0},{33}),  | 33, 1, 
-"];
-N0x126819d60 -> N0x122ec5d20[label ="rf({0},{33}),  | 33, 1, 
-"];
-N0x126819d60 -> N0x122eba9e0[label ="rf({0},{33}),  | 33, 1, 
-"];
-N0x122eba9e0[tooltip="8475801388251810953
+N0x14be5f5b0[tooltip="14789603415069652942
 
 ", label="({0};rfinv);(co;{1})
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);T
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(co^*;(co;{0}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};co);T
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rf);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
 ~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
+"];
+root -> N0x14be40e90;
+N0x14be41600[tooltip="13470094589369978905
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~({0};co);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14be41600 -> N0x14be617b0[color="grey", label =" | 
+"];
+N0x14be617b0[tooltip="2902331211745176830
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};co);rfinv);T
+~({0};co);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+root -> N0x14be41600;
+N0x14be47a80[tooltip="9845281214591680737
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
 ~co({0},{1})
-~co({0},{0})
-~rf({0},{1})
-~rf({0},{0})
-~rfinv({1},{1})
-~rfinv({1},{0})
 "];
-N0x122eba9e0 -> N0x121f705e0[color="grey", label =" | 
+N0x14be47a80 -> N0x14d1109c0[color="grey", label =" | 
 "];
-N0x122e900a0[tooltip="18190532156793609909
+N0x14d1109c0[tooltip="18198668645930729037
 
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
 ~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~rfinv({1},{1})
-~rfinv({1},{0})
-~rfinv({0},{1})
-~rfinv({0},{0})
-"];
-N0x122e900a0 -> N0x122e378d0[color="grey", label =" | 
-"];
-N0x122e378d0[tooltip="12940925457234508549
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~rf({0},{0})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x122e378d0 -> N0x122e8a670[label ="co({0},{31}),  | 31, 1, 
-"];
-N0x122e378d0 -> N0x122e900a0[label ="co({0},{31}),  | 31, 1, 
-"];
-N0x122e378d0 -> N0x122ec44c0[label ="co({0},{31}),  | 31, 1, 
-"];
-N0x122e378d0 -> N0x122e31600[label ="co({0},{31}),  | 31, 1, 
-"];
-N0x122e378d0 -> N0x126819d60[label ="co({0},{31}),  | 31, 1, 
-"];
-N0x122ec44c0[tooltip="10868080610048062064
-
-", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~rfinv({1},{1})
-~rfinv({1},{0})
-~rfinv({0},{1})
-~rfinv({0},{0})
-", color=green];
-N0x122e31600[tooltip="14118596614777259774
-
-", label="({0};rfinv);(co;{1})
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{1})
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{1})
-~({1};rf);(co;{0})
-~({1};rf);(rf;{1})
-~({1};rf);(rf;{0})
-~({1};rfinv);T
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~rfinv({1},{1})
-~rfinv({1},{0})
-~rfinv({0},{1})
-~rfinv({0},{0})
-", color=green];
-N0x122a3de40[tooltip="12076391803298883339
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
 ~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{1})
-~rfinv({0},{0})
 "];
-N0x122a3de40 -> N0x121e6fe30[color="grey", label =" | 
-"];
-N0x122a3de40 -> N0x12690dbc0[color="grey", label =" | 
-"];
-N0x121e6fe30[tooltip="5502585793996116749
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-"];
-N0x121e6fe30 -> N0x122a932d0[label ="co({0},{10}),  | 10, 1, 
-"];
-N0x121e6fe30 -> N0x122a3de40[label ="co({0},{10}),  | 10, 1, 
-"];
-N0x121e6fe30 -> N0x122a89740[label ="co({0},{10}),  | 10, 1, 
-"];
-N0x121e6fe30 -> N0x122a86a60[label ="co({0},{10}),  | 10, 1, 
-"];
-N0x121e6fe30 -> N0x121f2d990[label ="co({0},{10}),  | 10, 1, 
-"];
-N0x121e6fe30 -> N0x12690dbc0[color="grey", label =" | 
-"];
-N0x122a89740[tooltip="9852240947741946941
-
-", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{1})
-~rfinv({0},{0})
-", color=green];
-N0x122a86a60[tooltip="6010731369481885944
-
-", label="({0};rfinv);(co;{1})
-~((({1};co);co^*);rfinv);T
-~((({0};co);co^*);rfinv);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~({1};co);(rfinv;{0})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;{0})
-~({1};rf);(rf;{0})
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{1})
-~({0};co);(rfinv;{0})
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;{1})
-~({0};rf);(co;{0})
-~({0};rf);(rf;{1})
-~({0};rf);(rf;{0})
-~({0};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{1}))
-~T;(co;(rfinv;{0}))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;{1}))
-~T;(rf;(co;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;(rf;{0}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{1})
-~rfinv({0},{0})
-", color=green];
-N0x12690dbc0[tooltip="7493571327338741881
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~T;(rf;{0})
-~co({0},{1})
-~rf({0},{0})
-~rf({0},{1})
-~rf({1},{0})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x12690dbc0 -> N0x121e59850[label ="co({0},{21}),  | 21, 1, 
-"];
-N0x12690dbc0 -> N0x121ed55a0[label ="co({0},{21}),  | 21, 1, 
-"];
-N0x12690dbc0 -> N0x121ef02c0[label ="co({0},{21}),  | 21, 1, 
-"];
-N0x12690dbc0 -> N0x12292a980[label ="co({0},{21}),  | 21, 1, 
-"];
-N0x121e59850[tooltip="6332215489700588431
-
-", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x121e59850 -> N0x121f98530[color="grey", label =" | 
-"];
-N0x121ed55a0[tooltip="206366686493094327
-
-", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-"];
-N0x121ed55a0 -> N0x12690dbc0[color="grey", label =" | 
-"];
-N0x121ef02c0[tooltip="16921925398024656048
-
-", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-", color=green];
-N0x12292a980[tooltip="1954902492617435907
-
-", label="({0};rfinv);(co;{1})
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(co;{1})
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);T
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
-~T;((co;rfinv);T)
-~T;((rf;co);T)
-~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
-~rfinv({0},{0})
-~rfinv({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
-", color=green];
-N0x121e42720[tooltip="15396208046040202825
+root -> N0x14be47a80;
+N0x14be48740[tooltip="17367744533842016473
 
 ", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~co({0},{1})
+"];
+N0x14be48740 -> N0x14bf18880[color="grey", label =" | 
+"];
+N0x14bf18880[tooltip="10346832862089116870
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
 ~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~co({0},{1})
+"];
+root -> N0x14be48740;
+N0x14be40c90[tooltip="4637964706612568894
+
+", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};rfinv);co);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14be40c90 -> N0x14be5a0c0[color="grey", label =" | 
+"];
+N0x14be5a0c0[tooltip="847674382665909209
+
+", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};rfinv);co);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x14be5a0c0 -> N0x14be62990[label ="rfinv({0},{32}),  | 32, 1, 
+"];
+N0x14be5a0c0 -> N0x14be79610[label ="rfinv({0},{32}),  | 32, 1, 
+"];
+N0x14be62990[tooltip="5173459484484253336
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};co);rfinv);T
+~({0};co);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x14be62990 -> N0x14be79610[color="grey", label =" | 
+"];
+N0x14be79610[tooltip="7256463475997047757
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rf;{1}))
+~(({0};co);rfinv);T
 ~({0};co);(rf;{1})
 ~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
 ~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
+~T;(rf;(rf;{1}))
+"];
+N0x14be79610 -> N0x14be39c00[label ="co({0},{34}),  | 34, 1, 
+"];
+N0x14be79610 -> N0x14be5f4f0[label ="co({0},{34}),  | 34, 1, 
+"];
+N0x14be79610 -> N0x14be79560[label ="co({0},{34}),  | 34, 1, 
+"];
+N0x14be79610 -> N0x14be87dd0[label ="co({0},{34}),  | 34, 1, 
+"];
+N0x14be79610 -> N0x15be1ef10[label ="co({0},{34}),  | 34, 1, 
+"];
+N0x14be39c00[tooltip="4225206921172561353
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+~rf({0},{1})
+"];
+N0x14be39c00 -> N0x15be1ef10[color="grey", label =" | 
+"];
+N0x15be1ef10[tooltip="14603362484480297150
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(co;{0})
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(rf;{1}))
+~rf({0},{1})
+"];
+N0x15be1ef10 -> N0x14d206380[label ="rf({0},{45}),  | 45, 1, 
+"];
+N0x15be1ef10 -> N0x15be36bd0[label ="rf({0},{45}),  | 45, 1, 
+"];
+N0x15be1ef10 -> N0x14d206470[label ="rf({0},{45}),  | 45, 1, 
+"];
+N0x14be5f4f0[tooltip="10000690520402345358
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x14be5f4f0 -> N0x14be87dd0[color="grey", label =" | 
+"];
+N0x14be87dd0[tooltip="8335770570592300015
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(rf;{1}))
+"];
+N0x14be87dd0 -> N0x15be1c9d0[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x14be5f4f0[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x14be79560[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x14d12cc70[label ="rf({37},{1}), co({0},{37}),  | 
+"];
+N0x14be87dd0 -> N0x14d20c660[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x14d2285c0[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x14d2285c0[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x15be30d60[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x15be30d60[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x15be30d60[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x14be87dd0 -> N0x15be30d60[label ="co({0},{37}),  | 37, 1, 
+"];
+N0x15be1c9d0[tooltip="17621576395649478343
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+"];
+N0x15be1c9d0 -> N0x14d20c660[color="grey", label =" | 
+"];
+N0x15be1c9d0 -> N0x14d2285c0[color="grey", label =" | 
+"];
+N0x15be1c9d0 -> N0x15be30d60[color="grey", label =" | 
+"];
+N0x14d20c660[tooltip="11873492845014978863
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(co;{0})
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(rf;{1}))
+"];
+N0x14d20c660 -> N0x14d2285c0[color="grey", label =" | 
+"];
+N0x14d20c660 -> N0x14d206470[label ="rf({0},{39}),  | 39, 1, 
+"];
+N0x14d20c660 -> N0x15be30d60[color="grey", label =" | 
+"];
+N0x14d2285c0[tooltip="8999549900394793006
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(co;{0})
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
 ~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
 ~T;(rf;(rf;{1}))
-~T;(rf;{0})
+"];
+N0x14d2285c0 -> N0x14d206380[label ="rf({0},{41}),  | 41, 1, 
+"];
+N0x14d2285c0 -> N0x15be36bd0[label ="rf({0},{41}),  | 41, 1, 
+"];
+N0x14d2285c0 -> N0x15be30d60[color="grey", label =" | 
+"];
+N0x15be30d60[tooltip="13786695692019077711
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);(co;{0})
+~({0};rf);(co;{1})
+~({0};rf);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(co;{1}))
+~T;(rf;(rf;{1}))
+"];
+N0x15be30d60 -> N0x14d206380[label ="rf({0},{42}),  | 42, 1, 
+"];
+N0x15be30d60 -> N0x15be36bd0[label ="rf({0},{42}),  | 42, 1, 
+"];
+N0x15be30d60 -> N0x14d206470[label ="rf({0},{42}),  | 42, 1, 
+"];
+N0x14be79560[tooltip="10795863568083465408
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~({0};rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(rf;{1}))
+", color=green];
+root -> N0x14be40c90;
+N0x14be487f0[tooltip="10799110975109318295
+
+", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~({0};rfinv);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14be487f0 -> N0x14be5dac0[color="grey", label =" | 
+"];
+N0x14be5dac0[tooltip="13129666813529423997
+
+", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~({0};rfinv);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14be5dac0 -> N0x14d113c80[label ="rfinv({0},{18}),  | 18, 1, 
+"];
+N0x14be5dac0 -> N0x14d007510[label ="rfinv({0},{18}),  | 18, 1, 
+"];
+N0x14be5dac0 -> N0x14d007510[label ="rfinv({0},{18}),  | 18, 1, 
+"];
+N0x14be5dac0 -> N0x14be72b50[label ="rfinv({0},{18}),  | 18, 1, 
+"];
+N0x14d113c80[tooltip="17639452471907167270
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
 ~co({0},{1})
-~rf({0},{0})
-~rf({1},{0})
-~rfinv({1},{0})
-~rfinv({1},{1})
 "];
-N0x121e42720 -> N0x121e59850[label ="co({0},{16}),  | 16, 1, 
+N0x14d113c80 -> N0x14d11cd20[label ="co({0},{19}),  | 19, 1, 
 "];
-N0x121e42720 -> N0x121ed55a0[label ="co({0},{16}),  | 16, 1, 
+N0x14d113c80 -> N0x14bf0f050[label ="co({0},{19}),  | 19, 1, 
 "];
-N0x121e42720 -> N0x121ef02c0[label ="co({0},{16}),  | 16, 1, 
+N0x14d113c80 -> N0x14d007510[color="grey", label =" | 
 "];
-N0x121e42720 -> N0x12292a980[label ="co({0},{16}),  | 16, 1, 
+N0x14d113c80 -> N0x14be72b50[color="grey", label =" | 
 "];
-N0x121e42720 -> N0x12690dbc0[label ="co({0},{16}),  | 16, 1, 
+N0x14d113c80 -> N0x14d14a4d0[label ="co({0},{19}),  | 19, 1, 
 "];
-N0x121e42720 -> N0x121f98530[label ="co({0},{16}),  | 16, 1, 
+N0x14d007510[tooltip="3955631438402471239
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~(({0};co);rfinv);T
+~({0};co);(rfinv;{0})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(co;(rfinv;{0}))
+~T;(rf;(co;{1}))
+~co({0},{1})
 "];
-N0x121ea7c40[tooltip="8775062488219928308
+N0x14d007510 -> N0x14d11cd20[label ="co({0},{20}),  | 20, 1, 
+"];
+N0x14d007510 -> N0x14bf0f050[label ="co({0},{20}),  | 20, 1, 
+"];
+N0x14d007510 -> N0x14bf11a30[label ="co({0},{20}),  | 20, 1, 
+"];
+N0x14d007510 -> N0x14d12cc70[label ="co({20},{1}), co({0},{20}),  | 
+"];
+N0x14d007510 -> N0x14be65780[label ="co({0},{20}),  | 20, 1, 
+"];
+N0x14d007510 -> N0x14d14a4d0[label ="co({0},{20}),  | 20, 1, 
+"];
+N0x14be72b50[tooltip="14320433835923257474
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(co;{1}))
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(co;(rfinv;{0}))
+~T;(rf;(co;{1}))
+~co({0},{1})
+"];
+N0x14be72b50 -> N0x14d007510[color="grey", label =" | 
+"];
+root -> N0x14be487f0;
+N0x14be488e0[tooltip="14016491119705028509
 
 ", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{0}))
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
-~({0};rf);(co;{0})
-~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
 ~({0};rfinv);(co;{1})
-~({1};co);(co^*;(co;{0}))
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(co^*;(co;{0})))
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(co;{0})
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
+"];
+N0x14be488e0 -> N0x14d605510[color="grey", label =" | 
+"];
+N0x14d605510[tooltip="2002968079034614677
+
+", label="(({0};rfinv);co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
+~({0};rfinv);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{0})
-~co({0},{1})
-~co({1},{0})
-~rf({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
 "];
-N0x121ea7c40 -> N0x122a57bd0[label ="rfinv({0},{14}),  | 14, 1, 
+N0x14d605510 -> N0x14d705570[label ="rfinv({0},{4}),  | 4, 1, 
 "];
-N0x121ea7c40 -> N0x121e42720[label ="rfinv({0},{14}),  | 14, 1, 
+N0x14d605510 -> N0x14be5fea0[label ="rfinv({0},{4}),  | 4, 1, 
 "];
-N0x122a57bd0[tooltip="2681976625478028112
+N0x14d705570[tooltip="14245254194130250058
 
 ", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);co^*);(rfinv;{0})
-~(({0};co);co^*);(rfinv;{1})
 ~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+~co({0},{1})
+"];
+N0x14d705570 -> N0x14d122250[label ="co({0},{5}),  | 5, 1, 
+"];
+N0x14d705570 -> N0x14be43570[label ="co({0},{5}),  | 5, 1, 
+"];
+N0x14d705570 -> N0x14d121db0[label ="co({0},{5}),  | 5, 1, 
+"];
+N0x14d705570 -> N0x14be5fea0[color="grey", label =" | 
+"];
+N0x14d705570 -> N0x14be5c080[label ="co({0},{5}),  | 5, 1, 
+"];
+N0x14d122250[tooltip="2689239674340016808
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
 ~(({0};rf);co);T
 ~(({0};rf);rf);T
-~(({1};co);co^*);(rfinv;{0})
-~(({1};co);co^*);(rfinv;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};co);(rfinv;{0})
-~({0};co);(rfinv;{1})
-~({0};rf);(co;(co^*;(co;{0})))
-~({0};rf);(co;(co^*;(co;{1})))
+~({0};rf);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14d122250 -> N0x14d11fe40[color="grey", label =" | 
+"];
+N0x14d11fe40[tooltip="10656665140153547394
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
 ~({0};rf);(co;{0})
 ~({0};rf);(co;{1})
-~({0};rf);(rf;{0})
-~({0};rf);(rf;{1})
-~({1};co);(rfinv;{0})
-~({1};co);(rfinv;{1})
-~({1};rf);(co;(co^*;(co;{0})))
-~({1};rf);(co;(co^*;(co;{1})))
-~({1};rf);(co;{0})
-~({1};rf);(co;{1})
-~({1};rf);(rf;{0})
-~({1};rf);(rf;{1})
-~({1};rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(co;{1}))
+"];
+N0x14d11fe40 -> N0x14d109b60[label ="rf({0},{12}),  | 12, 1, 
+"];
+N0x14d11fe40 -> N0x14be54790[label ="rf({0},{12}),  | 12, 1, 
+"];
+N0x14d11fe40 -> N0x14be56a10[label ="rf({0},{12}),  | 12, 1, 
+"];
+N0x14d11fe40 -> N0x14be5f5b0[label ="rf({0},{12}),  | 12, 1, 
+"];
+N0x14be43570[tooltip="6140272037573514626
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+"];
+N0x14be43570 -> N0x14be5c080[color="grey", label =" | 
+"];
+N0x14be5c080[tooltip="9192834601993881480
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};co);rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{0}))
+~T;(rf;(co;{1}))
+"];
+N0x14be5c080 -> N0x14d122250[label ="co({0},{10}),  | 10, 1, 
+"];
+N0x14be5c080 -> N0x14be43570[label ="co({0},{10}),  | 10, 1, 
+"];
+N0x14be5c080 -> N0x14d121db0[label ="co({0},{10}),  | 10, 1, 
+"];
+N0x14be5c080 -> N0x14be42eb0[label ="co({0},{10}),  | 10, 1, 
+"];
+N0x14be5c080 -> N0x14d11fe40[label ="co({0},{10}),  | 10, 1, 
+"];
+N0x14d121db0[tooltip="2108620237637924727
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~({0};rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+", color=green];
+N0x14be42eb0[tooltip="3443369463160477287
+
+", label="({0};rfinv);(co;{1})
+~({0};rfinv);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+~T;(rf;(co;{1}))
+", color=green];
+N0x14be5fea0[tooltip="7510306421018047186
+
+", label="({0};co);(((rf | co) | (rfinv;co))^*;(rfinv;(co;{1})))
+~(({0};co);rfinv);T
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
 ~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
 ~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
 ~co({0},{1})
-~rfinv({1},{0})
-~rfinv({1},{1})
 "];
-N0x122a57bd0 -> N0x121e42720[color="grey", label =" | 
+N0x14be5fea0 -> N0x14d122250[label ="co({0},{6}),  | 6, 1, 
 "];
-root -> N0x122929950;
-N0x122908320[tooltip="10912070967470611248
+N0x14be5fea0 -> N0x14be43570[label ="co({0},{6}),  | 6, 1, 
+"];
+N0x14be5fea0 -> N0x14d121db0[label ="co({0},{6}),  | 6, 1, 
+"];
+N0x14be5fea0 -> N0x14be42eb0[label ="co({0},{6}),  | 6, 1, 
+"];
+N0x14be5fea0 -> N0x14be5c080[label ="co({0},{6}),  | 6, 1, 
+"];
+N0x14be5fea0 -> N0x14d11fe40[label ="co({0},{6}),  | 6, 1, 
+"];
+root -> N0x14be488e0;
+N0x14be390d0[tooltip="8225655186812607299
 
 ", label="({0};rfinv);(co;{1})
-~((({0};co);co^*);rfinv);T
-~((({1};co);co^*);rfinv);T
-~(({0};co);co^*);(rf;{1})
-~(({0};co);rfinv);T
-~(({0};rf);co);T
-~(({0};rf);rf);T
-~(({0};rfinv);co);(rf;{1})
-~(({1};co);rfinv);T
-~(({1};rf);co);T
-~(({1};rf);rf);T
-~({0};co);(co^*;(co;{1}))
-~({0};co);(rf;{1})
-~({0};rfinv);(co;(co^*;(co;{1})))
 ~({0};rfinv);(co;{1})
 ~T;((co;rfinv);T)
 ~T;((rf;co);T)
 ~T;((rf;rf);T)
-~T;(co;(rfinv;{0}))
-~T;(co;(rfinv;{1}))
-~T;(rf;(co;(co^*;(co;{0}))))
-~T;(rf;(co;(co^*;(co;{1}))))
-~T;(rf;(co;{0}))
-~T;(rf;(co;{1}))
-~T;(rf;(rf;{0}))
-~T;(rf;(rf;{1}))
-~co({0},{1})
-~rf({0},{1})
 ", color=green];
-root -> N0x122908320;
-root -> N0x121f2d0b0;
-root -> N0x121ea7c40;
-root -> N0x121ea7c40;
+root -> N0x14be390d0;
+root -> N0x14d605510;
+root -> N0x14be5dac0;
+root -> N0x14be5a0c0;
+root -> N0x14bf18880;
+root -> N0x14d1109c0;
+root -> N0x14be617b0;
+root -> N0x15be39d50;
+root -> N0x14d247ed0;
+root -> N0x14d247ed0;
+root -> N0x14d209d10;
+root -> N0x14d209d10;
+root -> N0x14d209d10;
+root -> N0x15be2be50;
+root -> N0x15be46560;
+root -> N0x15be46560;
+root -> N0x15be187e0;
+root -> N0x15be187e0;
+root -> N0x15be187e0;
+root -> N0x15be0cf30;
+root -> N0x15be70400;
+root -> N0x15be70400;
+root -> N0x15be2a130;
+root -> N0x15be2a130;
+root -> N0x15be2a130;
+N0x14d212780[tooltip="7395068464648886555
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be5a160[tooltip="6995838574013657296
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};co);rfinv);T
+~({0};co);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be1e340[tooltip="13867932737121078193
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be23cf0[tooltip="1074337126880872886
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(co;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14d24aee0[tooltip="12487766393408770375
+
+", label="({0};rfinv);(co;{1})
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be17900[tooltip="1714719792773027426
+
+", label="((({0};rfinv);co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14d20a0c0[tooltip="1511666139345032972
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};co);rfinv);T
+~({0};co);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be1e1d0[tooltip="3447492403755585903
+
+", label="(({0};co);((rf | co) | (rfinv;co))^*);(co;{1})
+~(({0};co);rfinv);T
+~({0};co);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x15be578c0[tooltip="7337166517276563787
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rf;{1})
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
+N0x14d209f40[tooltip="11069145396633652164
+
+", label="(({0};rf);((rf | co) | (rfinv;co))^*);(rfinv;(co;{1}))
+~(({0};rf);co);T
+~(({0};rf);rf);T
+~({0};rf);T
+~T;((co;rfinv);T)
+~T;((rf;co);T)
+~T;((rf;rf);T)
+"];
 }

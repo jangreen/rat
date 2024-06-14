@@ -89,7 +89,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
   static std::unordered_map<std::string, Relation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
   static std::vector<Formula> parse(const std::string &filePath) {
-    spdlog::info(fmt::format("[Parser] Parse file: {}", filePath));
+    spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);
@@ -103,7 +103,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     return std::any_cast<std::vector<Formula>>(visitor.visitProof(ctx));
   }
   static std::vector<Constraint> parseMemoryModel(const std::string &filePath) {
-    spdlog::info(fmt::format("[Parser] Parse file: {}", filePath));
+    spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
     antlr4::ANTLRInputStream input(stream);
