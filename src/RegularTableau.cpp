@@ -291,8 +291,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
-  for (size_t i = 0; i <= RegularTableau::saturationBound; i++) {
-    saturate(dnf);  // saturate twice to get immediate id saturation (yield smaller proofs)
+  for (size_t i = 0; i < RegularTableau::saturationBound; i++) {
+    saturate(dnf);
   }
 
   if (dnf.empty() && node != nullptr) {
@@ -387,11 +387,9 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 }
 
 void RegularTableau::saturate(GDNF &dnf) {
-  // saturation phase
-  GDNF newDnf = {};
   if (!RegularTableau::baseAssumptions.empty()) {
-    GDNF copyForBaseSaturation = dnf;
-    for (auto &clause : copyForBaseSaturation) {
+    GDNF newDnf;
+    for (auto &clause : dnf) {
       // saturation phase
       for (Formula &formula : clause) {
         if (formula.operation == FormulaOperation::literal) {
@@ -403,11 +401,11 @@ void RegularTableau::saturate(GDNF &dnf) {
       auto saturatedDnf = saturatedTableau.dnf();
       newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
     }
+    swap(dnf, newDnf);
   }
   if (!RegularTableau::idAssumptions.empty()) {
-    GDNF copyForIdSaturation = dnf;
-
-    for (auto &clause : copyForIdSaturation) {
+    GDNF newDnf;
+    for (auto &clause : dnf) {
       // saturation phase
       for (Formula &formula : clause) {
         if (formula.operation == FormulaOperation::literal) {
@@ -419,8 +417,6 @@ void RegularTableau::saturate(GDNF &dnf) {
       auto saturatedDnf = saturatedTableau.dnf();
       newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
     }
-  }
-  if (!newDnf.empty()) {
     swap(dnf, newDnf);
   }
 }

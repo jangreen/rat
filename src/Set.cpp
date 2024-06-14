@@ -475,7 +475,7 @@ void Set::saturateBase() {
       if (leftOperand->operation == SetOperation::singleton) {
         // saturate base relation assumptions
         if (relation->operation == RelationOperation::base &&
-            relation->saturated < RegularTableau::saturationBound) {
+            relation->saturated < RegularTableau::saturationBound && relation->saturated % 2 == 0) {
           auto relationName = *relation->identifier;
           if (RegularTableau::baseAssumptions.contains(relationName)) {
             auto assumption = RegularTableau::baseAssumptions.at(relationName);
@@ -512,7 +512,7 @@ void Set::saturateId() {
         }
         // saturate identity assumptions
         if (relation->operation == RelationOperation::base &&
-            relation->saturated < RegularTableau::saturationBound) {
+            relation->saturated < RegularTableau::saturationBound && relation->saturated % 2 == 1) {
           // saturate identity assumptions
           auto leftOperandCopy = Set(*leftOperand);
           Relation r = std::move(subsetId);

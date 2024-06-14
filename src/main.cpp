@@ -1,5 +1,6 @@
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -7,6 +8,13 @@
 #include "RegularTableau.h"
 #include "Tableau.h"
 #include "parsing/LogicVisitor.h"
+
+// helper
+template <class result_t = std::chrono::milliseconds, class clock_t = std::chrono::steady_clock,
+          class duration_t = std::chrono::milliseconds>
+auto since(std::chrono::time_point<clock_t, duration_t> const &start) {
+  return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+}
 
 int main(int argc, const char *argv[]) {
 #if DEBUG
@@ -44,7 +52,11 @@ int main(int argc, const char *argv[]) {
     } else {
       // TODO: RegularTableau::assumptions = assumptions;
       RegularTableau tableau{goal};
+
+      std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
       tableau.solve();
+
+      spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
       tableau.exportProof("regular");
     }
   }
