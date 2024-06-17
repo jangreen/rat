@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "../Formula.h"
+#include "../Literal.h"
 #include "../cat/Constraint.h"
 #include "LogicVisitor.h"
 
@@ -33,12 +33,10 @@ Relation loadModel(const std::string &file) {
 // TODO: implement precedence rules
 class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
  public:
-  /*std::vector<Formula>*/ std::any visitProof(LogicParser::ProofContext *context) override;
+  /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;
   // /*void*/ std::any visitStatement(LogicParser::StatementContext *ctx) override;
   /*void*/ std::any visitInclusion(LogicParser::InclusionContext *ctx) override;
-  /*Formula*/ std::any visitAssertion(LogicParser::AssertionContext *context) override;
-  /*Formula*/ std::any visitFormula(LogicParser::FormulaContext *context) override;
-  /*Predicate*/ std::any visitPredicate(LogicParser::PredicateContext *context) override;
+  /*Cube*/ std::any visitAssertion(LogicParser::AssertionContext *context) override;
   /*void*/ std::any visitHypothesis(LogicParser::HypothesisContext *ctx) override;
   /*std::vector<Constraint>*/ std::any visitMcm(LogicParser::McmContext *context) override;
   // /*void*/ std::any visitDefinition(LogicParser::DefinitionContext *context) override;
@@ -88,7 +86,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
 
   static std::unordered_map<std::string, Relation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
-  static std::vector<Formula> parse(const std::string &filePath) {
+  static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
@@ -100,7 +98,7 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
 
     LogicParser::ProofContext *ctx = parser.proof();
     Logic visitor;
-    return std::any_cast<std::vector<Formula>>(visitor.visitProof(ctx));
+    return std::any_cast<DNF>(visitor.visitProof(ctx));
   }
   static std::vector<Constraint> parseMemoryModel(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
@@ -130,30 +128,6 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
     return std::get<Relation>(parsedRelation);
   }
 
-  static Formula parseFormula(const std::string &formulaString) {
-    antlr4::ANTLRInputStream input(formulaString);
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::FormulaContext *ctx = parser.formula();
-    Logic visitor;
-    Formula formula = std::any_cast<Formula>(visitor.visitFormula(ctx));
-    return formula;
-  }
-
-  static Predicate parsePredicate(const std::string &predicateString) {
-    antlr4::ANTLRInputStream input(predicateString);
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::PredicateContext *ctx = parser.predicate();
-    Logic visitor;
-    Predicate predicate = std::any_cast<Predicate>(visitor.visitPredicate(ctx));
-    return predicate;
-  }
-
   static Set parseSet(const std::string &setString) {
     antlr4::ANTLRInputStream input(setString);
     LogicLexer lexer(&input);
@@ -166,61 +140,4 @@ class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
         std::any_cast<std::variant<Set, Relation>>(visitor.visit(ctx));
     return std::get<Set>(set);
   }
-
-  /* LEGACY
-    std::tuple<std::vector<Assumption>, std::vector<Formula>> std::any visitStatement(
-        LogicParser::StatementContext *ctx) {
-      for (const auto &letDefinition : ctx->letDefinition()) {
-        std::string name = letDefinition->NAME()->getText();
-        Relation derivedRelation(letDefinition->e->getText());
-        Logic::definedRelations.insert({name, derivedRelation});
-      }
-
-      std::vector<Formula> formulas;
-      std::vector<Assumption> hypotheses;
-
-      for (const auto &assertionContext : ctx->assertion()) {
-        auto formula = std::any_cast<Formula>(assertionContext->accept(this));
-        formulas.push_back(std::move(formula));
-      }
-      for (const auto &assertionMmContext : ctx->mmAssertion()) {
-        auto mm = std::any_cast<std::tuple<Assumption,
-  Formula>>(assertionMmContext->accept(this)); auto assumption = std::get<Assumption>(mm); auto
-  formula = std::get<Formula>(mm); formulas.push_back(std::move(formula));
-        hypotheses.push_back(std::move(assumption));
-      }
-
-      for (const auto &hypothesisContext : ctx->hypothesis()) {
-        auto hypothesis = std::any_cast<Assumption>(hypothesisContext->accept(this));
-        hypotheses.push_back(std::move(hypothesis));
-      }
-      std::tuple<std::vector<Assumption>, std::vector<Formula>> response{std::move(hypotheses),
-                                                                         std::move(formulas)};
-      return response;
-    }
-
-    / *Assumption
-
-  / *Formula
-  std::any visitAssertion(LogicParser::AssertionContext *ctx) {
-    Relation r1(ctx->lhs->getText());
-    Relation r2(ctx->rhs->getText());
-    Set startEvent1(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set endEvent1(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set startEvent2(startEvent1);
-    Set endEvent2(endEvent1);
-    Set image1(SetOperation::image, std::move(startEvent1), std::move(r1));
-    Set image2(SetOperation::image, std::move(startEvent2), std::move(r2));
-    Predicate p1(PredicateOperation::intersectionNonEmptiness, std::move(image1),
-                 std::move(endEvent1));
-    Predicate p2(PredicateOperation::intersectionNonEmptiness, std::move(image2),
-                 std::move(endEvent2));
-    Literal l1(false, std::move(p1));
-    Literal l2(true, std::move(p2));
-    Formula f1(FormulaOperation::literal, std::move(l1));
-    Formula f2(FormulaOperation::literal, std::move(l2));
-    Formula response(FormulaOperation::logicalAnd, std::move(f1), std::move(f2));
-    return response;
-  }
-  */
 };

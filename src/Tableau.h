@@ -6,35 +6,35 @@
 #include <string>
 #include <vector>
 
-#include "Formula.h"
+#include "Literal.h"
 
 class Tableau {
  public:
   class Node {
    public:
-    Node(Tableau *tableau, const Formula &&formula);
-    Node(Node *parent, const Formula &&formula);
+    Node(Tableau *tableau, const Literal &&literal);
+    Node(Node *parent, const Literal &&literal);
 
     Tableau *tableau;
-    Formula formula;
+    Literal literal;
     std::unique_ptr<Node> leftNode = nullptr;
     std::unique_ptr<Node> rightNode = nullptr;
     Node *parentNode = nullptr;
 
     bool isClosed() const;
     bool isLeaf() const;
-    bool branchContains(const Formula &formula);
-    void appendBranch(const GDNF &formulas);
-    bool appendable(const FormulaSet &formulas);
-    void appendBranch(const Formula &leftFormula);
-    void appendBranch(const Formula &leftFormula, const Formula &rightFormula);
-    std::optional<GDNF> applyRule(bool modalRule = false);
+    bool branchContains(const Literal &literal);
+    void appendBranch(const DNF &cubes);
+    bool appendable(const Cube &cube);
+    void appendBranch(const Literal &leftLiteral);
+    void appendBranch(const Literal &leftLiteral, const Literal &rightLiteral);
+    std::optional<DNF> applyRule(bool modalRule = false);
     void inferModal();
     void inferModalTop();
     void inferModalAtomic();
 
     // this method assumes that tableau is already reduced
-    std::vector<std::vector<Formula>> extractDNF() const;
+    std::vector<std::vector<Literal>> extractDNF() const;
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -43,8 +43,8 @@ class Tableau {
     };
   };
 
-  Tableau(std::initializer_list<Formula> initalFormulas);
-  explicit Tableau(FormulaSet initalFormulas);
+  Tableau(std::initializer_list<Literal> initalLiterals);
+  explicit Tableau(Cube initalLiterals);
 
   std::unique_ptr<Node> rootNode;
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
@@ -52,8 +52,8 @@ class Tableau {
   bool solve(int bound = 50000);  // TODO: remove bound for regular reasoning since it terminates
 
   // methods for regular reasoning
-  std::optional<Formula> applyRuleA();
-  GDNF dnf();
+  std::optional<Literal> applyRuleA();
+  DNF dnf();
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(std::string filename) const;

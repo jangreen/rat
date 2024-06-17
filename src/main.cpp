@@ -6,7 +6,6 @@
 #include <iostream>
 
 #include "RegularTableau.h"
-#include "Tableau.h"
 #include "parsing/LogicVisitor.h"
 
 // helper
@@ -37,25 +36,22 @@ int main(int argc, const char *argv[]) {
   }
 
   std::string path = programArguments[0];
-  // TODO: const auto& [assumptions, goals] = Logic::parse(path);
   const auto &goals = Logic::parse(path);
   spdlog::info(
       fmt::format("[Parser] Done: {} goal(s), {} assumption(s)", goals.size(),
                   (RegularTableau::baseAssumptions.size() + RegularTableau::idAssumptions.size() +
                    RegularTableau::emptinessAssumptions.size())));
   for (auto goal : goals) {
-    spdlog::info(fmt::format("[Status] Goal: {}", goal.toString()));
+    spdlog::info("[Status] Goal: ");
+    Literal::print(goal);
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
       Tableau tableau{goal};
       tableau.solve(200);
       tableau.exportProof("infinite");
     } else {
-      // TODO: RegularTableau::assumptions = assumptions;
       RegularTableau tableau{goal};
-
       std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
       tableau.solve();
-
       spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
       tableau.exportProof("regular");
     }

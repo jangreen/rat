@@ -4,18 +4,18 @@
 #include "RegularTableau.h"
 
 // TODO: when hashing all sinlgeton sets are equal, when comparing search for renaming
-RegularTableau::Node::Node(std::initializer_list<Formula> formulas) : formulas(formulas) {}
-RegularTableau::Node::Node(FormulaSet formulas) : formulas(formulas) {}
+RegularTableau::Node::Node(std::initializer_list<Literal> cube) : cube(cube) {}
+RegularTableau::Node::Node(Cube cube) : cube(cube) {}
 
 // hashing and comparision is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shorcuts
-  if (formulas.size() != otherNode.formulas.size()) {
+  if (cube.size() != otherNode.cube.size()) {
     return false;
   }
   // copy, sort, compare
-  FormulaSet c1 = formulas;
-  FormulaSet c2 = otherNode.formulas;
+  Cube c1 = cube;
+  Cube c2 = otherNode.cube;
   std::sort(c1.begin(), c1.end());
   std::sort(c2.begin(), c2.end());
 
@@ -27,11 +27,11 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
 
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
-  FormulaSet copy = node.formulas;
+  Cube copy = node.cube;
   std::sort(copy.begin(), copy.end());
   RegularTableau::rename(copy);
-  for (const auto &formula : copy) {
-    boost::hash_combine(seed, formula.toString());
+  for (const auto &literal : copy) {
+    boost::hash_combine(seed, literal.toString());
   }
   return seed;
 }
@@ -53,9 +53,9 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "N" << this << "[tooltip=\"";
   // debug
   output << std::hash<Node>()(*this) << std::endl << std::endl;
-  // label/formulas
+  // label/cube
   output << "\", label=\"";
-  for (const auto &relation : formulas) {
+  for (const auto &relation : cube) {
     output << relation.toString() << std::endl;
   }
   output << "\"";

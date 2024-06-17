@@ -10,20 +10,19 @@
 #include <vector>
 
 #include "Assumption.h"
-#include "Formula.h"
+#include "Literal.h"
 #include "Tableau.h"
 
-typedef std::vector<Formula> FormulaSet;
-typedef std::tuple<std::vector<Formula>, Renaming> EdgeLabel;
+typedef std::tuple<std::vector<Literal>, Renaming> EdgeLabel;
 
 class RegularTableau {
  public:
   class Node {
    public:
-    Node(std::initializer_list<Formula> formulas);
-    explicit Node(FormulaSet formulas);
+    Node(std::initializer_list<Literal> cube);
+    explicit Node(Cube cube);
 
-    FormulaSet formulas;
+    Cube cube;
     std::vector<Node *> childNodes;
     std::map<Node *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
     bool closed = false;
@@ -46,8 +45,8 @@ class RegularTableau {
     };
   };
 
-  RegularTableau(std::initializer_list<Formula> initalFormulas);
-  explicit RegularTableau(FormulaSet initalFormulas);
+  RegularTableau(std::initializer_list<Literal> initalLiterals);
+  explicit RegularTableau(Cube initalLiterals);
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
@@ -58,31 +57,31 @@ class RegularTableau {
   static int saturationBound;
 
   bool solve();
-  Node *addNode(FormulaSet clause, EdgeLabel &label);  // TODO: assert clause
+  Node *addNode(Cube clause, EdgeLabel &label);  // TODO: assert clause
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   void extractCounterexample(Node *openNode);
-  void saturate(GDNF &dnf);
+  void saturate(DNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(std::string filename) const;
 
   // helper
-  static Renaming rename(FormulaSet &formulas) {
+  static Renaming rename(Cube &cube) {
     // calculate renaming
-    std::sort(formulas.begin(), formulas.end());
+    std::sort(cube.begin(), cube.end());
     Renaming renaming;
-    for (auto &formula : formulas) {
-      for (const auto &l : formula.literal->predicate->labels()) {
+    for (auto &literal : cube) {
+      for (const auto &l : literal.labels()) {
         if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
           renaming.push_back(l);
         }
       }
     }
 
-    for (auto &formula : formulas) {
-      formula.literal->predicate->rename(renaming, false);
+    for (auto &literal : cube) {
+      literal.rename(renaming, false);
     }
     return renaming;
   }

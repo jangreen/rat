@@ -3,8 +3,8 @@
 #include "../Assumption.h"
 #include "../RegularTableau.h"
 
-/*std::vector<Formula>*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
-  std::vector<Formula> formulas;
+/*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
+  DNF assertionCubes;
 
   for (auto statementContext : context->statement()) {
     if (statementContext->letDefinition()) {
@@ -14,36 +14,33 @@
     } else if (statementContext->hypothesis()) {
       visitHypothesis(statementContext->hypothesis());
     } else if (statementContext->assertion()) {
-      auto untypedFormula = visitAssertion(statementContext->assertion());
-      auto formula = std::any_cast<Formula>(untypedFormula);
-      formulas.push_back(std::move(formula));
+      auto untypedCube = visitAssertion(statementContext->assertion());
+      auto cube = std::any_cast<Cube>(untypedCube);
+      assertionCubes.push_back(std::move(cube));
     }
   }
 
   // process assumptions
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
-  for (auto &formula : formulas) {
+  for (auto &cube : assertionCubes) {
     for (const auto &assumption : RegularTableau::emptinessAssumptions) {
       Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
-      Predicate p(PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
-                  std::move(s));
-      Formula f(FormulaOperation::literal, Literal(true, std::move(p)));
-
-      formula = Formula(FormulaOperation::logicalAnd, std::move(formula), std::move(f));
+      Literal l(true, PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
+                std::move(s));
+      cube.push_back(std::move(l));
     }
   }
 
-  return formulas;
+  return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *context) {
   auto _ = Logic::parseMemoryModel(context->FILEPATH()->getText());
 
   return 0;
 }
-/*Formula*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
+/*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
   if (context->INEQUAL()) {
-    // currently only support relations on each side of inequation, otherwise behavuour is
-    // undefined
+    // currently only support relations on each side of assertion
     Relation lhs(context->e1->getText());
     Relation rhs(context->e2->getText());
     Set start(SetOperation::singleton, Set::maxSingletonLabel++);
@@ -51,54 +48,16 @@
     Set lImage(SetOperation::image, Set(start), std::move(lhs));
     Set rImage(SetOperation::image, std::move(start), std::move(rhs));
 
-    Predicate lp(PredicateOperation::intersectionNonEmptiness, std::move(lImage), Set(end));
-    Predicate rp(PredicateOperation::intersectionNonEmptiness, std::move(rImage), std::move(end));
+    Literal l(false, PredicateOperation::intersectionNonEmptiness, std::move(lImage), Set(end));
+    Literal r(true, PredicateOperation::intersectionNonEmptiness, std::move(rImage),
+              std::move(end));
 
-    Literal ll(false, std::move(lp));
-    Literal rl(true, std::move(rp));
-    Formula lf(FormulaOperation::literal, std::move(ll));
-    Formula rf(FormulaOperation::literal, std::move(rl));
-    return Formula(FormulaOperation::logicalAnd, std::move(lf), std::move(rf));
+    // returns conjunctive literal set
+    Cube cube = {std::move(l), std::move(r)};
+    Literal::print(cube);
+    return cube;
   }
-  return Formula(context->f1->getText());
-}
-/*Formula*/ std::any Logic::visitFormula(LogicParser::FormulaContext *context) {
-  // TODO: split up by giving names to different functions inside Logic.g4
-  if (context->NOT()) {
-    auto f = std::any_cast<Formula>(this->visitFormula(context->f1));
-    Formula not_f(FormulaOperation::negation, std::move(f));
-    return not_f;
-  } else if (context->AMP()) {
-    auto f1 = std::any_cast<Formula>(this->visitFormula(context->f1));
-    auto f2 = std::any_cast<Formula>(this->visitFormula(context->f2));
-    Formula f1_and_f2(FormulaOperation::logicalAnd, std::move(f1), std::move(f2));
-    return f1_and_f2;
-  } else if (context->BAR()) {
-    auto f1 = std::any_cast<Formula>(this->visitFormula(context->f1));
-    auto f2 = std::any_cast<Formula>(this->visitFormula(context->f2));
-    Formula f1_or_f2(FormulaOperation::logicalOr, std::move(f1), std::move(f2));
-    return f1_or_f2;
-  } else if (context->LPAR() && context->RPAR()) {
-    auto f1 = std::any_cast<Formula>(this->visitFormula(context->f1));
-    return f1;
-  } else {
-    auto p = std::any_cast<Predicate>(this->visitPredicate(context->p1));
-    Literal l(false, std::move(p));
-    return Formula(FormulaOperation::literal, std::move(l));
-  }
-}
-/*Predicate*/ std::any Logic::visitPredicate(LogicParser::PredicateContext *context) {
-  std::variant<Set, Relation> e1 =
-      std::any_cast<std::variant<Set, Relation>>(this->Logic::visit(context->s1));
-  std::variant<Set, Relation> e2 =
-      std::any_cast<std::variant<Set, Relation>>(this->Logic::visit(context->s2));
-  if (std::holds_alternative<Set>(e1) && std::holds_alternative<Set>(e2)) {
-    Set s1 = std::get<Set>(e1);
-    Set s2 = std::get<Set>(e2);
-    return Predicate(PredicateOperation::intersectionNonEmptiness, std::move(s1), std::move(s2));
-  }
-  spdlog::error(
-      "[Parser] Type mismatch of two operands of the intersectionNonEmptiness predicate.");
+  spdlog::error("[Parser] Unsupported assertion format.");
   exit(0);
 }
 

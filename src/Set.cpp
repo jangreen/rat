@@ -1,4 +1,3 @@
-#include "Predicate.h"
 #include "RegularTableau.h"
 #include "parsing/LogicVisitor.h"
 
@@ -110,8 +109,8 @@ std::vector<std::vector<Set::PartialPredicate>> substituteHelper2(
   for (const auto &conjunction : disjunction) {
     std::vector<Set::PartialPredicate> resultConjunction;
     for (const auto &predicate : conjunction) {
-      if (std::holds_alternative<Predicate>(predicate)) {
-        Predicate p = std::get<Predicate>(predicate);
+      if (std::holds_alternative<Literal>(predicate)) {
+        Literal p = std::get<Literal>(predicate);
         resultConjunction.push_back(p);
       } else {
         Set s = std::get<Set>(predicate);
@@ -136,37 +135,62 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
     case SetOperation::singleton:
       // no rule applicable to single event constant
       return std::nullopt;
-    case SetOperation::empty:  // TODO: handle in choice/intersection/domain/image
-      spdlog::error("Rule (\bot_1) is not implemented.");
-      return std::nullopt;
+    case SetOperation::empty:
+      // Rule (\bot_1):
+      result = {{BOTTOM}};
+      return result;
     case SetOperation::full: {
       if (negated) {
+        // Rule (\neg\top_1): this case needs context (handled later)
         return std::nullopt;
-      }
-      // [T] -> { [e] } , only if positive
-      Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-      result = {{std::move(f)}};
-      return result;
-    }
-    case SetOperation::choice:
-      // [A | B] -> { [A] },{ [B] }
-      result = {{Set(*leftOperand)}, {Set(*rightOperand)}};
-      return result;
-    case SetOperation::intersection:
-      if (leftOperand->operation == SetOperation::singleton) {
-        // [e & S] -> { [e], e.S }
-        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*leftOperand),
-                    Set(*rightOperand));
-        result = {{Set(*leftOperand), std::move(p)}};
+      } else {
+        // Rule (\top_1): [T] -> { [f] } , only if positive
+        Set f(SetOperation::singleton, Set::maxSingletonLabel++);
+        result = {{std::move(f)}};
         return result;
-      } else if (rightOperand->operation == SetOperation::singleton) {
-        // [S & e] -> { [e], e.S }
-        Predicate p(PredicateOperation::intersectionNonEmptiness, Set(*rightOperand),
-                    Set(*leftOperand));
-        result = {{Set(*rightOperand), std::move(p)}};
+      }
+    }
+    case SetOperation::choice: {
+      if (negated) {
+        // Rule (\neg\cup_1): ~[A | B] -> { ~[A], ~[B] }
+        result = {{Set(*leftOperand), Set(*rightOperand)}};
         return result;
       } else {
-        // [S1 & S2]
+        // Rule (\cup_1): [A | B] -> { [A] },{ [B] }
+        result = {{Set(*leftOperand)}, {Set(*rightOperand)}};
+        return result;
+      }
+    }
+    case SetOperation::intersection:
+      if (leftOperand->operation == SetOperation::singleton) {
+        Literal eS(negated, PredicateOperation::intersectionNonEmptiness, Set(*leftOperand),
+                   Set(*rightOperand));
+        Set e(*leftOperand);
+
+        if (negated) {
+          // Rule (\neg\anode\lrule):
+          result = {{std::move(e)}, {std::move(eS)}};
+          return result;
+        } else {
+          // Rule (\anode\lrule): [e & S] -> { [e], e.S }
+          result = {{std::move(e), std::move(eS)}};
+          return result;
+        }
+      } else if (rightOperand->operation == SetOperation::singleton) {
+        Literal eS(negated, PredicateOperation::intersectionNonEmptiness, Set(*rightOperand),
+                   Set(*leftOperand));
+        Set e(*rightOperand);
+        if (negated) {
+          // Rule (\neg\anode\rrule):
+          result = {{std::move(e)}, {std::move(eS)}};
+          return result;
+        } else {
+          // Rule (\anode\rrule): [S & e] -> { [e], e.S }
+          result = {{std::move(e), std::move(eS)}};
+          return result;
+        }
+      } else {
+        // [S1 & S2]: apply rules recursively
         auto leftResult = leftOperand->applyRule(negated, modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
@@ -181,74 +205,88 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
 
       return std::nullopt;
     case SetOperation::base: {
-      // [B] -> { [f], f \in B }
-      Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-      Predicate p(PredicateOperation::set, Set(f), *identifier);
-      result = {{std::move(f), p}};
-      return result;
+      if (!negated) {
+        // Rule (\aset): [B] -> { [f], f \in B }
+        Set f(SetOperation::singleton, Set::maxSingletonLabel++);
+        Literal fInB(false, PredicateOperation::set, Set(f), *identifier);
+        result = {{std::move(f), std::move(fInB)}};
+        return result;
+      } else {
+        // Rule (\neg\aset): requires context (handled later)
+        return std::nullopt;
+      }
     }
     case SetOperation::image:
       if (leftOperand->operation == SetOperation::singleton) {
         switch (relation->operation) {
           case RelationOperation::base: {
-            // TODO: implement (only use if want to)
+            // only use if want to
             if (!modalRules) {
               return std::nullopt;
             }
-            // [e.b] -> { [f], (e,f) \in b }
-            Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-            Predicate p(PredicateOperation::edge, Set(*leftOperand), Set(f), *relation->identifier);
-            result = {{std::move(f), p}};
-            return result;
+
+            if (!negated) {
+              // Rule (\arel\lrule): [e.b] -> { [f], (e,f) \in b }
+              Set f(SetOperation::singleton, Set::maxSingletonLabel++);
+              Literal efInB(false, PredicateOperation::edge, Set(*leftOperand), Set(f),
+                            *relation->identifier);
+              result = {{std::move(f), std::move(efInB)}};
+              return result;
+            } else {
+              // Rule (\neg\arel\lrule): requires context (handled later)
+              return std::nullopt;
+            }
           }
           case RelationOperation::cartesianProduct:
+            // TODO: implement
             std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
-            return std::nullopt;  // TODO: implement
+            return std::nullopt;
           case RelationOperation::choice: {
-            // [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
             Set er1(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             Set er2(SetOperation::image, Set(*leftOperand), Relation(*relation->rightOperand));
-            result = {{std::move(er1)}, {std::move(er2)}};
-            return result;
+            if (negated) {
+              // Rule (\neg\cup_2\lrule): ~[e.(r1 | r2)] -> { ~[e.r1], ~[e.r2] }
+              result = {{std::move(er1), std::move(er2)}};
+              return result;
+            } else {
+              // Rule (\cup_2\lrule): [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
+              result = {{std::move(er1)}, {std::move(er2)}};
+              return result;
+            }
           }
           case RelationOperation::composition: {
-            // [e(a.b)] -> { [(e.a)b] }
+            // Rule (\comp_{2,2}\lrule): [e(a.b)] -> { [(e.a)b] }
             Set ea(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             Set ea_b(SetOperation::image, std::move(ea), Relation(*relation->rightOperand));
             result = {{std::move(ea_b)}};
             return result;
           }
           case RelationOperation::converse: {
-            // [e.(r^-1)] -> { [r.e] }
+            // Rule (^-1\lrule): [e.(r^-1)] -> { [r.e] }
             Set re(SetOperation::domain, Set(*leftOperand), Relation(*relation->leftOperand));
             result = {{std::move(re)}};
             return result;
           }
           case RelationOperation::empty: {
-            // [e.0] -> { [0] }
-            // assumption needed for soundness: context is union-free
-            Formula f(FormulaOperation::bottom);
-            // TODO:
-            // result = {{std::move(f)}};
-            // return result;
+            // TODO: implement
+            // Rule (\bot_2\lrule):
+            std::cout << "[Error] Empty relations are currently not supported." << std::endl;
             return std::nullopt;
           }
           case RelationOperation::full: {
-            // [e.T] -> { [T] }
-            Formula f(FormulaOperation::top);
-            // TODO:
-            // result = {{std::move(f)}};
-            // return result;
+            // TODO: implement
+            // Rule (\top_2\lrule):
+            std::cout << "[Error] Full relations are currently not supported." << std::endl;
             return std::nullopt;
           }
           case RelationOperation::identity: {
-            // [e.id] -> { [e] }
+            // Rule (\id\lrule): [e.id] -> { [e] }
             Set e(*leftOperand);
             result = {{std::move(e)}};
             return result;
           }
           case RelationOperation::intersection: {
-            // [e.(r1 & r2)] -> { [e.r1 & e.r2] }
+            // Rule (\cap_2\lrule): [e.(r1 & r2)] -> { [e.r1 & e.r2] }
             Set er1(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             Set er2(SetOperation::image, Set(*leftOperand), Relation(*relation->rightOperand));
             Set er1_and_er2(SetOperation::intersection, std::move(er1), std::move(er2));
@@ -256,13 +294,19 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             return result;
           }
           case RelationOperation::transitiveClosure: {
-            // [e.r*] -> { [(e.r)r*] }, { [e] }
             Set er(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             Set err_star(SetOperation::image, std::move(er), Relation(*relation));
             Set e(*leftOperand);
 
-            result = {{std::move(err_star)}, {std::move(e)}};
-            return result;
+            if (negated) {
+              // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
+              result = {{std::move(err_star), std::move(e)}};
+              return result;
+            } else {
+              // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
+              result = {{std::move(err_star)}, {std::move(e)}};
+              return result;
+            }
           }
         }
       } else {
@@ -270,20 +314,20 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {
-            std::vector<PartialPredicate> newClause;
+            std::vector<PartialPredicate> newCube;
             for (const auto &partialPredicate : clause) {
-              if (std::holds_alternative<Predicate>(partialPredicate)) {
-                newClause.push_back(std::move(partialPredicate));
+              if (std::holds_alternative<Literal>(partialPredicate)) {
+                newCube.push_back(std::move(partialPredicate));
               } else {
                 auto set = std::get<Set>(partialPredicate);
                 // TODO: there should only be one [] inside eache {}
                 // otherwise we have to instersect (&) all  []'s after before replacing
                 // currently we jsut assume this is the case without further checking
                 Set newSet(SetOperation::image, std::move(set), Relation(*relation));
-                newClause.push_back(std::move(newSet));
+                newCube.push_back(std::move(newSet));
               }
             }
-            result.push_back(std::move(newClause));
+            result.push_back(std::move(newCube));
           }
           return result;
         }
@@ -293,66 +337,74 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
       if (leftOperand->operation == SetOperation::singleton) {
         switch (relation->operation) {
           case RelationOperation::base: {
-            // TODO: implement (only use if want to)
+            // only use if want to
             if (!modalRules) {
               return std::nullopt;
             }
 
-            // [b.e] -> { [f], (f,e) \in b }
-            Set f(SetOperation::singleton, Set::maxSingletonLabel++);
-            Predicate p(PredicateOperation::edge, Set(f), Set(*leftOperand), *relation->identifier);
-            result = {{std::move(f), p}};
-            return result;
+            if (!negated) {
+              // Rule (\anode\rrule): [b.e] -> { [f], (f,e) \in b }
+              Set f(SetOperation::singleton, Set::maxSingletonLabel++);
+              Literal feInB(false, PredicateOperation::edge, Set(f), Set(*leftOperand),
+                            *relation->identifier);
+              result = {{std::move(f), std::move(feInB)}};
+              return result;
+            } else {
+              // Rule (\neg\anode\rrule): requires context (handled later)
+              return std::nullopt;
+            }
           }
           case RelationOperation::cartesianProduct:
+            // TODO: implement
             std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
-            return std::nullopt;  // TODO: implement
+            return std::nullopt;
           case RelationOperation::choice: {
-            // [(r1 | r2).e] -> { [r1.e] }, { [r2.e] }
             Set r1e(SetOperation::domain, Set(*leftOperand), Relation(*relation->leftOperand));
             Set r2e(SetOperation::domain, Set(*leftOperand), Relation(*relation->rightOperand));
-            result = {{std::move(r1e)}, {std::move(r2e)}};
-            return result;
+
+            if (negated) {
+              // Rule (\neg\cup_2\rrule): ~[(r1 | r2).e] -> { ~[r1.e], ~[r2.e] }
+              result = {{std::move(r1e), std::move(r2e)}};
+              return result;
+            } else {
+              // Rule (\cup_2\rrule): [(r1 | r2).e] -> { [r1.e] }, { [r2.e] }
+              result = {{std::move(r1e)}, {std::move(r2e)}};
+              return result;
+            }
           }
           case RelationOperation::composition: {
-            // [(a.b)e] -> { [a(b.e)] }
+            // Rule (\comp\rrule): [(a.b)e] -> { [a(b.e)] }
             Set be(SetOperation::domain, Set(*leftOperand), Relation(*relation->rightOperand));
             Set a_be(SetOperation::domain, std::move(be), Relation(*relation->leftOperand));
             result = {{std::move(a_be)}};
             return result;
           }
           case RelationOperation::converse: {
-            // [(r^-1)e] -> { [e.r] }
+            // Rule (^-1\rrule): [(r^-1)e] -> { [e.r] }
             Set er(SetOperation::image, Set(*leftOperand), Relation(*relation->leftOperand));
             result = {{std::move(er)}};
             return result;
           }
           case RelationOperation::empty: {
-            // [0.e] -> { [0] }
-            // assumption needed for soundness: context is union-free
-            Formula f(FormulaOperation::bottom);
-            // TODO:
-            // result = {{std::move(f)}};
-            // return result;
+            // TODO: implement
+            // Rule (\bot_2\rrule):
+            std::cout << "[Error] Empty relations are currently not supported." << std::endl;
             return std::nullopt;
           }
           case RelationOperation::full: {
-            // [T.e] -> { [T] }
-            // assumption needed for soundness: context is union-free
-            Formula f(FormulaOperation::top);
-            // TODO:
-            // result = {{std::move(f)}};
-            // return result;
+            // TODO: implement
+            // Rule (\top_2\rrule):
+            std::cout << "[Error] Full relations are currently not supported." << std::endl;
             return std::nullopt;
           }
           case RelationOperation::identity: {
-            // [id.e] -> { [e] }
+            // Rule (\id\rrule): [id.e] -> { [e] }
             Set e(*leftOperand);
             result = {{std::move(e)}};
             return result;
           }
           case RelationOperation::intersection: {
-            // [(r1 & r2).e] -> { [r1.e & r2.e] }
+            // Rule (\cap_2\rrule): [(r1 & r2).e] -> { [r1.e & r2.e] }
             Set r1e(SetOperation::domain, Set(*leftOperand), Relation(*relation->leftOperand));
             Set r2e(SetOperation::domain, Set(*leftOperand), Relation(*relation->rightOperand));
             Set r1e_and_r2e(SetOperation::intersection, std::move(r1e), std::move(r2e));
@@ -360,13 +412,19 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
             return result;
           }
           case RelationOperation::transitiveClosure: {
-            // [r*.e] -> { [r*.(r.e)] }, { [e] }
             Set re(SetOperation::domain, Set(*leftOperand), Relation(*relation->leftOperand));
             Set r_star_re(SetOperation::domain, std::move(re), Relation(*relation));
             Set e(*leftOperand);
 
-            result = {{std::move(r_star_re)}, {std::move(e)}};
-            return result;
+            if (negated) {
+              // Rule (\neg*\rrule): ~[r*.e] -> { ~[r*.(r.e)], ~[e] }
+              result = {{std::move(r_star_re), std::move(e)}};
+              return result;
+            } else {
+              // Rule (*\rrule): [r*.e] -> { [r*.(r.e)] }, { [e] }
+              result = {{std::move(r_star_re)}, {std::move(e)}};
+              return result;
+            }
           }
         }
       } else {
@@ -374,20 +432,20 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
           for (const auto &clause : leftOperandResult) {
-            std::vector<PartialPredicate> newClause;
+            std::vector<PartialPredicate> newCube;
             for (const auto &partialPredicate : clause) {
-              if (std::holds_alternative<Predicate>(partialPredicate)) {
-                newClause.push_back(std::move(partialPredicate));
+              if (std::holds_alternative<Literal>(partialPredicate)) {
+                newCube.push_back(std::move(partialPredicate));
               } else {
                 auto set = std::get<Set>(partialPredicate);
                 // TODO: there should only be one [] inside eache {}
                 // otherwise we have to instersect (&) all  []'s after before replacing
                 // currently we jsut assume this is the case without further checking
                 Set newSet(SetOperation::domain, std::move(set), Relation(*relation));
-                newClause.push_back(std::move(newSet));
+                newCube.push_back(std::move(newSet));
               }
             }
-            result.push_back(std::move(newClause));
+            result.push_back(std::move(newCube));
           }
           return result;
         }
