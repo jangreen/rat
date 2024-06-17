@@ -371,8 +371,8 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   }
 
   Tableau calcConverseReq(converseRequest);
-  // add cube of label (adding them to converseRequest is incomplete, because inital
-  // contradiction are not checked)
+  // add cube of label (adding them to converseRequest is incomplete,
+  // because inital contradiction are not checked)
   for (const auto &literal : std::get<0>(label)) {
     calcConverseReq.rootNode->appendBranch(literal);
   }
@@ -389,11 +389,13 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
     return true;
   }
 
-  // TODO: check this: must this be the intersection of inconsistentLiterals for all branches?
+  // TODO: check this: must this be the intersection of
+  // inconsistentLiterals for all branches?
   DNF dnf = calcConverseReq.rootNode->extractDNF();
   // each Disjunct must have some inconsistency to have an inconsistency
-  // otherwise the proof for one clause without inconsistency would subsume the others (which have
-  // more literals) if this is the case: add one epsilon edge for each clause
+  // otherwise the proof for one clause without inconsistency would
+  // subsume the others (which have more literals) if this is the case:
+  // add one epsilon edge for each clause
   for (const auto &clause : dnf) {
     if (!getInconsistentLiterals(parent, clause)) {
       return false;
