@@ -13,25 +13,27 @@ bool Tableau::Node::isClosed() const {
   if (literal == BOTTOM) {
     return true;
   }
-  return leftNode && leftNode->isClosed() && (rightNode == nullptr || rightNode->isClosed());
+  return leftNode != nullptr && leftNode->isClosed() &&
+         (rightNode == nullptr || rightNode->isClosed());
 }
 
 bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
 
 bool Tableau::Node::branchContains(const Literal &literal) {
+  Literal negatedCopy(literal);
+  negatedCopy.negated = !negatedCopy.negated;
+
   const Node *node = this;
   while (node != nullptr) {
     if (node->literal == literal) {
       return true;
     } else if (literal.operation != PredicateOperation::intersectionNonEmptiness) {
-      // check if p & ~p (only in case of atomic predicate)
-      Literal negatedCopy(literal);
-      negatedCopy.negated = !negatedCopy.negated;
+      // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
       if (node->literal == negatedCopy) {
         Node newNode(this, std::move(literal));
+        Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
+        newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
         leftNode = std::make_unique<Node>(std::move(newNode));
-        Node newNode2(leftNode.get(), Literal(BOTTOM));
-        leftNode->leftNode = std::make_unique<Node>(std::move(newNode2));
         return true;
       }
     }
@@ -98,7 +100,6 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral) {
       Node newNode(this, std::move(leftLiteral));
       leftNode = std::make_unique<Node>(std::move(newNode));
       tableau->unreducedNodes.push(leftNode.get());
-      // std::cout << "[Tableau]: Append Node. " << leftNode->literal.toString() << std::endl;
     }
   } else {
     if (leftNode != nullptr) {

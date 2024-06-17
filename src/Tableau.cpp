@@ -64,7 +64,6 @@ bool Tableau::solve(int bound) {
 
       Node *temp = currentNode->parentNode;
       while (temp != nullptr) {
-        // TODO: must replace in cube?
         // check if inside literal can be something inferred
         auto newLiterals = substitute(temp->literal, *search, *replace);
         for (auto &literal : newLiterals) {
@@ -159,7 +158,6 @@ void Tableau::toDotFormat(std::ofstream &output) const {
 }
 
 void Tableau::exportProof(std::string filename) const {
-  // TODO: std::cout << "[Status] Export infinite proof: " << filename << ".dot" << std::endl;
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();

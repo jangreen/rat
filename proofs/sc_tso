@@ -11,4 +11,3 @@ assume rmw <= 0
 //assume rf;co <= 0
 
 assert sc <= tso
-//cat assert./cat/tso-modified.cat <= ./cat/sc.cat

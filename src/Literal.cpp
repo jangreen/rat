@@ -619,6 +619,9 @@ void Literal::saturateId() {
 
 std::string Literal::toString() const {
   std::string output;
+  if (*this == BOTTOM) {
+    return "FALSE";
+  }
   if (negated) {
     output += "~";
   }

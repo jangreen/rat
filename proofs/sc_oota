@@ -1,8 +1,8 @@
 include ./cat/sc.cat
-let sc = (hb* & id)
+let sc = (hb+ & id)
 include ./cat/oota-simple.cat
-let oota = (hb* & id)
+let oota = (hb+ & id)
 
-assume dep <= po
+//assume dep <= po
 
 assert sc <= oota

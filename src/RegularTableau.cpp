@@ -26,6 +26,7 @@ Cube purge(const Cube &clause, Cube &dropped, EdgeLabel &label) {
   }
 
   // filter none active labels + active (label,baseRel) combinations
+  // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
   // assume already normal
   // 1) gather all active labels
   std::vector<int> activeLabels;
@@ -39,6 +40,14 @@ Cube purge(const Cube &clause, Cube &dropped, EdgeLabel &label) {
       activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
                                          std::begin(literalCobinations),
                                          std::end(literalCobinations));
+    }
+  }
+  // (*) above
+  std::vector<Literal> edges = std::get<0>(label);
+  for (const auto edgeLiteral : edges) {
+    auto literalCobinations = edgeLiteral.labelBaseCombinations();
+    for (auto combination : literalCobinations) {
+      activeLabelBaseCombinations.push_back(combination);
     }
   }
   // calculate equivalence class
@@ -161,7 +170,7 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
     auto literalCobinations = literal.labelBaseCombinations();
 
     if (isSubset(literalLabels, parentActiveLabels) &&
-        isSubset(literalCobinations, parentActiveLabelBaseCombinations)) {
+        isSubset(literalCobinations, parentActiveLabelBaseCombinations) && literal != TOP) {
       filteredNewLiterals.push_back(literal);
     }
   }
@@ -187,7 +196,7 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
 std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
-int RegularTableau::saturationBound = 1;
+int RegularTableau::saturationBound = 2;
 
 RegularTableau::RegularTableau(std::initializer_list<Literal> initalLiterals)
     : RegularTableau(std::vector(initalLiterals)) {}
@@ -304,7 +313,6 @@ bool RegularTableau::solve() {
 
     if (atomicLiteral) {
       expandNode(currentNode, &tableau);
-
     } else {
       extractCounterexample(currentNode);
       spdlog::info("[Solver] Answer: False");

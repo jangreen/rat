@@ -167,8 +167,8 @@ class Set {
 };
 
 static const Literal BOTTOM =
-    Literal(true, PredicateOperation::equality, Set(SetOperation::singleton, 0),
-            Set(SetOperation::singleton, 0));
+    Literal(true, PredicateOperation::equality, Set(SetOperation::singleton, -1),
+            Set(SetOperation::singleton, -1));
 static const Literal TOP =
-    Literal(false, PredicateOperation::equality, Set(SetOperation::singleton, 0),
-            Set(SetOperation::singleton, 0));
+    Literal(false, PredicateOperation::equality, Set(SetOperation::singleton, -1),
+            Set(SetOperation::singleton, -1));
