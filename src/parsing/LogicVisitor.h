@@ -30,8 +30,7 @@ Relation loadModel(const std::string &file) {
   return *unionR;
 }
 */
-// TODO: implement precedence rules
-class Logic : LogicBaseVisitor {  // TODO: should inherit from CatInferVisitor
+class Logic : LogicBaseVisitor {
  public:
   /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;
   // /*void*/ std::any visitStatement(LogicParser::StatementContext *ctx) override;

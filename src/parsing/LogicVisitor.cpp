@@ -309,10 +309,6 @@
 }
 /*std::variant<Set, Relation>*/ std::any Logic::visitCartesianProduct(
     LogicParser::CartesianProductContext *context) {
-  /* TODO:
-  std::cout << "[Parser] Cartesian products are currently not supported." << std::endl;
-  exit(0);
-  */
   // treat cartesian product as binary base relation
   std::string r1 = context->e1->getText();
   std::string r2 = context->e2->getText();

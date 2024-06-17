@@ -100,17 +100,6 @@ Cube purge(const Cube &clause, Cube &dropped, EdgeLabel &label) {
       continue;
     }
 
-    // TODO: remove:
-    // std::cout << "------ " << literal.toString() << std::endl;
-    // for (auto s : literalCobinations) {
-    //   std::cout << s.toString() << std::endl;
-    // }
-    // std::cout << "-" << std::endl;
-    // for (auto s : activeLabelBaseCombinations) {
-    //   std::cout << s.toString() << std::endl;
-    // }
-    // std::cout << isSubset(literalCobinations, activeLabelBaseCombinations) << std::endl;
-
     if (isSubset(literalLabels, activeLabels) &&
         isSubset(literalCobinations, activeLabelBaseCombinations)) {
       newCube.push_back(literal);
@@ -184,8 +173,6 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
     }
     spdlog::debug(
         fmt::format("[Solver] Inconsistent Node  {}", std::hash<RegularTableau::Node>()(*parent)));
-    // TODO: remove:
-    // printCube(filteredNewLiterals);
     // at this point filteredNewLiterals is the alternative child
     return filteredNewLiterals;
   }

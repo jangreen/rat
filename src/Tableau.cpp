@@ -26,7 +26,7 @@ Tableau::Tableau(Cube initalLiterals) {
 }
 
 bool Tableau::solve(int bound) {
-  while (!unreducedNodes.empty() && bound > 0) {
+  while (!unreducedNodes.empty() && (bound > 0 || bound == -1)) {
     bound--;
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();

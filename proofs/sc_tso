@@ -1,10 +1,10 @@
 include ./cat/sc.cat
-let sc = (hb* & id)
+let sc = (hb+ & id)
 include ./cat/tso.cat
-let tso = (ghb-tso* & id)
+let tso = (ghb-tso+ & id)
 
-assume mfence <= po
-assume rmw <= 0
+//assume mfence <= po
+//assume rmw <= 0
 //assume rf;rfinv <= id
 //assume rf;rf <= 0
 //assume rf;W*W <= 0

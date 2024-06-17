@@ -365,7 +365,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
 bool Literal::isNormal() const {
   switch (operation) {
     case PredicateOperation::edge:
-      return true;  // TODO: maybe false!, remove all at once
+      return true;
     case PredicateOperation::set:
       return true;
     case PredicateOperation::equality:
@@ -457,7 +457,6 @@ bool Literal::isPositiveEqualityPredicate() const {
   return !negated && operation == PredicateOperation::equality;
 }
 
-// TODO: need generalization?
 int Literal::substitute(const Set &search, const Set &replace, int n) {
   assert(n >= 1);
   if (operation == PredicateOperation::intersectionNonEmptiness) {

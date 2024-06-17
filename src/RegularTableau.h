@@ -57,7 +57,7 @@ class RegularTableau {
   static int saturationBound;
 
   bool solve();
-  Node *addNode(Cube clause, EdgeLabel &label);  // TODO: assert clause
+  Node *addNode(Cube clause, EdgeLabel &label);
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);

@@ -41,7 +41,6 @@ class Literal {
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &otherSet) const;  // for sorting/hashing
 
-  // TODO: explicit Literal(const std::string &expression);  // parse constructor
   Literal(const bool negated, const PredicateOperation operation, Set &&left, Set &&right);
   Literal(const bool negated, const PredicateOperation operation, Set &&left,
           std::string identifier);
@@ -139,12 +138,6 @@ class Set {
   std::unique_ptr<Relation> relation;     // is set iff domain/image
 
   static int maxSingletonLabel;  // to create globally unique labels
-
-  /* TODO: remove
-  std::vector<int> labels() const;                // return all labels of the relation term
-  std::vector<int> calculateRenaming() const;     // renaming {2,4,5}: 2->0,4->1,5->2
-  void inverseRename(const std::vector<int> &renaming);
-  */
 
   // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
   // predicate for a given context

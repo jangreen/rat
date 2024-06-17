@@ -48,8 +48,6 @@ bool Relation::operator==(const Relation &other) const {
   }
   return isEqual;
 }
-// TODO: remove: bool Relation::operator<(const Relation &other) const { return toString() <
-// other.toString(); }
 
 std::string Relation::toString() const {
   std::string output;
