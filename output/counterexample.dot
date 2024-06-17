@@ -1,5 +1,0 @@
-digraph { node[shape="point"]
-N3 -> N11[label = "b"];
-N11 -> N1[label = "a"];
-N0 -> N3[label = "a"];
-}
