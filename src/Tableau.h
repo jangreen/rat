@@ -38,17 +38,13 @@ class Tableau {
     void dnfBuilder(DNF &dnf) const;
 
     void toDotFormat(std::ofstream &output) const;
-
-    struct CompareNodes {
-      bool operator()(const Node *left, const Node *right) const;
-    };
   };
 
   Tableau(std::initializer_list<Literal> initalLiterals);
   explicit Tableau(Cube initalLiterals);
 
   std::unique_ptr<Node> rootNode;
-  std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
+  std::queue<Node *> unreducedNodes;
 
   bool solve(int bound = -1);
 

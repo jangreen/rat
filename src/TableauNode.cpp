@@ -253,9 +253,3 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
     output << "N" << this << " -- " << "N" << rightNode << ";" << std::endl;
   }
 }
-
-bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
-  return left->literal.toString().length() < right->literal.toString().length();
-  // TODO: define clever measure: should measure alpha beta rules
-  // left.literal->negated < right.literal->negated;
-}

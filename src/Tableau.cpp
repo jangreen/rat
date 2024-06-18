@@ -30,7 +30,7 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    auto currentNode = unreducedNodes.top();
+    auto currentNode = unreducedNodes.front();
     unreducedNodes.pop();
 
     // 1) Rules that just rewrite a single literal
@@ -125,7 +125,7 @@ DNF Tableau::Node::extractDNF() const {
 
 std::optional<Literal> Tableau::applyRuleA() {
   while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.top();
+    auto currentNode = unreducedNodes.front();
     unreducedNodes.pop();
 
     auto result = currentNode->applyRule(true);
