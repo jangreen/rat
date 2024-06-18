@@ -5,7 +5,10 @@
 #include "parsing/LogicVisitor.h"
 
 Relation::Relation(const Relation &other)
-    : operation(other.operation), identifier(other.identifier), saturated(other.saturated) {
+    : operation(other.operation),
+      identifier(other.identifier),
+      saturatedId(other.saturatedId),
+      saturatedBase(other.saturatedBase) {
   if (other.leftOperand != nullptr) {
     leftOperand = std::make_unique<Relation>(*other.leftOperand);
   }
@@ -32,21 +35,28 @@ Relation::Relation(const RelationOperation operation, Relation &&left, Relation 
 }
 
 bool Relation::operator==(const Relation &other) const {
-  auto isEqual = operation == other.operation;
-  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
-    isEqual = false;
-  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
-    isEqual = false;
-  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
-    isEqual = false;
-  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
-    isEqual = false;
-  } else if (identifier.has_value() != other.identifier.has_value()) {
-    isEqual = false;
-  } else if (identifier.has_value() && *identifier != *other.identifier) {
-    isEqual = false;
+  if (operation != other.operation) {
+    return false;
   }
-  return isEqual;
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    return false;
+  }
+  if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    return false;
+  }
+  if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    return false;
+  }
+  if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    return false;
+  }
+  if (identifier.has_value() != other.identifier.has_value()) {
+    return false;
+  }
+  if (identifier.has_value() && *identifier != *other.identifier) {
+    return false;
+  }
+  return true;
 }
 
 std::string Relation::toString() const {
@@ -82,8 +92,5 @@ std::string Relation::toString() const {
     case RelationOperation::cartesianProduct:
       output += "TODO";  // "(" + TODO: leftSet + "x" + TODO: rightSet + ")";
   }
-  // if (saturated > 0) {
-  //   output += "[" + std::to_string(saturated) + "]";
-  // }
   return output;
 }

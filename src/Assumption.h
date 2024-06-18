@@ -15,5 +15,5 @@ class Assumption {
   Relation relation;
   std::optional<std::string> baseRelation;  // is set iff regular
 
-  static void markBaseRelationsAsSaturated(Relation &relation, int saturatedCount);
+  static void markBaseRelationsAsSaturated(Relation &relation, int saturatedCount, bool base);
 };

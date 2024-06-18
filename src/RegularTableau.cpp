@@ -183,7 +183,8 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
 std::vector<Assumption> RegularTableau::emptinessAssumptions;
 std::vector<Assumption> RegularTableau::idAssumptions;
 std::map<std::string, Assumption> RegularTableau::baseAssumptions;
-int RegularTableau::saturationBound = 2;
+int RegularTableau::saturationBoundId = 1;
+int RegularTableau::saturationBoundBase = 1;
 
 RegularTableau::RegularTableau(std::initializer_list<Literal> initalLiterals)
     : RegularTableau(std::vector(initalLiterals)) {}
@@ -310,7 +311,9 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
-  for (size_t i = 0; i < RegularTableau::saturationBound; i++) {
+  int maxSaturationBound =
+      std::max(RegularTableau::saturationBoundId, RegularTableau::saturationBoundBase);
+  for (size_t i = 0; i < maxSaturationBound; i++) {
     saturate(dnf);
   }
 
@@ -418,7 +421,8 @@ void RegularTableau::saturate(DNF &dnf) {
       // normalize
       Tableau saturatedTableau{cube};
       auto saturatedDnf = saturatedTableau.dnf();
-      newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
+      newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
+                    std::make_move_iterator(saturatedDnf.end()));
     }
     swap(dnf, newDnf);
   }
@@ -432,7 +436,8 @@ void RegularTableau::saturate(DNF &dnf) {
       // normalize
       Tableau saturatedTableau{cube};
       auto saturatedDnf = saturatedTableau.dnf();
-      newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
+      newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
+                    std::make_move_iterator(saturatedDnf.end()));
     }
     swap(dnf, newDnf);
   }

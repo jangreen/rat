@@ -37,23 +37,31 @@ Literal::Literal(const bool negated, const PredicateOperation operation, Set &&l
 }
 
 bool Literal::operator==(const Literal &other) const {
-  auto isEqual = operation == other.operation;
-  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
-    isEqual = false;
-  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
-    isEqual = false;
-  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
-    isEqual = false;
-  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
-    isEqual = false;
-  } else if ((identifier.has_value()) != (other.identifier.has_value())) {
-    isEqual = false;
-  } else if (identifier.has_value() && *identifier != *other.identifier) {
-    isEqual = false;
-  } else if (negated != other.negated) {
-    isEqual = false;
+  if (operation != other.operation) {
+    return false;
   }
-  return isEqual;
+  if (negated != other.negated) {
+    return false;
+  }
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    return false;
+  }
+  if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    return false;
+  }
+  if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    return false;
+  }
+  if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    return false;
+  }
+  if ((identifier.has_value()) != (other.identifier.has_value())) {
+    return false;
+  }
+  if (identifier.has_value() && *identifier != *other.identifier) {
+    return false;
+  }
+  return true;
 }
 
 bool Literal::operator<(const Literal &other) const {

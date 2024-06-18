@@ -37,29 +37,40 @@ Set::Set(const SetOperation operation, Set &&left, Relation &&relation) : operat
 }
 
 bool Set::operator==(const Set &other) const {
-  auto isEqual = operation == other.operation;
-  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
-    isEqual = false;
-  } else if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
-    isEqual = false;
-  } else if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
-    isEqual = false;
-  } else if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
-    isEqual = false;
-  } else if ((relation == nullptr) != (other.relation == nullptr)) {
-    isEqual = false;
-  } else if (relation != nullptr && *relation != *other.relation) {
-    isEqual = false;
-  } else if (label.has_value() != other.label.has_value()) {
-    isEqual = false;
-  } else if (label.has_value() && *label != *other.label) {
-    isEqual = false;
-  } else if (identifier.has_value() != other.identifier.has_value()) {
-    isEqual = false;
-  } else if (identifier.has_value() && *identifier != *other.identifier) {
-    isEqual = false;
+  if (operation != other.operation) {
+    return false;
   }
-  return isEqual;
+  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
+    return false;
+  }
+  if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
+    return false;
+  }
+  if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
+    return false;
+  }
+  if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
+    return false;
+  }
+  if ((relation == nullptr) != (other.relation == nullptr)) {
+    return false;
+  }
+  if (relation != nullptr && *relation != *other.relation) {
+    return false;
+  }
+  if (label.has_value() != other.label.has_value()) {
+    return false;
+  }
+  if (label.has_value() && *label != *other.label) {
+    return false;
+  }
+  if (identifier.has_value() != other.identifier.has_value()) {
+    return false;
+  }
+  if (identifier.has_value() && *identifier != *other.identifier) {
+    return false;
+  }
+  return true;
 }
 
 bool Set::operator<(const Set &other) const {
@@ -571,14 +582,14 @@ void Set::saturateBase() {
       if (leftOperand->operation == SetOperation::singleton) {
         // saturate base relation assumptions
         if (relation->operation == RelationOperation::base &&
-            relation->saturated < RegularTableau::saturationBound && relation->saturated % 2 == 0) {
+            relation->saturatedBase < RegularTableau::saturationBoundBase) {
           auto relationName = *relation->identifier;
           if (RegularTableau::baseAssumptions.contains(relationName)) {
             auto assumption = RegularTableau::baseAssumptions.at(relationName);
             Relation b = Relation(RelationOperation::base, relationName);
             Relation subsetR = Relation(assumption.relation);
             Relation r = Relation(RelationOperation::choice, std::move(b), std::move(subsetR));
-            Assumption::markBaseRelationsAsSaturated(r, relation->saturated + 1);
+            Assumption::markBaseRelationsAsSaturated(r, relation->saturatedBase + 1, true);
             *relation = std::move(r);
           }
         }
@@ -608,11 +619,11 @@ void Set::saturateId() {
         }
         // saturate identity assumptions
         if (relation->operation == RelationOperation::base &&
-            relation->saturated < RegularTableau::saturationBound && relation->saturated % 2 == 1) {
+            relation->saturatedId < RegularTableau::saturationBoundId) {
           // saturate identity assumptions
           auto leftOperandCopy = Set(*leftOperand);
           Relation r = std::move(subsetId);
-          Assumption::markBaseRelationsAsSaturated(r, relation->saturated + 1);
+          Assumption::markBaseRelationsAsSaturated(r, relation->saturatedId + 1, false);
           *leftOperand = Set(SetOperation::image, std::move(leftOperandCopy), std::move(r));
         }
       } else {

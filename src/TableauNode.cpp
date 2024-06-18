@@ -136,6 +136,19 @@ std::optional<DNF> Tableau::Node::applyRule(bool modalRule) {
   if (result) {
     auto disjunction = *result;
     appendBranch(disjunction);
+    // make rule application in-place
+    if (parentNode != nullptr && parentNode->rightNode == nullptr) {
+      // important: do right first because setting parentNode->leftNode destroys 'this'
+      if (rightNode != nullptr) {
+        rightNode->parentNode = parentNode;
+        parentNode->rightNode = std::move(rightNode);
+      }
+      if (leftNode != nullptr) {
+        leftNode->parentNode = parentNode;
+        parentNode->leftNode = std::move(leftNode);
+      }
+    }
+
     return disjunction;
   }
   return std::nullopt;

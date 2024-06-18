@@ -3,15 +3,19 @@
 #include <utility>
 
 // helper
-void Assumption::markBaseRelationsAsSaturated(Relation &relation, int saturatedCount) {
+void Assumption::markBaseRelationsAsSaturated(Relation &relation, int saturatedCount, bool base) {
   if (relation.operation == RelationOperation::base) {
-    relation.saturated = saturatedCount;
+    if (base) {
+      relation.saturatedBase = saturatedCount;
+    } else {
+      relation.saturatedId = saturatedCount;
+    }
   } else {
     if (relation.leftOperand != nullptr) {
-      markBaseRelationsAsSaturated(*relation.leftOperand, saturatedCount);
+      markBaseRelationsAsSaturated(*relation.leftOperand, saturatedCount, base);
     }
     if (relation.rightOperand != nullptr) {
-      markBaseRelationsAsSaturated(*relation.rightOperand, saturatedCount);
+      markBaseRelationsAsSaturated(*relation.rightOperand, saturatedCount, base);
     }
   }
 }
@@ -19,7 +23,14 @@ void Assumption::markBaseRelationsAsSaturated(Relation &relation, int saturatedC
 Assumption::Assumption(const AssumptionType type, Relation &&relation,
                        std::optional<std::string> baseRelation)
     : type(type), relation(std::move(relation)), baseRelation(baseRelation) {
-  if (this->type != AssumptionType::empty) {
-    markBaseRelationsAsSaturated(this->relation, 1);
+  switch (this->type) {
+    case AssumptionType::empty:
+      break;
+    case AssumptionType::regular:
+      markBaseRelationsAsSaturated(this->relation, 1, true);
+      break;
+    case AssumptionType::identity:
+      markBaseRelationsAsSaturated(this->relation, 1, false);
+      break;
   }
 }

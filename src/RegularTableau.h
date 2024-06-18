@@ -54,7 +54,8 @@ class RegularTableau {
   static std::vector<Assumption> emptinessAssumptions;
   static std::vector<Assumption> idAssumptions;
   static std::map<std::string, Assumption> baseAssumptions;
-  static int saturationBound;
+  static int saturationBoundId;
+  static int saturationBoundBase;
 
   bool solve();
   Node *addNode(Cube cube, EdgeLabel &label);
