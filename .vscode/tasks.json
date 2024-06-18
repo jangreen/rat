@@ -12,9 +12,17 @@
             }
         },
         {
-            "label": "Tests",
+            "label": "|= Profile",
+            "type": "shell",
+            "command": "rm -rf ./build/record.trace; xctrace record --output ./build/record.trace --template 'Time Profiler' --launch ${workspaceFolder}/build/CatInfer ${file}; open ./build/record.trace",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
+            "label": "Run Tests",
             "type": "shell",
             "command": "${workspaceFolder}/tests/run.sh",
-        }
+        },
     ]
 }

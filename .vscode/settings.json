@@ -98,7 +98,8 @@
         "*.tcc": "cpp",
         "random": "cpp",
         "cinttypes": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "numeric": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,
