@@ -34,7 +34,8 @@ class Tableau {
     void inferModalAtomic();
 
     // this method assumes that tableau is already reduced
-    std::vector<std::vector<Literal>> extractDNF() const;
+    DNF extractDNF() const;
+    void dnfBuilder(DNF &dnf) const;
 
     void toDotFormat(std::ofstream &output) const;
 
@@ -59,10 +60,10 @@ class Tableau {
   void exportProof(std::string filename) const;
 
   // helper
-  static std::vector<Literal> substitute(Literal &literal, Set &search, Set &replace) {
+  static Cube substitute(Literal &literal, Set &search, Set &replace) {
     int c = 1;
     Literal copy = literal;
-    std::vector<Literal> newLiterals;
+    Cube newLiterals;
     while (copy.substitute(search, replace, c) == 0) {
       newLiterals.push_back(copy);
       copy = literal;

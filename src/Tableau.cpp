@@ -74,10 +74,6 @@ bool Tableau::solve(int bound) {
         temp = temp->parentNode;
       }
     }
-
-#if DEBUG
-    exportProof("infinite-debug");
-#endif
   }
 
   // warning if bound is reached
@@ -88,35 +84,43 @@ bool Tableau::solve(int bound) {
   return rootNode->isClosed();
 }
 
-std::vector<std::vector<Literal>> Tableau::Node::extractDNF() const {
+void Tableau::Node::dnfBuilder(DNF &dnf) const {
   if (isClosed()) {
-    return {};
+    return;
   }
   if (isLeaf()) {
     if (literal.isNormal() && literal != TOP) {
-      return {{literal}};
+      dnf.push_back({literal});
     }
-    return {};
+    return;
   } else {
-    std::vector<std::vector<Literal>> result;
     if (leftNode != nullptr) {
-      auto left = leftNode->extractDNF();
-      result.insert(result.end(), left.begin(), left.end());
+      DNF leftDNF;
+      leftNode->dnfBuilder(leftDNF);
+      dnf.insert(dnf.end(), std::make_move_iterator(leftDNF.begin()),
+                 std::make_move_iterator(leftDNF.end()));
     }
     if (rightNode != nullptr) {
-      auto right = rightNode->extractDNF();
-      result.insert(result.end(), right.begin(), right.end());
+      DNF rightDNF;
+      rightNode->dnfBuilder(rightDNF);
+      dnf.insert(dnf.end(), std::make_move_iterator(rightDNF.begin()),
+                 std::make_move_iterator(rightDNF.end()));
     }
-    if (literal.isNormal()) {
-      if (result.empty()) {
-        result.push_back({});
+    if (literal.isNormal() && literal != TOP) {
+      if (dnf.empty()) {
+        dnf.push_back({});
       }
-      for (auto &clause : result) {
-        clause.push_back(literal);
+      for (auto &cube : dnf) {
+        cube.push_back(literal);
       }
     }
-    return result;
   }
+}
+
+DNF Tableau::Node::extractDNF() const {
+  DNF dnf;
+  dnfBuilder(dnf);
+  return dnf;
 }
 
 std::optional<Literal> Tableau::applyRuleA() {
