@@ -137,9 +137,9 @@ std::optional<Literal> Tableau::applyRuleA() {
       currentNode->literal = TOP;
 
       // find atomic
-      for (const auto &clause : modalResult) {
-        // should be only one clause
-        for (const auto &literal : clause) {
+      for (const auto &cube : modalResult) {
+        // should be only one cube
+        for (const auto &literal : cube) {
           if (literal.isPositiveEdgePredicate()) {
             return literal;
           }

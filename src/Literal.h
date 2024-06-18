@@ -69,11 +69,11 @@ class Literal {
   // printing
   std::string toString() const;
 
-  static void print(const DNF &gdnf) {
+  static void print(const DNF &dnf) {
     std::cout << "Cubes:";
-    for (auto &clause : gdnf) {
+    for (auto &cube : dnf) {
       std::cout << "\n";
-      for (auto &literal : clause) {
+      for (auto &literal : cube) {
         std::cout << literal.toString() << " , ";
       }
     }

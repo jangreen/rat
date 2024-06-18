@@ -313,9 +313,9 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
-          for (const auto &clause : leftOperandResult) {
+          for (const auto &cube : leftOperandResult) {
             std::vector<PartialPredicate> newCube;
-            for (const auto &partialPredicate : clause) {
+            for (const auto &partialPredicate : cube) {
               if (std::holds_alternative<Literal>(partialPredicate)) {
                 newCube.push_back(std::move(partialPredicate));
               } else {
@@ -431,9 +431,9 @@ std::optional<std::vector<std::vector<Set::PartialPredicate>>> Set::applyRule(bo
         auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
         if (leftOperandResultOptional) {
           auto leftOperandResult = *leftOperandResultOptional;
-          for (const auto &clause : leftOperandResult) {
+          for (const auto &cube : leftOperandResult) {
             std::vector<PartialPredicate> newCube;
-            for (const auto &partialPredicate : clause) {
+            for (const auto &partialPredicate : cube) {
               if (std::holds_alternative<Literal>(partialPredicate)) {
                 newCube.push_back(std::move(partialPredicate));
               } else {

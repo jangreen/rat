@@ -11,13 +11,13 @@
 #include <utility>
 
 // helper
-// assumption: input is dnf clause
+// assumption: input is dnf cube
 // purges useless literals
-Cube purge(const Cube &clause, Cube &dropped, EdgeLabel &label) {
+Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   Cube newCube;
 
   // remove edge predicates and put them in the edge label
-  for (const auto &literal : clause) {
+  for (const auto &literal : cube) {
     if (literal.isPositiveEdgePredicate() || literal.isPositiveEqualityPredicate()) {
       std::get<0>(label).push_back(literal);
     } else {
@@ -43,7 +43,7 @@ Cube purge(const Cube &clause, Cube &dropped, EdgeLabel &label) {
     }
   }
   // (*) above
-  std::vector<Literal> edges = std::get<0>(label);
+  Cube edges = std::get<0>(label);
   for (const auto edgeLiteral : edges) {
     auto literalCobinations = edgeLiteral.labelBaseCombinations();
     for (auto combination : literalCobinations) {
@@ -136,7 +136,7 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
   // (*) above
   for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
     for (const auto &parentLabel : parentLabels) {
-      std::vector<Literal> edges = std::get<0>(parentLabel);
+      Cube edges = std::get<0>(parentLabel);
       Renaming renaming = std::get<1>(parentLabel);
       for (const auto edgeLiteral : edges) {
         auto literalCobinations = edgeLiteral.labelBaseCombinations();
@@ -193,14 +193,14 @@ RegularTableau::RegularTableau(Cube initalLiterals) {
 }
 
 // assumptions:
-// clause is in normal form
-RegularTableau::Node *RegularTableau::addNode(Cube clause, EdgeLabel &label) {
-  // rename clause events such that two isomorphic nodes are equal after renaming
-  auto renaming = rename(clause);
+// cube is in normal form
+RegularTableau::Node *RegularTableau::addNode(Cube cube, EdgeLabel &label) {
+  // rename cube events such that two isomorphic nodes are equal after renaming
+  auto renaming = rename(cube);
   // update edge label
   std::get<1>(label) = renaming;
   // create node, add to "nodes" (returns pointer to existing node if already exists)
-  auto newNode = std::make_unique<Node>(clause);
+  auto newNode = std::make_unique<Node>(cube);
   auto insertion = nodes.insert(std::move(newNode));
   if (insertion.second) {
     // new node has been added added (no isomorphic node existed)
@@ -321,11 +321,11 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // spdlog::debug(fmt::format("[Solver] Expand node {} ", (node == nullptr ? 0 :
   // std::hash<Node>()(*node))));
 
-  // for each clause: calculate potential child
-  for (const auto &clause : dnf) {
+  // for each cube: calculate potential child
+  for (const auto &cube : dnf) {
     Cube droppedLiterals;
     EdgeLabel edgeLabel;
-    auto newCube = purge(clause, droppedLiterals, edgeLabel);
+    auto newCube = purge(cube, droppedLiterals, edgeLabel);
 
     // check if immediate inconsistency exists (inconsistent literals that are immdediatly
     // dropped)
@@ -387,17 +387,17 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   // inconsistentLiterals for all branches?
   DNF dnf = calcConverseReq.rootNode->extractDNF();
   // each Disjunct must have some inconsistency to have an inconsistency
-  // otherwise the proof for one clause without inconsistency would
+  // otherwise the proof for one cube without inconsistency would
   // subsume the others (which have more literals) if this is the case:
-  // add one epsilon edge for each clause
-  for (const auto &clause : dnf) {
-    if (!getInconsistentLiterals(parent, clause)) {
+  // add one epsilon edge for each cube
+  for (const auto &cube : dnf) {
+    if (!getInconsistentLiterals(parent, cube)) {
       return false;
     }
   }
 
-  for (const auto &clause : dnf) {
-    auto alternativeNode = getInconsistentLiterals(parent, clause);
+  for (const auto &cube : dnf) {
+    auto alternativeNode = getInconsistentLiterals(parent, cube);
     if (alternativeNode) {
       // create new fixed Node
       Node *fixedNode = addNode(*alternativeNode, label);
@@ -410,13 +410,13 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 void RegularTableau::saturate(DNF &dnf) {
   if (!RegularTableau::baseAssumptions.empty()) {
     DNF newDnf;
-    for (auto &clause : dnf) {
+    for (auto &cube : dnf) {
       // saturation phase
-      for (Literal &literal : clause) {
+      for (Literal &literal : cube) {
         literal.saturateBase();
       }
       // normalize
-      Tableau saturatedTableau{clause};
+      Tableau saturatedTableau{cube};
       auto saturatedDnf = saturatedTableau.dnf();
       newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
     }
@@ -424,13 +424,13 @@ void RegularTableau::saturate(DNF &dnf) {
   }
   if (!RegularTableau::idAssumptions.empty()) {
     DNF newDnf;
-    for (auto &clause : dnf) {
+    for (auto &cube : dnf) {
       // saturation phase
-      for (Literal &literal : clause) {
+      for (Literal &literal : cube) {
         literal.saturateId();
       }
       // normalize
-      Tableau saturatedTableau{clause};
+      Tableau saturatedTableau{cube};
       auto saturatedDnf = saturatedTableau.dnf();
       newDnf.insert(std::end(newDnf), std::begin(saturatedDnf), std::end(saturatedDnf));
     }

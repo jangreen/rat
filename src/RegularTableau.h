@@ -13,7 +13,7 @@
 #include "Literal.h"
 #include "Tableau.h"
 
-typedef std::tuple<std::vector<Literal>, Renaming> EdgeLabel;
+typedef std::tuple<Cube, Renaming> EdgeLabel;
 
 class RegularTableau {
  public:
@@ -57,7 +57,7 @@ class RegularTableau {
   static int saturationBound;
 
   bool solve();
-  Node *addNode(Cube clause, EdgeLabel &label);
+  Node *addNode(Cube cube, EdgeLabel &label);
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);

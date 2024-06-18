@@ -24,7 +24,7 @@ class Tableau {
     bool isClosed() const;
     bool isLeaf() const;
     bool branchContains(const Literal &literal);
-    void appendBranch(const DNF &cubes);
+    void appendBranch(const DNF &dnf);
     bool appendable(const Cube &cube);
     void appendBranch(const Literal &leftLiteral);
     void appendBranch(const Literal &leftLiteral, const Literal &rightLiteral);

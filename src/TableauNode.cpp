@@ -42,40 +42,38 @@ bool Tableau::Node::branchContains(const Literal &literal) {
   return false;
 }
 
-void Tableau::Node::appendBranch(const DNF &cube) {
+void Tableau::Node::appendBranch(const DNF &dnf) {
   if (isLeaf() && !isClosed()) {
-    if (cube.size() > 2) {
+    if (dnf.size() > 2) {
       // TODO: make this explicit using types
       std::cout << "[Bug] We would like to support only binary branching" << std::endl;
-    } else if (cube.size() > 1) {
-      // special case: appending X | \emptyset to B would result in B.X and B.nullptr
-      // but B.nullptr should mean here B.emptyset however this is not reflected
-      // Solution: we do not append anything since truth of the empty branch implies truth of B.X
-      if (!appendable(cube[0]) || !appendable(cube[1])) {
+    } else if (dnf.size() > 1) {
+      // only append if all resulting branches have new literals
+      if (!appendable(dnf[0]) || !appendable(dnf[1])) {
         return;
       }
 
       // trick: lift disjunctive appendBranch to sets
-      for (const auto &literal : cube[1]) {
+      for (const auto &literal : dnf[1]) {
         appendBranch(literal);
       }
       auto temp = std::move(leftNode);
       leftNode = nullptr;
-      for (const auto &literal : cube[0]) {
+      for (const auto &literal : dnf[0]) {
         appendBranch(literal);
       }
       rightNode = std::move(temp);
-    } else if (cube.size() > 0) {
-      for (const auto &literal : cube[0]) {
+    } else if (dnf.size() > 0) {
+      for (const auto &literal : dnf[0]) {
         appendBranch(literal);
       }
     }
   } else {
     if (leftNode != nullptr) {
-      leftNode->appendBranch(cube);
+      leftNode->appendBranch(dnf);
     }
     if (rightNode != nullptr) {
-      rightNode->appendBranch(cube);
+      rightNode->appendBranch(dnf);
     }
   }
 }
