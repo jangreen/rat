@@ -1,0 +1,45 @@
+// (*** Standard definitions ***)
+let M = R | W
+
+// Maybe use po-imm and co-imm as base relations
+let rmw = [R];rmw-base;[W] & po
+let loc = [M];loc-base;[M] | id
+let rf = [W];rf-base;[R] & loc
+let co = [W];co-base;[W] & loc
+
+let data = [R];data-base;[W] & po
+let addr = [R];addr-base;[M] & po
+let ctrl = [R];ctrl-base;[M] & po
+
+let int = po | po^-1 | id
+let fr = rf^-1;co
+
+// NOTE: We do not have "r == (r & int) | (r & ext)"
+let rfi = rf & int
+let rfe = rf & ext
+let coi = co & int
+let coe = co & ext
+let fri = fr & int
+let fre = fr & ext
+
+let po-loc = po & loc
+
+(*** Standard assumptions ***)
+(*
+    assume W & R <= 0
+    assume F & M <= 0
+
+    assume int & ext <= 0
+
+    assume loc;loc <= loc
+    assume loc^-1 <= loc
+
+    assume co;co <= co
+    assume co & id <= 0
+
+    assume po;po <= po
+    assume po & id <= 0
+
+    assume rf;rf^-1 <= id
+
+*)

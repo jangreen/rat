@@ -1,0 +1,6 @@
+include ./evaluation/stdlib.cat
+
+assume co-base;co-base <= co-base
+assume loc-base;loc-base <= loc-base
+
+assert fr;co <= fr

@@ -17,7 +17,7 @@ Tableau::Tableau(Cube initalLiterals) {
     if (rootNode == nullptr) {
       rootNode = std::move(newNode);
     } else if (currentNode != nullptr) {
-      newNode->parentNode->leftNode = std::move(newNode);
+      currentNode->children.push_back(std::move(newNode));
     }
 
     currentNode = temp;
@@ -30,7 +30,7 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    auto currentNode = unreducedNodes.front();
+    auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
     // 1) Rules that just rewrite a single literal
@@ -94,25 +94,19 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
     }
     return;
   } else {
-    if (leftNode != nullptr) {
-      DNF leftDNF;
-      leftNode->dnfBuilder(leftDNF);
-      dnf.insert(dnf.end(), std::make_move_iterator(leftDNF.begin()),
-                 std::make_move_iterator(leftDNF.end()));
+    for (const auto &child : children) {
+      DNF childDNF;
+      child->dnfBuilder(childDNF);
+      dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
+                 std::make_move_iterator(childDNF.end()));
     }
-    if (rightNode != nullptr) {
-      DNF rightDNF;
-      rightNode->dnfBuilder(rightDNF);
-      dnf.insert(dnf.end(), std::make_move_iterator(rightDNF.begin()),
-                 std::make_move_iterator(rightDNF.end()));
+  }
+  if (literal.isNormal() && literal != TOP) {
+    if (dnf.empty()) {
+      dnf.push_back({});
     }
-    if (literal.isNormal() && literal != TOP) {
-      if (dnf.empty()) {
-        dnf.push_back({});
-      }
-      for (auto &cube : dnf) {
-        cube.push_back(literal);
-      }
+    for (auto &cube : dnf) {
+      cube.push_back(literal);
     }
   }
 }
@@ -125,7 +119,7 @@ DNF Tableau::Node::extractDNF() const {
 
 std::optional<Literal> Tableau::applyRuleA() {
   while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.front();
+    auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
     auto result = currentNode->applyRule(true);
@@ -167,4 +161,10 @@ void Tableau::exportProof(std::string filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
+}
+
+bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
+  return left->literal.toString() < right->literal.toString();
+  // TODO: define clever measure: should measure alpha beta rules
+  // left.literal->negated < right.literal->negated;
 }

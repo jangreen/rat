@@ -99,7 +99,8 @@
         "random": "cpp",
         "cinttypes": "cpp",
         "format": "cpp",
-        "numeric": "cpp"
+        "numeric": "cpp",
+        "test1": "c"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

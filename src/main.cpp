@@ -49,8 +49,8 @@ int main(int argc, const char *argv[]) {
       tableau.solve(200);
       tableau.exportProof("infinite");
     } else {
-      RegularTableau tableau{goal};
       std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+      RegularTableau tableau{goal};
       tableau.solve();
       spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
       tableau.exportProof("regular");

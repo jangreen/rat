@@ -28,3 +28,9 @@ This project uses cpplint for linting. the .clang-format file describes lint con
 ### Dependencies
 
 Install brew, spdl with homebrew
+
+### installation
+
+/opt/homebrew/bin/cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ -S/Users/jangruenke/cat-infer -B/Users/jangruenke/cat-infer/build -G "Unix Makefiles"
+
+/opt/homebrew/bin/cmake --build /Users/jangruenke/cat-infer/build --config RelWithDebInfo --target all -j 14 --

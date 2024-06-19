@@ -1,0 +1,6 @@
+include ./evaluation/stdlib.cat
+
+assume [W] & [R] <= 0
+
+assert rf;rf <= 0
+assert fr;co <= fr

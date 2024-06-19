@@ -17,8 +17,7 @@ class Tableau {
 
     Tableau *tableau;
     Literal literal;
-    std::unique_ptr<Node> leftNode = nullptr;
-    std::unique_ptr<Node> rightNode = nullptr;
+    std::vector<std::unique_ptr<Node>> children;
     Node *parentNode = nullptr;
 
     bool isClosed() const;
@@ -26,7 +25,7 @@ class Tableau {
     bool branchContains(const Literal &literal);
     void appendBranch(const DNF &dnf);
     bool appendable(const Cube &cube);
-    void appendBranch(const Literal &leftLiteral);
+    void appendBranch(const Literal &literal);
     void appendBranch(const Literal &leftLiteral, const Literal &rightLiteral);
     std::optional<DNF> applyRule(bool modalRule = false);
     void inferModal();
@@ -38,13 +37,17 @@ class Tableau {
     void dnfBuilder(DNF &dnf) const;
 
     void toDotFormat(std::ofstream &output) const;
+
+    struct CompareNodes {
+      bool operator()(const Node *left, const Node *right) const;
+    };
   };
 
   Tableau(std::initializer_list<Literal> initalLiterals);
   explicit Tableau(Cube initalLiterals);
 
   std::unique_ptr<Node> rootNode;
-  std::queue<Node *> unreducedNodes;
+  std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
   bool solve(int bound = -1);
 

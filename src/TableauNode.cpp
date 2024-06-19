@@ -13,11 +13,18 @@ bool Tableau::Node::isClosed() const {
   if (literal == BOTTOM) {
     return true;
   }
-  return leftNode != nullptr && leftNode->isClosed() &&
-         (rightNode == nullptr || rightNode->isClosed());
+  if (children.empty()) {
+    return false;
+  }
+  for (const auto &child : children) {
+    if (!child->isClosed()) {
+      return false;
+    }
+  }
+  return true;
 }
 
-bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
+bool Tableau::Node::isLeaf() const { return children.empty(); }
 
 bool Tableau::Node::branchContains(const Literal &literal) {
   Literal negatedCopy(literal);
@@ -30,10 +37,10 @@ bool Tableau::Node::branchContains(const Literal &literal) {
     } else if (literal.operation != PredicateOperation::intersectionNonEmptiness) {
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
       if (node->literal == negatedCopy) {
-        Node newNode(this, std::move(literal));
-        Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
-        newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
-        leftNode = std::make_unique<Node>(std::move(newNode));
+        auto newNode = std::make_unique<Node>(this, std::move(literal));
+        auto newNodeBot = std::make_unique<Node>(newNode.get(), std::move(Literal(BOTTOM)));
+        newNode->children.push_back(std::move(newNodeBot));
+        children.push_back(std::move(newNode));
         return true;
       }
     }
@@ -44,45 +51,31 @@ bool Tableau::Node::branchContains(const Literal &literal) {
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
   if (isLeaf() && !isClosed()) {
-    if (dnf.size() > 2) {
-      // TODO: make this explicit using types
-      std::cout << "[Bug] We would like to support only binary branching" << std::endl;
-    } else if (dnf.size() > 1) {
+    for (const auto &cube : dnf) {
       // only append if all resulting branches have new literals
-      if (!appendable(dnf[0]) || !appendable(dnf[1])) {
+      if (!appendable(cube)) {
         return;
       }
-
-      // trick: lift disjunctive appendBranch to sets
-      for (const auto &literal : dnf[1]) {
-        appendBranch(literal);
+    }
+    for (const auto &cube : dnf) {
+      auto firstLiteral = cube.front();
+      auto newNode = std::make_unique<Node>(this, std::move(firstLiteral));
+      for (auto &literal : cube) {
+        newNode->appendBranch(literal);
       }
-      auto temp = std::move(leftNode);
-      leftNode = nullptr;
-      for (const auto &literal : dnf[0]) {
-        appendBranch(literal);
-      }
-      rightNode = std::move(temp);
-    } else if (dnf.size() > 0) {
-      for (const auto &literal : dnf[0]) {
-        appendBranch(literal);
-      }
+      tableau->unreducedNodes.push(newNode.get());
+      children.push_back(std::move(newNode));
     }
   } else {
-    if (leftNode != nullptr) {
-      leftNode->appendBranch(dnf);
-    }
-    if (rightNode != nullptr) {
-      rightNode->appendBranch(dnf);
+    for (const auto &child : children) {
+      child->appendBranch(dnf);
     }
   }
 }
 
 bool Tableau::Node::appendable(const Cube &cube) {
-  // assume that it is called only on leafs
-  // predicts conjunctive literal appending returns true if it would appended at least some literal
+  // procondition: called on leaf node
   if (isLeaf() && !isClosed()) {
-    auto currentLeaf = this;
     for (const auto &literal : cube) {
       if (!branchContains(literal)) {
         return true;
@@ -92,19 +85,16 @@ bool Tableau::Node::appendable(const Cube &cube) {
   return false;
 }
 
-void Tableau::Node::appendBranch(const Literal &leftLiteral) {
+void Tableau::Node::appendBranch(const Literal &literal) {
   if (isLeaf() && !isClosed()) {
-    if (!branchContains(leftLiteral)) {
-      Node newNode(this, std::move(leftLiteral));
-      leftNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(leftNode.get());
+    if (!branchContains(literal)) {
+      auto newNode = std::make_unique<Node>(this, std::move(literal));
+      tableau->unreducedNodes.push(newNode.get());
+      children.push_back(std::move(newNode));
     }
   } else {
-    if (leftNode != nullptr) {
-      leftNode->appendBranch(leftLiteral);
-    }
-    if (rightNode != nullptr) {
-      rightNode->appendBranch(leftLiteral);
+    for (const auto &child : children) {
+      child->appendBranch(literal);
     }
   }
 }
@@ -112,21 +102,18 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral) {
 void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &rightLiteral) {
   if (isLeaf() && !isClosed()) {
     if (!branchContains(leftLiteral)) {
-      Node newNode(this, std::move(leftLiteral));
-      leftNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(leftNode.get());
+      auto newNode = std::make_unique<Node>(this, std::move(leftLiteral));
+      tableau->unreducedNodes.push(newNode.get());
+      children.push_back(std::move(newNode));
     }
     if (!branchContains(rightLiteral)) {
-      Node newNode(this, std::move(rightLiteral));
-      rightNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(rightNode.get());
+      auto newNode = std::make_unique<Node>(this, std::move(rightLiteral));
+      tableau->unreducedNodes.push(newNode.get());
+      children.push_back(std::move(newNode));
     }
   } else {
-    if (leftNode != nullptr) {
-      leftNode->appendBranch(leftLiteral, rightLiteral);
-    }
-    if (rightNode != nullptr) {
-      rightNode->appendBranch(leftLiteral, rightLiteral);
+    for (const auto &child : children) {
+      child->appendBranch(leftLiteral, rightLiteral);
     }
   }
 }
@@ -137,18 +124,19 @@ std::optional<DNF> Tableau::Node::applyRule(bool modalRule) {
     auto disjunction = *result;
     appendBranch(disjunction);
     // make rule application in-place
-    if (parentNode != nullptr && parentNode->rightNode == nullptr) {
-      // important: do right first because setting parentNode->leftNode destroys 'this'
-      if (rightNode != nullptr) {
-        rightNode->parentNode = parentNode;
-        parentNode->rightNode = std::move(rightNode);
+    if (parentNode != nullptr) {
+      for (auto &child : children) {
+        child->parentNode = parentNode;
       }
-      if (leftNode != nullptr) {
-        leftNode->parentNode = parentNode;
-        parentNode->leftNode = std::move(leftNode);
-      }
-    }
 
+      parentNode->children.insert(parentNode->children.end(),
+                                  std::make_move_iterator(children.begin()),
+                                  std::make_move_iterator(children.end()));
+      // next line destroys this
+      parentNode->children.erase(
+          std::remove_if(std::begin(parentNode->children), std::end(parentNode->children),
+                         [this](auto &element) { return element.get() == this; }));
+    }
     return disjunction;
   }
   return std::nullopt;
@@ -250,19 +238,19 @@ void Tableau::Node::inferModalAtomic() {
 }
 
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
-  output << "N" << this << "[label=\"" << literal.toString() << "\"";
+  output << "N" << this << "[tooltip=\"";
+  // debug
+  output << this << std::endl << std::endl;
+  // label/cube
+  output << "\",label=\"" << literal.toString() << "\"";
   // color closed branches
   if (isClosed()) {
     output << ", fontcolor=green";
   }
   output << "];" << std::endl;
   // children
-  if (leftNode != nullptr) {
-    leftNode->toDotFormat(output);
-    output << "N" << this << " -- " << "N" << leftNode << ";" << std::endl;
-  }
-  if (rightNode != nullptr) {
-    rightNode->toDotFormat(output);
-    output << "N" << this << " -- " << "N" << rightNode << ";" << std::endl;
+  for (const auto &child : children) {
+    child->toDotFormat(output);
+    output << "N" << this << " -- " << "N" << child << ";" << std::endl;
   }
 }
