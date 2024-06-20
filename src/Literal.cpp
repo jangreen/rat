@@ -145,13 +145,14 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
 
               if (negated) {
                 // Rule (~&_1L)
-                DNF result = {{Literal(negated, e_and_s1), Literal(negated, e_and_s1)}};
+                DNF result = {{Literal(negated, e_and_s1), Literal(negated, e_and_s2)}};
                 return result;
               } else {
                 // Rule (&_1L)
-                DNF result = {{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s1)}};
+                DNF result = {{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s2)}};
                 return result;
               }
+              assert(false);
             }
             case SetOperation::image:
             case SetOperation::domain:
@@ -229,7 +230,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
           }
           break;
         } else if (set->rightOperand->operation == SetOperation::singleton) {
-          switch (set->rightOperand->operation) {
+          switch (set->leftOperand->operation) {
             case SetOperation::intersection: {
               // (s1 & s2) & e -> s1 & e , s2 & e
               CanonicalSet e = set->rightOperand;
@@ -251,9 +252,9 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
             case SetOperation::image:
             case SetOperation::domain:
               // (sr) & e    or      (rs) & e
-              if (set->rightOperand->leftOperand->operation == SetOperation::singleton) {
+              if (set->leftOperand->leftOperand->operation == SetOperation::singleton) {
                 // (e2.r) & e1      or      (r.e2) & e1
-                if (set->rightOperand->relation->operation == RelationOperation::base) {
+                if (set->leftOperand->relation->operation == RelationOperation::base) {
                   // (e2.b) & e1      or      (b.e2) & e1
                   // shortcut multiple rules
                   int e1 = *set->rightOperand->label;
