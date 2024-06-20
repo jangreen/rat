@@ -155,7 +155,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
               assert(false);
             }
             case SetOperation::image:
-            case SetOperation::domain:
+            case SetOperation::domain: {
               // e & (sr)     or      e & (rs)
               if (set->rightOperand->leftOperand->operation == SetOperation::singleton) {
                 // e1 & (e2.r)     or      e1 & (r.e2)
@@ -225,6 +225,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
                   return result;
                 }
               }
+            }
             default:
               break;
           }
@@ -250,7 +251,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
               }
             }
             case SetOperation::image:
-            case SetOperation::domain:
+            case SetOperation::domain: {
               // (sr) & e    or      (rs) & e
               if (set->leftOperand->leftOperand->operation == SetOperation::singleton) {
                 // (e2.r) & e1      or      (r.e2) & e1
@@ -320,6 +321,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
                   return result;
                 }
               }
+            }
             default:
               break;
           }
