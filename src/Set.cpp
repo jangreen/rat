@@ -1,8 +1,8 @@
 #include "Assumption.h"
 #include "Literal.h"
+#include <unordered_set>
 
 int Set::maxSingletonLabel = 0;
-std::unordered_map<Set, const Set> Set::canonicalSets;
 
 // initialization helper
 bool calcIsNormal(SetOperation operation, CanonicalSet leftOperand, CanonicalSet rightOperand,
@@ -23,6 +23,8 @@ bool calcIsNormal(SetOperation operation, CanonicalSet leftOperand, CanonicalSet
       return leftOperand->operation == SetOperation::singleton
                  ? relation->operation == RelationOperation::base
                  : leftOperand->isNormal;
+    default:
+      assert(false);
   }
 }
 
@@ -91,7 +93,7 @@ Set::Set(SetOperation operation, CanonicalSet leftOperand, CanonicalSet rightOpe
           calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this)),
       hasTopSet(calcHasTopSet(operation, leftOperand, rightOperand)) {}
 
-Set::Set(const Set &&other)
+Set::Set(const Set &&other) noexcept
     : operation(other.operation),
       leftOperand(other.leftOperand),
       rightOperand(other.rightOperand),
@@ -104,11 +106,10 @@ Set::Set(const Set &&other)
 
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                          CanonicalRelation relation, std::optional<int> label,
-                         std::optional<std::string> identifier) {
-  Set s(operation, left, right, relation, label, identifier);
-  auto [canonicalSetIterator, found] = Set::canonicalSets.try_emplace(
-      std::move(s), operation, left, right, relation, label, identifier);
-  return &(*canonicalSetIterator).second;
+                         const std::optional<std::string>& identifier) {
+  static std::unordered_set<Set> canonicalizer;
+  auto [iter, found] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
+  return &(*iter);
 }
 
 CanonicalSet Set::newSet(SetOperation operation) {

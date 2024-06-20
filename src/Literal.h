@@ -39,19 +39,19 @@ class Literal {
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &otherSet) const;  // for sorting/hashing
 
-  bool negated;
+  bool negated{};
   PredicateOperation operation;
-  CanonicalSet set;                       // setNonEmptiness
+  CanonicalSet set{};                       // setNonEmptiness
   std::optional<int> leftLabel;           // edge, set, equality
   std::optional<int> rightLabel;          // edge, equality
   std::optional<std::string> identifier;  // edge, set
 
-  bool isNormal() const;
-  bool hasTopSet() const;
-  bool isPositiveEdgePredicate() const;
-  bool isPositiveEqualityPredicate() const;
-  std::vector<int> labels() const;
-  std::vector<CanonicalSet> labelBaseCombinations() const;
+  [[nodiscard]] bool isNormal() const;
+  [[nodiscard]] bool hasTopSet() const;
+  [[nodiscard]] bool isPositiveEdgePredicate() const;
+  [[nodiscard]] bool isPositiveEqualityPredicate() const;
+  [[nodiscard]] std::vector<int> labels() const;
+  [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
 
   std::optional<DNF> applyRule(bool modalRules);
   bool substitute(CanonicalSet search, CanonicalSet replace,
@@ -62,7 +62,7 @@ class Literal {
   void saturateBase();
 
   // printing
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
   static void print(const DNF &dnf) {
     std::cout << "Cubes:";
@@ -103,7 +103,7 @@ class Set {
  private:
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
-                             std::optional<std::string> identifier);
+                             const std::optional<std::string>& identifier);
 
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
@@ -118,7 +118,7 @@ class Set {
   static CanonicalSet newBaseSet(std::string &identifier);
 
   Set(const Set &other) = delete;
-  Set(const Set &&other);  // used for try_emplace (do not want to use copy constructor)
+  Set(const Set &&other) noexcept ;  // used for try_emplace (do not want to use copy constructor)
 
   bool operator==(const Set &other) const;
 
@@ -129,26 +129,26 @@ class Set {
   CanonicalSet const rightOperand;              // is set iff operation binary
   CanonicalRelation const relation;             // is set iff domain/image
 
-  // propterties calulated for canonical sets
+  // properties calculated for canonical sets
   const bool isNormal;
   const bool hasTopSet;
   const std::vector<int> labels;
   const std::vector<CanonicalSet> labelBaseCombinations;
 
-  CanonicalSet rename(const Renaming &renaming, bool inverse) const;
+  [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
-  std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool negated,
+  [[nodiscard]] std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool negated,
                                                                       bool modalRules) const;
-  CanonicalSet saturateId() const;
-  CanonicalSet saturateBase() const;
+  [[nodiscard]] CanonicalSet saturateId() const;
+  [[nodiscard]] CanonicalSet saturateBase() const;
 
   // FIXME: Both unused
   int saturatedId = 0;  // mark base relation
   int saturatedBase = 0;
 
   // printing
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 };
 
 /// hashing

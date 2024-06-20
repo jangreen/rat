@@ -21,8 +21,8 @@ class Tableau {
     std::unique_ptr<Node> rightNode = nullptr;
     Node *parentNode = nullptr;
 
-    bool isClosed() const;
-    bool isLeaf() const;
+    [[nodiscard]] bool isClosed() const;
+    [[nodiscard]] bool isLeaf() const;
     bool branchContains(const Literal &lit);
     void appendBranch(const DNF &dnf);
     bool appendable(const Cube &cube);
@@ -34,7 +34,7 @@ class Tableau {
     void inferModalAtomic();
 
     // this method assumes that tableau is already reduced
-    DNF extractDNF() const;
+    [[nodiscard]] DNF extractDNF() const;
     void dnfBuilder(DNF &dnf) const;
 
     void toDotFormat(std::ofstream &output) const;

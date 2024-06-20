@@ -26,10 +26,10 @@ class Relation {
  private:
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
                                        CanonicalRelation right,
-                                       std::optional<std::string> identifier);
+                                       const std::optional<std::string>& identifier);
 
  public:
-  Relation(const RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
+  Relation(RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
            std::optional<std::string> identifier);  // do not use directly
   static std::unordered_map<Relation, const Relation> canonicalRelations;
   static CanonicalRelation newRelation(RelationOperation operation);
@@ -39,7 +39,7 @@ class Relation {
   static CanonicalRelation newBaseRelation(std::string identifier);
 
   Relation(const Relation &other) = delete;
-  Relation(const Relation &&other);  // used for try_emplace (do not want to use copy constructor)
+  Relation(const Relation &&other) noexcept ;  // used for try_emplace (do not want to use copy constructor)
 
  public:
   bool operator==(const Relation &other) const;
@@ -49,7 +49,7 @@ class Relation {
   CanonicalRelation const leftOperand;          // is set iff operation unary/binary
   CanonicalRelation const rightOperand;         // is set iff operation binary
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 };
 
 /// hashing

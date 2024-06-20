@@ -1,15 +1,13 @@
 #include "Relation.h"
 
-#include <algorithm>
 #include <utility>
-
-std::unordered_map<Relation, const Relation> Relation::canonicalRelations;
+#include <unordered_set>
 
 Relation::Relation(const RelationOperation operation, CanonicalRelation left,
                    CanonicalRelation right, std::optional<std::string> identifier)
     : operation(operation), leftOperand(left), rightOperand(right), identifier(std::move(identifier)){};
 
-Relation::Relation(const Relation &&other)
+Relation::Relation(const Relation &&other) noexcept
    : operation(other.operation),
       leftOperand(other.leftOperand),
       rightOperand(other.rightOperand),
@@ -23,11 +21,10 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
                                         CanonicalRelation right,
-                                        std::optional<std::string> identifier) {
-  Relation r(operation, left, right, identifier);
-  auto [canonicalRelationIterator, found] =
-      Relation::canonicalRelations.try_emplace(std::move(r), operation, left, right, identifier);
-  return &(*canonicalRelationIterator).second;
+                                        const std::optional<std::string>& identifier) {
+  static std::unordered_set<Relation> canonicalizer;
+  auto [iter, found] = canonicalizer.emplace(operation, left, right, identifier);
+  return &(*iter);
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
                                         CanonicalRelation right) {
