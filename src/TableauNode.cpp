@@ -27,7 +27,7 @@ bool Tableau::Node::branchContains(const Literal &literal) {
   while (node != nullptr) {
     if (node->literal == literal) {
       return true;
-    } else if (literal.operation != PredicateOperation::intersectionNonEmptiness) {
+    } else if (literal.operation != PredicateOperation::setNonEmptiness) {
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
       if (node->literal == negatedCopy) {
         Node newNode(this, std::move(literal));
@@ -163,12 +163,17 @@ void Tableau::Node::inferModal() {
     if (temp->literal.isNormal() && temp->literal.isPositiveEdgePredicate()) {
       // check if inside literal can be something inferred
       Literal edgeLiteral = temp->literal;
-      Set search1 = Set(SetOperation::image, Set(*edgeLiteral.leftOperand),
-                        Relation(RelationOperation::base, edgeLiteral.identifier));
-      Set replace1 = Set(*edgeLiteral.rightOperand);
-      Set search2 = Set(SetOperation::domain, Set(*edgeLiteral.rightOperand),
-                        Relation(RelationOperation::base, edgeLiteral.identifier));
-      Set replace2 = Set(*edgeLiteral.leftOperand);
+      // (e1, e2) \in b
+      CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
+      CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+      CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+      CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+      CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+
+      CanonicalSet search1 = e1b;
+      CanonicalSet replace1 = e2;
+      CanonicalSet search2 = be2;
+      CanonicalSet replace2 = e1;
 
       auto newLiterals = substitute(literal, search1, replace1);
       for (auto &literal : newLiterals) {
@@ -204,25 +209,30 @@ void Tableau::Node::inferModalTop() {
 
   for (auto label : labels) {
     // T -> e
-    Set search = Set(SetOperation::full);
-    Set replace = Set(SetOperation::singleton, label);
+    CanonicalSet search = Set::newSet(SetOperation::full);
+    CanonicalSet replace = Set::newEvent(label);
 
     auto newLiterals = substitute(literal, search, replace);
     for (auto &literal : newLiterals) {
-      appendBranch(std::move(literal));
+      appendBranch(literal);
     }
   }
 }
 void Tableau::Node::inferModalAtomic() {
-  Literal edgePredicate = literal;
-  Set search1 = Set(SetOperation::image, Set(*edgePredicate.leftOperand),
-                    Relation(RelationOperation::base, edgePredicate.identifier));
-  Set replace1 = Set(*edgePredicate.rightOperand);
-  Set search2 = Set(SetOperation::domain, Set(*edgePredicate.rightOperand),
-                    Relation(RelationOperation::base, edgePredicate.identifier));
-  Set replace2 = Set(*edgePredicate.leftOperand);
+  Literal edgeLiteral = literal;
+  // (e1, e2) \in b
+  CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
+  CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+  CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+  CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+  CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+
+  CanonicalSet search1 = e1b;
+  CanonicalSet replace1 = e2;
+  CanonicalSet search2 = be2;
+  CanonicalSet replace2 = e1;
   // replace T -> e
-  Set search12 = Set(SetOperation::full);
+  CanonicalSet search12 = Set::newSet(SetOperation::full);
 
   Node *temp = parentNode;
   while (temp != nullptr) {

@@ -40,6 +40,7 @@ class RegularTableau {
       size_t operator()(const std::unique_ptr<Node> &node) const;
     };
 
+    // special equal function that is different from ==
     struct Equal {
       bool operator()(const std::unique_ptr<Node> &node1, const std::unique_ptr<Node> &node2) const;
     };
@@ -51,9 +52,7 @@ class RegularTableau {
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
   std::stack<Node *> unreducedNodes;
-  static std::vector<Assumption> emptinessAssumptions;
-  static std::vector<Assumption> idAssumptions;
-  static std::map<std::string, Assumption> baseAssumptions;
+
   static int saturationBoundId;
   static int saturationBoundBase;
 

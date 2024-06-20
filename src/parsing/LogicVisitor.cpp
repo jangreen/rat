@@ -16,18 +16,19 @@
     } else if (statementContext->assertion()) {
       auto untypedCube = visitAssertion(statementContext->assertion());
       auto cube = std::any_cast<Cube>(untypedCube);
-      assertionCubes.push_back(std::move(cube));
+      assertionCubes.push_back(cube);
     }
   }
 
   // process assumptions
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
   for (auto &cube : assertionCubes) {
-    for (const auto &assumption : RegularTableau::emptinessAssumptions) {
-      Set s(SetOperation::domain, Set(SetOperation::full), Relation(assumption.relation));
-      Literal l(true, PredicateOperation::intersectionNonEmptiness, Set(SetOperation::full),
-                std::move(s));
-      cube.push_back(std::move(l));
+    for (const auto &assumption : Assumption::emptinessAssumptions) {
+      CanonicalSet fullSet = Set::newSet(SetOperation::full);
+      CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
+      CanonicalSet TrT = Set::newSet(SetOperation::intersection, fullSet, rT);
+      Literal l(true, TrT);
+      cube.push_back(l);
     }
   }
 
@@ -41,48 +42,45 @@
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
   if (context->INEQUAL()) {
     // currently only support relations on each side of assertion
-    Relation lhs(context->e1->getText());
-    Relation rhs(context->e2->getText());
-    Set start(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set end(SetOperation::singleton, Set::maxSingletonLabel++);
-    Set lImage(SetOperation::image, Set(start), std::move(lhs));
-    Set rImage(SetOperation::image, std::move(start), std::move(rhs));
+    CanonicalRelation lhs = parseRelation(context->e1->getText());
+    CanonicalRelation rhs = parseRelation(context->e2->getText());
+    CanonicalSet e1 = Set::newEvent(Set::maxSingletonLabel++);
+    CanonicalSet e2 = Set::newEvent(Set::maxSingletonLabel++);
+    CanonicalSet e1LHS = Set::newSet(SetOperation::image, e1, lhs);
+    CanonicalSet e1RHS = Set::newSet(SetOperation::image, e1, rhs);
 
-    Literal l(false, PredicateOperation::intersectionNonEmptiness, std::move(lImage), Set(end));
-    Literal r(true, PredicateOperation::intersectionNonEmptiness, std::move(rImage),
-              std::move(end));
+    CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::intersection, e1LHS, e2);
+    CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::intersection, e1RHS, e2);
 
-    // returns conjunctive literal set
-    Cube cube = {std::move(l), std::move(r)};
-    Literal::print(cube);
+    Cube cube = {Literal(false, e1LHS_and_e2), Literal(true, e1RHS_and_e2)};
     return cube;
   }
   spdlog::error("[Parser] Unsupported assertion format.");
   exit(0);
 }
 
-/*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
-  Relation lhs(ctx->lhs->getText());
-  Relation rhs(ctx->rhs->getText());
-  switch (rhs.operation) {
+/*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *context) {
+  CanonicalRelation lhs = parseRelation(context->lhs->getText());
+  CanonicalRelation rhs = parseRelation(context->rhs->getText());
+  switch (rhs->operation) {
     case RelationOperation::base: {
-      Assumption assumption(AssumptionType::regular, std::move(lhs), *rhs.identifier);
-      RegularTableau::baseAssumptions.insert({*assumption.baseRelation, std::move(assumption)});
+      Assumption assumption(AssumptionType::regular, lhs, *rhs->identifier);
+      Assumption::baseAssumptions.insert({*assumption.baseRelation, assumption});
       return 0;
     }
     case RelationOperation::empty: {
-      Assumption assumption(AssumptionType::empty, std::move(lhs));
-      RegularTableau::emptinessAssumptions.push_back(std::move(assumption));
+      Assumption assumption(AssumptionType::empty, lhs);
+      Assumption::emptinessAssumptions.push_back(assumption);
       return 0;
     }
     case RelationOperation::identity: {
-      Assumption assumption(AssumptionType::identity, std::move(lhs));
-      RegularTableau::idAssumptions.push_back(std::move(assumption));
+      Assumption assumption(AssumptionType::identity, lhs);
+      Assumption::idAssumptions.push_back(assumption);
       return 0;
     }
     default: {
-      std::cout << "[Parser] Ignoring unsupported hypothesis:" << ctx->lhs->getText()
-                << " <= " << ctx->rhs->getText() << std::endl;
+      std::cout << "[Parser] Ignoring unsupported hypothesis:" << context->lhs->getText()
+                << " <= " << context->rhs->getText() << std::endl;
       return 0;
     }
   }
@@ -121,16 +119,17 @@
   } else if (context->ACYCLIC()) {
     type = ConstraintType::acyclic;
   }
-  auto relationVariant = std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
-  Relation relation = std::get<Relation>(relationVariant);
-  return Constraint(type, std::move(relation), name);
+  auto relationVariant =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+  CanonicalRelation relation = std::get<CanonicalRelation>(relationVariant);
+  return Constraint(type, relation, name);
 }
 /*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {
   if (context->RELNAME()) {
     std::string name = context->RELNAME()->getText();
     auto derivedRelationVariant =
-        std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
-    Relation derivedRelation = std::get<Relation>(derivedRelationVariant);
+        std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+    CanonicalRelation derivedRelation = std::get<CanonicalRelation>(derivedRelationVariant);
     // overwrite existing definition
     Logic::definedRelations.insert_or_assign(name, derivedRelation);
   } else if (context->SETNAME()) {
@@ -148,46 +147,44 @@
   std::cout << "[Parser] Recursive definitions are currently not supported." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitParentheses(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitParentheses(
     LogicParser::ParenthesesContext *context) {
   // process: (e)
-  std::variant<Set, Relation> expression =
-      std::any_cast<std::variant<Set, Relation>>(context->e1->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> expression =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
   return expression;
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitTransitiveClosure(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitTransitiveClosure(
     LogicParser::TransitiveClosureContext *context) {
-  std::variant<Set, Relation> relationExpression =
-      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
 
-  if (std::holds_alternative<Relation>(relationExpression)) {
-    Relation r1 = std::get<Relation>(relationExpression);
-    Relation r2(r1);
-    Relation r1Transitive(RelationOperation::transitiveClosure, std::move(r1));
-    Relation r(RelationOperation::composition, std::move(r2), std::move(r1Transitive));
-    std::variant<Set, Relation> result = r;
+  if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
+    CanonicalRelation r = std::get<CanonicalRelation>(relationExpression);
+    CanonicalRelation rStar = Relation::newRelation(RelationOperation::transitiveClosure, r);
+    CanonicalRelation rrStar = Relation::newRelation(RelationOperation::composition, r, rStar);
+    std::variant<CanonicalSet, CanonicalRelation> result = rrStar;
     return result;
   }
   std::cout << "[Parser] Type mismatch of the operand of the relation transitive closure."
             << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationFencerel(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {
   auto relationName = context->n->getText();
   if (Logic::definedRelations.contains(relationName)) {
     auto r = Logic::definedRelations.at(relationName);
-    Relation po1(RelationOperation::base, "po");
-    Relation po2(RelationOperation::base, "po");
-    Relation po1_r(RelationOperation::composition, std::move(po1), std::move(r));
-    Relation po1_r_po2(RelationOperation::composition, std::move(po1_r), std::move(po2));
-    std::variant<Set, Relation> result = po1_r_po2;
+    CanonicalRelation po = Relation::newBaseRelation("po");
+    CanonicalRelation po_r = Relation::newRelation(RelationOperation::composition, po, r);
+    CanonicalRelation po_r_po = Relation::newRelation(RelationOperation::composition, po_r, po);
+    std::variant<CanonicalSet, CanonicalRelation> result = po_r_po;
     return result;
   }
   std::cout << "[Parser] Error: fencerel() of unkown relation." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitSetSingleton(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetSingleton(
     LogicParser::SetSingletonContext *context) {
   std::string name = context->SETNAME()->getText();
   int label;
@@ -197,62 +194,66 @@
     label = Set::maxSingletonLabel++;
     definedSingletons.insert({name, label});
   }
-  Set s(SetOperation::singleton, label);
-  std::variant<Set, Relation> result = s;
+  CanonicalSet s = Set::newEvent(label);
+  std::variant<CanonicalSet, CanonicalRelation> result = s;
   return result;
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationBasic(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationBasic(
     LogicParser::RelationBasicContext *context) {
   std::string name = context->RELNAME()->getText();
   if (name == "id") {
-    std::variant<Set, Relation> result = Relation(RelationOperation::identity);
+    std::variant<CanonicalSet, CanonicalRelation> result =
+        CanonicalRelation(RelationOperation::identity);
     return result;
   }
   if (name == "0") {
-    std::variant<Set, Relation> result = Relation(RelationOperation::empty);
+    std::variant<CanonicalSet, CanonicalRelation> result =
+        CanonicalRelation(RelationOperation::empty);
     return result;
   }
   if (Logic::definedRelations.contains(name)) {
-    std::variant<Set, Relation> result = Logic::definedRelations.at(name);
+    std::variant<CanonicalSet, CanonicalRelation> result = Logic::definedRelations.at(name);
     return result;
   }
-  Relation r(RelationOperation::base, name);
-  std::variant<Set, Relation> result = r;
+  CanonicalRelation r = Relation::newBaseRelation(name);
+  std::variant<CanonicalSet, CanonicalRelation> result = r;
   return result;
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationMinus(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationMinus(
     LogicParser::RelationMinusContext *context) {
   std::cout << "[Parser] Setminus operation is not supported." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationDomainIdentity(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationDomainIdentity(
     LogicParser::RelationDomainIdentityContext *context) {
   std::cout << "[Parser] Domain identity expressions are not supported." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationRangeIdentity(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationRangeIdentity(
     LogicParser::RelationRangeIdentityContext *context) {
   std::cout << "[Parser] Range identity expressions are not supported." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
-  std::variant<Set, Relation> e1 =
-      std::any_cast<std::variant<Set, Relation>>(context->e1->accept(this));
-  std::variant<Set, Relation> e2 =
-      std::any_cast<std::variant<Set, Relation>>(context->e2->accept(this));
-  if (std::holds_alternative<Relation>(e1) && std::holds_alternative<Relation>(e2)) {
-    Relation r1 = std::get<Relation>(e1);
-    Relation r2 = std::get<Relation>(e2);
-    Relation r(RelationOperation::choice, std::move(r1), std::move(r2));
-    std::variant<Set, Relation> result = r;
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitUnion(
+    LogicParser::UnionContext *context) {
+  std::variant<CanonicalSet, CanonicalRelation> e1 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> e2 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
+  if (std::holds_alternative<CanonicalRelation>(e1) &&
+      std::holds_alternative<CanonicalRelation>(e2)) {
+    CanonicalRelation r1 = std::get<CanonicalRelation>(e1);
+    CanonicalRelation r2 = std::get<CanonicalRelation>(e2);
+    CanonicalRelation r1_or_r2 = Relation::newRelation(RelationOperation::choice, r1, r2);
+    std::variant<CanonicalSet, CanonicalRelation> result = r1_or_r2;
     return result;
   }
 
-  if (std::holds_alternative<Set>(e1) && std::holds_alternative<Set>(e2)) {
-    Set s1 = std::get<Set>(e1);
-    Set s2 = std::get<Set>(e2);
-    Set s(SetOperation::choice, std::move(s1), std::move(s2));
-    std::variant<Set, Relation> result = s;
+  if (std::holds_alternative<CanonicalSet>(e1) && std::holds_alternative<CanonicalSet>(e2)) {
+    CanonicalSet s1 = std::get<CanonicalSet>(e1);
+    CanonicalSet s2 = std::get<CanonicalSet>(e2);
+    CanonicalSet s1_or_s2 = Set::newSet(SetOperation::choice, s1, s2);
+    std::variant<CanonicalSet, CanonicalRelation> result = s1_or_s2;
     return result;
   }
   std::cout << "[Parser] Type mismatch of two operands of the union operator." << std::endl;
@@ -260,152 +261,157 @@
 }
 
 // TODO: emptyset as set type is not supported
-/*std::variant<Set, Relation>*/ std::any Logic::visitEmptyset(LogicParser::EmptysetContext *ctx) {
-  Relation r(RelationOperation::empty);
-  std::variant<Set, Relation> result = r;
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitEmptyset(
+    LogicParser::EmptysetContext *ctx) {
+  CanonicalRelation r = Relation::newRelation(RelationOperation::empty);
+  std::variant<CanonicalSet, CanonicalRelation> result = r;
   return result;
 }
 
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationInverse(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationInverse(
     LogicParser::RelationInverseContext *context) {
-  std::variant<Set, Relation> relationExpression =
-      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
-  if (std::holds_alternative<Relation>(relationExpression)) {
-    Relation r1 = std::get<Relation>(relationExpression);
-    Relation r(RelationOperation::converse, std::move(r1));
-    std::variant<Set, Relation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+  if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
+    CanonicalRelation r = std::get<CanonicalRelation>(relationExpression);
+    CanonicalRelation rInv = Relation::newRelation(RelationOperation::converse, r);
+    std::variant<CanonicalSet, CanonicalRelation> result = rInv;
     return result;
   }
   std::cout << "[Parser] Type mismatch of the operand of the relation inverse." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationOptional(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationOptional(
     LogicParser::RelationOptionalContext *context) {
-  std::variant<Set, Relation> relationExpression =
-      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
-  if (std::holds_alternative<Relation>(relationExpression)) {
-    Relation r1 = std::get<Relation>(relationExpression);
-    Relation idR(RelationOperation::identity);
-    Relation r(RelationOperation::choice, std::move(r1), std::move(idR));
-    std::variant<Set, Relation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+  if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
+    CanonicalRelation r = std::get<CanonicalRelation>(relationExpression);
+    CanonicalRelation id = Relation::newRelation(RelationOperation::identity);
+    CanonicalRelation r_or_id = Relation::newRelation(RelationOperation::choice, r, id);
+    std::variant<CanonicalSet, CanonicalRelation> result = r_or_id;
     return result;
   }
   std::cout << "[Parser] Type mismatch of the operand of the relation optional." << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitRelationIdentity(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationIdentity(
     LogicParser::RelationIdentityContext *context) {
   if (context->TOID() == nullptr) {
     std::string set = context->e->getText();
-    Relation r1(RelationOperation::base, set + "*" + set);
-    Relation id(RelationOperation::identity);
-    Relation r(RelationOperation::intersection, std::move(r1), std::move(id));
-    std::variant<Set, Relation> result = r;
+    CanonicalRelation r = Relation::newBaseRelation(set + "*" + set);
+    CanonicalRelation id = Relation::newRelation(RelationOperation::identity);
+    CanonicalRelation r_and_id = Relation::newRelation(RelationOperation::intersection, r, id);
+    std::variant<CanonicalSet, CanonicalRelation> result = r_and_id;
     return result;
   } else {
     std::cout << "[Parser] 'visitExprIdentity TOID' expressions are not supported." << std::endl;
     exit(0);
   }
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitCartesianProduct(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitCartesianProduct(
     LogicParser::CartesianProductContext *context) {
   // treat cartesian product as binary base relation
   std::string r1 = context->e1->getText();
   std::string r2 = context->e2->getText();
-  Relation r(RelationOperation::base, r1 + "*" + r2);
-  std::variant<Set, Relation> result = r;
+  CanonicalRelation r = Relation::newBaseRelation(r1 + "*" + r2);
+  std::variant<CanonicalSet, CanonicalRelation> result = r;
   return result;
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitSetBasic(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetBasic(
     LogicParser::SetBasicContext *context) {
   // TODO: lookup let definitons
   std::string name = context->SETNAME()->getText();
   if (name == "E") {
-    std::variant<Set, Relation> result = Set(SetOperation::full);
+    std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::full);
     return result;
   }
   if (name == "0") {
-    std::variant<Set, Relation> result = Set(SetOperation::empty);
+    std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::empty);
     return result;
   }
-  Set s(SetOperation::base, name);
-  std::variant<Set, Relation> result = s;
+  CanonicalSet s = Set::newBaseSet(name);
+  std::variant<CanonicalSet, CanonicalRelation> result = s;
   return result;
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitTransitiveReflexiveClosure(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitTransitiveReflexiveClosure(
     LogicParser::TransitiveReflexiveClosureContext *context) {
-  std::variant<Set, Relation> e =
-      std::any_cast<std::variant<Set, Relation>>(context->e->accept(this));
-  if (std::holds_alternative<Relation>(e)) {
-    Relation r(RelationOperation::transitiveClosure, std::move(std::get<Relation>(e)));
-    std::variant<Set, Relation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> e =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+  if (std::holds_alternative<CanonicalRelation>(e)) {
+    CanonicalRelation r =
+        Relation::newRelation(RelationOperation::transitiveClosure, std::get<CanonicalRelation>(e));
+    std::variant<CanonicalSet, CanonicalRelation> result = r;
     return result;
   }
   std::cout << "[Parser] Type mismatch of operand of the Kleene operator: " << context->getText()
             << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitComposition(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitComposition(
     LogicParser::CompositionContext *context) {
-  std::variant<Set, Relation> e1 =
-      std::any_cast<std::variant<Set, Relation>>(context->e1->accept(this));
-  std::variant<Set, Relation> e2 =
-      std::any_cast<std::variant<Set, Relation>>(context->e2->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> e1 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> e2 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
 
-  if (std::holds_alternative<Relation>(e1) && std::holds_alternative<Relation>(e2)) {
-    Relation r1 = std::get<Relation>(e1);
-    Relation r2 = std::get<Relation>(e2);
-    Relation r(RelationOperation::composition, std::move(r1), std::move(r2));
-    std::variant<Set, Relation> result = r;
+  if (std::holds_alternative<CanonicalRelation>(e1) &&
+      std::holds_alternative<CanonicalRelation>(e2)) {
+    CanonicalRelation r1 = std::get<CanonicalRelation>(e1);
+    CanonicalRelation r2 = std::get<CanonicalRelation>(e2);
+    CanonicalRelation r1_r2 = Relation::newRelation(RelationOperation::composition, r1, r2);
+    std::variant<CanonicalSet, CanonicalRelation> result = r1_r2;
     return result;
   }
-  if (std::holds_alternative<Set>(e1) && std::holds_alternative<Relation>(e2)) {
-    Set s1 = std::get<Set>(e1);
-    Relation r2 = std::get<Relation>(e2);
-    Set s(SetOperation::image, std::move(s1), std::move(r2));
-    std::variant<Set, Relation> result = s;
+  if (std::holds_alternative<CanonicalSet>(e1) && std::holds_alternative<CanonicalRelation>(e2)) {
+    CanonicalSet s = std::get<CanonicalSet>(e1);
+    CanonicalRelation r = std::get<CanonicalRelation>(e2);
+    CanonicalSet sr = Set::newSet(SetOperation::image, s, r);
+    std::variant<CanonicalSet, CanonicalRelation> result = sr;
     return result;
   }
-  if (std::holds_alternative<Relation>(e1) && std::holds_alternative<Set>(e2)) {
-    Relation r1 = std::get<Relation>(e1);
-    Set s2 = std::get<Set>(e2);
-    Set s(SetOperation::domain, std::move(s2), std::move(r1));
-    std::variant<Set, Relation> result = s;
+  if (std::holds_alternative<CanonicalRelation>(e1) && std::holds_alternative<CanonicalSet>(e2)) {
+    CanonicalRelation r = std::get<CanonicalRelation>(e1);
+    CanonicalSet s = std::get<CanonicalSet>(e2);
+    CanonicalSet rs = Set::newSet(SetOperation::domain, s, r);
+    std::variant<CanonicalSet, CanonicalRelation> result = rs;
     return result;
   }
   std::cout << "[Parser] Type mismatch of two operands of the composition operator: "
             << context->getText() << std::endl;
   exit(0);
 }
-/*std::variant<Set, Relation>*/ std::any Logic::visitIntersection(
+/*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitIntersection(
     LogicParser::IntersectionContext *context) {
-  std::variant<Set, Relation> e1 =
-      std::any_cast<std::variant<Set, Relation>>(context->e1->accept(this));
-  std::variant<Set, Relation> e2 =
-      std::any_cast<std::variant<Set, Relation>>(context->e2->accept(this));
-  if (std::holds_alternative<Relation>(e1) && std::holds_alternative<Relation>(e2)) {
-    Relation r1 = std::get<Relation>(e1);
-    Relation r2 = std::get<Relation>(e2);
-    Relation r(RelationOperation::intersection, std::move(r1), std::move(r2));
-    std::variant<Set, Relation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> e1 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
+  std::variant<CanonicalSet, CanonicalRelation> e2 =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
+  if (std::holds_alternative<CanonicalRelation>(e1) &&
+      std::holds_alternative<CanonicalRelation>(e2)) {
+    CanonicalRelation r1 = std::get<CanonicalRelation>(e1);
+    CanonicalRelation r2 = std::get<CanonicalRelation>(e2);
+    CanonicalRelation r1_and_r2 = Relation::newRelation(RelationOperation::intersection, r1, r2);
+    std::variant<CanonicalSet, CanonicalRelation> result = r1_and_r2;
     return result;
   }
 
-  if (std::holds_alternative<Set>(e1) && std::holds_alternative<Set>(e2)) {
-    Set s1 = std::get<Set>(e1);
-    Set s2 = std::get<Set>(e2);
-    Set s(SetOperation::intersection, std::move(s1), std::move(s2));
-    std::variant<Set, Relation> result = s;
+  if (std::holds_alternative<CanonicalSet>(e1) && std::holds_alternative<CanonicalSet>(e2)) {
+    CanonicalSet s1 = std::get<CanonicalSet>(e1);
+    CanonicalSet s2 = std::get<CanonicalSet>(e2);
+    CanonicalSet s1_and_s2 = Set::newSet(SetOperation::intersection, s1, s2);
+    std::variant<CanonicalSet, CanonicalRelation> result = s1_and_s2;
     return result;
   }
   std::cout << "[Parser] Type mismatch of two operands of the intersection operator." << std::endl;
   exit(0);
 }
-// /*std::variant<Set, Relation>*/ std::any Logic::visitRelationComplement(
-//     LogicParser::RelationComplementContext *context) {
+// /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any
+// Logic::visitCanonicalRelationComplement(
+//     LogicParser::CanonicalRelationComplementContext *context) {
 //   std::cout << "[Parser] Complement operation is not supported." << std::endl;
 //   exit(0);
 // }
 
-std::unordered_map<std::string, Relation> Logic::definedRelations;
+std::unordered_map<std::string, CanonicalRelation> Logic::definedRelations;
 std::unordered_map<std::string, int> Logic::definedSingletons;

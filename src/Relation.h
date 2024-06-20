@@ -2,7 +2,12 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
+
+// forward declaration
+class Relation;
+typedef const Relation *CanonicalRelation;
 
 enum class RelationOperation {
   base,               // nullary function (constant): base relation
@@ -18,37 +23,61 @@ enum class RelationOperation {
 };
 
 class Relation {
+ private:
+  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left,
+                                       CanonicalRelation right,
+                                       std::optional<std::string> identifier);
+
  public:
-  /* Rule of five */
-  Relation(const Relation &other);
-  Relation(Relation &&other) = default;
-  Relation &operator=(const Relation &other);
-  Relation &operator=(Relation &&other) = default;
-  ~Relation() = default;
-  friend void swap(Relation &first, Relation &second) {
-    using std::swap;
-    swap(first.operation, second.operation);
-    swap(first.identifier, second.identifier);
-    swap(first.leftOperand, second.leftOperand);
-    swap(first.rightOperand, second.rightOperand);
-    swap(first.saturatedId, second.saturatedId);
-    swap(first.saturatedBase, second.saturatedBase);
+  Relation(const RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
+           std::optional<std::string> identifier);  // do not use directly
+  static std::unordered_map<Relation, const Relation> canonicalRelations;
+  static CanonicalRelation newRelation(const RelationOperation operation);
+  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left);
+  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left,
+                                       CanonicalRelation right);
+  static CanonicalRelation newBaseRelation(const std::string &identifier);
+
+  Relation(const Relation &other) = delete;
+  Relation(const Relation &&other);  // used for try_emplace (do not want to use copy constructor)
+
+ public:
+  bool operator==(const Relation &other) const;
+
+  const RelationOperation operation;
+  const std::optional<std::string> identifier;  // is set iff operation base
+  CanonicalRelation const leftOperand;          // is set iff operation unary/binary
+  CanonicalRelation const rightOperand;         // is set iff operation binary
+
+  std::string toString() const;
+};
+
+/// hashing
+
+template <>
+struct std::hash<RelationOperation> {
+  std::size_t operator()(const RelationOperation &operation) const {
+    using std::hash;
+    using std::size_t;
+    using std::string;
+    return static_cast<std::size_t>(operation);
   }
-  bool operator==(const Relation &other) const;  // compares two relation syntactically
+};
 
-  explicit Relation(const std::string &expression);  // parse constructor
-  explicit Relation(const RelationOperation operation,
-                    const std::optional<std::string> &identifier = std::nullopt);
-  Relation(const RelationOperation operation, Relation &&left);
-  Relation(const RelationOperation operation, Relation &&left, Relation &&right);
+template <>
+struct std::hash<Relation> {
+  std::size_t operator()(const Relation &relation) const {
+    using std::hash;
+    using std::size_t;
+    using std::string;
 
-  RelationOperation operation;
-  std::optional<std::string> identifier;   // is set iff operation base
-  std::unique_ptr<Relation> leftOperand;   // is set iff operation unary/binary
-  std::unique_ptr<Relation> rightOperand;  // is set iff operation binary
+    // Compute individual hash values for first,
+    // second and third and combine them using XOR
+    // and bit shifting:
 
-  int saturatedId = 0;  // mark base relation
-  int saturatedBase = 0;
-
-  std::string toString() const;  // for printing
+    return ((hash<RelationOperation>()(relation.operation) ^
+             (hash<CanonicalRelation>()(relation.leftOperand) << 1)) >>
+            1) ^
+           (hash<CanonicalRelation>()(relation.rightOperand) << 1);
+  }
 };

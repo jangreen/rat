@@ -45,7 +45,7 @@ bool Tableau::solve(int bound) {
     if (currentNode->literal.hasTopSet()) {
       // Rule (~\top_1)
       currentNode->inferModalTop();
-    } else if (currentNode->literal.operation == PredicateOperation::intersectionNonEmptiness) {
+    } else if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
       // Rule (~a)
       currentNode->inferModal();
     } else if (currentNode->literal.isPositiveEdgePredicate()) {
@@ -54,14 +54,14 @@ bool Tableau::solve(int bound) {
     } else if (currentNode->literal.isPositiveEqualityPredicate()) {
       // Rule (\equiv)
       Literal equalityLiteral = currentNode->literal;
-      std::optional<Set> search, replace;
-      if (*equalityLiteral.leftOperand->label < *equalityLiteral.rightOperand->label) {
+      std::optional<CanonicalSet> search, replace;
+      if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
         // e1 = e2 , e1 < e2
-        search = *equalityLiteral.rightOperand;
-        replace = *equalityLiteral.leftOperand;
+        search = Set::newEvent(*equalityLiteral.rightLabel);
+        replace = Set::newEvent(*equalityLiteral.leftLabel);
       } else {
-        search = *equalityLiteral.leftOperand;
-        replace = *equalityLiteral.rightOperand;
+        search = Set::newEvent(*equalityLiteral.leftLabel);
+        replace = Set::newEvent(*equalityLiteral.rightLabel);
       }
 
       Node *temp = currentNode->parentNode;

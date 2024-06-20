@@ -5,63 +5,58 @@
 #include <string>
 #include <vector>
 
+#include "Assumption.h"
 #include "Relation.h"
 
 // forward declareation
-class Set;
 class Literal;
+class Set;
 
 typedef std::vector<Literal> Cube;
 typedef std::vector<Cube> DNF;
 typedef std::vector<int> Renaming;
+typedef std::vector<int> Renaming;
+typedef const Set *CanonicalSet;
+// a PartialPredicate can be either a Predicate or a Set that will be used to construct a
+// predicate for a given context
+typedef std::variant<CanonicalSet, Literal> PartialPredicate;
 
 enum class PredicateOperation {
-  edge,                     // (e1, e2) \in a
-  set,                      // e1 \in A
-  equality,                 // e1 = e2
-  intersectionNonEmptiness  // binary predicate
+  edge,            // (e1, e2) \in a
+  set,             // e1 \in A
+  equality,        // e1 = e2
+  setNonEmptiness  // s != 0
 };
 
 class Literal {
  public:
-  /* Rule of five */
-  Literal(const Literal &other);
-  Literal(Literal &&other) = default;
-  Literal &operator=(const Literal &other);
-  Literal &operator=(Literal &&other) = default;
-  ~Literal() = default;
-  friend void swap(Literal &first, Literal &second) {
-    using std::swap;
-    swap(first.operation, second.operation);
-    swap(first.leftOperand, second.leftOperand);
-    swap(first.rightOperand, second.rightOperand);
-    swap(first.identifier, second.identifier);
-    swap(first.negated, second.negated);
-  }
+  Literal(bool negated, CanonicalSet set);
+  Literal(bool negated, int leftLabel, std::string identifier);
+  Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
+  Literal(bool negated, int leftLabel, int rightLabel);
+  Literal() = default;
+
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &otherSet) const;  // for sorting/hashing
 
-  Literal(const bool negated, const PredicateOperation operation, Set &&left, Set &&right);
-  Literal(const bool negated, const PredicateOperation operation, Set &&left,
-          std::string identifier);
-  Literal(const bool negated, const PredicateOperation operation, Set &&left, Set &&right,
-          std::string identifier);
-
-  PredicateOperation operation;
-  std::unique_ptr<Set> leftOperand;       // is set iff binary predicate
-  std::unique_ptr<Set> rightOperand;      // is set iff binary predicate
-  std::optional<std::string> identifier;  // is set iff edge/set predicate
   bool negated;
+  PredicateOperation operation;
+  CanonicalSet set;                       // setNonEmptiness
+  std::optional<int> leftLabel;           // edge, set, equality
+  std::optional<int> rightLabel;          // edge, equality
+  std::optional<std::string> identifier;  // edge, set
 
-  std::optional<DNF> applyRule(bool modalRules);
-  int substitute(const Set &search, const Set &replace, int n);
   bool isNormal() const;
   bool hasTopSet() const;
   bool isPositiveEdgePredicate() const;
   bool isPositiveEqualityPredicate() const;
   std::vector<int> labels() const;
-  std::vector<Set> labelBaseCombinations() const;
-  void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
+  std::vector<CanonicalSet> labelBaseCombinations() const;
+
+  std::optional<DNF> applyRule(bool modalRules);
+  bool substitute(CanonicalSet search, CanonicalSet replace,
+                  int n);  // substitute n-th occurence
+  void rename(const Renaming &renaming, bool inverse);
 
   void saturateId();
   void saturateBase();
@@ -88,7 +83,11 @@ class Literal {
   }
 };
 
-// ---------- SET header ----------
+static const Literal BOTTOM = Literal(false, -1, -1);
+static const Literal TOP = Literal(true, -1, -1);
+
+//---------------- Set.h
+
 enum class SetOperation {
   base,          // nullary function (constant): base Set
   singleton,     // nullary function (constant): single Set
@@ -101,67 +100,81 @@ enum class SetOperation {
 };
 
 class Set {
+ private:
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
+                             CanonicalRelation relation, std::optional<int> label,
+                             std::optional<std::string> identifier);
+
  public:
-  /* Rule of five */
-  Set(const Set &other);
-  Set(Set &&other) = default;
-  Set &operator=(const Set &other);
-  Set &operator=(Set &&other) = default;
-  ~Set() = default;
-  friend void swap(Set &first, Set &second) {
-    using std::swap;
-    swap(first.operation, second.operation);
-    swap(first.identifier, second.identifier);
-    swap(first.label, second.label);
-    swap(first.leftOperand, second.leftOperand);
-    swap(first.rightOperand, second.rightOperand);
-    swap(first.relation, second.relation);
-    /*swap(first.saturated, second.saturated);
-    swap(first.saturatedId, second.saturatedId);*/
-  }
-  bool operator==(const Set &other) const;
-  bool operator<(const Set &otherSet) const;  // for sorting/hashing
-
-  explicit Set(const std::string &expression);  // parse constructor
-  explicit Set(const SetOperation operation,
-               const std::optional<std::string> &identifier = std::nullopt);
-  explicit Set(const SetOperation operation, int label);
-  Set(const SetOperation operation, Set &&left);
-  Set(const SetOperation operation, Set &&left, Set &&right);
-  Set(const SetOperation operation, Set &&left, Relation &&relation);
-
-  SetOperation operation;
-  std::optional<std::string> identifier;  // is set iff operation base
-  std::optional<int> label;               // is set iff operation singleton
-  std::unique_ptr<Set> leftOperand;       // is set iff operation unary/binary
-  std::unique_ptr<Set> rightOperand;      // is set iff operation binary
-  std::unique_ptr<Relation> relation;     // is set iff domain/image
-
+  Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
+      std::optional<int> label, std::optional<std::string> identifier);  // do not use
   static int maxSingletonLabel;  // to create globally unique labels
+  static std::unordered_map<Set, const Set> canonicalSets;
+  static CanonicalSet newSet(SetOperation operation);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
+  static CanonicalSet newEvent(int label);
+  static CanonicalSet newBaseSet(std::string &identifier);
 
-  // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
-  // predicate for a given context
-  typedef std::variant<Set, Literal> PartialPredicate;
+  Set(const Set &other) = delete;
+  Set(const Set &&other);  // used for try_emplace (do not want to use copy constructor)
+
+  bool operator==(const Set &other) const;
+
+  const SetOperation operation;
+  const std::optional<std::string> identifier;  // is set iff operation base
+  const std::optional<int> label;               // is set iff operation singleton
+  CanonicalSet const leftOperand;               // is set iff operation unary/binary
+  CanonicalSet const rightOperand;              // is set iff operation binary
+  CanonicalRelation const relation;             // is set iff domain/image
+
+  // propterties calulated for canonical sets
+  const bool isNormal;
+  const bool hasTopSet;
+  const std::vector<int> labels;
+  const std::vector<CanonicalSet> labelBaseCombinations;
+
+  CanonicalSet rename(const Renaming &renaming, bool inverse) const;
+  CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
+
   std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool negated,
-                                                                      bool modalRules);
-  int substitute(const Set &search, const Set &replace, int n);  // returns new n (1 = replace)
-  bool isNormal() const;  // true iff all labels are in front of base Sets
-  bool hasTopSet() const;
-  std::vector<int> labels() const;
-  std::vector<Set> labelBaseCombinations() const;
-  // TODO: make inverse parameter either compile time constexpr or use templates
-  void rename(const Renaming &renaming, const bool inverse);  // renames given a renaming function
+                                                                      bool modalRules) const;
+  CanonicalSet saturateId() const;
+  CanonicalSet saturateBase() const;
 
-  void saturateId();
-  void saturateBase();
+  int saturatedId = 0;  // mark base relation
+  int saturatedBase = 0;
 
   // printing
   std::string toString() const;
 };
 
-static const Literal BOTTOM =
-    Literal(true, PredicateOperation::equality, Set(SetOperation::singleton, -1),
-            Set(SetOperation::singleton, -1));
-static const Literal TOP =
-    Literal(false, PredicateOperation::equality, Set(SetOperation::singleton, -1),
-            Set(SetOperation::singleton, -1));
+/// hashing
+
+template <>
+struct std::hash<SetOperation> {
+  std::size_t operator()(const SetOperation &operation) const {
+    using std::hash;
+    using std::size_t;
+    using std::string;
+    return static_cast<std::size_t>(operation);
+  }
+};
+
+template <>
+struct std::hash<Set> {
+  std::size_t operator()(const Set &set) const {
+    using std::hash;
+    using std::size_t;
+    using std::string;
+
+    // Compute individual hash values for first,
+    // second and third and combine them using XOR
+    // and bit shifting:
+
+    return ((hash<SetOperation>()(set.operation) ^ (hash<CanonicalSet>()(set.leftOperand) << 1)) >>
+            1) ^
+           (hash<CanonicalSet>()(set.rightOperand) << 1);
+  }
+};

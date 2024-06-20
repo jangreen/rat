@@ -56,11 +56,11 @@ class Tableau {
   void exportProof(std::string filename) const;
 
   // helper
-  static Cube substitute(Literal &literal, Set &search, Set &replace) {
+  static Cube substitute(Literal &literal, CanonicalSet search, CanonicalSet replace) {
     int c = 1;
     Literal copy = literal;
     Cube newLiterals;
-    while (copy.substitute(search, replace, c) == 0) {
+    while (copy.substitute(search, replace, c)) {
       newLiterals.push_back(copy);
       copy = literal;
       c++;

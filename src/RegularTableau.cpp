@@ -30,7 +30,7 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   // assume already normal
   // 1) gather all active labels
   std::vector<int> activeLabels;
-  std::vector<Set> activeLabelBaseCombinations;
+  std::vector<CanonicalSet> activeLabelBaseCombinations;
   for (const auto &literal : newCube) {
     if (!literal.negated) {
       auto literalLabels = literal.labels();
@@ -54,8 +54,8 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   std::map<int, int> minimalRepresentants;
   for (const auto &literal : std::get<0>(label)) {
     if (literal.isPositiveEqualityPredicate()) {
-      int i = *literal.leftOperand->label;
-      int j = *literal.rightOperand->label;
+      int i = *literal.leftLabel;
+      int j = *literal.rightLabel;
 
       std::optional<int> iMin, jMin;
       if (minimalRepresentants.contains(i)) {
@@ -121,7 +121,7 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
   // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
   // 1) gather parent active labels
   std::vector<int> parentActiveLabels;
-  std::vector<Set> parentActiveLabelBaseCombinations;
+  std::vector<CanonicalSet> parentActiveLabelBaseCombinations;
   for (const auto &literal : parent->cube) {
     if (!literal.negated) {
       auto literalLabels = literal.labels();
@@ -142,10 +142,10 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
         auto literalCobinations = edgeLiteral.labelBaseCombinations();
         // only keep combinations with labels that are still there after renaming
         for (auto combination : literalCobinations) {
-          if (isSubset(combination.labels(), renaming)) {
+          if (isSubset(combination->labels, renaming)) {
             // push renamed combination (using inverse of renaming)
-            combination.rename(renaming, true);
-            parentActiveLabelBaseCombinations.push_back(combination);
+            auto renamedCombination = combination->rename(renaming, true);
+            parentActiveLabelBaseCombinations.push_back(renamedCombination);
           }
         }
       }
@@ -180,9 +180,6 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
 }
 // helper end
 
-std::vector<Assumption> RegularTableau::emptinessAssumptions;
-std::vector<Assumption> RegularTableau::idAssumptions;
-std::map<std::string, Assumption> RegularTableau::baseAssumptions;
 int RegularTableau::saturationBoundId = 1;
 int RegularTableau::saturationBoundBase = 1;
 
@@ -411,7 +408,7 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 }
 
 void RegularTableau::saturate(DNF &dnf) {
-  if (!RegularTableau::baseAssumptions.empty()) {
+  if (!Assumption::baseAssumptions.empty()) {
     DNF newDnf;
     for (auto &cube : dnf) {
       // saturation phase
@@ -426,7 +423,7 @@ void RegularTableau::saturate(DNF &dnf) {
     }
     swap(dnf, newDnf);
   }
-  if (!RegularTableau::idAssumptions.empty()) {
+  if (!Assumption::idAssumptions.empty()) {
     DNF newDnf;
     for (auto &cube : dnf) {
       // saturation phase
@@ -450,8 +447,8 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   Node *node = openNode;
   while (node->firstParentNode != nullptr) {
     for (const auto &edge : std::get<0>(node->firstParentLabel)) {
-      int left = *edge.leftOperand->label;
-      int right = *edge.rightOperand->label;
+      int left = *edge.leftLabel;
+      int right = *edge.rightLabel;
       std::string relation = *edge.identifier;
       // rename left
       Node *renameNode = node->firstParentNode;
