@@ -174,7 +174,34 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
                     return result;
                   }
                 } else {
-                  break;  // skip to "apply non-root rules"
+                  // non-root rule:
+                  auto rightResult = set->rightOperand->applyRule(negated, modalRules);
+                  if (rightResult) {
+                    // e1 & rightResult     or      e1 & rightResult
+                    DNF result;
+                    result.reserve(rightResult->size());
+                    for (const auto &partialCube : *rightResult) {
+                      Cube cube;
+                      cube.reserve(partialCube.size());
+
+                      for (const auto &partialLiteral : partialCube) {
+                        if (std::holds_alternative<Literal>(partialLiteral)) {
+                          Literal l = std::get<Literal>(partialLiteral);
+                          cube.push_back(std::move(l));
+                        } else {
+                          CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
+                          CanonicalSet e1 = set->leftOperand;
+                          CanonicalSet e1_and_s = Set::newSet(SetOperation::intersection, e1, s);
+                          Literal l(negated, e1_and_s);
+                          cube.push_back(std::move(l));
+                        }
+                      }
+                      result.push_back(cube);
+                    }
+                    return result;
+                  } else {
+                    return std::nullopt;
+                  }
                 }
               } else {
                 // e & sr -> re & s     or      e & rs -> er & s
@@ -201,8 +228,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
               break;
           }
           break;
-        }
-        if (set->rightOperand->operation == SetOperation::singleton) {
+        } else if (set->rightOperand->operation == SetOperation::singleton) {
           switch (set->rightOperand->operation) {
             case SetOperation::intersection: {
               // (s1 & s2) & e -> s1 & e , s2 & e
@@ -243,7 +269,34 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
                     return result;
                   }
                 } else {
-                  break;  // skip to "apply non-root rules"
+                  // non-root rule:
+                  auto leftResult = set->leftOperand->applyRule(negated, modalRules);
+                  if (leftResult) {
+                    // leftResult & e1     or      leftResult & e1
+                    DNF result;
+                    result.reserve(leftResult->size());
+                    for (const auto &partialCube : *leftResult) {
+                      Cube cube;
+                      cube.reserve(partialCube.size());
+
+                      for (const auto &partialLiteral : partialCube) {
+                        if (std::holds_alternative<Literal>(partialLiteral)) {
+                          Literal l = std::get<Literal>(partialLiteral);
+                          cube.push_back(std::move(l));
+                        } else {
+                          CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
+                          CanonicalSet e1 = set->rightOperand;
+                          CanonicalSet s_and_e1 = Set::newSet(SetOperation::intersection, s, e1);
+                          Literal l(negated, s_and_e1);
+                          cube.push_back(std::move(l));
+                        }
+                      }
+                      result.push_back(cube);
+                    }
+                    return result;
+                  } else {
+                    return std::nullopt;
+                  }
                 }
               } else {
                 // sr & e -> s & re        or        rs & e -> s & er
@@ -387,41 +440,3 @@ std::string Literal::toString() const {
   }
   return output;
 }
-
-// std::optional<DNF> substituteHelper(bool negated, bool substituteRight,
-//                                     const std::vector<std::vector<PartialPredicate>>
-//                                     &disjunction, CanonicalSet otherOperand) {
-//   std::optional<DNF> result = std::nullopt;
-//   for (const auto &conjunction : disjunction) {
-//     std::optional<Cube> cube = std::nullopt;
-//     for (const auto &literal : conjunction) {
-//       if (std::holds_alternative<Literal>(literal)) {
-//         Literal l = std::get<Literal>(literal);
-//         if (!cube) {
-//           cube = Cube();
-//         }
-//         cube->push_back(l);
-//       } else {
-//         auto s = std::get<CanonicalSet>(literal);
-//         // substitute
-//         std::optional<Literal> l;
-//         if (substituteRight) {
-//           l = Literal(negated, PredicateOperation::setNonEmptiness, otherOperand, s);
-//         } else {
-//           l = Literal(negated, PredicateOperation::setNonEmptiness, s, otherOperand);
-//         }
-//         if (!cube) {
-//           Cube c = {};
-//           cube = c;
-//         }
-//         cube->push_back(*l);
-//       }
-//     }
-//     if (!result) {
-//       result = {*cube};
-//     } else {
-//       result->push_back(*cube);
-//     }
-//   }
-//   return result;
-// }

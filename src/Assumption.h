@@ -18,7 +18,7 @@ class Assumption {
 
   static CanonicalRelation masterIdRelation() {
     // construct master identity CanonicalRelation
-    CanonicalRelation masterId = CanonicalRelation(RelationOperation::identity);
+    CanonicalRelation masterId = Relation::newRelation(RelationOperation::identity);
     for (const auto assumption : idAssumptions) {
       masterId = Relation::newRelation(RelationOperation::choice, masterId, assumption.relation);
     }
