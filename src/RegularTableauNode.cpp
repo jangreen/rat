@@ -3,13 +3,13 @@
 
 #include "RegularTableau.h"
 
-// TODO: when hashing all sinlgeton sets are equal, when comparing search for renaming
+// TODO: when hashing all singleton sets are equal, when comparing search for renaming
 RegularTableau::Node::Node(std::initializer_list<Literal> cube) : cube(cube) {}
-RegularTableau::Node::Node(Cube cube) : cube(cube) {}
+RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
 
-// hashing and comparision is insensitive to label renaming
+// hashing and comparison is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
-  // shorcuts
+  // shortcuts
   if (cube.size() != otherNode.cube.size()) {
     return false;
   }
@@ -68,7 +68,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   for (const auto childNode : childNodes) {
     auto edgeLabels = childNode->parentNodes[this];
 
-    for (const auto edgeLabel : edgeLabels) {
+    for (const auto &edgeLabel : edgeLabels) {
       output << "N" << this << " -> " << "N" << childNode << "[";
       if (std::get<0>(edgeLabel).empty()) {
         output << "color=\"grey\", ";

@@ -24,7 +24,7 @@ enum class RelationOperation {
 
 class Relation {
  private:
-  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left,
+  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
                                        CanonicalRelation right,
                                        std::optional<std::string> identifier);
 
@@ -32,11 +32,11 @@ class Relation {
   Relation(const RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
            std::optional<std::string> identifier);  // do not use directly
   static std::unordered_map<Relation, const Relation> canonicalRelations;
-  static CanonicalRelation newRelation(const RelationOperation operation);
-  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left);
-  static CanonicalRelation newRelation(const RelationOperation operation, CanonicalRelation left,
+  static CanonicalRelation newRelation(RelationOperation operation);
+  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left);
+  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
                                        CanonicalRelation right);
-  static CanonicalRelation newBaseRelation(const std::string &identifier);
+  static CanonicalRelation newBaseRelation(std::string identifier);
 
   Relation(const Relation &other) = delete;
   Relation(const Relation &&other);  // used for try_emplace (do not want to use copy constructor)

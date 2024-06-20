@@ -107,11 +107,13 @@ class Logic : LogicBaseVisitor {
 
     LogicParser::ExpressionContext *context = parser.expression();  // expect expression
     Logic visitor;
-    std::variant<CanonicalSet, CanonicalRelation> parsedRelation =
+    auto parsedRelation =
         std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(visitor.visit(context));
     return std::get<CanonicalRelation>(parsedRelation);
+    // FIXME: clang-tidy claims address of <parsedRelation> can escape... why?
   }
 
+  // FIXME: Unused
   static CanonicalSet parseSet(const std::string &setString) {
     antlr4::ANTLRInputStream input(setString);
     LogicLexer lexer(&input);
@@ -120,7 +122,7 @@ class Logic : LogicBaseVisitor {
 
     LogicParser::ExpressionContext *ctx = parser.expression();
     Logic visitor;
-    std::variant<CanonicalSet, CanonicalRelation> set =
+    auto set =
         std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(visitor.visit(ctx));
     return std::get<CanonicalSet>(set);
   }

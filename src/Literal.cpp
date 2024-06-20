@@ -11,6 +11,7 @@ Literal::Literal(bool negated, int leftLabel, std::string identifier)
     : negated(negated),
       operation(PredicateOperation::set),
       leftLabel(leftLabel),
+      set(nullptr),
       identifier(identifier) {}
 
 Literal::Literal(bool negated, int leftLabel, int rightLabel, std::string identifier)
@@ -18,13 +19,15 @@ Literal::Literal(bool negated, int leftLabel, int rightLabel, std::string identi
       operation(PredicateOperation::edge),
       leftLabel(leftLabel),
       rightLabel(rightLabel),
+      set(nullptr),
       identifier(identifier) {}
 
 Literal::Literal(bool negated, int leftLabel, int rightLabel)
     : negated(negated),
       operation(PredicateOperation::equality),
       leftLabel(leftLabel),
-      rightLabel(rightLabel) {}
+      rightLabel(rightLabel),
+      set(nullptr) {}
 
 bool Literal::operator==(const Literal &other) const {
   return operation == other.operation && negated == other.negated && set == other.set &&
@@ -71,7 +74,7 @@ std::vector<int> Literal::labels() const {
       return {*leftLabel};
     }
     default:
-      return {};
+      assert (false);
   }
 }
 
@@ -335,6 +338,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       }
       return std::nullopt;
   }
+  assert(false); // FIXME: REACHABLE!!!
 }
 
 bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {

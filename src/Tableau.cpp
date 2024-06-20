@@ -2,14 +2,14 @@
 
 #include <algorithm>
 #include <iostream>
-#include <tuple>
 #include <utility>
 
-Tableau::Tableau(std::initializer_list<Literal> initalLiterals)
-    : Tableau(std::vector(initalLiterals)) {}
-Tableau::Tableau(Cube initalLiterals) {
+// FIXME: Unused constructor
+Tableau::Tableau(std::initializer_list<Literal> initialLiterals)
+    : Tableau(Cube(initialLiterals)) {}
+Tableau::Tableau(const Cube &initialLiterals) {
   Node *currentNode = nullptr;
-  for (const auto &literal : initalLiterals) {
+  for (const auto &literal : initialLiterals) {
     auto newNode = std::make_unique<Node>(this, std::move(literal));
     newNode->parentNode = currentNode;
 
@@ -70,7 +70,7 @@ bool Tableau::solve(int bound) {
         // check if inside literal can be something inferred
         auto newLiterals = substitute(temp->literal, *search, *replace);
         for (auto &literal : newLiterals) {
-          currentNode->appendBranch(std::move(literal));
+          currentNode->appendBranch(literal);
         }
         temp = temp->parentNode;
       }
@@ -109,7 +109,7 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
     }
     if (literal.isNormal() && literal != TOP) {
       if (dnf.empty()) {
-        dnf.push_back({});
+        dnf.emplace_back();
       }
       for (auto &cube : dnf) {
         cube.push_back(literal);
@@ -164,7 +164,7 @@ void Tableau::toDotFormat(std::ofstream &output) const {
   output << "}" << std::endl;
 }
 
-void Tableau::exportProof(std::string filename) const {
+void Tableau::exportProof(const std::string& filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();

@@ -46,8 +46,8 @@ class RegularTableau {
     };
   };
 
-  RegularTableau(std::initializer_list<Literal> initalLiterals);
-  explicit RegularTableau(Cube initalLiterals);
+  RegularTableau(std::initializer_list<Literal> initialLiterals);
+  explicit RegularTableau(const Cube& initialLiterals);
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
@@ -61,11 +61,11 @@ class RegularTableau {
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
-  void extractCounterexample(Node *openNode);
-  void saturate(DNF &dnf);
+  static void extractCounterexample(Node *openNode);
+  static void saturate(DNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
-  void exportProof(std::string filename) const;
+  void exportProof(const std::string& filename) const;
 
   // helper
   static Renaming rename(Cube &cube) {

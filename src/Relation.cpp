@@ -1,18 +1,19 @@
 #include "Relation.h"
 
 #include <algorithm>
+#include <utility>
 
 std::unordered_map<Relation, const Relation> Relation::canonicalRelations;
 
 Relation::Relation(const RelationOperation operation, CanonicalRelation left,
                    CanonicalRelation right, std::optional<std::string> identifier)
-    : operation(operation), leftOperand(left), rightOperand(right), identifier(identifier){};
+    : operation(operation), leftOperand(left), rightOperand(right), identifier(std::move(identifier)){};
 
 Relation::Relation(const Relation &&other)
-    : operation(std::move(other.operation)),
-      leftOperand(std::move(other.leftOperand)),
-      rightOperand(std::move(other.rightOperand)),
-      identifier(std::move(other.identifier)) {}
+   : operation(other.operation),
+      leftOperand(other.leftOperand),
+      rightOperand(other.rightOperand),
+      identifier(other.identifier) {}
 
 CanonicalRelation Relation::newRelation(const RelationOperation operation) {
   return newRelation(operation, nullptr, nullptr, std::nullopt);
@@ -22,7 +23,6 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
                                         CanonicalRelation right,
-
                                         std::optional<std::string> identifier) {
   Relation r(operation, left, right, identifier);
   auto [canonicalRelationIterator, found] =
@@ -33,7 +33,7 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
                                         CanonicalRelation right) {
   return newRelation(operation, left, right, std::nullopt);
 }
-CanonicalRelation Relation::newBaseRelation(const std::string &identifier) {
+CanonicalRelation Relation::newBaseRelation(std::string identifier) {
   return newRelation(RelationOperation::base, nullptr, nullptr, identifier);
 }
 

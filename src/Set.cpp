@@ -4,12 +4,13 @@
 int Set::maxSingletonLabel = 0;
 std::unordered_map<Set, const Set> Set::canonicalSets;
 
-// initalization helper
+// initialization helper
 bool calcIsNormal(SetOperation operation, CanonicalSet leftOperand, CanonicalSet rightOperand,
                   CanonicalRelation relation) {
   switch (operation) {
     case SetOperation::choice:
     case SetOperation::intersection:
+      assert(rightOperand != nullptr);
       return leftOperand->isNormal && rightOperand->isNormal;
     case SetOperation::singleton:
     case SetOperation::empty:
@@ -60,10 +61,9 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(SetOperation operation,
     }
     case SetOperation::domain:
     case SetOperation::image: {
-      std::vector<CanonicalSet> combinations = {thisRef};
       return leftOperand->operation == SetOperation::singleton &&
                      relation->operation == RelationOperation::base
-                 ? combinations
+                 ? std::vector{thisRef}
                  : leftOperand->labelBaseCombinations;
     }
     default:
@@ -84,7 +84,7 @@ Set::Set(SetOperation operation, CanonicalSet leftOperand, CanonicalSet rightOpe
       rightOperand(rightOperand),
       relation(relation),
       label(label),
-      identifier(identifier),
+      identifier(std::move(identifier)),
       isNormal(calcIsNormal(operation, leftOperand, rightOperand, relation)),
       labels(calcLabels(operation, leftOperand, rightOperand, label)),
       labelBaseCombinations(
@@ -92,15 +92,15 @@ Set::Set(SetOperation operation, CanonicalSet leftOperand, CanonicalSet rightOpe
       hasTopSet(calcHasTopSet(operation, leftOperand, rightOperand)) {}
 
 Set::Set(const Set &&other)
-    : operation(std::move(other.operation)),
-      leftOperand(std::move(other.leftOperand)),
-      rightOperand(std::move(other.rightOperand)),
-      relation(std::move(other.relation)),
-      identifier(std::move(other.identifier)),
-      isNormal(std::move(other.isNormal)),
-      hasTopSet(std::move(other.hasTopSet)),
-      labels(std::move(other.labels)),
-      labelBaseCombinations(std::move(other.labelBaseCombinations)) {}
+    : operation(other.operation),
+      leftOperand(other.leftOperand),
+      rightOperand(other.rightOperand),
+      relation(other.relation),
+      identifier(other.identifier),
+      isNormal(other.isNormal),
+      hasTopSet(other.hasTopSet),
+      labels(other.labels),
+      labelBaseCombinations(other.labelBaseCombinations) {}
 
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                          CanonicalRelation relation, std::optional<int> label,
@@ -142,7 +142,7 @@ CanonicalSet Set::substitute(CanonicalSet search, CanonicalSet replace, int *n) 
     if (*n == 1) {
       return replace;
     }
-    n--;
+    (*n)--;
     return this;
   }
   if (leftOperand != nullptr) {
@@ -167,7 +167,7 @@ CanonicalSet Set::rename(const Renaming &renaming, bool inverse) const {
     } else {
       auto newLabel =
           std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), *label));
-      return Set::newEvent(newLabel);
+      return Set::newEvent(int(newLabel));
     }
   }
   CanonicalSet leftRenamed;
@@ -192,7 +192,7 @@ std::vector<std::vector<PartialPredicate>> substituteHelper2(
     for (const auto &predicate : conjunction) {
       if (std::holds_alternative<Literal>(predicate)) {
         auto p = std::get<Literal>(predicate);
-        resultConjunction.push_back(p);
+        resultConjunction.emplace_back(p);
       } else {
         auto s = std::get<CanonicalSet>(predicate);
         // substitute
@@ -201,7 +201,7 @@ std::vector<std::vector<PartialPredicate>> substituteHelper2(
         } else {
           s = Set::newSet(SetOperation::intersection, s, otherOperand);
         }
-        resultConjunction.push_back(s);
+        resultConjunction.emplace_back(s);
       }
     }
     resultDisjunction.push_back(resultConjunction);
@@ -403,7 +403,7 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
                 // otherwise we have to instersect (&) all  []'s after before replacing
                 // currently we jsut assume this is the case without further checking
                 CanonicalSet newSet = Set::newSet(SetOperation::image, s, relation);
-                newCube.push_back(newSet);
+                newCube.emplace_back(newSet);
               }
             }
             result.push_back(newCube);
@@ -522,10 +522,10 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
               } else {
                 auto s = std::get<CanonicalSet>(partialPredicate);
                 // TODO: there should only be one [] inside eache {}
-                // otherwise we have to instersect (&) all  []'s after before replacing
-                // currently we jsut assume this is the case without further checking
+                // otherwise we have to intersect (&) all  []'s after before replacing
+                // currently we just assume this is the case without further checking
                 CanonicalSet newSet = Set::newSet(SetOperation::domain, s, relation);
-                newCube.push_back(newSet);
+                newCube.emplace_back(newSet);
               }
             }
             result.push_back(newCube);
@@ -557,7 +557,7 @@ CanonicalSet Set::saturateBase() const {
       return this;
     }
   }
-  CanonicalSet leftSaturated;
+  CanonicalSet leftSaturated; // FIXME: Unused (should maybe used in the return?)
   CanonicalSet rightSaturated;
   if (leftOperand != nullptr) {
     leftSaturated = leftOperand->saturateBase();
@@ -567,8 +567,10 @@ CanonicalSet Set::saturateBase() const {
   }
   return Set::newSet(operation, saturateBase(), rightSaturated, relation, label, identifier);
 }
+
 CanonicalSet Set::saturateId() const {
   if (operation == SetOperation::domain || operation == SetOperation::image) {
+    assert (leftOperand != nullptr);
     if (leftOperand->operation == SetOperation::singleton) {
       if (relation->operation == RelationOperation::base) {
         return Set::newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());

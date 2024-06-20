@@ -8,7 +8,7 @@
 #include "Assumption.h"
 #include "Relation.h"
 
-// forward declareation
+// forward declaration
 class Literal;
 class Set;
 
@@ -111,7 +111,7 @@ class Set {
   static int maxSingletonLabel;  // to create globally unique labels
   static std::unordered_map<Set, const Set> canonicalSets;
   static CanonicalSet newSet(SetOperation operation);
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left); // FIXME: Unused
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
   static CanonicalSet newEvent(int label);
@@ -143,6 +143,7 @@ class Set {
   CanonicalSet saturateId() const;
   CanonicalSet saturateBase() const;
 
+  // FIXME: Both unused
   int saturatedId = 0;  // mark base relation
   int saturatedBase = 0;
 

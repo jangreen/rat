@@ -3,10 +3,10 @@
 #include "Tableau.h"
 
 Tableau::Node::Node(Tableau *tableau, const Literal &&literal)
-    : tableau(tableau), literal(std::move(literal)) {}
+    : tableau(tableau), literal(literal) {}
 Tableau::Node::Node(Node *parent, const Literal &&literal)
-    : tableau(parent->tableau), literal(std::move(literal)), parentNode(parent) {}
-// TODO: do this here? onlyin base case? newNode.closed = checkIfClosed(parent, relation);
+    : tableau(parent->tableau), literal(literal), parentNode(parent) {}
+// TODO: do this here? only in base case? newNode.closed = checkIfClosed(parent, relation);
 
 bool Tableau::Node::isClosed() const {
   // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
@@ -19,18 +19,20 @@ bool Tableau::Node::isClosed() const {
 
 bool Tableau::Node::isLeaf() const { return (leftNode == nullptr) && (rightNode == nullptr); }
 
-bool Tableau::Node::branchContains(const Literal &literal) {
-  Literal negatedCopy(literal);
+bool Tableau::Node::branchContains(const Literal &lit) {
+  Literal negatedCopy(lit);
   negatedCopy.negated = !negatedCopy.negated;
 
   const Node *node = this;
   while (node != nullptr) {
-    if (node->literal == literal) {
+    if (node->literal == lit) {
       return true;
-    } else if (literal.operation != PredicateOperation::setNonEmptiness) {
+    } else if (lit.operation != PredicateOperation::setNonEmptiness) {
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
       if (node->literal == negatedCopy) {
-        Node newNode(this, std::move(literal));
+        // FIXME: std::move does not actually move but create a copy because lit is const
+        //  However, I cannot remove the move because Node has no valid constructors otherwise.
+        Node newNode(this, std::move(lit));
         Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
         newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
         leftNode = std::make_unique<Node>(std::move(newNode));
@@ -54,18 +56,18 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
       }
 
       // trick: lift disjunctive appendBranch to sets
-      for (const auto &literal : dnf[1]) {
-        appendBranch(literal);
+      for (const auto &lit : dnf[1]) {
+        appendBranch(lit);
       }
       auto temp = std::move(leftNode);
       leftNode = nullptr;
-      for (const auto &literal : dnf[0]) {
-        appendBranch(literal);
+      for (const auto &lit : dnf[0]) {
+        appendBranch(lit);
       }
       rightNode = std::move(temp);
-    } else if (dnf.size() > 0) {
-      for (const auto &literal : dnf[0]) {
-        appendBranch(literal);
+    } else if (!dnf.empty()) {
+      for (const auto &lit : dnf[0]) {
+        appendBranch(lit);
       }
     }
   } else {
@@ -80,11 +82,11 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
 
 bool Tableau::Node::appendable(const Cube &cube) {
   // assume that it is called only on leafs
-  // predicts conjunctive literal appending returns true if it would appended at least some literal
+  // predicts conjunctive literal appending returns true if it would append at least some literal
   if (isLeaf() && !isClosed()) {
-    auto currentLeaf = this;
-    for (const auto &literal : cube) {
-      if (!branchContains(literal)) {
+    // auto currentLeaf = this; // FIXME: Unused
+    for (const auto &lit : cube) {
+      if (!branchContains(lit)) {
         return true;
       }
     }
@@ -95,6 +97,7 @@ bool Tableau::Node::appendable(const Cube &cube) {
 void Tableau::Node::appendBranch(const Literal &leftLiteral) {
   if (isLeaf() && !isClosed()) {
     if (!branchContains(leftLiteral)) {
+      // FIXME: No actual move happens (literal is const)
       Node newNode(this, std::move(leftLiteral));
       leftNode = std::make_unique<Node>(std::move(newNode));
       tableau->unreducedNodes.push(leftNode.get());
@@ -112,11 +115,13 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral) {
 void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &rightLiteral) {
   if (isLeaf() && !isClosed()) {
     if (!branchContains(leftLiteral)) {
+      // FIXME: No actual move happens (literal is const)
       Node newNode(this, std::move(leftLiteral));
       leftNode = std::make_unique<Node>(std::move(newNode));
       tableau->unreducedNodes.push(leftNode.get());
     }
     if (!branchContains(rightLiteral)) {
+      // FIXME: No actual move happens (literal is const)
       Node newNode(this, std::move(rightLiteral));
       rightNode = std::make_unique<Node>(std::move(newNode));
       tableau->unreducedNodes.push(rightNode.get());
@@ -176,12 +181,12 @@ void Tableau::Node::inferModal() {
       CanonicalSet replace2 = e1;
 
       auto newLiterals = substitute(literal, search1, replace1);
-      for (auto &literal : newLiterals) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals) {
+        appendBranch(lit);
       }
       auto newLiterals2 = substitute(literal, search2, replace2);
-      for (auto &literal : newLiterals2) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals2) {
+        appendBranch(lit);
       }
     }
     temp = temp->parentNode;
@@ -213,8 +218,8 @@ void Tableau::Node::inferModalTop() {
     CanonicalSet replace = Set::newEvent(label);
 
     auto newLiterals = substitute(literal, search, replace);
-    for (auto &literal : newLiterals) {
-      appendBranch(literal);
+    for (auto &lit : newLiterals) {
+      appendBranch(lit);
     }
   }
 }
@@ -239,20 +244,20 @@ void Tableau::Node::inferModalAtomic() {
     if (temp->literal.negated && temp->literal.isNormal()) {
       // check if inside literal can be something inferred
       auto newLiterals = substitute(temp->literal, search1, replace1);
-      for (auto &literal : newLiterals) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals) {
+        appendBranch(lit);
       }
       auto newLiterals2 = substitute(temp->literal, search2, replace2);
-      for (auto &literal : newLiterals2) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals2) {
+        appendBranch(lit);
       }
       auto newLiterals3 = substitute(temp->literal, search12, replace1);
-      for (auto &literal : newLiterals3) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals3) {
+        appendBranch(lit);
       }
       auto newLiterals4 = substitute(temp->literal, search12, replace2);
-      for (auto &literal : newLiterals4) {
-        appendBranch(std::move(literal));
+      for (auto &lit : newLiterals4) {
+        appendBranch(lit);
       }
     }
     temp = temp->parentNode;

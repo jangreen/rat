@@ -1,9 +1,7 @@
 #include "Constraint.h"
 
-#include <utility>
-
 Constraint::Constraint(const ConstraintType type, const CanonicalRelation relation,
-                       const std::optional<std::string> name)
+                       const std::optional<std::string>& name)
     : type(type), relation(relation), name(name) {}
 
 // void Constraint::toEmptyNormalForm() {

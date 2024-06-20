@@ -8,10 +8,10 @@ enum class ConstraintType { empty, irreflexive, acyclic };
 
 class Constraint {
  public:
-  Constraint(const ConstraintType type, const CanonicalRelation relation,
-             const std::optional<std::string> name = std::nullopt);
+  Constraint(ConstraintType type, CanonicalRelation relation,
+             const std::optional<std::string>& name = std::nullopt);
 
-  ConstraintType type;
+  ConstraintType type; // FIXME: Unused
   CanonicalRelation relation;
   std::optional<std::string> name;  // for printing
 

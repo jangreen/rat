@@ -1,6 +1,5 @@
 #include "LogicVisitor.h"
 
-#include "../Assumption.h"
 #include "../RegularTableau.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
@@ -97,7 +96,7 @@
       exit(0);
     } else if (definitionContext->axiomDefinition()) {
       auto untypedAxiom = visitAxiomDefinition(definitionContext->axiomDefinition());
-      Constraint axiom = std::any_cast<Constraint>(untypedAxiom);
+      auto axiom = std::any_cast<Constraint>(untypedAxiom);
       constraints.push_back(axiom);
     }
   }
@@ -118,6 +117,8 @@
     type = ConstraintType::irreflexive;
   } else if (context->ACYCLIC()) {
     type = ConstraintType::acyclic;
+  } else {
+    assert(false); // Exhaustive cases
   }
   auto relationVariant =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
@@ -150,13 +151,13 @@
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitParentheses(
     LogicParser::ParenthesesContext *context) {
   // process: (e)
-  std::variant<CanonicalSet, CanonicalRelation> expression =
+  auto expression =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
   return expression;
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitTransitiveClosure(
     LogicParser::TransitiveClosureContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+  auto relationExpression =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
 
   if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
@@ -236,10 +237,8 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitUnion(
     LogicParser::UnionContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> e1 =
-      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
-  std::variant<CanonicalSet, CanonicalRelation> e2 =
-      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
+  auto e1 = std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
+  auto e2 = std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
   if (std::holds_alternative<CanonicalRelation>(e1) &&
       std::holds_alternative<CanonicalRelation>(e2)) {
     CanonicalRelation r1 = std::get<CanonicalRelation>(e1);
@@ -270,7 +269,7 @@
 
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationInverse(
     LogicParser::RelationInverseContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+  auto relationExpression =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
     CanonicalRelation r = std::get<CanonicalRelation>(relationExpression);
@@ -283,7 +282,7 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationOptional(
     LogicParser::RelationOptionalContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> relationExpression =
+  auto relationExpression =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
     CanonicalRelation r = std::get<CanonicalRelation>(relationExpression);
@@ -336,7 +335,7 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitTransitiveReflexiveClosure(
     LogicParser::TransitiveReflexiveClosureContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> e =
+  auto e =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (std::holds_alternative<CanonicalRelation>(e)) {
     CanonicalRelation r =
@@ -350,9 +349,9 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitComposition(
     LogicParser::CompositionContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> e1 =
+  auto e1 =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
-  std::variant<CanonicalSet, CanonicalRelation> e2 =
+  auto e2 =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
 
   if (std::holds_alternative<CanonicalRelation>(e1) &&
@@ -383,9 +382,9 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitIntersection(
     LogicParser::IntersectionContext *context) {
-  std::variant<CanonicalSet, CanonicalRelation> e1 =
+  auto e1 =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e1->accept(this));
-  std::variant<CanonicalSet, CanonicalRelation> e2 =
+  auto e2 =
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e2->accept(this));
   if (std::holds_alternative<CanonicalRelation>(e1) &&
       std::holds_alternative<CanonicalRelation>(e2)) {

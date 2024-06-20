@@ -23,7 +23,7 @@ class Tableau {
 
     bool isClosed() const;
     bool isLeaf() const;
-    bool branchContains(const Literal &literal);
+    bool branchContains(const Literal &lit);
     void appendBranch(const DNF &dnf);
     bool appendable(const Cube &cube);
     void appendBranch(const Literal &leftLiteral);
@@ -40,8 +40,8 @@ class Tableau {
     void toDotFormat(std::ofstream &output) const;
   };
 
-  Tableau(std::initializer_list<Literal> initalLiterals);
-  explicit Tableau(Cube initalLiterals);
+  Tableau(std::initializer_list<Literal> initialLiterals); // FIXME: Unused???
+  explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
   std::queue<Node *> unreducedNodes;
@@ -53,7 +53,7 @@ class Tableau {
   DNF dnf();
 
   void toDotFormat(std::ofstream &output) const;
-  void exportProof(std::string filename) const;
+  void exportProof(const std::string& filename) const;
 
   // helper
   static Cube substitute(Literal &literal, CanonicalSet search, CanonicalSet replace) {
