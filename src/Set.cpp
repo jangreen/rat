@@ -247,23 +247,23 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
         CanonicalSet e_and_S = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
 
         if (negated) {
-          // Rule (\neg\anode\lrule):
+          // Rule (~eL):
           result = {{leftOperand}, {Literal(negated, e_and_S)}};
           return result;
         } else {
-          // Rule (\anode\lrule): [e & S] -> { [e], e.S }
+          // Rule (eL): [e & S] -> { [e], e.S }
           result = {{leftOperand, Literal(negated, e_and_S)}};
           return result;
         }
       } else if (rightOperand->operation == SetOperation::singleton) {
-        CanonicalSet S_and_e = Set::newSet(SetOperation::intersection, rightOperand, leftOperand);
+        CanonicalSet S_and_e = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
 
         if (negated) {
-          // Rule (\neg\anode\rrule):
+          // Rule (~eR):
           result = {{rightOperand}, {Literal(negated, S_and_e)}};
           return result;
         } else {
-          // Rule (\anode\rrule): [S & e] -> { [e], S.e }
+          // Rule (eR): [S & e] -> { [e], S.e }
           result = {{rightOperand, Literal(negated, S_and_e)}};
           return result;
         }
@@ -284,13 +284,13 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
       return std::nullopt;
     case SetOperation::base: {
       if (!negated) {
-        // Rule (\aCanonicalSet): [B] -> { [f], f \in B }
+        // Rule (A): [B] -> { [f], f \in B }
         CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
         Literal fInB(false, *f->label, *identifier);
         result = {{f, fInB}};
         return result;
       } else {
-        // Rule (\neg\aCanonicalSet): requires context (handled later)
+        // Rule (~A): requires context (handled later)
         return std::nullopt;
       }
     }
@@ -304,13 +304,13 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
             }
 
             if (!negated) {
-              // Rule (\arel\lrule): [e.b] -> { [f], (e,f) \in b }
+              // Rule (aL): [e.b] -> { [f], (e,f) \in b }
               CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
               Literal efInB(false, *leftOperand->label, *f->label, *relation->identifier);
               result = {{f, efInB}};
               return result;
             } else {
-              // Rule (\neg\arel\lrule): requires context (handled later)
+              // Rule (~aL): requires context (handled later)
               return std::nullopt;
             }
           }
@@ -323,24 +323,24 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
             CanonicalSet er2 =
                 Set::newSet(SetOperation::image, leftOperand, relation->rightOperand);
             if (negated) {
-              // Rule (\neg\cup_2\lrule): ~[e.(r1 | r2)] -> { ~[e.r1], ~[e.r2] }
+              // Rule (~v_2L): ~[e.(r1 | r2)] -> { ~[e.r1], ~[e.r2] }
               result = {{er1, er2}};
               return result;
             } else {
-              // Rule (\cup_2\lrule): [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
+              // Rule (v_2L): [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
               result = {{er1}, {er2}};
               return result;
             }
           }
           case RelationOperation::composition: {
-            // Rule (\comp_{2,2}\lrule): [e(a.b)] -> { [(e.a)b] }
+            // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
             CanonicalSet ea = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
             CanonicalSet ea_b = Set::newSet(SetOperation::image, ea, relation->rightOperand);
             result = {{ea_b}};
             return result;
           }
           case RelationOperation::converse: {
-            // Rule (^-1\lrule): [e.(r^-1)] -> { [r.e] }
+            // Rule (^-1L): [e.(r^-1)] -> { [r.e] }
             CanonicalSet re = Set::newSet(SetOperation::domain, leftOperand, relation->leftOperand);
             result = {{re}};
             return result;

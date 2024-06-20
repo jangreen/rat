@@ -95,6 +95,28 @@ std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
   }
 }
 
+DNF toDNF(bool negated, const std::vector<std::vector<PartialPredicate>> &partialDNF) {
+  DNF result;
+  result.reserve(partialDNF.size());
+  for (const auto &partialCube : partialDNF) {
+    Cube cube;
+    cube.reserve(partialCube.size());
+
+    for (const auto &partialLiteral : partialCube) {
+      if (std::holds_alternative<Literal>(partialLiteral)) {
+        Literal l = std::get<Literal>(partialLiteral);
+        cube.push_back(std::move(l));
+      } else {
+        CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
+        Literal l(negated, s);
+        cube.push_back(std::move(l));
+      }
+    }
+    result.push_back(cube);
+  }
+  return result;
+}
+
 std::optional<DNF> Literal::applyRule(bool modalRules) {
   switch (operation) {
     case PredicateOperation::edge:
@@ -110,29 +132,150 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       return std::nullopt;  // no rule applicable in case e1 = e2
     }
     case PredicateOperation::setNonEmptiness:
+      if (set->operation == SetOperation::intersection) {
+        if (set->leftOperand->operation == SetOperation::singleton) {
+          switch (set->rightOperand->operation) {
+            case SetOperation::intersection: {
+              // e & (s1 & s2) -> e & s1 , e & s2
+              CanonicalSet e = set->leftOperand;
+              CanonicalSet s1 = set->rightOperand->leftOperand;
+              CanonicalSet s2 = set->rightOperand->rightOperand;
+              CanonicalSet e_and_s1 = Set::newSet(SetOperation::intersection, e, s1);
+              CanonicalSet e_and_s2 = Set::newSet(SetOperation::intersection, e, s2);
+
+              if (negated) {
+                // Rule (~&_1L)
+                DNF result = {{Literal(negated, e_and_s1), Literal(negated, e_and_s1)}};
+                return result;
+              } else {
+                // Rule (&_1L)
+                DNF result = {{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s1)}};
+                return result;
+              }
+            }
+            case SetOperation::image:
+            case SetOperation::domain:
+              // e & (sr)     or      e & (rs)
+              if (set->rightOperand->leftOperand->operation == SetOperation::singleton) {
+                // e1 & (e2.r)     or      e1 & (r.e2)
+                if (set->rightOperand->relation->operation == RelationOperation::base) {
+                  // e1 & (e2.b)     or      e1 & (b.e2)
+                  // shortcut multiple rules
+                  int e1 = *set->leftOperand->label;
+                  int e2 = *set->rightOperand->leftOperand->label;
+                  std::string b = *set->rightOperand->relation->identifier;
+                  if (set->rightOperand->operation == SetOperation::image) {
+                    // e1 & (e2.b)
+                    DNF result = {{Literal(negated, e2, e1, b)}};
+                    return result;
+                  } else {
+                    // e1 & (b.e2)
+                    DNF result = {{Literal(negated, e1, e2, b)}};
+                    return result;
+                  }
+                } else {
+                  break;  // skip to "apply non-root rules"
+                }
+              } else {
+                // e & sr -> re & s     or      e & rs -> er & s
+                CanonicalSet e = set->leftOperand;
+                CanonicalSet s = set->rightOperand->leftOperand;
+                CanonicalRelation r = set->rightOperand->relation;
+                if (set->rightOperand->operation == SetOperation::image) {
+                  // e & sr -> re & s
+                  // Rule (._12L)
+                  CanonicalSet re = Set::newSet(SetOperation::domain, e, r);
+                  CanonicalSet re_and_s = Set::newSet(SetOperation::intersection, re, s);
+                  DNF result = {{Literal(negated, re_and_s)}};
+                  return result;
+                } else {
+                  // e & rs -> er & s
+                  // Rule (._21L)
+                  CanonicalSet er = Set::newSet(SetOperation::image, e, r);
+                  CanonicalSet er_and_s = Set::newSet(SetOperation::intersection, er, s);
+                  DNF result = {{Literal(negated, er_and_s)}};
+                  return result;
+                }
+              }
+            default:
+              break;
+          }
+          break;
+        }
+        if (set->rightOperand->operation == SetOperation::singleton) {
+          switch (set->rightOperand->operation) {
+            case SetOperation::intersection: {
+              // (s1 & s2) & e -> s1 & e , s2 & e
+              CanonicalSet e = set->rightOperand;
+              CanonicalSet s1 = set->leftOperand->leftOperand;
+              CanonicalSet s2 = set->leftOperand->rightOperand;
+              CanonicalSet s1_and_e = Set::newSet(SetOperation::intersection, s1, e);
+              CanonicalSet s2_and_e = Set::newSet(SetOperation::intersection, s2, e);
+
+              if (negated) {
+                // Rule (~&_1R)
+                DNF result = {{Literal(negated, s1_and_e), Literal(negated, s2_and_e)}};
+                return result;
+              } else {
+                // Rule (&_1R)
+                DNF result = {{Literal(negated, s1_and_e)}, {Literal(negated, s2_and_e)}};
+                return result;
+              }
+            }
+            case SetOperation::image:
+            case SetOperation::domain:
+              // (sr) & e    or      (rs) & e
+              if (set->rightOperand->leftOperand->operation == SetOperation::singleton) {
+                // (e2.r) & e1      or      (r.e2) & e1
+                if (set->rightOperand->relation->operation == RelationOperation::base) {
+                  // (e2.b) & e1      or      (b.e2) & e1
+                  // shortcut multiple rules
+                  int e1 = *set->rightOperand->label;
+                  int e2 = *set->leftOperand->leftOperand->label;
+                  std::string b = *set->leftOperand->relation->identifier;
+                  if (set->leftOperand->operation == SetOperation::image) {
+                    // (e2.b) & e1
+                    DNF result = {{Literal(negated, e2, e1, b)}};
+                    return result;
+                  } else {
+                    // (b.e2) & e1
+                    DNF result = {{Literal(negated, e1, e2, b)}};
+                    return result;
+                  }
+                } else {
+                  break;  // skip to "apply non-root rules"
+                }
+              } else {
+                // sr & e -> s & re        or        rs & e -> s & er
+                CanonicalSet e = set->rightOperand;
+                CanonicalSet s = set->leftOperand->leftOperand;
+                CanonicalRelation r = set->leftOperand->relation;
+                if (set->rightOperand->operation == SetOperation::image) {
+                  // sr & e -> s & re
+                  // Rule (._12R)
+                  CanonicalSet re = Set::newSet(SetOperation::domain, e, r);
+                  CanonicalSet s_and_re = Set::newSet(SetOperation::intersection, s, re);
+                  DNF result = {{Literal(negated, s_and_re)}};
+                  return result;
+                } else {
+                  // rs & e -> s & er
+                  // Rule (._21R)
+                  CanonicalSet er = Set::newSet(SetOperation::image, e, r);
+                  CanonicalSet s_and_er = Set::newSet(SetOperation::intersection, s, er);
+                  DNF result = {{Literal(negated, s_and_er)}};
+                  return result;
+                }
+              }
+            default:
+              break;
+          }
+          break;
+        }
+      }
+      // apply non-root rules
       auto result = set->applyRule(negated, modalRules);
       if (result) {
-        auto newLiterals = *result;
-
-        DNF result;
-        result.reserve(newLiterals.size());
-        for (const auto &partialCube : newLiterals) {
-          Cube cube;
-          cube.reserve(partialCube.size());
-
-          for (const auto &partialLiteral : partialCube) {
-            if (std::holds_alternative<Literal>(partialLiteral)) {
-              Literal l = std::get<Literal>(partialLiteral);
-              cube.push_back(std::move(l));
-            } else {
-              CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
-              Literal l(negated, s);
-              cube.push_back(std::move(l));
-            }
-          }
-          result.push_back(cube);
-        }
-        return result;
+        return toDNF(negated, *result);
       }
       return std::nullopt;
   }
@@ -282,233 +425,3 @@ std::string Literal::toString() const {
 //   }
 //   return result;
 // }
-
-// TODO: remove
-// if (leftOperand->operation == SetOperation::singleton) {
-//   switch (rightOperand->operation) {
-//     case SetOperation::choice: {
-//       Literal es1(negated, PredicateOperation::setNonEmptiness, leftOperand,
-//                   rightOperand->leftOperand);
-//       Literal es2(negated, PredicateOperation::setNonEmptiness, leftOperand,
-//                   rightOperand->rightOperand);
-
-//       if (negated) {
-//         // Rule (\neg\cup_1\lrule): ~{e}.(s1 | s2) -> ~{e}.s1, ~{e}.s2
-//         DNF result = {{es1, es2}};
-//         return result;
-//       } else {
-//         // Rule (\cup_1\lrule): {e}.(s1 | s2) -> {e}.s1 | {e}.s2
-//         DNF result = {{es1}, {es2}};
-//         return result;
-//       }
-//     }
-//     case SetOperation::intersection: {
-//       Literal es1(negated, PredicateOperation::setNonEmptiness, leftOperand,
-//                   rightOperand->leftOperand);
-//       Literal es2(negated, PredicateOperation::setNonEmptiness, leftOperand,
-//                   rightOperand->rightOperand);
-
-//       if (negated) {
-//         // Rule (\neg\cap_1\lrule): ~{e}.(s1 & s2) -> ~{e}.s1 | ~{e}.s2
-//         DNF result = {{es1}, {es2}};
-//         return result;
-//       } else {
-//         // Rule (\cap_1\lrule): {e}.(s1 & s2) -> {e}.s1, {e}.s2
-//         DNF result = {{es1, es2}};
-//         return result;
-//       }
-//     }
-//     case SetOperation::empty: {
-//       // Rule (bot_1): {e}.0
-//       DNF result = {{BOTTOM}};
-//       return result;
-//     }
-//     case SetOperation::full: {
-//       if (negated) {
-//         // Rule (\neg\top_1) + Rule (\neg=): ~{e}.T -> ~{e}.{e} -> \bot_1
-//         DNF result = {{BOTTOM}};
-//         return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::singleton: {
-//       // Rule (=): {e1}.{e2}
-//       Literal l(negated, PredicateOperation::equality, leftOperand, rightOperand);
-//       DNF result = {{l}};
-//       return result;
-//     }
-//     case SetOperation::domain: {
-//       // Rule (\comp_{1,2}): {e}.(r.s)
-//       if (rightOperand->leftOperand->operation == SetOperation::singleton) {
-//         // {e1}.(r.{e2})
-//         if (rightOperand->relation->operation == RelationOperation::base) {
-//           // fast path for {e1}.(a.e2) -> (e1,e2) \in a
-//           Literal l(negated, PredicateOperation::edge, leftOperand, rightOperand->leftOperand,
-//                     *rightOperand->relation->identifier);
-//           DNF result = {{l}};
-//           return result;
-//         }
-//         // 1) try reduce r.s
-//         auto domainResult = rightOperand->applyRule(negated, modalRules);
-//         if (domainResult) {
-//           auto disjunction = *domainResult;
-//           return substituteHelper(negated, true, disjunction, leftOperand);
-//         }
-//       } else {
-//         // 2) {e}.(r.s) -> ({e}.r).s
-//         CanonicalSet er = Set::newSet(SetOperation::image, leftOperand,
-//         rightOperand->relation); Literal ers(negated, PredicateOperation::setNonEmptiness, er,
-//         rightOperand->leftOperand); DNF result = {{ers}}; return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::image: {
-//       // {e}.(s.r)
-//       if (rightOperand->leftOperand->operation == SetOperation::singleton) {
-//         if (rightOperand->relation->operation == RelationOperation::base) {
-//           // fast path for {e1}.(e2.a) -> (e2,e1) \in a
-//           Literal l(negated, PredicateOperation::edge, rightOperand->leftOperand, leftOperand,
-//                     *rightOperand->relation->identifier);
-//           DNF result = {{l}};
-//           return result;
-//         }
-//         // 1) try reduce s.r
-//         auto imageResult = rightOperand->applyRule(negated, modalRules);
-//         if (imageResult) {
-//           auto disjunction = *imageResult;
-//           return substituteHelper(negated, true, disjunction, leftOperand);
-//         }
-//       } else {
-//         // 2) -> s.(r.{e})
-//         CanonicalSet re = Set::newSet(SetOperation::domain, leftOperand,
-//         rightOperand->relation); Literal sre(negated, PredicateOperation::setNonEmptiness,
-//         rightOperand->leftOperand, re); DNF result = {{sre}}; return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::base: {
-//       // e.B
-//       Literal l(negated, PredicateOperation::set, leftOperand, *rightOperand->identifier);
-//       DNF result = {{l}};
-//       return result;
-//     }
-//   }
-// } else if (rightOperand->operation == SetOperation::singleton) {
-//   switch (leftOperand->operation) {
-//     case SetOperation::choice: {
-//       Literal s1e(negated, PredicateOperation::setNonEmptiness, rightOperand->leftOperand,
-//                   leftOperand);
-//       Literal s2e(negated, PredicateOperation::setNonEmptiness, rightOperand->rightOperand,
-//                   leftOperand);
-//       if (negated) {
-//         // Rule (\neg\cup_1\rrule): ~(s1 | s2).{e} -> ~s1{e}, ~s2{e}.
-//         DNF result = {{s1e}, {s2e}};
-//         return result;
-//       } else {
-//         // Rule (\cup_1\rrule): (s1 | s2).{e} -> s1{e}. | s2{e}.
-//         DNF result = {{s1e, s2e}};
-//         return result;
-//       }
-//     }
-//     case SetOperation::intersection: {
-//       Literal s1e(negated, PredicateOperation::setNonEmptiness, leftOperand->leftOperand,
-//                   rightOperand);
-//       Literal s2e(negated, PredicateOperation::setNonEmptiness, leftOperand->rightOperand,
-//                   rightOperand);
-//       if (negated) {
-//         // Rule (\neg\cap_1\rrule): ~(s1 & s2).{e} -> ~s1.{e} | ~s2.{e}
-//         DNF result = {{s1e}, {s2e}};
-//         return result;
-//       } else {
-//         // Rule (\cap_1\rrule): (s1 & s2).{e} -> s1.{e}, s2.{e}
-//         DNF result = {{s1e, s2e}};
-//         return result;
-//       }
-//     }
-//     case SetOperation::empty: {
-//       // Rule (bot_1): 0.{e}
-//       DNF result = {{BOTTOM}};
-//       return result;
-//     }
-//     case SetOperation::full: {
-//       if (negated) {
-//         // Rule (\neg\top_1) + Rule (\neg=): ~T.{e} -> ~{e}.{e} -> \bot_1
-//         DNF result = {{BOTTOM}};
-//         return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::singleton: {
-//       // {e1}.{e2}
-//       // could not happen since case is already handled above
-//       std::cout << "[Error] This should not happen." << std::endl;
-//       return std::nullopt;
-//     }
-//     case SetOperation::domain: {
-//       // (r.s).{e}
-//       if (leftOperand->leftOperand->operation == SetOperation::singleton) {
-//         if (leftOperand->relation->operation == RelationOperation::base) {
-//           // fast path for (a.e2){e1} -> (e1,e2) \in a
-//           Literal l(negated, PredicateOperation::edge, rightOperand, leftOperand->leftOperand,
-//                     *leftOperand->relation->identifier);
-//           DNF result = {{l}};
-//           return result;
-//         }
-//         // 1) try reduce r.s
-//         auto domainResult = leftOperand->applyRule(negated, modalRules);
-//         if (domainResult) {
-//           auto disjunction = *domainResult;
-//           return substituteHelper(negated, false, disjunction, rightOperand);
-//         }
-//       } else {
-//         // 2) -> ({e}.r).s
-//         CanonicalSet er = Set::newSet(SetOperation::image, rightOperand,
-//         leftOperand->relation); Literal ers(negated, PredicateOperation::setNonEmptiness, er,
-//         leftOperand->leftOperand); DNF result = {{ers}}; return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::image: {
-//       // (s.r).{e}
-//       if (leftOperand->leftOperand->operation == SetOperation::singleton) {
-//         if (leftOperand->relation->operation == RelationOperation::base) {
-//           // fast path for (e2.a){e1} -> (e2,e1) \in a
-//           Literal l(negated, PredicateOperation::edge, leftOperand->leftOperand, rightOperand,
-//                     *leftOperand->relation->identifier);
-//           DNF result = {{l}};
-//           return result;
-//         }
-//         // 1) try reduce s.r
-//         auto imageResult = leftOperand->applyRule(negated, modalRules);
-//         if (imageResult) {
-//           auto disjunction = *imageResult;
-//           return substituteHelper(negated, false, disjunction, rightOperand);
-//         }
-//       } else {
-//         // 2) -> s.(r.{e})
-//         CanonicalSet re = Set::newSet(SetOperation::domain, rightOperand,
-//         leftOperand->relation); Literal sre(negated, PredicateOperation::setNonEmptiness,
-//         leftOperand->leftOperand, re); DNF result = {{sre}}; return result;
-//       }
-//       return std::nullopt;
-//     }
-//     case SetOperation::base: {
-//       // B.e
-//       Literal l(negated, PredicateOperation::set, rightOperand, *leftOperand->identifier);
-//       DNF result = {{l}};
-//       return result;
-//     }
-//   }
-// } else {
-//   auto leftResult = leftOperand->applyRule(negated, modalRules);
-//   if (leftResult) {
-//     auto disjunction = *leftResult;
-//     return substituteHelper(negated, false, disjunction, rightOperand);
-//   }
-//   auto rightResult = rightOperand->applyRule(negated, modalRules);
-//   if (rightResult) {
-//     auto disjunction = *rightResult;
-//     return substituteHelper(negated, true, disjunction, leftOperand);
-//   }
-// }
-// return std::nullopt;

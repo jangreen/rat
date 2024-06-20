@@ -32,6 +32,7 @@ bool Tableau::solve(int bound) {
     }
     auto currentNode = unreducedNodes.front();
     unreducedNodes.pop();
+    exportProof("debug");
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {

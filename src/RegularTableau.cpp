@@ -280,6 +280,7 @@ bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    exportProof("debug");
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
          currentNode->rootParents.empty()) ||
         currentNode->closed) {
