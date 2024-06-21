@@ -90,8 +90,8 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, Canonical
 
         auto sResult = s->applyRule(context, modalRules);
         if (!sResult) {
-          spdlog::error(s->toString());
-          assert(false);  // Unreachable
+          // no rule applicable (possible since we omit rules where true is derivable)
+          return std::nullopt;
         }
 
         // RuleDirection::Left: e & sResult
@@ -274,8 +274,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
     case PredicateOperation::equality: {
       if (negated && *leftLabel == *rightLabel) {
         // (\neg=): ~(e1 = e2) -> FALSE
-        DNF result = {{BOTTOM}};
-        return result;
+        return DNF{{BOTTOM}};
       }
       return std::nullopt;  // no rule applicable in case e1 = e2
     }

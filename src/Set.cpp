@@ -64,10 +64,11 @@ std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalS
       return PartialDNF{{re}};
     }
     case RelationOperation::empty: {
-      // TODO: implement
-      // Rule (\bot_2\lrule):
-      spdlog::error("[Error] Empty relations are currently not supported.");
-      assert(false);
+      if (!context->negated) {
+        // Rule (\bot_2L), (\bot_2R) + (\bot_1) -> FALSE
+        return PartialDNF{{BOTTOM}};
+      }
+      return std::nullopt;  // no rule applicabel (omit rules generating true)
     }
     case RelationOperation::full: {
       // TODO: implement
@@ -232,12 +233,12 @@ Set::Set(const Set &&other) noexcept
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                          CanonicalRelation relation, std::optional<int> label,
                          const std::optional<std::string> &identifier) {
-
 #if (DEBUG)
   // ------------------ Validation ------------------
   static std::unordered_set<SetOperation> operations = {
-      SetOperation::image, SetOperation::domain, SetOperation::singleton, SetOperation::intersection,
-      SetOperation::choice, SetOperation::base, SetOperation::full, SetOperation::empty };
+      SetOperation::image,        SetOperation::domain, SetOperation::singleton,
+      SetOperation::intersection, SetOperation::choice, SetOperation::base,
+      SetOperation::full,         SetOperation::empty};
   assert(operations.contains(operation));
 
   const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
@@ -247,21 +248,21 @@ CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet
       assert(identifier.has_value() && !label.has_value() && isSimple);
       break;
     case SetOperation::singleton:
-      assert (label.has_value() && !identifier.has_value() && isSimple);
+      assert(label.has_value() && !identifier.has_value() && isSimple);
       break;
     case SetOperation::empty:
     case SetOperation::full:
-      assert (!hasLabelOrId && isSimple);
+      assert(!hasLabelOrId && isSimple);
       break;
     case SetOperation::choice:
     case SetOperation::intersection:
       assert(!hasLabelOrId);
-      assert (left != nullptr && right != nullptr && relation == nullptr);
+      assert(left != nullptr && right != nullptr && relation == nullptr);
       break;
     case SetOperation::image:
     case SetOperation::domain:
       assert(!hasLabelOrId);
-      assert (left != nullptr && relation != nullptr && right == nullptr);
+      assert(left != nullptr && relation != nullptr && right == nullptr);
       break;
   }
 #endif
