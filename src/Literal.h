@@ -21,7 +21,7 @@ typedef const Set *CanonicalSet;
 // predicate for a given context
 typedef std::variant<CanonicalSet, Literal> PartialLiteral;
 typedef std::vector<PartialLiteral> PartialCube;
-typedef std::vector<PartialCube> ParitalDNF;
+typedef std::vector<PartialCube> PartialDNF;
 
 enum class PredicateOperation {
   edge,            // (e1, e2) \in a
@@ -40,9 +40,9 @@ class Literal {
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &otherSet) const;  // for sorting/hashing
 
-  bool negated{};
+  bool negated;
   PredicateOperation operation;
-  CanonicalSet set{};                     // setNonEmptiness
+  CanonicalSet set;                     // setNonEmptiness
   std::optional<int> leftLabel;           // edge, set, equality
   std::optional<int> rightLabel;          // edge, equality
   std::optional<std::string> identifier;  // edge, set
@@ -123,7 +123,6 @@ class Set {
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
       std::optional<int> label, std::optional<std::string> identifier);  // do not use
   static int maxSingletonLabel;                             // to create globally unique labels
-  static std::unordered_map<Set, const Set> canonicalSets;  // TODO: repplace with unordered_set
   static CanonicalSet newSet(SetOperation operation);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
@@ -151,7 +150,7 @@ class Set {
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
-  [[nodiscard]] std::optional<ParitalDNF> applyRule(const Literal *context, bool modalRules) const;
+  [[nodiscard]] std::optional<PartialDNF> applyRule(const Literal *context, bool modalRules) const;
   [[nodiscard]] CanonicalSet saturateId() const;
   [[nodiscard]] CanonicalSet saturateBase() const;
 

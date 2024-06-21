@@ -9,7 +9,7 @@
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
-std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalSet event,
+std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalSet event,
                                               CanonicalRelation relation, SetOperation operation,
                                               bool modalRules) {
   switch (relation->operation) {
@@ -29,7 +29,7 @@ std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalS
         int first = operation == SetOperation::image ? *event->label : *f->label;
         int second = operation == SetOperation::image ? *f->label : *event->label;
 
-        return ParitalDNF{{f, Literal(false, first, second, b)}};
+        return PartialDNF{{f, Literal(false, first, second, b)}};
       } else {
         // Rule (~aL), Rule (~aR): requires context (handled later)
         return std::nullopt;
@@ -48,20 +48,20 @@ std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalS
       //    Rule (v_2R):
       CanonicalSet er1 = Set::newSet(operation, event, relation->leftOperand);
       CanonicalSet er2 = Set::newSet(operation, event, relation->rightOperand);
-      return context->negated ? ParitalDNF{{er1, er2}} : ParitalDNF{{er1}, {er2}};
+      return context->negated ? PartialDNF{{er1, er2}} : PartialDNF{{er1}, {er2}};
     }
     case RelationOperation::composition: {
       // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
       CanonicalSet ea = Set::newSet(operation, event, relation->leftOperand);
       CanonicalSet ea_b = Set::newSet(operation, ea, relation->rightOperand);
-      return ParitalDNF{{ea_b}};
+      return PartialDNF{{ea_b}};
     }
     case RelationOperation::converse: {
       // Rule (^-1L): [e.(r^-1)] -> { [r.e] }
       SetOperation oppositOp =
           operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
       CanonicalSet re = Set::newSet(oppositOp, event, relation->leftOperand);
-      return ParitalDNF{{re}};
+      return PartialDNF{{re}};
     }
     case RelationOperation::empty: {
       // TODO: implement
@@ -77,14 +77,14 @@ std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalS
     }
     case RelationOperation::identity: {
       // Rule (\id\lrule): [e.id] -> { [e] }
-      return ParitalDNF{{event}};
+      return PartialDNF{{event}};
     }
     case RelationOperation::intersection: {
       // Rule (\cap_2\lrule): [e.(r1 & r2)] -> { [e.r1 & e.r2] }
       CanonicalSet er1 = Set::newSet(operation, event, relation->leftOperand);
       CanonicalSet er2 = Set::newSet(operation, event, relation->rightOperand);
       CanonicalSet er1_and_er2 = Set::newSet(SetOperation::intersection, er1, er2);
-      return ParitalDNF{{er1_and_er2}};
+      return PartialDNF{{er1_and_er2}};
     }
     case RelationOperation::transitiveClosure: {
       CanonicalSet er = Set::newSet(operation, event, relation->leftOperand);
@@ -92,13 +92,13 @@ std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalS
 
       // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
       // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
-      return context->negated ? ParitalDNF{{err_star, event}} : ParitalDNF{{err_star}, {event}};
+      return context->negated ? PartialDNF{{err_star, event}} : PartialDNF{{err_star}, {event}};
     }
   }
 }
 
 // TODO: give better name
-ParitalDNF substituteHelper2(bool substituteRight, const ParitalDNF &disjunction,
+PartialDNF substituteHelper2(bool substituteRight, const PartialDNF &disjunction,
                              CanonicalSet otherOperand) {
   std::vector<std::vector<PartialLiteral>> resultDisjunction;
   resultDisjunction.reserve(disjunction.size());
@@ -232,6 +232,40 @@ Set::Set(const Set &&other) noexcept
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                          CanonicalRelation relation, std::optional<int> label,
                          const std::optional<std::string> &identifier) {
+
+#if (DEBUG)
+  // ------------------ Validation ------------------
+  static std::unordered_set<SetOperation> operations = {
+      SetOperation::image, SetOperation::domain, SetOperation::singleton, SetOperation::intersection,
+      SetOperation::choice, SetOperation::base, SetOperation::full, SetOperation::empty };
+  assert(operations.contains(operation));
+
+  const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
+  const bool hasLabelOrId = (label.has_value() || identifier.has_value());
+  switch (operation) {
+    case SetOperation::base:
+      assert(identifier.has_value() && !label.has_value() && isSimple);
+      break;
+    case SetOperation::singleton:
+      assert (label.has_value() && !identifier.has_value() && isSimple);
+      break;
+    case SetOperation::empty:
+    case SetOperation::full:
+      assert (!hasLabelOrId && isSimple);
+      break;
+    case SetOperation::choice:
+    case SetOperation::intersection:
+      assert(!hasLabelOrId);
+      assert (left != nullptr && right != nullptr && relation == nullptr);
+      break;
+    case SetOperation::image:
+    case SetOperation::domain:
+      assert(!hasLabelOrId);
+      assert (left != nullptr && relation != nullptr && right == nullptr);
+      break;
+  }
+#endif
+
   static std::unordered_set<Set> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
   return &(*iter);
@@ -305,7 +339,7 @@ CanonicalSet Set::rename(const Renaming &renaming, bool inverse) const {
   }
 }
 
-std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules) const {
+std::optional<PartialDNF> Set::applyRule(const Literal *context, bool modalRules) const {
   std::vector<std::vector<PartialLiteral>> result;
   switch (operation) {
     case SetOperation::singleton:
@@ -313,7 +347,7 @@ std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules
       return std::nullopt;
     case SetOperation::empty:
       // Rule (\bot_1):
-      return ParitalDNF{{BOTTOM}};
+      return PartialDNF{{BOTTOM}};
     case SetOperation::full: {
       if (context->negated) {
         // Rule (\neg\top_1): this case needs context (handled later)
@@ -321,29 +355,29 @@ std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules
       } else {
         // Rule (\top_1): [T] -> { [f] } , only if positive
         CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-        return ParitalDNF{{f}};
+        return PartialDNF{{f}};
       }
     }
     case SetOperation::choice: {
       // Rule (\neg\cup_1): ~[A | B] -> { ~[A], ~[B] }
       // Rule (\cup_1): [A | B] -> { [A] },{ [B] }
-      return context->negated ? ParitalDNF{{leftOperand, rightOperand}}
-                              : ParitalDNF{{leftOperand}, {rightOperand}};
+      return context->negated ? PartialDNF{{leftOperand, rightOperand}}
+                              : PartialDNF{{leftOperand}, {rightOperand}};
     }
     case SetOperation::intersection:
       if (leftOperand->operation == SetOperation::singleton) {
         CanonicalSet e_and_s = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
         // Rule (~eL):
         // Rule (eL): [e & s] -> { [e], e.s }
-        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(e_and_s)}}
-                                : ParitalDNF{{leftOperand, context->substituteSet(e_and_s)}};
+        return context->negated ? PartialDNF{{leftOperand}, {context->substituteSet(e_and_s)}}
+                                : PartialDNF{{leftOperand, context->substituteSet(e_and_s)}};
       } else if (rightOperand->operation == SetOperation::singleton) {
         CanonicalSet s_and_e = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
 
         // Rule (~eR):
         // Rule (eR): [s & e] -> { [e], s.e }
-        return context->negated ? ParitalDNF{{rightOperand}, {context->substituteSet(s_and_e)}}
-                                : ParitalDNF{{rightOperand, context->substituteSet(s_and_e)}};
+        return context->negated ? PartialDNF{{rightOperand}, {context->substituteSet(s_and_e)}}
+                                : PartialDNF{{rightOperand, context->substituteSet(s_and_e)}};
       } else {
         // [S1 & S2]: apply rules recursively
         auto leftResult = leftOperand->applyRule(context, modalRules);
@@ -363,7 +397,7 @@ std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules
       if (!context->negated) {
         // Rule (A): [B] -> { [f], f \in B }
         CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-        return ParitalDNF{{f, Literal(false, *f->label, *identifier)}};
+        return PartialDNF{{f, Literal(false, *f->label, *identifier)}};
       } else {
         // Rule (~A): requires context (handled later)
         return std::nullopt;

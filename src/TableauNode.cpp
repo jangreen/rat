@@ -24,174 +24,201 @@ bool Tableau::Node::branchContains(const Literal &lit) {
   negatedCopy.negated = !negatedCopy.negated;
 
   const Node *node = this;
-  while (node != nullptr) {
+  do {
     if (node->literal == lit) {
+      // Found literal
       return true;
-    } else if (lit.operation != PredicateOperation::setNonEmptiness) {
+    } else if (lit.operation != PredicateOperation::setNonEmptiness && node->literal == negatedCopy) {
+      // Found negated literal of atomic predicate
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
-      if (node->literal == negatedCopy) {
-        // FIXME: std::move does not actually move but create a copy because lit is const
-        //  However, I cannot remove the move because Node has no valid constructors otherwise.
-        Node newNode(this, std::move(lit));
-        Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
-        newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
-        leftNode = std::make_unique<Node>(std::move(newNode));
-        return true;
-      }
+      // FIXME: std::move does not actually move but create a copy because lit is const
+      //  However, I cannot remove the move because Node has no valid constructors otherwise.
+      Node newNode(this, std::move(lit));
+      Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
+      newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
+      leftNode = std::make_unique<Node>(std::move(newNode));
+      return true;
     }
-    node = node->parentNode;
-  }
+  } while ((node = node->parentNode) != nullptr);
+
   return false;
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
-  if (isLeaf() && !isClosed()) {
-    if (dnf.size() > 2) {
-      // TODO: make this explicit using types
-      std::cout << "[Bug] We would like to support only binary branching" << std::endl;
-    } else if (dnf.size() > 1) {
-      // only append if all resulting branches have new literals
-      if (!appendable(dnf[0]) || !appendable(dnf[1])) {
-        return;
-      }
+  assert(!dnf.empty()); // empty DNF makes no sense
+  assert(dnf.size() <= 2); // We only support binary branching for now (might change in the future)
 
-      // trick: lift disjunctive appendBranch to sets
-      for (const auto &lit : dnf[1]) {
-        appendBranch(lit);
-      }
-      auto temp = std::move(leftNode);
-      leftNode = nullptr;
-      for (const auto &lit : dnf[0]) {
-        appendBranch(lit);
-      }
-      rightNode = std::move(temp);
-    } else if (!dnf.empty()) {
-      for (const auto &lit : dnf[0]) {
-        appendBranch(lit);
-      }
-    }
-  } else {
+  if (!isLeaf()) {
+    // No leaf: descend recursively
     if (leftNode != nullptr) {
       leftNode->appendBranch(dnf);
     }
     if (rightNode != nullptr) {
       rightNode->appendBranch(dnf);
     }
+    return;
   }
+
+  if (isClosed()) {
+    // Closed leaf: nothing to do
+    return;
+  }
+
+  // Open leaf: append
+  if (dnf.size() == 2) {
+    // only append if all resulting branches have new literals
+    if (!appendable(dnf[0]) || !appendable(dnf[1])) {
+      return;
+    }
+
+    // trick: lift disjunctive appendBranch to sets
+    for (const auto &lit : dnf[1]) {
+      appendBranch(lit);
+    }
+    auto temp = std::move(leftNode);
+    leftNode = nullptr;
+    for (const auto &lit : dnf[0]) {
+      appendBranch(lit);
+    }
+    rightNode = std::move(temp);
+  } else {
+    assert(dnf.size() == 1);
+    for (const auto &lit : dnf[0]) {
+      appendBranch(lit);
+    }
+  }
+
 }
 
 bool Tableau::Node::appendable(const Cube &cube) {
   // assume that it is called only on leafs
   // predicts conjunctive literal appending returns true if it would append at least some literal
-  if (isLeaf() && !isClosed()) {
-    // auto currentLeaf = this; // FIXME: Unused
-    for (const auto &lit : cube) {
-      if (!branchContains(lit)) {
-        return true;
-      }
+  assert(isLeaf() && !isClosed());
+  for (const auto &lit : cube) {
+    if (!branchContains(lit)) {
+      return true;
     }
   }
   return false;
 }
 
 void Tableau::Node::appendBranch(const Literal &leftLiteral) {
-  if (isLeaf() && !isClosed()) {
-    if (!branchContains(leftLiteral)) {
-      // FIXME: No actual move happens (literal is const)
-      Node newNode(this, std::move(leftLiteral));
-      leftNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(leftNode.get());
-    }
-  } else {
+  if (!isLeaf()) {
+    // No leaf: descend recursively
     if (leftNode != nullptr) {
       leftNode->appendBranch(leftLiteral);
     }
     if (rightNode != nullptr) {
       rightNode->appendBranch(leftLiteral);
     }
+    return;
   }
+
+  if (isClosed() || branchContains(leftLiteral)) {
+    // Closed leaf or literal already exists: do nothing
+    return;
+  }
+
+  // Open leaf and new literal: append
+  // FIXME: No actual move happens (literal is const)
+  Node newNode(this, std::move(leftLiteral));
+  leftNode = std::make_unique<Node>(std::move(newNode));
+  tableau->unreducedNodes.push(leftNode.get());
 }
 
 // FIXME make faster
 void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &rightLiteral) {
-  if (isLeaf() && !isClosed()) {
-    if (!branchContains(leftLiteral)) {
-      // FIXME: No actual move happens (literal is const)
-      Node newNode(this, std::move(leftLiteral));
-      leftNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(leftNode.get());
-    }
-    if (!branchContains(rightLiteral)) {
-      // FIXME: No actual move happens (literal is const)
-      Node newNode(this, std::move(rightLiteral));
-      rightNode = std::make_unique<Node>(std::move(newNode));
-      tableau->unreducedNodes.push(rightNode.get());
-    }
-  } else {
+  if (!isLeaf()) {
+    // No leaf: descend recursively
     if (leftNode != nullptr) {
       leftNode->appendBranch(leftLiteral, rightLiteral);
     }
     if (rightNode != nullptr) {
       rightNode->appendBranch(leftLiteral, rightLiteral);
     }
+    return;
+  }
+
+  if (isClosed()) {
+    // Closed leaf: nothing to do
+    return;
+  }
+
+  // Open leaf: append literals if not already contained
+  if (!branchContains(leftLiteral)) {
+    // FIXME: No actual move happens (literal is const)
+    Node newNode(this, std::move(leftLiteral));
+    leftNode = std::make_unique<Node>(std::move(newNode));
+    tableau->unreducedNodes.push(leftNode.get());
+  }
+  if (!branchContains(rightLiteral)) {
+    // FIXME: No actual move happens (literal is const)
+    Node newNode(this, std::move(rightLiteral));
+    rightNode = std::make_unique<Node>(std::move(newNode));
+    tableau->unreducedNodes.push(rightNode.get());
   }
 }
 
 // FIXME use in place
 std::optional<DNF> Tableau::Node::applyRule(bool modalRule) {
   auto result = literal.applyRule(modalRule);
-  if (result) {
-    auto disjunction = *result;
-    appendBranch(disjunction);
-    // // make rule application in-place
-    // if (parentNode != nullptr && parentNode->rightNode == nullptr) {
-    //   // important: do right first because setting parentNode->leftNode destroys 'this'
-    //   if (rightNode != nullptr) {
-    //     rightNode->parentNode = parentNode;
-    //     parentNode->rightNode = std::move(rightNode);
-    //   }
-    //   if (leftNode != nullptr) {
-    //     leftNode->parentNode = parentNode;
-    //     parentNode->leftNode = std::move(leftNode);
-    //   }
-    // }
-
-    return disjunction;
+  if (!result) {
+    return std::nullopt;
   }
-  return std::nullopt;
+
+  auto disjunction = *result;
+  appendBranch(disjunction);
+  // // make rule application in-place
+  // if (parentNode != nullptr && parentNode->rightNode == nullptr) {
+  //   // important: do right first because setting parentNode->leftNode destroys 'this'
+  //   if (rightNode != nullptr) {
+  //     rightNode->parentNode = parentNode;
+  //     parentNode->rightNode = std::move(rightNode);
+  //   }
+  //   if (leftNode != nullptr) {
+  //     leftNode->parentNode = parentNode;
+  //     parentNode->leftNode = std::move(leftNode);
+  //   }
+  // }
+
+  return disjunction;
 }
 
 void Tableau::Node::inferModal() {
   if (!literal.negated) {
     return;
   }
-  Node *temp = parentNode;
-  while (temp != nullptr) {
-    if (temp->literal.isNormal() && temp->literal.isPositiveEdgePredicate()) {
-      // check if inside literal can be something inferred
-      Literal edgeLiteral = temp->literal;
-      // (e1, e2) \in b
-      CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
-      CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
-      CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
-      CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
-      CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
 
-      CanonicalSet search1 = e1b;
-      CanonicalSet replace1 = e2;
-      CanonicalSet search2 = be2;
-      CanonicalSet replace2 = e1;
-
-      auto newLiterals = substitute(literal, search1, replace1);
-      for (auto &lit : newLiterals) {
-        appendBranch(lit);
-      }
-      auto newLiterals2 = substitute(literal, search2, replace2);
-      for (auto &lit : newLiterals2) {
-        appendBranch(lit);
-      }
+  // Traverse bottom-up
+  Node *cur = this;
+  while ((cur = cur->parentNode) != nullptr) {
+    if (!cur->literal.isNormal() || !cur->literal.isPositiveEdgePredicate()) {
+      continue;
     }
-    temp = temp->parentNode;
+
+    // Normal and positive edge literal
+    // check if inside literal can be something inferred
+    Literal edgeLiteral = cur->literal;
+    // (e1, e2) \in b
+    CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
+    CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+    CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+    CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+    CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+
+    CanonicalSet search1 = e1b;
+    CanonicalSet replace1 = e2;
+    CanonicalSet search2 = be2;
+    CanonicalSet replace2 = e1;
+
+    auto newLiterals = substitute(literal, search1, replace1);
+    for (auto &lit : newLiterals) {
+      appendBranch(lit);
+    }
+    auto newLiterals2 = substitute(literal, search2, replace2);
+    for (auto &lit : newLiterals2) {
+      appendBranch(lit);
+    }
   }
 }
 
@@ -201,17 +228,20 @@ void Tableau::Node::inferModalTop() {
   }
 
   // get all labels
-  Node *temp = parentNode;
+  Node *cur = this;
   std::vector<int> labels;
-  while (temp != nullptr) {
-    if (temp->literal.isNormal() && !temp->literal.negated) {
-      for (auto newLabel : temp->literal.labels()) {
-        if (std::find(labels.begin(), labels.end(), newLabel) == labels.end()) {
-          labels.push_back(newLabel);
-        }
+  while ((cur = cur->parentNode) != nullptr) {
+    const Literal &lit = cur->literal;
+    if (!lit.isNormal() || lit.negated) {
+      continue;
+    }
+    // Normal and positive literal: collect new labels
+    for (auto newLabel : lit.labels()) {
+      if (std::find(labels.begin(), labels.end(), newLabel) == labels.end()) {
+        labels.push_back(newLabel);
       }
     }
-    temp = temp->parentNode;
+
   }
 
   for (auto label : labels) {
@@ -225,6 +255,7 @@ void Tableau::Node::inferModalTop() {
     }
   }
 }
+
 void Tableau::Node::inferModalAtomic() {
   Literal edgeLiteral = literal;
   // (e1, e2) \in b
@@ -241,28 +272,30 @@ void Tableau::Node::inferModalAtomic() {
   // replace T -> e
   CanonicalSet search12 = Set::newSet(SetOperation::full);
 
-  Node *temp = parentNode;
-  while (temp != nullptr) {
-    if (temp->literal.negated && temp->literal.isNormal()) {
-      // check if inside literal can be something inferred
-      auto newLiterals = substitute(temp->literal, search1, replace1);
-      for (auto &lit : newLiterals) {
-        appendBranch(lit);
-      }
-      auto newLiterals2 = substitute(temp->literal, search2, replace2);
-      for (auto &lit : newLiterals2) {
-        appendBranch(lit);
-      }
-      auto newLiterals3 = substitute(temp->literal, search12, replace1);
-      for (auto &lit : newLiterals3) {
-        appendBranch(lit);
-      }
-      auto newLiterals4 = substitute(temp->literal, search12, replace2);
-      for (auto &lit : newLiterals4) {
-        appendBranch(lit);
-      }
+  Node *cur = this;
+  while ((cur = cur->parentNode) != nullptr) {
+    const Literal &curLit = cur->literal;
+    if (!curLit.negated || !curLit.isNormal()) {
+      continue;
     }
-    temp = temp->parentNode;
+    // Negated and normal lit
+    // check if inside literal can be something inferred
+    const auto newLiterals = substitute(curLit, search1, replace1);
+    for (auto &lit : newLiterals) {
+      appendBranch(lit);
+    }
+    const auto newLiterals2 = substitute(curLit, search2, replace2);
+    for (auto &lit : newLiterals2) {
+      appendBranch(lit);
+    }
+    const auto newLiterals3 = substitute(curLit, search12, replace1);
+    for (auto &lit : newLiterals3) {
+      appendBranch(lit);
+    }
+    const auto newLiterals4 = substitute(curLit, search12, replace2);
+    for (auto &lit : newLiterals4) {
+      appendBranch(lit);
+    }
   }
 }
 
