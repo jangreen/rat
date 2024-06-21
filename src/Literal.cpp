@@ -15,19 +15,23 @@ std::optional<DNF> handleIntersectionWithEvent(CanonicalSet s, CanonicalSet e,
   assert(e->operation == SetOperation::singleton);
   // Do case distinction on the shape of "s"
   switch (s->operation) {
-    // TODO: Handle following base cases
     case SetOperation::base:
-      // e & A != 0  ->  e \in A
-      assert(false);  // Not implemented
+      // RuleDirection::Left: e & A != 0  ->  e \in A
+      // RuleDirection::Right: A & e != 0  ->  e \in A
+      return DNF{{Literal(negated, *e->label, *s->identifier)}};
     case SetOperation::singleton:
-      // e1 & e2 != 0  ->  e1 == e2
-      assert(false);  // Not implemented
+      // RuleDirection::Left: e & f != 0  ->  e == f
+      // RuleDirection::Right: f & e != 0  ->  e == f (in both cases use same here)
+      // Rule (=)
+      return DNF{{Literal(negated, *e->label, *s->label)}};
     case SetOperation::empty:
-      // e & 0 != 0  ->  false
-      assert(false);  // Not implemented
+      // RuleDirection::Left: e & 0 != 0  ->  false
+      // RuleDirection::Right: 0 & e != 0  ->  false
+      return DNF{{BOTTOM}};
     case SetOperation::full:
-      // e & 1 != 0  ->  true
-      assert(false);  // Not implemented
+      // RuleDirection::Left: e & 1 != 0  ->  true
+      // RuleDirection::Right: 1 & e != 0  ->  true
+      return std::nullopt;  // do nothing
     case SetOperation::intersection: {
       // RuleDirection::Left: e & (s1 & s2) -> e & s1 , e & s2
       // RuleDirection::Right: (s1 & s2) & e -> s1 & e , s2 & e
