@@ -480,8 +480,8 @@ CanonicalSet Set::saturateId() const {
       return this;
     }
   }
-  CanonicalSet leftSaturated;
-  CanonicalSet rightSaturated;
+  CanonicalSet leftSaturated = nullptr;
+  CanonicalSet rightSaturated = nullptr;
   if (leftOperand != nullptr) {
     leftSaturated = leftOperand->saturateId();
   }
