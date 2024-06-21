@@ -335,18 +335,18 @@ std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules
     }
     case SetOperation::intersection:
       if (leftOperand->operation == SetOperation::singleton) {
-        CanonicalSet e_and_S = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
+        CanonicalSet e_and_s = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
         // Rule (~eL):
-        // Rule (eL): [e & S] -> { [e], e.S }
-        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(e_and_S)}}
-                                : ParitalDNF{{leftOperand, context->substituteSet(e_and_S)}};
+        // Rule (eL): [e & s] -> { [e], e.s }
+        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(e_and_s)}}
+                                : ParitalDNF{{leftOperand, context->substituteSet(e_and_s)}};
       } else if (rightOperand->operation == SetOperation::singleton) {
-        CanonicalSet S_and_e = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
+        CanonicalSet s_and_e = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
 
         // Rule (~eR):
-        // Rule (eR): [S & e] -> { [e], S.e }
-        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(S_and_e)}}
-                                : ParitalDNF{{leftOperand, context->substituteSet(S_and_e)}};
+        // Rule (eR): [s & e] -> { [e], s.e }
+        return context->negated ? ParitalDNF{{rightOperand}, {context->substituteSet(s_and_e)}}
+                                : ParitalDNF{{rightOperand, context->substituteSet(s_and_e)}};
       } else {
         // [S1 & S2]: apply rules recursively
         auto leftResult = leftOperand->applyRule(context, modalRules);
