@@ -110,7 +110,7 @@ CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet
                          CanonicalRelation relation, std::optional<int> label,
                          const std::optional<std::string> &identifier) {
   static std::unordered_set<Set> canonicalizer;
-  auto [iter, found] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
+  auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
   return &(*iter);
 }
 
@@ -402,9 +402,9 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
                 newCube.push_back(partialPredicate);
               } else {
                 auto s = std::get<CanonicalSet>(partialPredicate);
-                // TODO: there should only be one [] inside eache {}
-                // otherwise we have to instersect (&) all  []'s after before replacing
-                // currently we jsut assume this is the case without further checking
+                // TODO: there should only be one [] inside each {}
+                // otherwise we have to intersect (&) all  []'s after before replacing
+                // currently we just assume this is the case without further checking
                 CanonicalSet newSet = Set::newSet(SetOperation::image, s, relation);
                 newCube.emplace_back(newSet);
               }
@@ -524,7 +524,7 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
                 newCube.push_back(partialPredicate);
               } else {
                 auto s = std::get<CanonicalSet>(partialPredicate);
-                // TODO: there should only be one [] inside eache {}
+                // TODO: there should only be one [] inside each {}
                 // otherwise we have to intersect (&) all  []'s after before replacing
                 // currently we just assume this is the case without further checking
                 CanonicalSet newSet = Set::newSet(SetOperation::domain, s, relation);
