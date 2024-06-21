@@ -376,8 +376,6 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
     return true;
   }
 
-  // TODO: check this: must this be the intersection of
-  // inconsistentLiterals for all branches?
   DNF dnf = calcConverseReq.rootNode->extractDNF();
   // each Disjunct must have some inconsistency to have an inconsistency
   // otherwise the proof for one cube without inconsistency would

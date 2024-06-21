@@ -12,8 +12,8 @@ class Tableau {
  public:
   class Node {
    public:
-    Node(Tableau *tableau, const Literal &&literal);
-    Node(Node *parent, const Literal &&literal);
+    // Node(Tableau *tableau, const Literal &&literal);
+    Node(Node *parent, const Literal &literal);
 
     Tableau *tableau;
     Literal literal;

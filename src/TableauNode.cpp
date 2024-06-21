@@ -2,14 +2,13 @@
 
 #include "Tableau.h"
 
-Tableau::Node::Node(Tableau *tableau, const Literal &&literal)
-    : tableau(tableau), literal(literal) {}
-Tableau::Node::Node(Node *parent, const Literal &&literal)
-    : tableau(parent->tableau), literal(literal), parentNode(parent) {}
-// TODO: do this here? only in base case? newNode.closed = checkIfClosed(parent, relation);
+Tableau::Node::Node(Node *parent, const Literal &literal)
+    : tableau(parent != nullptr ? parent->tableau : nullptr),
+      literal(literal),
+      parentNode(parent) {}
 
+// TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
 bool Tableau::Node::isClosed() const {
-  // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
   if (literal == BOTTOM) {
     return true;
   }
@@ -32,9 +31,7 @@ bool Tableau::Node::branchContains(const Literal &lit) {
                node->literal == negatedCopy) {
       // Found negated literal of atomic predicate
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
-      // FIXME: std::move does not actually move but create a copy because lit is const
-      //  However, I cannot remove the move because Node has no valid constructors otherwise.
-      Node newNode(this, std::move(lit));
+      Node newNode(this, lit);
       Node newNodeBot(&newNode, std::move(Literal(BOTTOM)));
       newNode.leftNode = std::make_unique<Node>(std::move(newNodeBot));
       leftNode = std::make_unique<Node>(std::move(newNode));
@@ -120,8 +117,7 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral) {
   }
 
   // Open leaf and new literal: append
-  // FIXME: No actual move happens (literal is const)
-  Node newNode(this, std::move(leftLiteral));
+  Node newNode(this, leftLiteral);
   leftNode = std::make_unique<Node>(std::move(newNode));
   tableau->unreducedNodes.push(leftNode.get());
 }
@@ -146,14 +142,12 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &righ
 
   // Open leaf: append literals if not already contained
   if (!branchContains(leftLiteral)) {
-    // FIXME: No actual move happens (literal is const)
-    Node newNode(this, std::move(leftLiteral));
+    Node newNode(this, leftLiteral);
     leftNode = std::make_unique<Node>(std::move(newNode));
     tableau->unreducedNodes.push(leftNode.get());
   }
   if (!branchContains(rightLiteral)) {
-    // FIXME: No actual move happens (literal is const)
-    Node newNode(this, std::move(rightLiteral));
+    Node newNode(this, rightLiteral);
     rightNode = std::make_unique<Node>(std::move(newNode));
     tableau->unreducedNodes.push(rightNode.get());
   }

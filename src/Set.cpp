@@ -413,6 +413,7 @@ std::optional<PartialDNF> Set::applyRule(const Literal *context, bool modalRules
         if (setResult) {
           for (const auto &cube : *setResult) {
             std::vector<PartialLiteral> newCube;
+            newCube.reserve(cube.size());
             for (const auto &partialPredicate : cube) {
               if (std::holds_alternative<Literal>(partialPredicate)) {
                 newCube.push_back(partialPredicate);

@@ -4,13 +4,13 @@
 #include <iostream>
 #include <utility>
 
-Tableau::Tableau(const Cube &initialLiterals) {
+Tableau::Tableau(const Cube &cube) {
   Node *parentNode = nullptr;
-  for (const auto &literal : initialLiterals) {
-    Node *newNode = new Node(this, std::move(literal));
-    newNode->parentNode = parentNode;
+  for (const auto &literal : cube) {
+    Node *newNode = new Node(parentNode, std::move(literal));
 
     if (parentNode == nullptr) {
+      newNode->tableau = this;
       rootNode = std::unique_ptr<Node>(newNode);
     } else {
       parentNode->leftNode = std::unique_ptr<Node>(newNode);

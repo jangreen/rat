@@ -172,7 +172,7 @@ bool Literal::operator==(const Literal &other) const {
 }
 
 bool Literal::operator<(const Literal &other) const {
-  // TODO (TH): toString must traverse the whole DAG to obtain the string.
+  // FIXME (TH): toString must traverse the whole DAG to obtain the string.
   //  If you use this in any performance critical part, you should change this.
   // sort lexicographically
   return toString() < other.toString();
