@@ -4,15 +4,10 @@
 #include <unordered_map>
 
 #include "Relation.h"
-
-enum AssumptionType { regular, empty, identity };
-
 class Assumption {
  public:
-  Assumption(AssumptionType type, CanonicalRelation relation,
-             std::optional<std::string> baseRelation = std::nullopt);
+  Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation = std::nullopt);
 
-  AssumptionType type;                            // FIXME: Unused
   CanonicalRelation const relation;               // regular, empty, identity
   const std::optional<std::string> baseRelation;  // regular
 

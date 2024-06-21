@@ -47,9 +47,7 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, Canonical
                  : DNF{{context->substituteSet(e_and_s1), context->substituteSet(e_and_s2)}};
     }
     case SetOperation::choice: {
-      // FIXME: Is this dual to the intersection rule? If so, the code can be merged easily
-      // e & (s1 | s2) != 0  ->  (e & s1) | (e & s2) ???
-      assert(false);  // Not implemented
+      return std::nullopt;  // handled in later function
     }
     // -------------- Complex case --------------
     case SetOperation::image:
@@ -411,7 +409,6 @@ void Literal::saturateId() {
 
 std::string Literal::toString() const {
   std::string output;
-  output += std::to_string(saturatedId) + ", " + std::to_string(saturatedBase) + "| ";
   if (*this == BOTTOM) {
     return "FALSE";
   }

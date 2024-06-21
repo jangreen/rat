@@ -11,7 +11,7 @@ class Constraint {
   Constraint(ConstraintType type, CanonicalRelation relation,
              const std::optional<std::string>& name = std::nullopt);
 
-  ConstraintType type;  // FIXME: Unused
+  ConstraintType type;
   CanonicalRelation relation;
   std::optional<std::string> name;  // for printing
 

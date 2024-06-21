@@ -36,7 +36,6 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   return cube == otherNode.cube;
 }
 
-// FIXME: use better hash function
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
   for (const auto &literal : node.cube) {

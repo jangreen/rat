@@ -63,18 +63,16 @@
   CanonicalRelation rhs = parseRelation(context->rhs->getText());
   switch (rhs->operation) {
     case RelationOperation::base: {
-      Assumption assumption(AssumptionType::regular, lhs, *rhs->identifier);
-      Assumption::baseAssumptions.insert({*assumption.baseRelation, assumption});
+      Assumption assumption(lhs, *rhs->identifier);
+      Assumption::baseAssumptions.emplace(*assumption.baseRelation, assumption);
       return 0;
     }
     case RelationOperation::empty: {
-      Assumption assumption(AssumptionType::empty, lhs);
-      Assumption::emptinessAssumptions.push_back(assumption);
+      Assumption::emptinessAssumptions.emplace_back(lhs);
       return 0;
     }
     case RelationOperation::identity: {
-      Assumption assumption(AssumptionType::identity, lhs);
-      Assumption::idAssumptions.push_back(assumption);
+      Assumption::idAssumptions.emplace_back(lhs);
       return 0;
     }
     default: {

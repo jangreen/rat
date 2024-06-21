@@ -2,9 +2,8 @@
 
 #include <utility>
 
-Assumption::Assumption(const AssumptionType type, CanonicalRelation relation,
-                       std::optional<std::string> baseRelation)
-    : type(type), relation(relation), baseRelation(std::move(baseRelation)) {}
+Assumption::Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation)
+    : relation(relation), baseRelation(std::move(baseRelation)) {}
 
 std::vector<Assumption> Assumption::emptinessAssumptions;
 std::vector<Assumption> Assumption::idAssumptions;
