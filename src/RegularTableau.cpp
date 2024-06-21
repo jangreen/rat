@@ -178,12 +178,9 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
 }
 // helper end
 
-int RegularTableau::saturationBoundId = 1;
-int RegularTableau::saturationBoundBase = 1;
-
 RegularTableau::RegularTableau(std::initializer_list<Literal> initialLiterals)
     : RegularTableau(std::vector(initialLiterals)) {}
-RegularTableau::RegularTableau(const Cube& initialLiterals) {
+RegularTableau::RegularTableau(const Cube &initialLiterals) {
   Tableau t{initialLiterals};
   expandNode(nullptr, &t);
 }
@@ -307,8 +304,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
-  int maxSaturationBound =
-      std::max(RegularTableau::saturationBoundId, RegularTableau::saturationBoundBase);
+  int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
   for (size_t i = 0; i < maxSaturationBound; i++) {
     saturate(dnf);
   }
@@ -492,7 +488,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
   output << "}" << std::endl;
 }
 
-void RegularTableau::exportProof(const std::string& filename) const {
+void RegularTableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();

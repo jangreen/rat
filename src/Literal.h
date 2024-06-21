@@ -19,9 +19,9 @@ typedef std::vector<int> Renaming;
 typedef const Set *CanonicalSet;
 // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
 // predicate for a given context
-typedef std::variant<CanonicalSet, Literal> PartialPredicate;
-
-enum RuleDirection { Left, Right };
+typedef std::variant<CanonicalSet, Literal> PartialLiteral;
+typedef std::vector<PartialLiteral> PartialCube;
+typedef std::vector<PartialCube> ParitalDNF;
 
 enum class PredicateOperation {
   edge,            // (e1, e2) \in a
@@ -36,7 +36,6 @@ class Literal {
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel);
-  Literal() = default;
 
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &otherSet) const;  // for sorting/hashing
@@ -56,10 +55,15 @@ class Literal {
   [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
 
   std::optional<DNF> applyRule(bool modalRules);
-  bool substitute(CanonicalSet search, CanonicalSet replace,
-                  int n);  // substitute n-th occurrence
+  // substitute n-th occurrence, TODO: -1 = all
+  bool substitute(CanonicalSet search, CanonicalSet replace, int n);
+  Literal substituteSet(CanonicalSet set) const;
   void rename(const Renaming &renaming, bool inverse);
 
+  static int saturationBoundId;
+  static int saturationBoundBase;
+  int saturatedId;
+  int saturatedBase;
   void saturateId();
   void saturateBase();
 
@@ -107,6 +111,8 @@ enum class SetOperation {
   domain
 };
 
+enum class RuleDirection { Left, Right };
+
 class Set {
  private:
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
@@ -146,8 +152,7 @@ class Set {
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
-  [[nodiscard]] std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(
-      bool negated, bool modalRules) const;
+  [[nodiscard]] std::optional<ParitalDNF> applyRule(const Literal *context, bool modalRules) const;
   [[nodiscard]] CanonicalSet saturateId() const;
   [[nodiscard]] CanonicalSet saturateBase() const;
 

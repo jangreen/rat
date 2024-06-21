@@ -53,9 +53,6 @@ class RegularTableau {
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
   std::stack<Node *> unreducedNodes;
 
-  static int saturationBoundId;
-  static int saturationBoundBase;
-
   bool solve();
   Node *addNode(Cube cube, EdgeLabel &label);
   void addEdge(Node *parent, Node *child, EdgeLabel label);

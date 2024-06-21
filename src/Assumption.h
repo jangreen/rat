@@ -5,14 +5,14 @@
 
 #include "Relation.h"
 
-enum class AssumptionType { regular, empty, identity };
+enum AssumptionType { regular, empty, identity };
 
 class Assumption {
  public:
   Assumption(AssumptionType type, CanonicalRelation relation,
              std::optional<std::string> baseRelation = std::nullopt);
 
-  AssumptionType type; // FIXME: Unused
+  AssumptionType type;                            // FIXME: Unused
   CanonicalRelation const relation;               // regular, empty, identity
   const std::optional<std::string> baseRelation;  // regular
 

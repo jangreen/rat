@@ -1,8 +1,103 @@
+#include <spdlog/spdlog.h>
+
 #include <cassert>
 #include <unordered_set>
 
 #include "Assumption.h"
 #include "Literal.h"
+
+namespace {
+// ---------------------- Anonymous helper functions ----------------------
+
+std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalSet event,
+                                              CanonicalRelation relation, SetOperation operation,
+                                              bool modalRules) {
+  switch (relation->operation) {
+    case RelationOperation::base: {
+      // only use if want to
+      if (!modalRules) {
+        return std::nullopt;
+      }
+
+      if (!context->negated) {
+        // RuleDirection::Left: [e.b] -> { [f], (e,f) \in b }
+        // -> Rule (aL)
+        // RuleDirection::Right: [b.e] -> { [f], (f,e) \in b }
+        // -> Rule (aR)
+        CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
+        auto b = *relation->identifier;
+        int first = operation == SetOperation::image ? *event->label : *f->label;
+        int second = operation == SetOperation::image ? *f->label : *event->label;
+
+        return ParitalDNF{{f, Literal(false, first, second, b)}};
+      } else {
+        // Rule (~aL), Rule (~aR): requires context (handled later)
+        return std::nullopt;
+      }
+    }
+    case RelationOperation::cartesianProduct:
+      // TODO: implement
+      spdlog::error("[Error] Cartesian products are currently not supported.");
+      assert(false);
+    case RelationOperation::choice: {
+      // RuleDirection::Left:
+      //    Rule (~v_2L): ~[e.(r1 | r2)] -> { ~[e.r1], ~[e.r2] }
+      //    Rule (v_2L): [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
+      // RuleDirection::Right: [b.e] -> { [f], (f,e) \in b }
+      //    Rule (~v_2R): ~[(r1 | r2).e] -> { ~[r1.e], ~[r2.e] }
+      //    Rule (v_2R):
+      CanonicalSet er1 = Set::newSet(operation, event, relation->leftOperand);
+      CanonicalSet er2 = Set::newSet(operation, event, relation->rightOperand);
+      return context->negated ? ParitalDNF{{er1, er2}} : ParitalDNF{{er1}, {er2}};
+    }
+    case RelationOperation::composition: {
+      // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
+      CanonicalSet ea = Set::newSet(operation, event, relation->leftOperand);
+      CanonicalSet ea_b = Set::newSet(operation, ea, relation->rightOperand);
+      return ParitalDNF{{ea_b}};
+    }
+    case RelationOperation::converse: {
+      // Rule (^-1L): [e.(r^-1)] -> { [r.e] }
+      SetOperation oppositOp =
+          operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
+      CanonicalSet re = Set::newSet(oppositOp, event, relation->leftOperand);
+      return ParitalDNF{{re}};
+    }
+    case RelationOperation::empty: {
+      // TODO: implement
+      // Rule (\bot_2\lrule):
+      spdlog::error("[Error] Empty relations are currently not supported.");
+      assert(false);
+    }
+    case RelationOperation::full: {
+      // TODO: implement
+      // Rule (\top_2\lrule):
+      spdlog::error("[Error] Full relations are currently not supported.");
+      assert(false);
+    }
+    case RelationOperation::identity: {
+      // Rule (\id\lrule): [e.id] -> { [e] }
+      return ParitalDNF{{event}};
+    }
+    case RelationOperation::intersection: {
+      // Rule (\cap_2\lrule): [e.(r1 & r2)] -> { [e.r1 & e.r2] }
+      CanonicalSet er1 = Set::newSet(operation, event, relation->leftOperand);
+      CanonicalSet er2 = Set::newSet(operation, event, relation->rightOperand);
+      CanonicalSet er1_and_er2 = Set::newSet(SetOperation::intersection, er1, er2);
+      return ParitalDNF{{er1_and_er2}};
+    }
+    case RelationOperation::transitiveClosure: {
+      CanonicalSet er = Set::newSet(operation, event, relation->leftOperand);
+      CanonicalSet err_star = Set::newSet(operation, er, relation);
+
+      // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
+      // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
+      return context->negated ? ParitalDNF{{err_star, event}} : ParitalDNF{{err_star}, {event}};
+    }
+  }
+}
+
+}  // namespace
 
 int Set::maxSingletonLabel = 0;
 
@@ -185,13 +280,13 @@ CanonicalSet Set::rename(const Renaming &renaming, bool inverse) const {
   }
 }
 
-std::vector<std::vector<PartialPredicate>> substituteHelper2(
-    bool substituteRight, const std::vector<std::vector<PartialPredicate>> &disjunction,
+std::vector<std::vector<PartialLiteral>> substituteHelper2(
+    bool substituteRight, const std::vector<std::vector<PartialLiteral>> &disjunction,
     CanonicalSet otherOperand) {
-  std::vector<std::vector<PartialPredicate>> resultDisjunction;
+  std::vector<std::vector<PartialLiteral>> resultDisjunction;
   resultDisjunction.reserve(disjunction.size());
   for (const auto &conjunction : disjunction) {
-    std::vector<PartialPredicate> resultConjunction;
+    std::vector<PartialLiteral> resultConjunction;
     resultConjunction.reserve(conjunction.size());
     for (const auto &predicate : conjunction) {
       if (std::holds_alternative<Literal>(predicate)) {
@@ -213,72 +308,53 @@ std::vector<std::vector<PartialPredicate>> substituteHelper2(
   return resultDisjunction;
 }
 
-std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool negated,
-                                                                         bool modalRules) const {
-  std::vector<std::vector<PartialPredicate>> result;
+std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules) const {
+  std::vector<std::vector<PartialLiteral>> result;
   switch (operation) {
     case SetOperation::singleton:
       // no rule applicable to single event constant
       return std::nullopt;
     case SetOperation::empty:
       // Rule (\bot_1):
-      result = {{BOTTOM}};
-      return result;
+      return ParitalDNF{{BOTTOM}};
     case SetOperation::full: {
-      if (negated) {
+      if (context->negated) {
         // Rule (\neg\top_1): this case needs context (handled later)
         return std::nullopt;
       } else {
         // Rule (\top_1): [T] -> { [f] } , only if positive
         CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-        result = {{f}};
-        return result;
+        return ParitalDNF{{f}};
       }
     }
     case SetOperation::choice: {
-      if (negated) {
-        // Rule (\neg\cup_1): ~[A | B] -> { ~[A], ~[B] }
-        result = {{leftOperand, rightOperand}};
-        return result;
-      } else {
-        // Rule (\cup_1): [A | B] -> { [A] },{ [B] }
-        result = {{leftOperand}, {rightOperand}};
-        return result;
-      }
+      // Rule (\neg\cup_1): ~[A | B] -> { ~[A], ~[B] }
+      // Rule (\cup_1): [A | B] -> { [A] },{ [B] }
+      return context->negated ? ParitalDNF{{leftOperand, rightOperand}}
+                              : ParitalDNF{{leftOperand}, {rightOperand}};
     }
     case SetOperation::intersection:
       if (leftOperand->operation == SetOperation::singleton) {
         CanonicalSet e_and_S = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
-
-        if (negated) {
-          // Rule (~eL):
-          result = {{leftOperand}, {Literal(negated, e_and_S)}};
-          return result;
-        } else {
-          // Rule (eL): [e & S] -> { [e], e.S }
-          result = {{leftOperand, Literal(negated, e_and_S)}};
-          return result;
-        }
+        // Rule (~eL):
+        // Rule (eL): [e & S] -> { [e], e.S }
+        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(e_and_S)}}
+                                : ParitalDNF{{leftOperand, context->substituteSet(e_and_S)}};
       } else if (rightOperand->operation == SetOperation::singleton) {
         CanonicalSet S_and_e = Set::newSet(SetOperation::intersection, leftOperand, rightOperand);
 
-        if (negated) {
-          // Rule (~eR):
-          result = {{rightOperand}, {Literal(negated, S_and_e)}};
-          return result;
-        } else {
-          // Rule (eR): [S & e] -> { [e], S.e }
-          result = {{rightOperand, Literal(negated, S_and_e)}};
-          return result;
-        }
+        // Rule (~eR):
+        // Rule (eR): [S & e] -> { [e], S.e }
+        return context->negated ? ParitalDNF{{leftOperand}, {context->substituteSet(S_and_e)}}
+                                : ParitalDNF{{leftOperand, context->substituteSet(S_and_e)}};
       } else {
         // [S1 & S2]: apply rules recursively
-        auto leftResult = leftOperand->applyRule(negated, modalRules);
+        auto leftResult = leftOperand->applyRule(context, modalRules);
         if (leftResult) {
           auto disjunction = *leftResult;
           return substituteHelper2(false, disjunction, rightOperand);
         }
-        auto rightResult = rightOperand->applyRule(negated, modalRules);
+        auto rightResult = rightOperand->applyRule(context, modalRules);
         if (rightResult) {
           auto disjunction = *rightResult;
           return substituteHelper2(true, disjunction, leftOperand);
@@ -287,239 +363,24 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
 
       return std::nullopt;
     case SetOperation::base: {
-      if (!negated) {
+      if (!context->negated) {
         // Rule (A): [B] -> { [f], f \in B }
         CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-        Literal fInB(false, *f->label, *identifier);
-        result = {{f, fInB}};
-        return result;
+        return ParitalDNF{{f, Literal(false, *f->label, *identifier)}};
       } else {
         // Rule (~A): requires context (handled later)
         return std::nullopt;
       }
     }
     case SetOperation::image:
-      if (leftOperand->operation == SetOperation::singleton) {
-        switch (relation->operation) {
-          case RelationOperation::base: {
-            // only use if want to
-            if (!modalRules) {
-              return std::nullopt;
-            }
-
-            if (!negated) {
-              // Rule (aL): [e.b] -> { [f], (e,f) \in b }
-              CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-              Literal efInB(false, *leftOperand->label, *f->label, *relation->identifier);
-              result = {{f, efInB}};
-              return result;
-            } else {
-              // Rule (~aL): requires context (handled later)
-              return std::nullopt;
-            }
-          }
-          case RelationOperation::cartesianProduct:
-            // TODO: implement
-            std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
-            return std::nullopt;
-          case RelationOperation::choice: {
-            CanonicalSet er1 = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
-            CanonicalSet er2 =
-                Set::newSet(SetOperation::image, leftOperand, relation->rightOperand);
-            if (negated) {
-              // Rule (~v_2L): ~[e.(r1 | r2)] -> { ~[e.r1], ~[e.r2] }
-              result = {{er1, er2}};
-              return result;
-            } else {
-              // Rule (v_2L): [e.(r1 | r2)] -> { [e.r1] }, { [e.r2] }
-              result = {{er1}, {er2}};
-              return result;
-            }
-          }
-          case RelationOperation::composition: {
-            // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
-            CanonicalSet ea = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
-            CanonicalSet ea_b = Set::newSet(SetOperation::image, ea, relation->rightOperand);
-            result = {{ea_b}};
-            return result;
-          }
-          case RelationOperation::converse: {
-            // Rule (^-1L): [e.(r^-1)] -> { [r.e] }
-            CanonicalSet re = Set::newSet(SetOperation::domain, leftOperand, relation->leftOperand);
-            result = {{re}};
-            return result;
-          }
-          case RelationOperation::empty: {
-            // TODO: implement
-            // Rule (\bot_2\lrule):
-            std::cout << "[Error] Empty CanonicalRelations are currently not supported."
-                      << std::endl;
-            return std::nullopt;
-          }
-          case RelationOperation::full: {
-            // TODO: implement
-            // Rule (\top_2\lrule):
-            std::cout << "[Error] Full CanonicalRelations are currently not supported."
-                      << std::endl;
-            return std::nullopt;
-          }
-          case RelationOperation::identity: {
-            // Rule (\id\lrule): [e.id] -> { [e] }
-            result = {{leftOperand}};
-            return result;
-          }
-          case RelationOperation::intersection: {
-            // Rule (\cap_2\lrule): [e.(r1 & r2)] -> { [e.r1 & e.r2] }
-            CanonicalSet er1 = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
-            CanonicalSet er2 =
-                Set::newSet(SetOperation::image, leftOperand, relation->rightOperand);
-            CanonicalSet er1_and_er2 = Set::newSet(SetOperation::intersection, er1, er2);
-            result = {{er1_and_er2}};
-            return result;
-          }
-          case RelationOperation::transitiveClosure: {
-            CanonicalSet er = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
-            CanonicalSet err_star = Set::newSet(SetOperation::image, er, relation);
-
-            if (negated) {
-              // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
-              result = {{err_star, leftOperand}};
-              return result;
-            } else {
-              // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
-              result = {{err_star}, {leftOperand}};
-              return result;
-            }
-          }
-        }
-      } else {
-        auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
-        if (leftOperandResultOptional) {
-          auto leftOperandResult = *leftOperandResultOptional;
-          for (const auto &cube : leftOperandResult) {
-            std::vector<PartialPredicate> newCube;
-            for (const auto &partialPredicate : cube) {
-              if (std::holds_alternative<Literal>(partialPredicate)) {
-                newCube.push_back(partialPredicate);
-              } else {
-                auto s = std::get<CanonicalSet>(partialPredicate);
-                // TODO: there should only be one [] inside each {}
-                // otherwise we have to intersect (&) all  []'s after before replacing
-                // currently we just assume this is the case without further checking
-                CanonicalSet newSet = Set::newSet(SetOperation::image, s, relation);
-                newCube.emplace_back(newSet);
-              }
-            }
-            result.push_back(newCube);
-          }
-          return result;
-        }
-        return std::nullopt;
-      }
     case SetOperation::domain:
       if (leftOperand->operation == SetOperation::singleton) {
-        switch (relation->operation) {
-          case RelationOperation::base: {
-            // only use if want to
-            if (!modalRules) {
-              return std::nullopt;
-            }
-
-            if (!negated) {
-              // Rule (\anode\rrule): [b.e] -> { [f], (f,e) \in b }
-              CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
-              Literal feInB(false, *f->label, *leftOperand->label, *relation->identifier);
-              result = {{f, feInB}};
-              return result;
-            } else {
-              // Rule (\neg\anode\rrule): requires context (handled later)
-              return std::nullopt;
-            }
-          }
-          case RelationOperation::cartesianProduct:
-            // TODO: implement
-            std::cout << "[Error] Cartesian products are currently not supported." << std::endl;
-            return std::nullopt;
-          case RelationOperation::choice: {
-            CanonicalSet r1e =
-                Set::newSet(SetOperation::domain, leftOperand, relation->leftOperand);
-            CanonicalSet r2e =
-                Set::newSet(SetOperation::domain, leftOperand, relation->rightOperand);
-
-            if (negated) {
-              // Rule (\neg\cup_2\rrule): ~[(r1 | r2).e] -> { ~[r1.e], ~[r2.e] }
-              result = {{r1e, r2e}};
-              return result;
-            } else {
-              // Rule (\cup_2\rrule): [(r1 | r2).e] -> { [r1.e] }, { [r2.e] }
-              result = {{r1e}, {r2e}};
-              return result;
-            }
-          }
-          case RelationOperation::composition: {
-            // Rule (\comp\rrule): [(a.b)e] -> { [a(b.e)] }
-            CanonicalSet be =
-                Set::newSet(SetOperation::domain, leftOperand, relation->rightOperand);
-            CanonicalSet a_be = Set::newSet(SetOperation::domain, be, relation->leftOperand);
-            result = {{a_be}};
-            return result;
-          }
-          case RelationOperation::converse: {
-            // Rule (^-1\rrule): [(r^-1)e] -> { [e.r] }
-            CanonicalSet er = Set::newSet(SetOperation::image, leftOperand, relation->leftOperand);
-            result = {{er}};
-            return result;
-          }
-          case RelationOperation::empty: {
-            // TODO: implement
-            // Rule (\bot_2\rrule):
-            std::cout << "[Error] Empty CanonicalRelations are currently not supported."
-                      << std::endl;
-            return std::nullopt;
-          }
-          case RelationOperation::full: {
-            // TODO: implement
-            // Rule (\top_2\rrule):
-            std::cout << "[Error] Full CanonicalRelations are currently not supported."
-                      << std::endl;
-            return std::nullopt;
-          }
-          case RelationOperation::identity: {
-            // Rule (\id\rrule): [id.e] -> { [e] }
-            result = {{leftOperand}};
-            return result;
-          }
-          case RelationOperation::intersection: {
-            // Rule (\cap_2\rrule): [(r1 & r2).e] -> { [r1.e & r2.e] }
-            CanonicalSet r1e =
-                Set::newSet(SetOperation::domain, leftOperand, relation->leftOperand);
-            CanonicalSet r2e =
-                Set::newSet(SetOperation::domain, leftOperand, relation->rightOperand);
-            CanonicalSet r1e_and_r2e = Set::newSet(SetOperation::intersection, r1e, r2e);
-            result = {{r1e_and_r2e}};
-            return result;
-          }
-          case RelationOperation::transitiveClosure: {
-            CanonicalSet re = Set::newSet(SetOperation::domain, leftOperand, relation->leftOperand);
-            CanonicalSet r_star_re = Set::newSet(SetOperation::domain, re, relation);
-
-            if (negated) {
-              // Rule (\neg*\rrule): ~[r*.e] -> { ~[r*.(r.e)], ~[e] }
-              result = {{r_star_re, leftOperand}};
-              return result;
-            } else {
-              // Rule (*\rrule): [r*.e] -> { [r*.(r.e)] }, { [e] }
-              result = {{r_star_re}, {leftOperand}};
-              return result;
-            }
-          }
-        }
+        return applyRelationalRule(context, leftOperand, relation, operation, modalRules);
       } else {
-        auto leftOperandResultOptional = leftOperand->applyRule(negated, modalRules);
-        if (leftOperandResultOptional) {
-          auto leftOperandResult = *leftOperandResultOptional;
-          for (const auto &cube : leftOperandResult) {
-            std::vector<PartialPredicate> newCube;
+        auto setResult = leftOperand->applyRule(context, modalRules);
+        if (setResult) {
+          for (const auto &cube : *setResult) {
+            std::vector<PartialLiteral> newCube;
             for (const auto &partialPredicate : cube) {
               if (std::holds_alternative<Literal>(partialPredicate)) {
                 newCube.push_back(partialPredicate);
@@ -528,7 +389,7 @@ std::optional<std::vector<std::vector<PartialPredicate>>> Set::applyRule(bool ne
                 // TODO: there should only be one [] inside each {}
                 // otherwise we have to intersect (&) all  []'s after before replacing
                 // currently we just assume this is the case without further checking
-                CanonicalSet newSet = Set::newSet(SetOperation::domain, s, relation);
+                CanonicalSet newSet = Set::newSet(operation, s, relation);
                 newCube.emplace_back(newSet);
               }
             }
@@ -561,15 +422,15 @@ CanonicalSet Set::saturateBase() const {
       return this;
     }
   }
-  CanonicalSet leftSaturated;  // FIXME: Unused (should maybe used in the return?)
-  CanonicalSet rightSaturated;
+  CanonicalSet leftSaturated = nullptr;
+  CanonicalSet rightSaturated = nullptr;
   if (leftOperand != nullptr) {
     leftSaturated = leftOperand->saturateBase();
   }
   if (rightOperand != nullptr) {
     rightSaturated = rightOperand->saturateBase();
   }
-  return Set::newSet(operation, saturateBase(), rightSaturated, relation, label, identifier);
+  return Set::newSet(operation, leftSaturated, rightSaturated, relation, label, identifier);
 }
 
 CanonicalSet Set::saturateId() const {

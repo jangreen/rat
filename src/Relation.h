@@ -26,7 +26,7 @@ class Relation {
  private:
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
                                        CanonicalRelation right,
-                                       const std::optional<std::string>& identifier);
+                                       const std::optional<std::string> &identifier);
 
  public:
   Relation(RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
@@ -39,7 +39,8 @@ class Relation {
   static CanonicalRelation newBaseRelation(std::string identifier);
 
   Relation(const Relation &other) = delete;
-  Relation(const Relation &&other) noexcept ;  // used for try_emplace (do not want to use copy constructor)
+  Relation(const Relation
+               &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
 
  public:
   bool operator==(const Relation &other) const;
