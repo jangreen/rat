@@ -5,7 +5,7 @@
 
 Relation::Relation(const RelationOperation operation, CanonicalRelation left,
                    CanonicalRelation right, std::optional<std::string> identifier)
-    : operation(operation), leftOperand(left), rightOperand(right), identifier(std::move(identifier)){};
+    : operation(operation), leftOperand(left), rightOperand(right), identifier(std::move(identifier)) {}
 
 Relation::Relation(const Relation &&other) noexcept
    : operation(other.operation),
@@ -22,6 +22,42 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
                                         CanonicalRelation right,
                                         const std::optional<std::string>& identifier) {
+#if (DEBUG)
+  // ------------------ Validation ------------------
+  static std::unordered_set<RelationOperation> operations = {
+      RelationOperation::identity, RelationOperation::cartesianProduct, RelationOperation::intersection,
+      RelationOperation::composition, RelationOperation::converse, RelationOperation::transitiveClosure,
+      RelationOperation::choice, RelationOperation::base, RelationOperation::full, RelationOperation::empty };
+  assert(operations.contains(operation));
+
+  const bool isBinary = (left != nullptr && right != nullptr);
+  const bool isUnary = (left == nullptr) == (right != nullptr);
+  const bool isNullary = (left == nullptr && right == nullptr);
+  const bool hasId = identifier.has_value();
+  switch (operation) {
+    case RelationOperation::base:
+      assert(hasId && isNullary);
+      break;
+    case RelationOperation::identity:
+    case RelationOperation::empty:
+    case RelationOperation::full:
+      assert(!hasId && isNullary);
+      break;
+    case RelationOperation::choice:
+    case RelationOperation::intersection:
+    case RelationOperation::composition:
+      assert(!hasId && isBinary);
+      break;
+    case RelationOperation::transitiveClosure:
+    case RelationOperation::converse:
+      assert(!hasId && isUnary);
+      break;
+    case RelationOperation::cartesianProduct:
+      // TODO: Cartesian product of relations???
+      break;
+  }
+#endif
+
   static std::unordered_set<Relation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
   return &(*iter);

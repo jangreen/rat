@@ -31,8 +31,6 @@ class Relation {
  public:
   Relation(RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
            std::optional<std::string> identifier);  // do not use directly
-  static std::unordered_map<Relation, const Relation>
-      canonicalRelations;  // TODO: repplace with unordered_set
   static CanonicalRelation newRelation(RelationOperation operation);
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left);
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
