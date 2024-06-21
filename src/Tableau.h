@@ -55,7 +55,7 @@ class Tableau {
   void exportProof(const std::string &filename) const;
 
   // helper
-  static Cube substitute(Literal &literal, CanonicalSet search, CanonicalSet replace) {
+  static Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
     int c = 1;
     Literal copy = literal;
     Cube newLiterals;
