@@ -97,6 +97,34 @@ std::optional<ParitalDNF> applyRelationalRule(const Literal *context, CanonicalS
   }
 }
 
+// TODO: give better name
+ParitalDNF substituteHelper2(bool substituteRight, const ParitalDNF &disjunction,
+                             CanonicalSet otherOperand) {
+  std::vector<std::vector<PartialLiteral>> resultDisjunction;
+  resultDisjunction.reserve(disjunction.size());
+  for (const auto &conjunction : disjunction) {
+    std::vector<PartialLiteral> resultConjunction;
+    resultConjunction.reserve(conjunction.size());
+    for (const auto &predicate : conjunction) {
+      if (std::holds_alternative<Literal>(predicate)) {
+        auto p = std::get<Literal>(predicate);
+        resultConjunction.emplace_back(p);
+      } else {
+        auto s = std::get<CanonicalSet>(predicate);
+        // substitute
+        if (substituteRight) {
+          s = Set::newSet(SetOperation::intersection, otherOperand, s);
+        } else {
+          s = Set::newSet(SetOperation::intersection, s, otherOperand);
+        }
+        resultConjunction.emplace_back(s);
+      }
+    }
+    resultDisjunction.push_back(resultConjunction);
+  }
+  return resultDisjunction;
+}
+
 }  // namespace
 
 int Set::maxSingletonLabel = 0;
@@ -212,9 +240,6 @@ CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet
 CanonicalSet Set::newSet(SetOperation operation) {
   return newSet(operation, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
 }
-CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left) {
-  return newSet(operation, left, nullptr, nullptr, std::nullopt, std::nullopt);
-}
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
   return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
 }
@@ -278,34 +303,6 @@ CanonicalSet Set::rename(const Renaming &renaming, bool inverse) const {
       leftRenamed = leftOperand->rename(renaming, inverse);
       return Set::newSet(operation, leftRenamed, relation);
   }
-}
-
-std::vector<std::vector<PartialLiteral>> substituteHelper2(
-    bool substituteRight, const std::vector<std::vector<PartialLiteral>> &disjunction,
-    CanonicalSet otherOperand) {
-  std::vector<std::vector<PartialLiteral>> resultDisjunction;
-  resultDisjunction.reserve(disjunction.size());
-  for (const auto &conjunction : disjunction) {
-    std::vector<PartialLiteral> resultConjunction;
-    resultConjunction.reserve(conjunction.size());
-    for (const auto &predicate : conjunction) {
-      if (std::holds_alternative<Literal>(predicate)) {
-        auto p = std::get<Literal>(predicate);
-        resultConjunction.emplace_back(p);
-      } else {
-        auto s = std::get<CanonicalSet>(predicate);
-        // substitute
-        if (substituteRight) {
-          s = Set::newSet(SetOperation::intersection, otherOperand, s);
-        } else {
-          s = Set::newSet(SetOperation::intersection, s, otherOperand);
-        }
-        resultConjunction.emplace_back(s);
-      }
-    }
-    resultDisjunction.push_back(resultConjunction);
-  }
-  return resultDisjunction;
 }
 
 std::optional<ParitalDNF> Set::applyRule(const Literal *context, bool modalRules) const {

@@ -40,7 +40,6 @@ class Tableau {
     void toDotFormat(std::ofstream &output) const;
   };
 
-  Tableau(std::initializer_list<Literal> initialLiterals); // FIXME: Unused???
   explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
@@ -53,7 +52,7 @@ class Tableau {
   DNF dnf();
 
   void toDotFormat(std::ofstream &output) const;
-  void exportProof(const std::string& filename) const;
+  void exportProof(const std::string &filename) const;
 
   // helper
   static Cube substitute(Literal &literal, CanonicalSet search, CanonicalSet replace) {

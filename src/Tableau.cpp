@@ -4,9 +4,6 @@
 #include <iostream>
 #include <utility>
 
-// FIXME: Unused constructor
-Tableau::Tableau(std::initializer_list<Literal> initialLiterals)
-    : Tableau(Cube(initialLiterals)) {}
 Tableau::Tableau(const Cube &initialLiterals) {
   Node *currentNode = nullptr;
   for (const auto &literal : initialLiterals) {
@@ -164,7 +161,7 @@ void Tableau::toDotFormat(std::ofstream &output) const {
   output << "}" << std::endl;
 }
 
-void Tableau::exportProof(const std::string& filename) const {
+void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
