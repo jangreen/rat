@@ -44,10 +44,10 @@ std::optional<DNF> handleIntersectionWithEvent(CanonicalSet s, CanonicalSet e,
 
       if (negated) {
         // Rule (~&_1L)
-        return DNF{{Literal(negated, e_and_s1), Literal(negated, e_and_s2)}};
+        return DNF{{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s2)}};
       } else {
         // Rule (&_1L)
-        return DNF{{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s2)}};
+        return DNF{{Literal(negated, e_and_s1), Literal(negated, e_and_s2)}};
       }
       assert(false);  // Unreachable
     }
@@ -167,6 +167,11 @@ bool Literal::operator<(const Literal &other) const {
 
 bool Literal::isNormal() const {
   if (operation == PredicateOperation::setNonEmptiness) {
+    if (set->operation == SetOperation::intersection &&
+        (set->leftOperand->operation == SetOperation::singleton ||
+         set->rightOperand->operation == SetOperation::singleton)) {
+      return false;
+    }
     return set->isNormal;
   }
   return true;
