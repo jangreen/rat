@@ -41,16 +41,10 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, Canonical
       CanonicalSet e_and_s2 = direction == RuleDirection::Left
                                   ? Set::newSet(SetOperation::intersection, e, s->rightOperand)
                                   : Set::newSet(SetOperation::intersection, s->rightOperand, e);
-
-      if (context->negated) {
-        ;
-        // Rule (~&_1L)
-        return DNF{{context->substituteSet(e_and_s1)}, {context->substituteSet(e_and_s2)}};
-      } else {
-        // Rule (&_1L)
-        return DNF{{context->substituteSet(e_and_s1), context->substituteSet(e_and_s2)}};
-      }
-      assert(false);  // Unreachable
+      // Rule (~&_1L), Rule (&_1L)
+      return context->negated
+                 ? DNF{{context->substituteSet(e_and_s1)}, {context->substituteSet(e_and_s2)}}
+                 : DNF{{context->substituteSet(e_and_s1), context->substituteSet(e_and_s2)}};
     }
     case SetOperation::choice: {
       // FIXME: Is this dual to the intersection rule? If so, the code can be merged easily
