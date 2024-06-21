@@ -83,6 +83,12 @@ class Literal {
     }
     std::cout << std::endl;
   }
+
+  static int rename(int n, const Renaming &renaming, bool inverse) {
+    return inverse
+               ? renaming[n]
+               : std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), n));
+  }
 };
 
 static const Literal BOTTOM = Literal(false, -1, -1);

@@ -85,9 +85,6 @@ std::optional<DNF> handleIntersectionWithEvent(CanonicalSet s, CanonicalSet e,
         if (s->operation == SetOperation::image) {
           std::swap(first, second);
         }
-        if (direction == RuleDirection::Right) {
-          std::swap(first, second);
-        }
         // (first, second) \in b
         return DNF{{Literal(negated, first, second, b)}};
       } else {
@@ -281,7 +278,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       }
       return std::nullopt;
   }
-  assert(false);  // FIXME: REACHABLE!!!
+  assert(false);
 }
 
 bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {
@@ -295,8 +292,7 @@ bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {
       return false;
     }
     default:
-      spdlog::error("TODO");
-      exit(0);
+      return false;  // only substitute in set expressions
   }
 }
 
@@ -306,9 +302,16 @@ void Literal::rename(const Renaming &renaming, bool inverse) {
       set = set->rename(renaming, inverse);
       return;
     }
-    default:
-      spdlog::error("TODO");
-      exit(0);
+    case PredicateOperation::edge:
+    case PredicateOperation::equality: {
+      leftLabel = Literal::rename(*leftLabel, renaming, inverse);
+      rightLabel = Literal::rename(*rightLabel, renaming, inverse);
+      return;
+    }
+    case PredicateOperation::set: {
+      leftLabel = Literal::rename(*leftLabel, renaming, inverse);
+      return;
+    }
   }
 }
 

@@ -164,24 +164,25 @@ CanonicalSet Set::substitute(CanonicalSet search, CanonicalSet replace, int *n) 
 }
 
 CanonicalSet Set::rename(const Renaming &renaming, bool inverse) const {
-  if (operation == SetOperation::singleton) {
-    if (inverse) {
-      return Set::newEvent(renaming[*label]);
-    } else {
-      auto newLabel =
-          std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), *label));
-      return Set::newEvent(int(newLabel));
-    }
-  }
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
-  if (leftOperand != nullptr) {
-    leftRenamed = leftOperand->rename(renaming, inverse);
+  switch (operation) {
+    case SetOperation::singleton:
+      return Set::newEvent(Literal::rename(*label, renaming, inverse));
+    case SetOperation::base:
+    case SetOperation::empty:
+    case SetOperation::full:
+      return this;
+    case SetOperation::choice:
+    case SetOperation::intersection:
+      leftRenamed = leftOperand->rename(renaming, inverse);
+      rightRenamed = rightOperand->rename(renaming, inverse);
+      return Set::newSet(operation, leftRenamed, rightRenamed);
+    case SetOperation::image:
+    case SetOperation::domain:
+      leftRenamed = leftOperand->rename(renaming, inverse);
+      return Set::newSet(operation, leftRenamed, relation);
   }
-  if (rightOperand != nullptr) {
-    rightRenamed = rightOperand->rename(renaming, inverse);
-  }
-  return Set::newSet(operation, leftRenamed, rightRenamed, relation, label, identifier);
 }
 
 std::vector<std::vector<PartialPredicate>> substituteHelper2(

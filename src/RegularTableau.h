@@ -47,7 +47,7 @@ class RegularTableau {
   };
 
   RegularTableau(std::initializer_list<Literal> initialLiterals);
-  explicit RegularTableau(const Cube& initialLiterals);
+  explicit RegularTableau(const Cube &initialLiterals);
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
@@ -65,7 +65,7 @@ class RegularTableau {
   static void saturate(DNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
-  void exportProof(const std::string& filename) const;
+  void exportProof(const std::string &filename) const;
 
   // helper
   static Renaming rename(Cube &cube) {
