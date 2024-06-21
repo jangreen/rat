@@ -4,8 +4,27 @@
 #include "RegularTableau.h"
 
 // TODO: when hashing all singleton sets are equal, when comparing search for renaming
-RegularTableau::Node::Node(std::initializer_list<Literal> cube) : cube(cube) {}
-RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
+RegularTableau::Node::Node(Cube cube) {
+  // order cube
+  std::sort(cube.begin(), cube.end());
+
+  // calculate renaming
+  Renaming renaming{};
+  for (auto &literal : cube) {
+    for (const auto &l : literal.labels()) {
+      if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
+        renaming.push_back(l);
+      }
+    }
+  }
+  this->renaming = renaming;
+
+  // rename
+  for (auto &literal : cube) {
+    literal.rename(renaming, false);
+  }
+  this->cube = std::move(cube);
+}
 
 // FIXME calculate cached lazy property
 // hashing and comparison is insensitive to label renaming
@@ -14,26 +33,14 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   if (cube.size() != otherNode.cube.size()) {
     return false;
   }
-  // copy, sort, compare
-  Cube c1 = cube;
-  Cube c2 = otherNode.cube;
-  std::sort(c1.begin(), c1.end());
-  std::sort(c2.begin(), c2.end());
-
-  // rename
-  rename(c1);
-  rename(c2);
-  return c1 == c2;
+  return cube == otherNode.cube;
 }
 
 // FIXME: use better hash function
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
-  Cube copy = node.cube;
-  std::sort(copy.begin(), copy.end());
-  RegularTableau::rename(copy);
-  for (const auto &literal : copy) {
-    boost::hash_combine(seed, literal.toString());
+  for (const auto &literal : node.cube) {
+    boost::hash_combine(seed, std::hash<Literal>()(literal));
   }
   return seed;
 }

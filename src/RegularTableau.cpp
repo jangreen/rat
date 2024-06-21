@@ -188,12 +188,9 @@ RegularTableau::RegularTableau(const Cube &initialLiterals) {
 // assumptions:
 // cube is in normal form
 RegularTableau::Node *RegularTableau::addNode(Cube cube, EdgeLabel &label) {
-  // rename cube events such that two isomorphic nodes are equal after renaming
-  auto renaming = rename(cube);
-  // update edge label
-  std::get<1>(label) = renaming;
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(cube);
+  std::get<1>(label) = newNode->renaming;  // update edge label
   auto insertion = nodes.insert(std::move(newNode));
   if (insertion.second) {
     // new node has been added (no isomorphic node existed)

@@ -19,10 +19,10 @@ class RegularTableau {
  public:
   class Node {
    public:
-    Node(std::initializer_list<Literal> cube);
-    explicit Node(Cube cube);
+    Node(Cube cube);
 
-    Cube cube;
+    Cube cube;          // must be ordered // FIXME assert this
+    Renaming renaming;  // renaming for ordered cube
     std::vector<Node *> childNodes;
     std::map<Node *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
     bool closed = false;
@@ -63,25 +63,6 @@ class RegularTableau {
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;
-
-  // helper
-  static Renaming rename(Cube &cube) {
-    // calculate renaming
-    std::sort(cube.begin(), cube.end());
-    Renaming renaming;
-    for (auto &literal : cube) {
-      for (const auto &l : literal.labels()) {
-        if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
-          renaming.push_back(l);
-        }
-      }
-    }
-
-    for (auto &literal : cube) {
-      literal.rename(renaming, false);
-    }
-    return renaming;
-  }
 };
 
 namespace std {

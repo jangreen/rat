@@ -160,6 +160,17 @@ class Set {
 };
 
 /// hashing
+#include <boost/functional/hash.hpp>
+
+template <>
+struct std::hash<Literal> {
+  std::size_t operator()(const Literal &literal) const {
+    return ((hash<PredicateOperation>()(literal.operation) ^
+             (hash<CanonicalSet>()(literal.set) << 1)) >>
+            1) ^
+           (hash<bool>()(literal.negated) << 1);
+  }
+};
 
 template <>
 struct std::hash<SetOperation> {
