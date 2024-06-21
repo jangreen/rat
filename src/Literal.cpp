@@ -273,7 +273,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
     }
     case PredicateOperation::equality: {
       if (negated && *leftLabel == *rightLabel) {
-        // (\neg=): ~(e1 = e2) -> FALSE
+        // (\neg=): ~(e = e) -> FALSE
         return DNF{{BOTTOM}};
       }
       return std::nullopt;  // no rule applicable in case e1 = e2
@@ -396,6 +396,7 @@ void Literal::saturateId() {
       return;
     }
     case PredicateOperation::setNonEmptiness: {
+      return;
       auto saturatedSet = set->saturateId();
       if (set != saturatedSet) {
         set = saturatedSet;
@@ -413,6 +414,9 @@ std::string Literal::toString() const {
   output += std::to_string(saturatedId) + ", " + std::to_string(saturatedBase) + "| ";
   if (*this == BOTTOM) {
     return "FALSE";
+  }
+  if (*this == TOP) {
+    return "TRUE";
   }
   if (negated) {
     output += "~";

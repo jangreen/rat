@@ -272,7 +272,7 @@ bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    exportProof("debug");
+
     if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
          currentNode->rootParents.empty()) ||
         currentNode->closed) {
@@ -301,6 +301,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
+  tableau->exportProof("debug");
   int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
   for (size_t i = 0; i < maxSaturationBound; i++) {
     saturate(dnf);

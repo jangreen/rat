@@ -470,7 +470,11 @@ CanonicalSet Set::saturateId() const {
     assert(leftOperand != nullptr);
     if (leftOperand->operation == SetOperation::singleton) {
       if (relation->operation == RelationOperation::base) {
-        return Set::newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
+        // e.b -> (e.MasterId).b
+        auto eMasterId =
+            Set::newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
+        auto b = relation;
+        return Set::newSet(SetOperation::image, eMasterId, b);
       }
     } else {
       auto leftSaturated = leftOperand->saturateId();

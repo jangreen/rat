@@ -28,7 +28,8 @@ bool Tableau::Node::branchContains(const Literal &lit) {
     if (node->literal == lit) {
       // Found literal
       return true;
-    } else if (lit.operation != PredicateOperation::setNonEmptiness && node->literal == negatedCopy) {
+    } else if (lit.operation != PredicateOperation::setNonEmptiness &&
+               node->literal == negatedCopy) {
       // Found negated literal of atomic predicate
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
       // FIXME: std::move does not actually move but create a copy because lit is const
@@ -45,8 +46,8 @@ bool Tableau::Node::branchContains(const Literal &lit) {
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
-  assert(!dnf.empty()); // empty DNF makes no sense
-  assert(dnf.size() <= 2); // We only support binary branching for now (might change in the future)
+  assert(!dnf.empty());     // empty DNF makes no sense
+  assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
 
   if (!isLeaf()) {
     // No leaf: descend recursively
@@ -87,7 +88,6 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
       appendBranch(lit);
     }
   }
-
 }
 
 bool Tableau::Node::appendable(const Cube &cube) {
@@ -241,7 +241,6 @@ void Tableau::Node::inferModalTop() {
         labels.push_back(newLabel);
       }
     }
-
   }
 
   for (auto label : labels) {
