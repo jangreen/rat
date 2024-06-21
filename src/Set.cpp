@@ -1,6 +1,8 @@
+#include <cassert>
+#include <unordered_set>
+
 #include "Assumption.h"
 #include "Literal.h"
-#include <unordered_set>
 
 int Set::maxSingletonLabel = 0;
 
@@ -106,7 +108,7 @@ Set::Set(const Set &&other) noexcept
 
 CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                          CanonicalRelation relation, std::optional<int> label,
-                         const std::optional<std::string>& identifier) {
+                         const std::optional<std::string> &identifier) {
   static std::unordered_set<Set> canonicalizer;
   auto [iter, found] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
   return &(*iter);
@@ -558,7 +560,7 @@ CanonicalSet Set::saturateBase() const {
       return this;
     }
   }
-  CanonicalSet leftSaturated; // FIXME: Unused (should maybe used in the return?)
+  CanonicalSet leftSaturated;  // FIXME: Unused (should maybe used in the return?)
   CanonicalSet rightSaturated;
   if (leftOperand != nullptr) {
     leftSaturated = leftOperand->saturateBase();
@@ -571,7 +573,7 @@ CanonicalSet Set::saturateBase() const {
 
 CanonicalSet Set::saturateId() const {
   if (operation == SetOperation::domain || operation == SetOperation::image) {
-    assert (leftOperand != nullptr);
+    assert(leftOperand != nullptr);
     if (leftOperand->operation == SetOperation::singleton) {
       if (relation->operation == RelationOperation::base) {
         return Set::newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());

@@ -5,109 +5,127 @@
 #include <iostream>
 
 namespace {
-    // ---------------------- Anonymous helper functions ----------------------
+// ---------------------- Anonymous helper functions ----------------------
 
-    std::optional<DNF> handleIntersectionWithLeftSingleton(bool negated, CanonicalSet intersection, bool modalRules) {
-      // Handle "e & s != 0"
-      assert(intersection->operation == SetOperation::intersection);
-      CanonicalSet e = intersection->leftOperand;
-      CanonicalSet s = intersection->rightOperand;
-      // Do case distinction on the shape of "s"
-      switch (s->operation) {
-          // TODO: Handle following base cases
-          case SetOperation::base:
-            // e & A != 0  ->  e \in A
-            assert(false);  // Not implemented
-          case SetOperation::singleton:
-            // e1 & e2 != 0  ->  e1 == e2
-            assert(false);  // Not implemented
-          case SetOperation::empty:
-            // e & 0 != 0  ->  false
-            assert(false);  // Not implemented
-          case SetOperation::full:
-            // e & 1 != 0  ->  true
-            assert(false);  // Not implemented
-          case SetOperation::intersection: {
-            // e & (s1 & s2) -> e & s1 , e & s2
-            CanonicalSet e_and_s1 = Set::newSet(SetOperation::intersection, e, s->leftOperand);
-            CanonicalSet e_and_s2 = Set::newSet(SetOperation::intersection, e, s->rightOperand);
+std::optional<DNF> handleIntersectionWithEvent(CanonicalSet s, CanonicalSet e,
+                                               RuleDirection direction, bool negated,
+                                               bool modalRules) {
+  // RuleDirection::Left: handle "e & s != 0"
+  // RuleDirection::Right: handle "s & e != 0"
+  assert(e->operation == SetOperation::singleton);
+  // Do case distinction on the shape of "s"
+  switch (s->operation) {
+    // TODO: Handle following base cases
+    case SetOperation::base:
+      // e & A != 0  ->  e \in A
+      assert(false);  // Not implemented
+    case SetOperation::singleton:
+      // e1 & e2 != 0  ->  e1 == e2
+      assert(false);  // Not implemented
+    case SetOperation::empty:
+      // e & 0 != 0  ->  false
+      assert(false);  // Not implemented
+    case SetOperation::full:
+      // e & 1 != 0  ->  true
+      assert(false);  // Not implemented
+    case SetOperation::intersection: {
+      // RuleDirection::Left: e & (s1 & s2) -> e & s1 , e & s2
+      // RuleDirection::Right: (s1 & s2) & e -> s1 & e , s2 & e
+      CanonicalSet e_and_s1 = direction == RuleDirection::Left
+                                  ? Set::newSet(SetOperation::intersection, e, s->leftOperand)
+                                  : Set::newSet(SetOperation::intersection, s->leftOperand, e);
+      CanonicalSet e_and_s2 = direction == RuleDirection::Left
+                                  ? Set::newSet(SetOperation::intersection, e, s->rightOperand)
+                                  : Set::newSet(SetOperation::intersection, s->rightOperand, e);
 
-            if (negated) {
-              // Rule (~&_1L)
-              return DNF{{Literal(negated, e_and_s1), Literal(negated, e_and_s2)}};
-            } else {
-              // Rule (&_1L)
-              return DNF{{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s2)}};
-            }
-            assert(false);  // Unreachable
-          }
-          case SetOperation::choice: {
-            // FIXME: Is this dual to the intersection rule? If so, the code can be merged easily
-            // e & (s1 | s2) != 0  ->  (e & s1) | (e & s2) ???
-            assert(false);  // Not implemented
-        }
-        // -------------- Complex case --------------
-        case SetOperation::image:
-        case SetOperation::domain: {
-          // e & (s'r)     or      e & (rs')
-          CanonicalSet sp = s->leftOperand;
-          CanonicalRelation r = s->relation;
-          if (sp->operation != SetOperation::singleton) {
-            // e & s'r -> re & s'     or      e & rs' -> er & s'
-            // shortcut multiple rules
-            const SetOperation oppositeOp = s->operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
-            CanonicalSet swapped = Set::newSet(oppositeOp, e, r); // er  or  re
-            CanonicalSet swapped_and_sp = Set::newSet(SetOperation::intersection, swapped, sp);
-            return DNF{{Literal(negated, swapped_and_sp)}};
-          } else if (r->operation == RelationOperation::base) {
-            // e & (f.b)     or      e & (b.f)
-            // shortcut multiple rules
-            std::string b = *r->identifier;
-            int first = *e->label;
-            int second = *sp->label;
-            if (s->operation == SetOperation::image) {
-              std::swap(first, second);
-            }
-            // (first, second) \in b
-            return DNF{{Literal(negated, first, second, b)}};
-          } else {
-            // Question: We know that s = fr/rf, but we don't use this fact at all here.
-            // In particular, we do not refer to "f" at all anymore. Is this intended?
-
-            // non-root rule:
-            auto rightResult = s->applyRule(negated, modalRules);
-            if (!rightResult) {
-              // FIXME (TH): Is this allowed to happen?
-              return std::nullopt;
-            }
-
-            // FIXME: The comments says the same thing twice
-            // e & rightResult     or      e & rightResult
-            DNF result;
-            result.reserve(rightResult->size());
-            for (const auto &partialCube : *rightResult) {
-              Cube cube;
-              cube.reserve(partialCube.size());
-
-              for (const auto &partialLiteral : partialCube) {
-                if (std::holds_alternative<Literal>(partialLiteral)) {
-                  Literal l = std::get<Literal>(partialLiteral);
-                  cube.push_back(std::move(l));
-                } else {
-                  CanonicalSet si = std::get<CanonicalSet>(partialLiteral);
-                  CanonicalSet e_and_si = Set::newSet(SetOperation::intersection, e, si);
-                  cube.emplace_back(negated, e_and_si);
-                }
-              }
-              result.push_back(cube);
-            }
-            return result;
-          }
-        }
+      if (negated) {
+        // Rule (~&_1L)
+        return DNF{{Literal(negated, e_and_s1), Literal(negated, e_and_s2)}};
+      } else {
+        // Rule (&_1L)
+        return DNF{{Literal(negated, e_and_s1)}, {Literal(negated, e_and_s2)}};
       }
-      assert(false);
+      assert(false);  // Unreachable
     }
+    case SetOperation::choice: {
+      // FIXME: Is this dual to the intersection rule? If so, the code can be merged easily
+      // e & (s1 | s2) != 0  ->  (e & s1) | (e & s2) ???
+      assert(false);  // Not implemented
+    }
+    // -------------- Complex case --------------
+    case SetOperation::image:
+    case SetOperation::domain: {
+      // RuleDirection::Left: e & (s'r)     or      e & (rs')
+      // RuleDirection::Right: (s'r) & e    or      (rs') & e
+      CanonicalSet sp = s->leftOperand;
+      CanonicalRelation r = s->relation;
+      if (sp->operation != SetOperation::singleton) {
+        // RuleDirection::Left: e & s'r -> re & s'     or      e & rs' -> er & s'
+        // Rule (._12L)     or      Rule (._21L)
+        // RuleDirection::Right: s'r & e -> s' & re        or      rs' & e -> s' & er
+        // Rule (._12R)     or      Rule (._21R)
+        const SetOperation oppositeOp =
+            s->operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
+        CanonicalSet swapped = Set::newSet(oppositeOp, e, r);  // re   or    er
+        CanonicalSet swapped_and_sp = direction == RuleDirection::Left
+                                          ? Set::newSet(SetOperation::intersection, swapped, sp)
+                                          : Set::newSet(SetOperation::intersection, sp, swapped);
+        return DNF{{Literal(negated, swapped_and_sp)}};
+      } else if (r->operation == RelationOperation::base) {
+        // RuleDirection::Left: e & (f.b)     or      e & (b.f)
+        // RuleDirection::Right: f.b & e      or      b.f & e
+        // shortcut multiple rules
+        std::string b = *r->identifier;
+        int first = *e->label;
+        int second = *sp->label;
+        if (s->operation == SetOperation::image) {
+          std::swap(first, second);
+        }
+        if (direction == RuleDirection::Right) {
+          std::swap(first, second);
+        }
+        // (first, second) \in b
+        return DNF{{Literal(negated, first, second, b)}};
+      } else {
+        // RuleDirection::Left: e & fr     or      e & rf
+        // RuleDirection::Right: fr & e      or      rf & e
+        // -> r is not base
+        // -> apply some rule to fr    or      rf
+
+        auto sResult = s->applyRule(negated, modalRules);
+        if (!sResult) {
+          assert(false);  // Unreachable
+        }
+
+        // RuleDirection::Left: e & sResult
+        // RuleDirection::Right: sResult & e
+        DNF result;
+        result.reserve(sResult->size());
+        for (const auto &partialCube : *sResult) {
+          Cube cube;
+          cube.reserve(partialCube.size());
+
+          for (const auto &partialLiteral : partialCube) {
+            if (std::holds_alternative<Literal>(partialLiteral)) {
+              Literal l = std::get<Literal>(partialLiteral);
+              cube.push_back(std::move(l));
+            } else {
+              CanonicalSet si = std::get<CanonicalSet>(partialLiteral);
+              CanonicalSet e_and_si = direction == RuleDirection::Left
+                                          ? Set::newSet(SetOperation::intersection, e, si)
+                                          : Set::newSet(SetOperation::intersection, si, e);
+              cube.emplace_back(negated, e_and_si);
+            }
+          }
+          result.push_back(cube);
+        }
+        return result;
+      }
+    }
+  }
+  assert(false);
 }
+}  // namespace
 
 Literal::Literal(bool negated, CanonicalSet set)
     : negated(negated), operation(PredicateOperation::setNonEmptiness), set(set) {}
@@ -181,7 +199,7 @@ std::vector<int> Literal::labels() const {
       return {*leftLabel};
     }
     default:
-      assert (false);
+      assert(false);
   }
 }
 
@@ -245,105 +263,11 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       if (set->operation == SetOperation::intersection) {
         // s1 & s2 != 0
         if (set->leftOperand->operation == SetOperation::singleton) {
-          return handleIntersectionWithLeftSingleton(negated, set, modalRules);
+          return handleIntersectionWithEvent(set->rightOperand, set->leftOperand,
+                                             RuleDirection::Left, negated, modalRules);
         } else if (set->rightOperand->operation == SetOperation::singleton) {
-          // TODO: Can't we just swap the order to always have (e & s) and avoid doubling the code?
-
-          switch (set->leftOperand->operation) {
-            case SetOperation::intersection: {
-              // (s1 & s2) & e -> s1 & e , s2 & e
-              CanonicalSet e = set->rightOperand;
-              CanonicalSet s1 = set->leftOperand->leftOperand;
-              CanonicalSet s2 = set->leftOperand->rightOperand;
-              CanonicalSet s1_and_e = Set::newSet(SetOperation::intersection, s1, e);
-              CanonicalSet s2_and_e = Set::newSet(SetOperation::intersection, s2, e);
-
-              if (negated) {
-                // Rule (~&_1R)
-                DNF result = {{Literal(negated, s1_and_e), Literal(negated, s2_and_e)}};
-                return result;
-              } else {
-                // Rule (&_1R)
-                DNF result = {{Literal(negated, s1_and_e)}, {Literal(negated, s2_and_e)}};
-                return result;
-              }
-            }
-            case SetOperation::image:
-            case SetOperation::domain: {
-              // (sr) & e    or      (rs) & e
-              if (set->leftOperand->leftOperand->operation == SetOperation::singleton) {
-                // (e2.r) & e1      or      (r.e2) & e1
-                if (set->leftOperand->relation->operation == RelationOperation::base) {
-                  // (e2.b) & e1      or      (b.e2) & e1
-                  // shortcut multiple rules
-                  int e1 = *set->rightOperand->label;
-                  int e2 = *set->leftOperand->leftOperand->label;
-                  std::string b = *set->leftOperand->relation->identifier;
-                  if (set->leftOperand->operation == SetOperation::image) {
-                    // (e2.b) & e1
-                    DNF result = {{Literal(negated, e2, e1, b)}};
-                    return result;
-                  } else {
-                    // (b.e2) & e1
-                    DNF result = {{Literal(negated, e1, e2, b)}};
-                    return result;
-                  }
-                } else {
-                  // non-root rule:
-                  auto leftResult = set->leftOperand->applyRule(negated, modalRules);
-                  if (leftResult) {
-                    // leftResult & e1     or      leftResult & e1
-                    DNF result;
-                    result.reserve(leftResult->size());
-                    for (const auto &partialCube : *leftResult) {
-                      Cube cube;
-                      cube.reserve(partialCube.size());
-
-                      for (const auto &partialLiteral : partialCube) {
-                        if (std::holds_alternative<Literal>(partialLiteral)) {
-                          Literal l = std::get<Literal>(partialLiteral);
-                          cube.push_back(std::move(l));
-                        } else {
-                          CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
-                          CanonicalSet e1 = set->rightOperand;
-                          CanonicalSet s_and_e1 = Set::newSet(SetOperation::intersection, s, e1);
-                          Literal l(negated, s_and_e1);
-                          cube.push_back(std::move(l));
-                        }
-                      }
-                      result.push_back(cube);
-                    }
-                    return result;
-                  } else {
-                    return std::nullopt;
-                  }
-                }
-              } else {
-                // sr & e -> s & re        or        rs & e -> s & er
-                CanonicalSet e = set->rightOperand;
-                CanonicalSet s = set->leftOperand->leftOperand;
-                CanonicalRelation r = set->leftOperand->relation;
-                if (set->rightOperand->operation == SetOperation::image) {
-                  // sr & e -> s & re
-                  // Rule (._12R)
-                  CanonicalSet re = Set::newSet(SetOperation::domain, e, r);
-                  CanonicalSet s_and_re = Set::newSet(SetOperation::intersection, s, re);
-                  DNF result = {{Literal(negated, s_and_re)}};
-                  return result;
-                } else {
-                  // rs & e -> s & er
-                  // Rule (._21R)
-                  CanonicalSet er = Set::newSet(SetOperation::image, e, r);
-                  CanonicalSet s_and_er = Set::newSet(SetOperation::intersection, s, er);
-                  DNF result = {{Literal(negated, s_and_er)}};
-                  return result;
-                }
-              }
-            }
-            default:
-              break;
-          }
-          break;
+          return handleIntersectionWithEvent(set->leftOperand, set->rightOperand,
+                                             RuleDirection::Right, negated, modalRules);
         }
       }
       // apply non-root rules
@@ -353,7 +277,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       }
       return std::nullopt;
   }
-  assert(false); // FIXME: REACHABLE!!!
+  assert(false);  // FIXME: REACHABLE!!!
 }
 
 bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {

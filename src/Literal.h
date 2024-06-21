@@ -21,6 +21,8 @@ typedef const Set *CanonicalSet;
 // predicate for a given context
 typedef std::variant<CanonicalSet, Literal> PartialPredicate;
 
+enum RuleDirection { Left, Right };
+
 enum class PredicateOperation {
   edge,            // (e1, e2) \in a
   set,             // e1 \in A
@@ -41,7 +43,7 @@ class Literal {
 
   bool negated{};
   PredicateOperation operation;
-  CanonicalSet set{};                       // setNonEmptiness
+  CanonicalSet set{};                     // setNonEmptiness
   std::optional<int> leftLabel;           // edge, set, equality
   std::optional<int> rightLabel;          // edge, equality
   std::optional<std::string> identifier;  // edge, set
@@ -103,7 +105,7 @@ class Set {
  private:
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
-                             const std::optional<std::string>& identifier);
+                             const std::optional<std::string> &identifier);
 
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
@@ -111,14 +113,14 @@ class Set {
   static int maxSingletonLabel;  // to create globally unique labels
   static std::unordered_map<Set, const Set> canonicalSets;
   static CanonicalSet newSet(SetOperation operation);
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left); // FIXME: Unused
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left);  // FIXME: Unused
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
   static CanonicalSet newEvent(int label);
   static CanonicalSet newBaseSet(std::string &identifier);
 
   Set(const Set &other) = delete;
-  Set(const Set &&other) noexcept ;  // used for try_emplace (do not want to use copy constructor)
+  Set(const Set &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
 
   bool operator==(const Set &other) const;
 
@@ -138,8 +140,8 @@ class Set {
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
-  [[nodiscard]] std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(bool negated,
-                                                                      bool modalRules) const;
+  [[nodiscard]] std::optional<std::vector<std::vector<PartialPredicate>>> applyRule(
+      bool negated, bool modalRules) const;
   [[nodiscard]] CanonicalSet saturateId() const;
   [[nodiscard]] CanonicalSet saturateBase() const;
 
