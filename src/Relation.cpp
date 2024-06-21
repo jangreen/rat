@@ -1,14 +1,18 @@
 #include "Relation.h"
 
-#include <utility>
+#include <cassert>
 #include <unordered_set>
+#include <utility>
 
 Relation::Relation(const RelationOperation operation, CanonicalRelation left,
                    CanonicalRelation right, std::optional<std::string> identifier)
-    : operation(operation), leftOperand(left), rightOperand(right), identifier(std::move(identifier)) {}
+    : operation(operation),
+      leftOperand(left),
+      rightOperand(right),
+      identifier(std::move(identifier)) {}
 
 Relation::Relation(const Relation &&other) noexcept
-   : operation(other.operation),
+    : operation(other.operation),
       leftOperand(other.leftOperand),
       rightOperand(other.rightOperand),
       identifier(other.identifier) {}
@@ -21,13 +25,15 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
                                         CanonicalRelation right,
-                                        const std::optional<std::string>& identifier) {
+                                        const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
   static std::unordered_set<RelationOperation> operations = {
-      RelationOperation::identity, RelationOperation::cartesianProduct, RelationOperation::intersection,
-      RelationOperation::composition, RelationOperation::converse, RelationOperation::transitiveClosure,
-      RelationOperation::choice, RelationOperation::base, RelationOperation::full, RelationOperation::empty };
+      RelationOperation::identity,     RelationOperation::cartesianProduct,
+      RelationOperation::intersection, RelationOperation::composition,
+      RelationOperation::converse,     RelationOperation::transitiveClosure,
+      RelationOperation::choice,       RelationOperation::base,
+      RelationOperation::full,         RelationOperation::empty};
   assert(operations.contains(operation));
 
   const bool isBinary = (left != nullptr && right != nullptr);

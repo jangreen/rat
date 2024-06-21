@@ -244,7 +244,7 @@ std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
   }
 }
 
-DNF toDNF(bool negated, const std::vector<std::vector<PartialLiteral>> &partialDNF) {
+DNF toDNF(const Literal *context, const PartialDNF &partialDNF) {
   DNF result;
   result.reserve(partialDNF.size());
   for (const auto &partialCube : partialDNF) {
@@ -257,8 +257,7 @@ DNF toDNF(bool negated, const std::vector<std::vector<PartialLiteral>> &partialD
         cube.push_back(std::move(l));
       } else {
         CanonicalSet s = std::get<CanonicalSet>(partialLiteral);
-        Literal l(negated, s);
-        cube.push_back(std::move(l));
+        cube.push_back(context->substituteSet(s));
       }
     }
     result.push_back(cube);
@@ -294,7 +293,7 @@ std::optional<DNF> Literal::applyRule(bool modalRules) {
       // apply non-root rules
       auto result = set->applyRule(this, modalRules);
       if (result) {
-        return toDNF(negated, *result);
+        return toDNF(this, *result);
       }
       return std::nullopt;
   }
