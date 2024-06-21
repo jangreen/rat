@@ -389,6 +389,8 @@ void Literal::saturateId() {
 
       operation = PredicateOperation::setNonEmptiness;
       set = e1R_and_be2;
+      leftLabel = std::nullopt;
+      rightLabel = std::nullopt;
       identifier = std::nullopt;
       saturatedId++;
       return;
