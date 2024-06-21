@@ -7,6 +7,7 @@
 RegularTableau::Node::Node(std::initializer_list<Literal> cube) : cube(cube) {}
 RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
 
+// FIXME calculate cached lazy property
 // hashing and comparison is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
   // shortcuts
@@ -25,6 +26,7 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   return c1 == c2;
 }
 
+// FIXME: use better hash function
 size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
   size_t seed = 0;
   Cube copy = node.cube;

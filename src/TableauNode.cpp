@@ -112,6 +112,7 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral) {
   }
 }
 
+// FIXME make faster
 void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &rightLiteral) {
   if (isLeaf() && !isClosed()) {
     if (!branchContains(leftLiteral)) {
@@ -136,6 +137,7 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &righ
   }
 }
 
+// FIXME use in place
 std::optional<DNF> Tableau::Node::applyRule(bool modalRule) {
   auto result = literal.applyRule(modalRule);
   if (result) {
