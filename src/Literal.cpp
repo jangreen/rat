@@ -155,6 +155,7 @@ Literal::Literal(bool negated, int leftLabel, int rightLabel)
 
 bool Literal::operator==(const Literal &other) const {
   return operation == other.operation && negated == other.negated && set == other.set &&
+         leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
          identifier == other.identifier;
 }
 
