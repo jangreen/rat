@@ -5,20 +5,19 @@
 #include <utility>
 
 Tableau::Tableau(const Cube &initialLiterals) {
-  Node *currentNode = nullptr;
+  Node *parentNode = nullptr;
   for (const auto &literal : initialLiterals) {
-    auto newNode = std::make_unique<Node>(this, std::move(literal));
-    newNode->parentNode = currentNode;
+    Node *newNode = new Node(this, std::move(literal));
+    newNode->parentNode = parentNode;
 
-    Node *temp = newNode.get();
-    if (rootNode == nullptr) {
-      rootNode = std::move(newNode);
-    } else if (currentNode != nullptr) {
-      newNode->parentNode->leftNode = std::move(newNode);
+    if (parentNode == nullptr) {
+      rootNode = std::unique_ptr<Node>(newNode);
+    } else {
+      parentNode->leftNode = std::unique_ptr<Node>(newNode);
     }
 
-    currentNode = temp;
-    unreducedNodes.push(temp);
+    unreducedNodes.push(newNode);
+    parentNode = newNode;
   }
 }
 
@@ -27,7 +26,7 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    auto currentNode = unreducedNodes.front();
+    Node *currentNode = unreducedNodes.front();
     unreducedNodes.pop();
 
     // 1) Rules that just rewrite a single literal
@@ -39,6 +38,7 @@ bool Tableau::solve(int bound) {
     if (!currentNode->literal.isNormal()) {
       continue;
     }
+
     if (currentNode->literal.hasTopSet()) {
       // Rule (~\top_1)
       currentNode->inferModalTop();
@@ -50,7 +50,7 @@ bool Tableau::solve(int bound) {
       currentNode->inferModalAtomic();
     } else if (currentNode->literal.isPositiveEqualityPredicate()) {
       // Rule (\equiv)
-      Literal equalityLiteral = currentNode->literal;
+      Literal &equalityLiteral = currentNode->literal;
       std::optional<CanonicalSet> search, replace;
       if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
         // e1 = e2 , e1 < e2
@@ -61,14 +61,13 @@ bool Tableau::solve(int bound) {
         replace = Set::newEvent(*equalityLiteral.rightLabel);
       }
 
-      Node *temp = currentNode->parentNode;
-      while (temp != nullptr) {
-        // check if inside literal can be something inferred
-        auto newLiterals = substitute(temp->literal, *search, *replace);
+      Node *cur = currentNode;
+      while ((cur = cur->parentNode) != nullptr) {
+        // check if inside literal something can be inferred
+        auto newLiterals = substitute(cur->literal, *search, *replace);
         for (auto &literal : newLiterals) {
           currentNode->appendBranch(literal);
         }
-        temp = temp->parentNode;
       }
     }
   }
@@ -85,31 +84,33 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
   if (isClosed()) {
     return;
   }
-  if (isLeaf()) {
-    if (literal.isNormal() && literal != TOP) {
-      dnf.push_back({literal});
-    }
+
+  if (leftNode != nullptr) {
+    DNF leftDNF;
+    leftNode->dnfBuilder(leftDNF);
+    dnf.insert(dnf.end(), std::make_move_iterator(leftDNF.begin()),
+               std::make_move_iterator(leftDNF.end()));
+  }
+  if (rightNode != nullptr) {
+    DNF rightDNF;
+    rightNode->dnfBuilder(rightDNF);
+    dnf.insert(dnf.end(), std::make_move_iterator(rightDNF.begin()),
+               std::make_move_iterator(rightDNF.end()));
+  }
+
+  if (!literal.isNormal() || literal == TOP) {
+    // Ignore non-normal literals.
     return;
+  }
+
+  if (isLeaf()) {
+    dnf.push_back({literal});
   } else {
-    if (leftNode != nullptr) {
-      DNF leftDNF;
-      leftNode->dnfBuilder(leftDNF);
-      dnf.insert(dnf.end(), std::make_move_iterator(leftDNF.begin()),
-                 std::make_move_iterator(leftDNF.end()));
+    if (dnf.empty()) {
+      dnf.emplace_back();
     }
-    if (rightNode != nullptr) {
-      DNF rightDNF;
-      rightNode->dnfBuilder(rightDNF);
-      dnf.insert(dnf.end(), std::make_move_iterator(rightDNF.begin()),
-                 std::make_move_iterator(rightDNF.end()));
-    }
-    if (literal.isNormal() && literal != TOP) {
-      if (dnf.empty()) {
-        dnf.emplace_back();
-      }
-      for (auto &cube : dnf) {
-        cube.push_back(literal);
-      }
+    for (auto &cube : dnf) {
+      cube.push_back(literal);
     }
   }
 }
@@ -122,28 +123,30 @@ DNF Tableau::Node::extractDNF() const {
 
 std::optional<Literal> Tableau::applyRuleA() {
   while (!unreducedNodes.empty()) {
-    auto currentNode = unreducedNodes.front();
+    Node *currentNode = unreducedNodes.front();
     unreducedNodes.pop();
 
     auto result = currentNode->applyRule(true);
-    if (result) {
-      auto modalResult = *result;
+    if (!result) {
+      continue;
+    }
+    auto modalResult = *result;
 
-      // currently remove currentNode by replacing it with dummy
-      // this is needed for expandNode
-      currentNode->literal = TOP;
+    // currently remove currentNode by replacing it with dummy
+    // this is needed for expandNode
+    currentNode->literal = TOP;
 
-      // find atomic
-      for (const auto &cube : modalResult) {
-        // should be only one cube
-        for (const auto &literal : cube) {
-          if (literal.isPositiveEdgePredicate()) {
-            return literal;
-          }
+    // find atomic
+    for (const auto &cube : modalResult) {
+      // should be only one cube
+      for (const auto &literal : cube) {
+        if (literal.isPositiveEdgePredicate()) {
+          return literal;
         }
       }
     }
   }
+
   return std::nullopt;
 }
 

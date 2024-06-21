@@ -235,6 +235,7 @@ void Tableau::Node::inferModalTop() {
     if (!lit.isNormal() || lit.negated) {
       continue;
     }
+
     // Normal and positive literal: collect new labels
     for (auto newLabel : lit.labels()) {
       if (std::find(labels.begin(), labels.end(), newLabel) == labels.end()) {
@@ -277,6 +278,7 @@ void Tableau::Node::inferModalAtomic() {
     if (!curLit.negated || !curLit.isNormal()) {
       continue;
     }
+
     // Negated and normal lit
     // check if inside literal can be something inferred
     const auto newLiterals = substitute(curLit, search1, replace1);
