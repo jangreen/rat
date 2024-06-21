@@ -257,11 +257,9 @@
   exit(0);
 }
 
-// TODO: emptyset as set type is not supported
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitEmptyset(
     LogicParser::EmptysetContext *ctx) {
-  CanonicalRelation r = Relation::newRelation(RelationOperation::empty);
-  std::variant<CanonicalSet, CanonicalRelation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::empty);
   return result;
 }
 
