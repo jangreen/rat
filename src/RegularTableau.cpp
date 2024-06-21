@@ -30,15 +30,17 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   std::vector<int> activeLabels;
   std::vector<CanonicalSet> activeLabelBaseCombinations;
   for (const auto &literal : newCube) {
-    if (!literal.negated) {
-      auto literalLabels = literal.labels();
-      auto literalCombinations = literal.labelBaseCombinations();
-      activeLabels.insert(std::end(activeLabels), std::begin(literalLabels),
-                          std::end(literalLabels));
-      activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
-                                         std::begin(literalCombinations),
-                                         std::end(literalCombinations));
+    if (literal.negated) {
+      continue;
     }
+
+    auto literalLabels = literal.labels();
+    auto literalCombinations = literal.labelBaseCombinations();
+    activeLabels.insert(std::end(activeLabels), std::begin(literalLabels),
+                        std::end(literalLabels));
+    activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
+                                       std::begin(literalCombinations),
+                                       std::end(literalCombinations));
   }
   // (*) above
   Cube edges = std::get<0>(label);
@@ -48,37 +50,28 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
       activeLabelBaseCombinations.push_back(combination);
     }
   }
+
   // calculate equivalence class
   std::map<int, int> minimalRepresentatives;
   for (const auto &literal : std::get<0>(label)) {
-    if (literal.isPositiveEqualityPredicate()) {
-      int i = *literal.leftLabel;
-      int j = *literal.rightLabel;
+    if (!literal.isPositiveEqualityPredicate()) {
+      continue;
+    }
 
-      std::optional<int> iMin, jMin;
-      if (minimalRepresentatives.contains(i)) {
-        iMin = minimalRepresentatives.at(i);
-      } else {
-        iMin = i;
-      }
-      if (minimalRepresentatives.contains(j)) {
-        jMin = minimalRepresentatives.at(j);
-      } else {
-        jMin = j;
-      }
-      int min = std::min(*iMin, *jMin);
-      minimalRepresentatives.insert({i, min});
-      minimalRepresentatives.insert({j, min});
-    }
+    const int i = *literal.leftLabel;
+    const int j = *literal.rightLabel;
+    const int iMin = minimalRepresentatives.contains(i) ? minimalRepresentatives.at(i) : i;
+    const int jMin = minimalRepresentatives.contains(j) ? minimalRepresentatives.at(j) : j;
+    const int min = std::min(iMin, jMin);
+    minimalRepresentatives.insert({i, min});
+    minimalRepresentatives.insert({j, min});
   }
-  // calculate set of non minimal labels
-  std::vector<int> nonMinimal;
-  for (const auto &[i, representative] : minimalRepresentatives) {
-    if (i != representative) {
-      nonMinimal.push_back(i);
-    }
-  }
+
   // 2) filtering: non-active labels, non-minimal labels, and non-active combinations
+  auto isNonMinimal = [&](int label) {
+    return minimalRepresentatives[label] != label;
+  };
+
   Cube copy = std::move(newCube);
   newCube = {};
   for (const auto &literal : copy) {
@@ -86,14 +79,8 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
     auto literalCombinations = literal.labelBaseCombinations();
 
     // find intersection: nonMinimal & literalLabels
-    bool intersectionNonempty = false;
-    for (const auto nonMin : nonMinimal) {
-      if (std::find(literalLabels.begin(), literalLabels.end(), nonMin) != literalLabels.end()) {
-        // contains non Minimal label -> drop it and do not remember
-        intersectionNonempty = true;
-        break;
-      }
-    }
+    bool intersectionNonempty = std::find_if(literalLabels.begin(),literalLabels.end(),
+                                             isNonMinimal) != literalLabels.end();
     if (intersectionNonempty) {
       continue;
     }
@@ -187,7 +174,7 @@ RegularTableau::RegularTableau(const Cube &initialLiterals) {
 
 // assumptions:
 // cube is in normal form
-RegularTableau::Node *RegularTableau::addNode(Cube cube, EdgeLabel &label) {
+RegularTableau::Node *RegularTableau::addNode(const Cube& cube, EdgeLabel &label) {
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(cube);
   std::get<1>(label) = newNode->renaming;  // update edge label
