@@ -54,7 +54,7 @@ class RegularTableau {
   std::stack<Node *> unreducedNodes;
 
   bool solve();
-  Node *addNode(Cube cube, EdgeLabel &label);
+  Node *addNode(const Cube& cube, EdgeLabel &label);
   void addEdge(Node *parent, Node *child, EdgeLabel label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
