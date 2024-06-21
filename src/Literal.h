@@ -57,7 +57,7 @@ class Literal {
 
   std::optional<DNF> applyRule(bool modalRules);
   bool substitute(CanonicalSet search, CanonicalSet replace,
-                  int n);  // substitute n-th occurence
+                  int n);  // substitute n-th occurrence
   void rename(const Renaming &renaming, bool inverse);
 
   void saturateId();

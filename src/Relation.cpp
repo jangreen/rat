@@ -23,7 +23,7 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
                                         CanonicalRelation right,
                                         const std::optional<std::string>& identifier) {
   static std::unordered_set<Relation> canonicalizer;
-  auto [iter, found] = canonicalizer.emplace(operation, left, right, identifier);
+  auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
   return &(*iter);
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,

@@ -28,8 +28,8 @@ class RegularTableau {
     bool closed = false;
 
     std::vector<Node *> rootParents;  // parent nodes that are reachable by some root node
-    Node *firstParentNode = nullptr;  // for counterexample extration
-    EdgeLabel firstParentLabel;       // for counterexample extration
+    Node *firstParentNode = nullptr;  // for counterexample extraction
+    EdgeLabel firstParentLabel;       // for counterexample extraction
 
     bool printed = false;  // prevent cycling in printing
     void toDotFormat(std::ofstream &output);

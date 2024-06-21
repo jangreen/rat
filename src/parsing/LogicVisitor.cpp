@@ -92,7 +92,7 @@
     if (definitionContext->letDefinition()) {
       visitLetDefinition(definitionContext->letDefinition());
     } else if (definitionContext->letRecDefinition()) {
-      std::cout << "[Parser] Recursive defitions are not supported." << std::endl;
+      std::cout << "[Parser] Recursive definitions are not supported." << std::endl;
       exit(0);
     } else if (definitionContext->axiomDefinition()) {
       auto untypedAxiom = visitAxiomDefinition(definitionContext->axiomDefinition());
@@ -182,7 +182,7 @@
     std::variant<CanonicalSet, CanonicalRelation> result = po_r_po;
     return result;
   }
-  std::cout << "[Parser] Error: fencerel() of unkown relation." << std::endl;
+  std::cout << "[Parser] Error: fencerel() of unknown relation." << std::endl;
   exit(0);
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetSingleton(
@@ -319,7 +319,7 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetBasic(
     LogicParser::SetBasicContext *context) {
-  // TODO: lookup let definitons
+  // TODO: lookup let definitions
   std::string name = context->SETNAME()->getText();
   if (name == "E") {
     std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::full);
