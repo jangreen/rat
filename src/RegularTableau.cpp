@@ -69,7 +69,7 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
 
   // 2) filtering: non-active labels, non-minimal labels, and non-active combinations
   auto isNonMinimal = [&](int label) {
-Fi    auto iter = minimalRepresentatives.find(label);
+    auto iter = minimalRepresentatives.find(label);
     return iter != minimalRepresentatives.end() && iter->second != label;
   };
 
