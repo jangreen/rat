@@ -8,16 +8,77 @@
 #include <tuple>
 #include <utility>
 
+namespace {
+  // -------------------- Anonymous helper functions --------------------
+
+  std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
+    std::vector<int> activeLabels;
+    std::vector<CanonicalSet> activeLabelBaseCombinations;
+    for (const auto &literal : cube) {
+      if (literal.negated) {
+        continue;
+      }
+
+      auto literalLabels = literal.labels();
+      auto literalCombinations = literal.labelBaseCombinations();
+      activeLabels.insert(std::end(activeLabels), std::begin(literalLabels),
+                          std::end(literalLabels));
+      activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
+                                         std::begin(literalCombinations),
+                                         std::end(literalCombinations));
+    }
+
+    return std::make_tuple(activeLabels, activeLabelBaseCombinations);
+  }
+
+  void addActiveLabelsFromEdges(const Cube &edges, std::vector<CanonicalSet> &activeLabelBaseCombinations) {
+    for (const auto &edgeLiteral : edges) {
+      assert (edgeLiteral.operation == PredicateOperation::edge);
+      auto literalCombinations = edgeLiteral.labelBaseCombinations();
+      for (auto combination : literalCombinations) {
+        activeLabelBaseCombinations.push_back(combination);
+      }
+    }
+  }
+
+  std::map<int, int> computeMinimalRepresentatives(const Cube &cube) {
+    std::map<int, int> minimalRepresentatives;
+    for (const auto &literal : cube) {
+      if (!literal.isPositiveEqualityPredicate()) {
+        continue;
+      }
+
+      const int i = *literal.leftLabel;
+      const int j = *literal.rightLabel;
+      const int iMin = minimalRepresentatives.contains(i) ? minimalRepresentatives.at(i) : i;
+      const int jMin = minimalRepresentatives.contains(j) ? minimalRepresentatives.at(j) : j;
+      const int min = std::min(iMin, jMin);
+      minimalRepresentatives.insert({i, min});
+      minimalRepresentatives.insert({j, min});
+    }
+
+    return minimalRepresentatives;
+  }
+
+  bool isLiteralActive(const Literal &literal, const std::vector<int> &activeLabels,
+                       const std::vector<CanonicalSet> &activeLabelBaseCombinations) {
+    return isSubset(literal.labels(), activeLabels)
+           && isSubset(literal.labelBaseCombinations(), activeLabelBaseCombinations);
+  }
+
+}
+
 // helper
 // assumption: input is dnf cube
 // purges useless literals
 Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   Cube newCube;
+  Cube &edges = std::get<0>(label);
 
   // remove edge predicates and put them in the edge label
   for (const auto &literal : cube) {
     if (literal.isPositiveEdgePredicate() || literal.isPositiveEqualityPredicate()) {
-      std::get<0>(label).push_back(literal);
+      edges.push_back(literal);
     } else {
       newCube.push_back(literal);
     }
@@ -27,45 +88,11 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
   // assume already normal
   // 1) gather all active labels
-  std::vector<int> activeLabels;
-  std::vector<CanonicalSet> activeLabelBaseCombinations;
-  for (const auto &literal : newCube) {
-    if (literal.negated) {
-      continue;
-    }
-
-    auto literalLabels = literal.labels();
-    auto literalCombinations = literal.labelBaseCombinations();
-    activeLabels.insert(std::end(activeLabels), std::begin(literalLabels),
-                        std::end(literalLabels));
-    activeLabelBaseCombinations.insert(std::end(activeLabelBaseCombinations),
-                                       std::begin(literalCombinations),
-                                       std::end(literalCombinations));
-  }
-  // (*) above
-  Cube edges = std::get<0>(label);
-  for (const auto &edgeLiteral : edges) {
-    auto literalCombinations = edgeLiteral.labelBaseCombinations();
-    for (auto combination : literalCombinations) {
-      activeLabelBaseCombinations.push_back(combination);
-    }
-  }
+  auto [activeLabels, activeLabelBaseCombinations] = gatherActiveLabels(newCube);
+  addActiveLabelsFromEdges(edges, activeLabelBaseCombinations); // (*) from above
 
   // calculate equivalence class
-  std::map<int, int> minimalRepresentatives;
-  for (const auto &literal : std::get<0>(label)) {
-    if (!literal.isPositiveEqualityPredicate()) {
-      continue;
-    }
-
-    const int i = *literal.leftLabel;
-    const int j = *literal.rightLabel;
-    const int iMin = minimalRepresentatives.contains(i) ? minimalRepresentatives.at(i) : i;
-    const int jMin = minimalRepresentatives.contains(j) ? minimalRepresentatives.at(j) : j;
-    const int min = std::min(iMin, jMin);
-    minimalRepresentatives.insert({i, min});
-    minimalRepresentatives.insert({j, min});
-  }
+  const std::map<int, int> minimalRepresentatives = computeMinimalRepresentatives(std::get<0>(label));
 
   // 2) filtering: non-active labels, non-minimal labels, and non-active combinations
   auto isNonMinimal = [&](int label) {
@@ -76,18 +103,16 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   Cube copy = std::move(newCube);
   newCube = {};
   for (const auto &literal : copy) {
-    auto literalLabels = literal.labels();
-    auto literalCombinations = literal.labelBaseCombinations();
+    const auto &literalLabels = literal.labels();
 
     // find intersection: nonMinimal & literalLabels
-    bool intersectionNonempty = std::find_if(literalLabels.begin(),literalLabels.end(),
+    const bool intersectionNonempty = std::find_if(literalLabels.begin(),literalLabels.end(),
                                              isNonMinimal) != literalLabels.end();
     if (intersectionNonempty) {
       continue;
     }
 
-    if (isSubset(literalLabels, activeLabels) &&
-        isSubset(literalCombinations, activeLabelBaseCombinations)) {
+    if (isLiteralActive(literal, activeLabels, activeLabelBaseCombinations)) {
       newCube.push_back(literal);
     } else {
       // are minimal
@@ -99,26 +124,14 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
 }
 
 // return fixed node as set, otherwise nullopt if consistent
-std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const Cube &newLiterals) {
+std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, const Cube &newLiterals) {
   if (parent == nullptr) {
     return std::nullopt;
   }
   // purge also here before adding new literals // TODO: use purge function
   // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
   // 1) gather parent active labels
-  std::vector<int> parentActiveLabels;
-  std::vector<CanonicalSet> parentActiveLabelBaseCombinations;
-  for (const auto &literal : parent->cube) {
-    if (!literal.negated) {
-      auto literalLabels = literal.labels();
-      auto literalCombinations = literal.labelBaseCombinations();
-      parentActiveLabels.insert(std::end(parentActiveLabels), std::begin(literalLabels),
-                                std::end(literalLabels));
-      parentActiveLabelBaseCombinations.insert(std::end(parentActiveLabelBaseCombinations),
-                                               std::begin(literalCombinations),
-                                               std::end(literalCombinations));
-    }
-  }
+  auto [parentActiveLabels, parentActiveLabelBaseCombinations] = gatherActiveLabels(parent->cube);
   // (*) above
   for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
     for (const auto &parentLabel : parentLabels) {
@@ -141,11 +154,8 @@ std::optional<Cube> getInconsistentLiterals(RegularTableau::Node *parent, const 
   // 2) filter newLiterals for parent
   Cube filteredNewLiterals;
   for (const auto &literal : newLiterals) {
-    auto literalLabels = literal.labels();
-    auto literalCombinations = literal.labelBaseCombinations();
-
-    if (isSubset(literalLabels, parentActiveLabels) &&
-        isSubset(literalCombinations, parentActiveLabelBaseCombinations) && literal != TOP) {
+    if (literal != TOP && isLiteralActive(literal, parentActiveLabels,
+                                          parentActiveLabelBaseCombinations)) {
       filteredNewLiterals.push_back(literal);
     }
   }
@@ -191,16 +201,18 @@ RegularTableau::Node *RegularTableau::addNode(const Cube& cube, EdgeLabel &label
 }
 
 // parent == nullptr -> rootNode
-void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
+void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel& label) {
   if (parent == nullptr) {
     // root node
     rootNodes.push_back(child);
     return;
   }
 
+  const Cube &edges = std::get<0>(label);
+
   // don't add epsilon edges that already exist
   // what about other edges(with same label)?
-  if (std::get<0>(label).empty()) {
+  if (edges.empty()) {
     for (const auto &edgeLabel : child->parentNodes[parent]) {
       if (std::get<0>(edgeLabel).empty()) {
         return;
@@ -210,7 +222,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
 
   // check if consistent (otherwise fixed child is created in isInconsistent)
   // never add inconsistent edges
-  if (std::get<0>(label).empty() || !isInconsistent(parent, child, label)) {
+  if (edges.empty() || !isInconsistent(parent, child, label)) {
     // spdlog::debug(fmt::format("[Solver] Add edge  {} -> {}",
     // std::hash<Node>()(*parent),std::hash<Node>()(*child))); adding edge only add each child once
     // to child nodes
@@ -221,12 +233,12 @@ void RegularTableau::addEdge(Node *parent, Node *child, EdgeLabel label) {
     child->parentNodes[parent].push_back(label);
 
     // set first parent node if not already set & not epsilon
-    if (child->firstParentNode == nullptr && !std::get<0>(label).empty()) {
+    if (child->firstParentNode == nullptr && !edges.empty()) {
       child->firstParentNode = parent;
       child->firstParentLabel = label;
     }
 
-    if (std::get<0>(label).empty()) {
+    if (edges.empty()) {
       // if epsilon edge is added -> add shortcuts
       for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
         for (const auto &parentLabel : parentLabels) {
@@ -329,7 +341,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
 // input is edge (parent,label,child)
 // must not be part of the proof graph
 bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) {
-  if (std::get<0>(label).empty()) {  // is already fixed node to its parent (by def inconsistent)
+  auto &[edges, renaming] = label;
+  if (edges.empty()) {  // is already fixed node to its parent (by def inconsistent)
     return false;                    // should return true?
   }
   // spdlog::debug(fmt::format("[Solver] Check consistency {} -> {}",
@@ -342,13 +355,13 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   Cube converseRequest = child->cube;
   // use parent naming: label has already parent naming, rename child cube
   for (auto &literal : converseRequest) {
-    literal.rename(std::get<1>(label), true);
+    literal.rename(renaming, true);
   }
 
   Tableau calcConverseReq(converseRequest);
   // add cube of label (adding them to converseRequest is incomplete,
   // because initial contradiction are not checked)
-  for (const auto &literal : std::get<0>(label)) {
+  for (const auto &literal : edges) {
     calcConverseReq.rootNode->appendBranch(literal);
   }
 

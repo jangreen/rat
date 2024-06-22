@@ -55,7 +55,7 @@ class RegularTableau {
 
   bool solve();
   Node *addNode(const Cube& cube, EdgeLabel &label);
-  void addEdge(Node *parent, Node *child, EdgeLabel label);
+  void addEdge(Node *parent, Node *child, const EdgeLabel& label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
   static void extractCounterexample(Node *openNode);
