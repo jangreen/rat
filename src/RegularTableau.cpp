@@ -33,7 +33,6 @@ namespace {
 
   void addActiveLabelsFromEdges(const Cube &edges, std::vector<CanonicalSet> &activeLabelBaseCombinations) {
     for (const auto &edgeLiteral : edges) {
-      assert (edgeLiteral.operation == PredicateOperation::edge);
       auto literalCombinations = edgeLiteral.labelBaseCombinations();
       for (auto combination : literalCombinations) {
         activeLabelBaseCombinations.push_back(combination);
