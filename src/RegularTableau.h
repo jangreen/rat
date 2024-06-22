@@ -19,7 +19,7 @@ class RegularTableau {
  public:
   class Node {
    public:
-    Node(Cube cube);
+    explicit Node(Cube cube);
 
     Cube cube;          // must be ordered // FIXME assert this
     Renaming renaming;  // renaming for ordered cube

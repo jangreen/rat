@@ -65,6 +65,22 @@ namespace {
            && isSubset(literal.labelBaseCombinations(), activeLabelBaseCombinations);
   }
 
+  void saturateWith(DNF &dnf, const std::function<void(Literal&)>& saturationFunc) {
+    DNF newDnf;
+    for (auto &cube : dnf) {
+      // saturation phase
+      for (Literal &literal : cube) {
+        saturationFunc(literal);
+      }
+      // normalize
+      Tableau saturatedTableau{cube};
+      auto saturatedDnf = saturatedTableau.dnf();
+      newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
+                    std::make_move_iterator(saturatedDnf.end()));
+    }
+    swap(dnf, newDnf);
+  }
+
 }
 
 // helper
@@ -103,11 +119,9 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   newCube = {};
   for (const auto &literal : copy) {
     const auto &literalLabels = literal.labels();
-
-    // find intersection: nonMinimal & literalLabels
-    const bool intersectionNonempty = std::find_if(literalLabels.begin(),literalLabels.end(),
+    const bool hasNonMinimalLabel = std::find_if(literalLabels.begin(),literalLabels.end(),
                                              isNonMinimal) != literalLabels.end();
-    if (intersectionNonempty) {
+    if (hasNonMinimalLabel) {
       continue;
     }
 
@@ -134,8 +148,8 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
   // (*) above
   for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
     for (const auto &parentLabel : parentLabels) {
-      Cube edges = std::get<0>(parentLabel);
-      Renaming renaming = std::get<1>(parentLabel);
+      const Cube &edges = std::get<0>(parentLabel);
+      const Renaming &renaming = std::get<1>(parentLabel);
       for (const auto &edgeLiteral : edges) {
         auto literalCombinations = edgeLiteral.labelBaseCombinations();
         // only keep combinations with labels that are still there after renaming
@@ -158,20 +172,23 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
       filteredNewLiterals.push_back(literal);
     }
   }
-  // 3) check if new derived literal exists
-  if (!isSubset(filteredNewLiterals, parent->cube)) {
-    for (const auto &literal : parent->cube) {
-      if (std::find(filteredNewLiterals.begin(), filteredNewLiterals.end(), literal) ==
-          filteredNewLiterals.end()) {
-        filteredNewLiterals.push_back(literal);
-      }
-    }
-    // spdlog::debug(fmt::format("[Solver] Inconsistent Node  {}",
-    // std::hash<RegularTableau::Node>()(*parent))); at this point filteredNewLiterals is the
-    // alternative child
-    return filteredNewLiterals;
+
+  // 3) If no new literals, nothing to do
+  if (isSubset(filteredNewLiterals, parent->cube)) {
+    return std::nullopt;
   }
-  return std::nullopt;
+
+  // 4) We have new literals: add all literals from parent node to complete new node
+  for (const auto &literal : parent->cube) {
+    if (std::find(filteredNewLiterals.begin(), filteredNewLiterals.end(), literal) ==
+        filteredNewLiterals.end()) {
+      filteredNewLiterals.push_back(literal);
+    }
+  }
+  // spdlog::debug(fmt::format("[Solver] Inconsistent Node  {}",
+  // std::hash<RegularTableau::Node>()(*parent))); at this point filteredNewLiterals is the
+  // alternative child
+  return filteredNewLiterals;
 }
 // helper end
 
@@ -301,7 +318,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // calculate normal form
   auto dnf = tableau->dnf();
   tableau->exportProof("debug");
-  int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
+  const int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
   for (size_t i = 0; i < maxSaturationBound; i++) {
     saturate(dnf);
   }
@@ -317,11 +334,11 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   for (const auto &cube : dnf) {
     Cube droppedLiterals;
     EdgeLabel edgeLabel;
-    auto newCube = purge(cube, droppedLiterals, edgeLabel);
+    const auto newCube = purge(cube, droppedLiterals, edgeLabel);
 
     // check if immediate inconsistency exists (inconsistent literals that are immediately
     // dropped)
-    auto alternativeNode = getInconsistentLiterals(node, droppedLiterals);
+    const auto alternativeNode = getInconsistentLiterals(node, droppedLiterals);
     if (alternativeNode) {
       // create new fixed Node
       Node *fixedNode = addNode(*alternativeNode, edgeLabel);
@@ -400,34 +417,10 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
 
 void RegularTableau::saturate(DNF &dnf) {
   if (!Assumption::baseAssumptions.empty()) {
-    DNF newDnf;
-    for (auto &cube : dnf) {
-      // saturation phase
-      for (Literal &literal : cube) {
-        literal.saturateBase();
-      }
-      // normalize
-      Tableau saturatedTableau{cube};
-      auto saturatedDnf = saturatedTableau.dnf();
-      newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
-                    std::make_move_iterator(saturatedDnf.end()));
-    }
-    swap(dnf, newDnf);
+    saturateWith(dnf, &Literal::saturateBase);
   }
   if (!Assumption::idAssumptions.empty()) {
-    DNF newDnf;
-    for (auto &cube : dnf) {
-      // saturation phase
-      for (Literal &literal : cube) {
-        literal.saturateId();
-      }
-      // normalize
-      Tableau saturatedTableau{cube};
-      auto saturatedDnf = saturatedTableau.dnf();
-      newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
-                    std::make_move_iterator(saturatedDnf.end()));
-    }
-    swap(dnf, newDnf);
+    saturateWith(dnf, &Literal::saturateId);
   }
 }
 
