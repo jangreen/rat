@@ -137,7 +137,7 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand, 
     case SetOperation::choice:
     case SetOperation::intersection:
       assert(rightOperand != nullptr);
-      return leftOperand->isNormal && rightOperand->isNormal;
+      return leftOperand->isNormal() && rightOperand->isNormal();
     case SetOperation::singleton:
     case SetOperation::empty:
     case SetOperation::full:
@@ -148,7 +148,7 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand, 
     case SetOperation::image:
       return leftOperand->operation == SetOperation::singleton
                  ? relation->operation == RelationOperation::base
-                 : leftOperand->isNormal;
+                 : leftOperand->isNormal();
     default:
       throw std::logic_error("unreachable");
   }
@@ -159,14 +159,14 @@ std::vector<int> calcLabels(const SetOperation operation, const CanonicalSet lef
   switch (operation) {
     case SetOperation::intersection:
     case SetOperation::choice: {
-      auto leftLabels = leftOperand->labels;
-      auto rightLabels = rightOperand->labels;
+      auto leftLabels = leftOperand->getLabels();
+      auto rightLabels = rightOperand->getLabels();
       leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
       return leftLabels;
     }
     case SetOperation::domain:
     case SetOperation::image:
-      return leftOperand->labels;
+      return leftOperand->getLabels();
     case SetOperation::singleton:
       return {*label};
     default:
@@ -182,8 +182,8 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
   switch (operation) {
     case SetOperation::choice:
     case SetOperation::intersection: {
-      auto left = leftOperand->labelBaseCombinations;
-      auto right = rightOperand->labelBaseCombinations;
+      auto left = leftOperand->getLabelBaseCombinations();
+      auto right = rightOperand->getLabelBaseCombinations();
       left.insert(std::end(left), std::begin(right), std::end(right));
       return left;
     }
@@ -192,7 +192,7 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
       return leftOperand->operation == SetOperation::singleton &&
                      relation->operation == RelationOperation::base
                  ? std::vector{thisRef}
-                 : leftOperand->labelBaseCombinations;
+                 : leftOperand->getLabelBaseCombinations();
     }
     default:
       return {};
@@ -200,8 +200,31 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
 }
 
 bool calcHasTopSet(const SetOperation operation, const CanonicalSet leftOperand, const CanonicalSet rightOperand) {
-  return SetOperation::full == operation || (leftOperand != nullptr && leftOperand->hasTopSet) ||
-         (rightOperand != nullptr && rightOperand->hasTopSet);
+  return SetOperation::full == operation || (leftOperand != nullptr && leftOperand->hasTopSet()) ||
+         (rightOperand != nullptr && rightOperand->hasTopSet());
+}
+
+void Set::completeInitialization() const {
+  this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
+  this->_hasTopSet = calcHasTopSet(operation, leftOperand, rightOperand);
+  this->labels = calcLabels(operation, leftOperand, rightOperand, label);
+  this->labelBaseCombinations = calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
+}
+
+const bool &Set::isNormal() const {
+  return _isNormal;
+}
+
+const bool &Set::hasTopSet() const {
+  return _hasTopSet;
+}
+
+const std::vector<int> &Set::getLabels() const {
+  return labels;
+}
+
+const std::vector<CanonicalSet> &Set::getLabelBaseCombinations() const {
+  return labelBaseCombinations;
 }
 
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
@@ -212,12 +235,7 @@ Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalS
       label(label),
       leftOperand(left),
       rightOperand(right),
-      relation(relation),
-      isNormal(calcIsNormal(operation, left, right, relation)),
-      hasTopSet(calcHasTopSet(operation, left, right)),
-      labels(calcLabels(operation, left, right, label)),
-      labelBaseCombinations(
-          calcLabelBaseCombinations(operation, left, right, relation, this)) {}
+      relation(relation) {}
 
 Set::Set(const Set &&other) noexcept
     : operation(other.operation),
@@ -225,10 +243,10 @@ Set::Set(const Set &&other) noexcept
       leftOperand(other.leftOperand),
       rightOperand(other.rightOperand),
       relation(other.relation),
-      isNormal(other.isNormal),
-      hasTopSet(other.hasTopSet),
-      labels(other.labels),
-      labelBaseCombinations(other.labelBaseCombinations) {}
+      _isNormal(other._isNormal),
+      _hasTopSet(other._hasTopSet),
+      labels(std::move(other.labels)),
+      labelBaseCombinations(std::move(other.labelBaseCombinations)) {}
 
 CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
                          const CanonicalRelation relation, const std::optional<int> label,
@@ -268,6 +286,9 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, 
 #endif
   static std::unordered_set<Set> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
+  if (created) {
+    iter->completeInitialization();
+  }
   return &*iter;
 }
 
@@ -490,7 +511,6 @@ std::string Set::toString() const {
   if (cachedStringRepr) {
     return *cachedStringRepr;
   }
-
   std::string output;
   switch (operation) {
     case SetOperation::singleton:

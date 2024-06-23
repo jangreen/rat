@@ -1,4 +1,5 @@
 #include "Literal.h"
+#include "Assumption.h"
 
 #include <spdlog/spdlog.h>
 
@@ -186,14 +187,14 @@ bool Literal::isNormal() const {
          set->rightOperand->operation == SetOperation::singleton)) {
       return false;
     }
-    return set->isNormal;
+    return set->isNormal();
   }
   return true;
 }
 
 bool Literal::hasTopSet() const {
   if (operation == PredicateOperation::setNonEmptiness) {
-    return set->hasTopSet;
+    return set->hasTopSet();
   }
   return false;
 }
@@ -209,7 +210,7 @@ bool Literal::isPositiveEqualityPredicate() const {
 std::vector<int> Literal::labels() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
-      return set->labels;
+      return set->getLabels();
     }
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
@@ -226,7 +227,7 @@ std::vector<int> Literal::labels() const {
 std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
-      return set->labelBaseCombinations;
+      return set->getLabelBaseCombinations();
     }
     case PredicateOperation::edge: {
       // (e1,e2) \in b

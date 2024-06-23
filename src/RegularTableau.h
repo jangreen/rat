@@ -73,8 +73,9 @@ struct std::hash<RegularTableau::Node> {
 // TODO: move into general vector class
 template <typename T>
 bool isSubset(std::vector<T> smallerSet, std::vector<T> largerSet) {
-  std::sort(largerSet.begin(), largerSet.end());
-  std::sort(smallerSet.begin(), smallerSet.end());
-  smallerSet.erase(unique(smallerSet.begin(), smallerSet.end()), smallerSet.end());
-  return std::includes(largerSet.begin(), largerSet.end(), smallerSet.begin(), smallerSet.end());
+  std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
+    std::make_move_iterator(largerSet.end()));
+  return std::ranges::all_of(smallerSet, [&](T &element) {
+    return set.contains(element);
+  });
 };

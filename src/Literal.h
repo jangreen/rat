@@ -1,11 +1,9 @@
 #pragma once
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "Assumption.h"
 #include "Relation.h"
 
 // forward declaration
@@ -91,7 +89,7 @@ class Literal {
   static int rename(int n, const Renaming &renaming, bool inverse) {
     return inverse
                ? renaming[n]
-               : std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), n));
+               : std::distance(renaming.begin(), std::ranges::find(renaming, n));
   }
 };
 
@@ -118,7 +116,20 @@ class Set {
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
+
+  // Cached values
   mutable std::optional<std::string> cachedStringRepr;
+
+  // properties calculated for canonical sets on initialization
+  mutable bool _isNormal{};
+  mutable bool _hasTopSet{};
+  mutable std::vector<int> labels;
+  mutable std::vector<CanonicalSet> labelBaseCombinations;
+
+  // Calculates the above properties: we do not do this inside the constructor
+  //  to avoid doing it for non-canonical sets.
+  void completeInitialization() const;
+
 
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
@@ -135,18 +146,17 @@ class Set {
 
   bool operator==(const Set &other) const;
 
+  const bool &isNormal() const;
+  const bool &hasTopSet() const;
+  const std::vector<int> &getLabels() const;
+  const std::vector<CanonicalSet> &getLabelBaseCombinations() const;
+
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
   const std::optional<int> label;               // is set iff operation singleton
-  CanonicalSet const leftOperand;               // is set iff operation unary/binary
-  CanonicalSet const rightOperand;              // is set iff operation binary
-  CanonicalRelation const relation;             // is set iff domain/image
-
-  // properties calculated for canonical sets
-  const bool isNormal;
-  const bool hasTopSet;
-  const std::vector<int> labels;
-  const std::vector<CanonicalSet> labelBaseCombinations;
+  const CanonicalSet leftOperand;               // is set iff operation unary/binary
+  const CanonicalSet rightOperand;              // is set iff operation binary
+  const CanonicalRelation relation;             // is set iff domain/image
 
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;

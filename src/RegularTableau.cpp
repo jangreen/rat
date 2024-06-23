@@ -156,7 +156,7 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
         const auto literalCombinations = edgeLiteral.labelBaseCombinations();
         // only keep combinations with labels that are still there after renaming
         for (const auto combination : literalCombinations) {
-          if (isSubset(combination->labels, renaming)) {
+          if (isSubset(combination->getLabels(), renaming)) {
             // push renamed combination (using inverse of renaming)
             auto renamedCombination = combination->rename(renaming, true);
             parentActiveLabelBaseCombinations.push_back(renamedCombination);
