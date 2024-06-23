@@ -11,6 +11,11 @@
 namespace {
   // -------------------- Anonymous helper functions --------------------
 
+  template<typename T>
+  bool contains(const std::vector<T> &vector, const T &object) {
+    return std::find(vector.begin(), vector.end(), object) != vector.end();
+  }
+
   std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
     std::vector<int> activeLabels;
     std::vector<CanonicalSet> activeLabelBaseCombinations;
@@ -180,8 +185,7 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
 
   // 4) We have new literals: add all literals from parent node to complete new node
   for (const auto &literal : parent->cube) {
-    if (std::find(filteredNewLiterals.begin(), filteredNewLiterals.end(), literal) ==
-        filteredNewLiterals.end()) {
+    if (!contains(filteredNewLiterals, literal)) {
       filteredNewLiterals.push_back(literal);
     }
   }
@@ -239,45 +243,45 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel& label) 
   // check if consistent (otherwise fixed child is created in isInconsistent)
   // never add inconsistent edges
   if (edges.empty() || !isInconsistent(parent, child, label)) {
-    // spdlog::debug(fmt::format("[Solver] Add edge  {} -> {}",
-    // std::hash<Node>()(*parent),std::hash<Node>()(*child))); adding edge only add each child once
-    // to child nodes
-    auto childIt = std::find(parent->childNodes.begin(), parent->childNodes.end(), child);
-    if (childIt == parent->childNodes.end()) {
-      parent->childNodes.push_back(child);
+    return;
+  }
+
+  // spdlog::debug(fmt::format("[Solver] Add edge  {} -> {}",
+  // std::hash<Node>()(*parent),std::hash<Node>()(*child))); adding edge only add each child once
+  // to child nodes
+  if (!contains(parent->childNodes, child)) {
+    parent->childNodes.push_back(child);
+  }
+  child->parentNodes[parent].push_back(label);
+
+  // set first parent node if not already set & not epsilon
+  if (child->firstParentNode == nullptr && !edges.empty()) {
+    child->firstParentNode = parent;
+    child->firstParentLabel = label;
+  }
+
+  if (edges.empty()) {
+    // if epsilon edge is added -> add shortcuts
+    for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
+      for (const auto &parentLabel : parentLabels) {
+        addEdge(grandparentNode, child, parentLabel);
+      }
     }
-    child->parentNodes[parent].push_back(label);
-
-    // set first parent node if not already set & not epsilon
-    if (child->firstParentNode == nullptr && !edges.empty()) {
-      child->firstParentNode = parent;
-      child->firstParentLabel = label;
+    // add epsilon child of a root nodes to root nodes
+    if (contains(rootNodes, parent)) {
+      rootNodes.push_back(child);
+    }
+  } else {
+    // update rootParents of child node
+    if (!parent->rootParents.empty() || contains(rootNodes, parent)) {
+      child->rootParents.push_back(parent);
     }
 
-    if (edges.empty()) {
-      // if epsilon edge is added -> add shortcuts
-      for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
-        for (const auto &parentLabel : parentLabels) {
-          addEdge(grandparentNode, child, parentLabel);
-        }
-      }
-      // add epsilon child of a root nodes to root nodes
-      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end()) {
-        rootNodes.push_back(child);
-      }
-    } else {
-      // update rootParents of child node
-      if (std::find(rootNodes.begin(), rootNodes.end(), parent) != rootNodes.end() ||
-          !parent->rootParents.empty()) {
-        child->rootParents.push_back(parent);
-      }
-
-      // if child has epsilon edge -> add shortcuts
-      for (const auto childChild : child->childNodes) {
-        if (childChild->parentNodes[child].empty()) {
-          for (const auto &parentLabel : child->parentNodes[parent]) {
-            addEdge(parent, childChild, parentLabel);
-          }
+    // if child has epsilon edge -> add shortcuts
+    for (const auto childChild : child->childNodes) {
+      if (childChild->parentNodes[child].empty()) {
+        for (const auto &parentLabel : child->parentNodes[parent]) {
+          addEdge(parent, childChild, parentLabel);
         }
       }
     }
@@ -289,9 +293,8 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
-    if ((std::find(rootNodes.begin(), rootNodes.end(), currentNode) == rootNodes.end() &&
-         currentNode->rootParents.empty()) ||
-        currentNode->closed) {
+    if (currentNode->closed ||
+        (!contains(rootNodes, currentNode) && currentNode->rootParents.empty())) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
