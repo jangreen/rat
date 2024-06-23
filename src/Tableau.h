@@ -13,7 +13,7 @@ class Tableau {
   class Node {
    public:
     // Node(Tableau *tableau, const Literal &&literal);
-    Node(Node *parent, const Literal &literal);
+    Node(Node *parent, Literal literal);
 
     Tableau *tableau;
     Literal literal;

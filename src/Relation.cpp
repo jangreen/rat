@@ -2,33 +2,33 @@
 
 #include <cassert>
 #include <unordered_set>
-#include <utility>
 
-Relation::Relation(const RelationOperation operation, CanonicalRelation left,
-                   CanonicalRelation right, std::optional<std::string> identifier)
+Relation::Relation(const RelationOperation operation, const CanonicalRelation left,
+                   const CanonicalRelation right, std::optional<std::string> identifier)
     : operation(operation),
+      identifier(std::move(identifier)),
       leftOperand(left),
-      rightOperand(right),
-      identifier(std::move(identifier)) {}
+      rightOperand(right) {}
 
 Relation::Relation(const Relation &&other) noexcept
     : operation(other.operation),
+      identifier(other.identifier),
       leftOperand(other.leftOperand),
-      rightOperand(other.rightOperand),
-      identifier(other.identifier) {}
+      rightOperand(other.rightOperand) {}
 
 CanonicalRelation Relation::newRelation(const RelationOperation operation) {
   return newRelation(operation, nullptr, nullptr, std::nullopt);
 }
-CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left) {
+CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left) {
   return newRelation(operation, left, nullptr, std::nullopt);
 }
-CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
-                                        CanonicalRelation right,
+CanonicalRelation Relation::newRelation(const RelationOperation operation,
+                                        const CanonicalRelation left,
+                                        const CanonicalRelation right,
                                         const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
-  static std::unordered_set<RelationOperation> operations = {
+  static std::unordered_set operations = {
       RelationOperation::identity,     RelationOperation::cartesianProduct,
       RelationOperation::intersection, RelationOperation::composition,
       RelationOperation::converse,     RelationOperation::transitiveClosure,
@@ -68,8 +68,8 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation, Canon
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
   return &(*iter);
 }
-CanonicalRelation Relation::newRelation(const RelationOperation operation, CanonicalRelation left,
-                                        CanonicalRelation right) {
+CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left,
+                                        const CanonicalRelation right) {
   return newRelation(operation, left, right, std::nullopt);
 }
 CanonicalRelation Relation::newBaseRelation(std::string identifier) {

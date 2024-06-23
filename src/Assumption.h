@@ -6,9 +6,9 @@
 #include "Relation.h"
 class Assumption {
  public:
-  Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation = std::nullopt);
+  explicit Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation = std::nullopt);
 
-  CanonicalRelation const relation;               // regular, empty, identity
+  const CanonicalRelation relation;               // regular, empty, identity
   const std::optional<std::string> baseRelation;  // regular
 
   static CanonicalRelation masterIdRelation() {

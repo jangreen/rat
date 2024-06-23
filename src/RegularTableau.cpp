@@ -2,18 +2,16 @@
 
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <iostream>
 #include <map>
 #include <tuple>
-#include <utility>
 
 namespace {
   // -------------------- Anonymous helper functions --------------------
 
   template<typename T>
   bool contains(const std::vector<T> &vector, const T &object) {
-    return std::find(vector.begin(), vector.end(), object) != vector.end();
+    return std::ranges::find(vector, object) != vector.end();
   }
 
   std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
@@ -115,18 +113,17 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   const std::map<int, int> minimalRepresentatives = computeMinimalRepresentatives(std::get<0>(label));
 
   // 2) filtering: non-active labels, non-minimal labels, and non-active combinations
-  auto isNonMinimal = [&](int label) {
-    auto iter = minimalRepresentatives.find(label);
-    return iter != minimalRepresentatives.end() && iter->second != label;
+  auto isNonMinimal = [&](const int l) {
+    const auto iter = minimalRepresentatives.find(l);
+    return iter != minimalRepresentatives.end() && iter->second != l;
   };
 
-  Cube copy = std::move(newCube);
+  const Cube copy = std::move(newCube);
   newCube = {};
   for (const auto &literal : copy) {
     const auto &literalLabels = literal.labels();
-    const bool hasNonMinimalLabel = std::find_if(literalLabels.begin(),literalLabels.end(),
-                                             isNonMinimal) != literalLabels.end();
-    if (hasNonMinimalLabel) {
+    if (std::ranges::find_if(literalLabels, isNonMinimal) != literalLabels.end()) {
+      // Has non-minimal labels
       continue;
     }
 
@@ -156,9 +153,9 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
       const Cube &edges = std::get<0>(parentLabel);
       const Renaming &renaming = std::get<1>(parentLabel);
       for (const auto &edgeLiteral : edges) {
-        auto literalCombinations = edgeLiteral.labelBaseCombinations();
+        const auto literalCombinations = edgeLiteral.labelBaseCombinations();
         // only keep combinations with labels that are still there after renaming
-        for (auto combination : literalCombinations) {
+        for (const auto combination : literalCombinations) {
           if (isSubset(combination->labels, renaming)) {
             // push renamed combination (using inverse of renaming)
             auto renamedCombination = combination->rename(renaming, true);
@@ -196,7 +193,7 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent, 
 }
 // helper end
 
-RegularTableau::RegularTableau(std::initializer_list<Literal> initialLiterals)
+RegularTableau::RegularTableau(const std::initializer_list<Literal> initialLiterals)
     : RegularTableau(std::vector(initialLiterals)) {}
 RegularTableau::RegularTableau(const Cube &initialLiterals) {
   Tableau t{initialLiterals};
@@ -209,15 +206,15 @@ RegularTableau::Node *RegularTableau::addNode(const Cube& cube, EdgeLabel &label
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   auto newNode = std::make_unique<Node>(cube);
   std::get<1>(label) = newNode->renaming;  // update edge label
-  auto insertion = nodes.insert(std::move(newNode));
-  if (insertion.second) {
+  auto [iter, added] = nodes.insert(std::move(newNode));
+  if (added) {
     // new node has been added (no isomorphic node existed)
-    unreducedNodes.push(insertion.first->get());
+    unreducedNodes.push(iter->get());
 
     // spdlog::debug(fmt::format("[Solver] Add node  {}",
     // std::hash<Node>()(*insertion.first->get())));
   }
-  return insertion.first->get();
+  return iter->get();
 }
 
 // parent == nullptr -> rootNode
@@ -300,9 +297,7 @@ bool RegularTableau::solve() {
     }
 
     Tableau tableau{currentNode->cube};
-    auto atomicLiteral = tableau.applyRuleA();  // TODO: make return value boolean
-
-    if (atomicLiteral) {
+    if (tableau.applyRuleA() /* TODO: make return value boolean */) {
       expandNode(currentNode, &tableau);
     } else {
       extractCounterexample(currentNode);
@@ -341,8 +336,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
 
     // check if immediate inconsistency exists (inconsistent literals that are immediately
     // dropped)
-    const auto alternativeNode = getInconsistentLiterals(node, droppedLiterals);
-    if (alternativeNode) {
+    if (const auto alternativeNode = getInconsistentLiterals(node, droppedLiterals)) {
       // create new fixed Node
       Node *fixedNode = addNode(*alternativeNode, edgeLabel);
       addEdge(node, fixedNode, {});
@@ -359,7 +353,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
 
 // input is edge (parent,label,child)
 // must not be part of the proof graph
-bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) {
+bool RegularTableau::isInconsistent(Node *parent, const Node *child, EdgeLabel label) {
   auto &[edges, renaming] = label;
   if (edges.empty()) {  // is already fixed node to its parent (by def inconsistent)
     return false;                    // should return true?
@@ -396,7 +390,7 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
     return true;
   }
 
-  DNF dnf = calcConverseReq.rootNode->extractDNF();
+  const DNF dnf = calcConverseReq.rootNode->extractDNF();
   // each Disjunct must have some inconsistency to have an inconsistency
   // otherwise the proof for one cube without inconsistency would
   // subsume the others (which have more literals) if this is the case:
@@ -408,8 +402,7 @@ bool RegularTableau::isInconsistent(Node *parent, Node *child, EdgeLabel label) 
   }
 
   for (const auto &cube : dnf) {
-    auto alternativeNode = getInconsistentLiterals(parent, cube);
-    if (alternativeNode) {
+    if (auto alternativeNode = getInconsistentLiterals(parent, cube)) {
       // create new fixed Node
       Node *fixedNode = addNode(*alternativeNode, label);
       addEdge(parent, fixedNode, {});
@@ -427,18 +420,18 @@ void RegularTableau::saturate(DNF &dnf) {
   }
 }
 
-void RegularTableau::extractCounterexample(Node *openNode) {
+void RegularTableau::extractCounterexample(const Node *openNode) {
   std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
 
-  Node *node = openNode;
+  const Node *node = openNode;
   while (node->firstParentNode != nullptr) {
     for (const auto &edge : std::get<0>(node->firstParentLabel)) {
       int left = *edge.leftLabel;
       int right = *edge.rightLabel;
       std::string relation = *edge.identifier;
       // rename left
-      Node *renameNode = node->firstParentNode;
+      const Node *renameNode = node->firstParentNode;
       auto currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
       while (left < currentRenaming.size() && renameNode != nullptr) {
         currentRenaming = std::get<1>(renameNode->firstParentLabel);
@@ -463,7 +456,7 @@ void RegularTableau::extractCounterexample(Node *openNode) {
   counterexample.close();
 }
 
-void RegularTableau::toDotFormat(std::ofstream &output, bool allNodes) const {
+void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) const {
   for (const auto &node : nodes) {  // reset printed property
     node->printed = false;
   }

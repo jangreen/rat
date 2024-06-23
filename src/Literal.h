@@ -38,7 +38,7 @@ class Literal {
   Literal(bool negated, int leftLabel, int rightLabel);
 
   bool operator==(const Literal &other) const;
-  bool operator<(const Literal &otherSet) const;  // for sorting/hashing
+  bool operator<(const Literal &other) const;  // for sorting/hashing
 
   bool negated;
   PredicateOperation operation;
@@ -54,7 +54,7 @@ class Literal {
   [[nodiscard]] std::vector<int> labels() const;
   [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
 
-  std::optional<DNF> applyRule(bool modalRules);
+  [[nodiscard]] std::optional<DNF> applyRule(bool modalRules) const;
   // substitute n-th occurrence, TODO: -1 = all
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
   Literal substituteSet(CanonicalSet set) const;
@@ -163,7 +163,7 @@ class Set {
 
 template <>
 struct std::hash<Literal> {
-  std::size_t operator()(const Literal &literal) const {
+  std::size_t operator()(const Literal &literal) const noexcept {
     return ((hash<PredicateOperation>()(literal.operation) ^
              (hash<CanonicalSet>()(literal.set) << 1)) >>
             1) ^
@@ -173,7 +173,7 @@ struct std::hash<Literal> {
 
 template <>
 struct std::hash<SetOperation> {
-  std::size_t operator()(const SetOperation &operation) const {
+  std::size_t operator()(const SetOperation &operation) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -183,7 +183,7 @@ struct std::hash<SetOperation> {
 
 template <>
 struct std::hash<Set> {
-  std::size_t operator()(const Set &set) const {
+  std::size_t operator()(const Set &set) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;

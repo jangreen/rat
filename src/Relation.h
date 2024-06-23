@@ -56,7 +56,7 @@ class Relation {
 
 template <>
 struct std::hash<RelationOperation> {
-  std::size_t operator()(const RelationOperation &operation) const {
+  std::size_t operator()(const RelationOperation &operation) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -66,7 +66,7 @@ struct std::hash<RelationOperation> {
 
 template <>
 struct std::hash<Relation> {
-  std::size_t operator()(const Relation &relation) const {
+  std::size_t operator()(const Relation &relation) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -75,9 +75,9 @@ struct std::hash<Relation> {
     // second and third and combine them using XOR
     // and bit shifting:
 
-    return ((hash<RelationOperation>()(relation.operation) ^
-             (hash<CanonicalRelation>()(relation.leftOperand) << 1)) >>
-            1) ^
-           (hash<CanonicalRelation>()(relation.rightOperand) << 1);
+    return (hash<RelationOperation>()(relation.operation) ^
+            hash<CanonicalRelation>()(relation.leftOperand) << 1) >>
+               1 ^
+           hash<CanonicalRelation>()(relation.rightOperand) << 1;
   }
 };
