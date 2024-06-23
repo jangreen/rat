@@ -118,6 +118,7 @@ class Set {
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
+  mutable std::optional<std::string> cachedStringRepr;
 
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
@@ -192,8 +193,13 @@ struct std::hash<Set> {
     // second and third and combine them using XOR
     // and bit shifting:
 
-    return ((hash<SetOperation>()(set.operation) ^ (hash<CanonicalSet>()(set.leftOperand) << 1)) >>
-            1) ^
-           (hash<CanonicalSet>()(set.rightOperand) << 1);
+    const size_t opHash = hash<SetOperation>()(set.operation);
+    const size_t leftHash = hash<CanonicalSet>()(set.leftOperand);
+    const size_t rightHash = hash<CanonicalSet>()(set.rightOperand);
+    const size_t relHash = hash<CanonicalRelation>()(set.relation);
+    const size_t idHash = hash<std::optional<std::string>>()(set.identifier);
+    const size_t labelHash = hash<std::optional<int>>()(set.label);
+
+    return (opHash ^(leftHash << 1) >> 1) ^ (rightHash << 1) + 31*relHash + idHash + labelHash;
   }
 };

@@ -266,10 +266,9 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, 
       break;
   }
 #endif
-
   static std::unordered_set<Set> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
-  return &(*iter);
+  return &*iter;
 }
 
 CanonicalSet Set::newSet(const SetOperation operation) {
@@ -488,6 +487,10 @@ CanonicalSet Set::saturateId() const {
 }
 
 std::string Set::toString() const {
+  if (cachedStringRepr) {
+    return *cachedStringRepr;
+  }
+
   std::string output;
   switch (operation) {
     case SetOperation::singleton:
@@ -515,5 +518,6 @@ std::string Set::toString() const {
       output += "(" + leftOperand->toString() + " | " + rightOperand->toString() + ")";
       break;
   }
-  return output;
+  cachedStringRepr.emplace(std::move(output));
+  return *cachedStringRepr;
 }
