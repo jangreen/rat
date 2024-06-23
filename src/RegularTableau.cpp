@@ -239,7 +239,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel& label) 
 
   // check if consistent (otherwise fixed child is created in isInconsistent)
   // never add inconsistent edges
-  if (edges.empty() || !isInconsistent(parent, child, label)) {
+  if (!edges.empty() && isInconsistent(parent, child, label)) {
     return;
   }
 
