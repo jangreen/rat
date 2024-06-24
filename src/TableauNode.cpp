@@ -67,6 +67,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   const bool contradiction = dnf.empty();
   if (contradiction) {
     closeBranch();
+    return;
   }
   if (!isAppendable(dnf)) {
     return;
@@ -102,6 +103,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 
 void Tableau::Node::closeBranch() {
   Node *newNode = new Node(this, BOTTOM);
+  children.clear();
   children.emplace_back(std::unique_ptr<Node>(newNode));
   tableau->unreducedNodes.push(newNode);
 }
