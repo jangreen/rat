@@ -6,7 +6,7 @@ namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
 bool isAppendable(const DNF &dnf) {
-  return !dnf.empty() && std::ranges::any_of(dnf, [](const auto &cube) { return cube.empty(); });
+  return !dnf.empty() && std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
 }  // namespace
@@ -34,19 +34,6 @@ bool Tableau::Node::isClosed() const {
 
 bool Tableau::Node::isLeaf() const { return children.empty(); }
 
-bool Tableau::Node::branchPrefixContains(const Literal &lit) const {
-  const Node *node = this;
-  do {
-    if (node->literal == lit) {
-      // Found literal
-      return true;
-    }
-
-  } while ((node = node->parentNode) != nullptr);
-
-  return false;
-}
-
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
 void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
@@ -68,7 +55,8 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
 
 void Tableau::Node::removeLiteralFrom(DNF &dnf) const {
   for (auto &cube : dnf) {
-    cube.erase(std::ranges::find(cube, literal));
+    auto [begin, end] = std::ranges::remove(cube, literal);
+    cube.erase(begin, end);
   }
 }
 

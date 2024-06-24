@@ -26,7 +26,6 @@ class Tableau {
 
     [[nodiscard]] bool isClosed() const;
     [[nodiscard]] bool isLeaf() const;
-    bool branchPrefixContains(const Literal &lit) const;
     void appendBranch(const DNF &dnf);
     void appendBranch(const Cube &cube);
     void appendBranch(const Literal &literal);
