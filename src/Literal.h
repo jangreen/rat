@@ -1,11 +1,9 @@
 #pragma once
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "Assumption.h"
 #include "Relation.h"
 
 // forward declaration
@@ -38,7 +36,7 @@ class Literal {
   Literal(bool negated, int leftLabel, int rightLabel);
 
   bool operator==(const Literal &other) const;
-  bool operator<(const Literal &otherSet) const;  // for sorting/hashing
+  bool operator<(const Literal &other) const;  // for sorting/hashing
 
   bool negated;
   PredicateOperation operation;
@@ -54,7 +52,7 @@ class Literal {
   [[nodiscard]] std::vector<int> labels() const;
   [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
 
-  std::optional<DNF> applyRule(bool modalRules);
+  [[nodiscard]] std::optional<DNF> applyRule(bool modalRules) const;
   // substitute n-th occurrence, TODO: -1 = all
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
   Literal substituteSet(CanonicalSet set) const;
@@ -91,7 +89,7 @@ class Literal {
   static int rename(int n, const Renaming &renaming, bool inverse) {
     return inverse
                ? renaming[n]
-               : std::distance(renaming.begin(), std::find(renaming.begin(), renaming.end(), n));
+               : std::distance(renaming.begin(), std::ranges::find(renaming, n));
   }
 };
 
@@ -119,6 +117,20 @@ class Set {
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
 
+  // Cached values
+  mutable std::optional<std::string> cachedStringRepr;
+
+  // properties calculated for canonical sets on initialization
+  mutable bool _isNormal{};
+  mutable bool _hasTopSet{};
+  mutable std::vector<int> labels;
+  mutable std::vector<CanonicalSet> labelBaseCombinations;
+
+  // Calculates the above properties: we do not do this inside the constructor
+  //  to avoid doing it for non-canonical sets.
+  void completeInitialization() const;
+
+
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
       std::optional<int> label, std::optional<std::string> identifier);  // do not use
@@ -134,18 +146,17 @@ class Set {
 
   bool operator==(const Set &other) const;
 
+  const bool &isNormal() const;
+  const bool &hasTopSet() const;
+  const std::vector<int> &getLabels() const;
+  const std::vector<CanonicalSet> &getLabelBaseCombinations() const;
+
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
   const std::optional<int> label;               // is set iff operation singleton
-  CanonicalSet const leftOperand;               // is set iff operation unary/binary
-  CanonicalSet const rightOperand;              // is set iff operation binary
-  CanonicalRelation const relation;             // is set iff domain/image
-
-  // properties calculated for canonical sets
-  const bool isNormal;
-  const bool hasTopSet;
-  const std::vector<int> labels;
-  const std::vector<CanonicalSet> labelBaseCombinations;
+  const CanonicalSet leftOperand;               // is set iff operation unary/binary
+  const CanonicalSet rightOperand;              // is set iff operation binary
+  const CanonicalRelation relation;             // is set iff domain/image
 
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
@@ -163,7 +174,7 @@ class Set {
 
 template <>
 struct std::hash<Literal> {
-  std::size_t operator()(const Literal &literal) const {
+  std::size_t operator()(const Literal &literal) const noexcept {
     return ((hash<PredicateOperation>()(literal.operation) ^
              (hash<CanonicalSet>()(literal.set) << 1)) >>
             1) ^
@@ -173,7 +184,7 @@ struct std::hash<Literal> {
 
 template <>
 struct std::hash<SetOperation> {
-  std::size_t operator()(const SetOperation &operation) const {
+  std::size_t operator()(const SetOperation &operation) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -183,7 +194,7 @@ struct std::hash<SetOperation> {
 
 template <>
 struct std::hash<Set> {
-  std::size_t operator()(const Set &set) const {
+  std::size_t operator()(const Set &set) const noexcept {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -192,8 +203,13 @@ struct std::hash<Set> {
     // second and third and combine them using XOR
     // and bit shifting:
 
-    return ((hash<SetOperation>()(set.operation) ^ (hash<CanonicalSet>()(set.leftOperand) << 1)) >>
-            1) ^
-           (hash<CanonicalSet>()(set.rightOperand) << 1);
+    const size_t opHash = hash<SetOperation>()(set.operation);
+    const size_t leftHash = hash<CanonicalSet>()(set.leftOperand);
+    const size_t rightHash = hash<CanonicalSet>()(set.rightOperand);
+    const size_t relHash = hash<CanonicalRelation>()(set.relation);
+    const size_t idHash = hash<std::optional<std::string>>()(set.identifier);
+    const size_t labelHash = hash<std::optional<int>>()(set.label);
+
+    return (opHash ^(leftHash << 1) >> 1) ^ (rightHash << 1) + 31*relHash + idHash + labelHash;
   }
 };

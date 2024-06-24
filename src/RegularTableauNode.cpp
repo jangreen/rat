@@ -1,4 +1,3 @@
-#include <boost/functional/hash.hpp>
 #include <iostream>
 
 #include "RegularTableau.h"
@@ -12,7 +11,7 @@ RegularTableau::Node::Node(Cube cube) {
   Renaming renaming{};
   for (auto &literal : cube) {
     for (const auto &l : literal.labels()) {
-      if (std::find(renaming.begin(), renaming.end(), l) == renaming.end()) {
+      if (std::ranges::find(renaming, l) == renaming.end()) {
         renaming.push_back(l);
       }
     }
@@ -36,7 +35,7 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   return cube == otherNode.cube;
 }
 
-size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
+size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const noexcept {
   size_t seed = 0;
   for (const auto &literal : node.cube) {
     boost::hash_combine(seed, std::hash<Literal>()(literal));
@@ -74,22 +73,20 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto childNode : childNodes) {
-    auto edgeLabels = childNode->parentNodes[this];
-
-    for (const auto &edgeLabel : edgeLabels) {
+    for (const auto &[edges, labels] : childNode->parentNodes[this]) {
       output << "N" << this << " -> " << "N" << childNode << "[";
-      if (std::get<0>(edgeLabel).empty()) {
+      if (edges.empty()) {
         output << "color=\"grey\", ";
       }
       // } else if (childNode->firstParentNode == this) {
       //   output << "color=\"blue\", ";
       // }
       output << "label =\"";
-      for (const auto &edgeValue : std::get<0>(edgeLabel)) {
+      for (const auto &edgeValue : edges) {
         output << edgeValue.toString() << ", ";
       }
       output << " | ";
-      for (const auto &v : std::get<1>(edgeLabel)) {
+      for (const auto &v : labels) {
         output << v << ", ";
       }
       output << "\n\"];" << std::endl;

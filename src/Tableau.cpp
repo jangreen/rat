@@ -1,13 +1,11 @@
 #include "Tableau.h"
 
-#include <algorithm>
 #include <iostream>
-#include <utility>
 
 Tableau::Tableau(const Cube &cube) {
   Node *parentNode = nullptr;
   for (const auto &literal : cube) {
-    Node *newNode = new Node(parentNode, std::move(literal));
+    auto *newNode = new Node(parentNode, literal);
 
     if (parentNode == nullptr) {
       newNode->tableau = this;
@@ -50,8 +48,8 @@ bool Tableau::solve(int bound) {
       currentNode->inferModalAtomic();
     } else if (currentNode->literal.isPositiveEqualityPredicate()) {
       // Rule (\equiv)
-      Literal &equalityLiteral = currentNode->literal;
-      std::optional<CanonicalSet> search, replace;
+      const Literal &equalityLiteral = currentNode->literal;
+      CanonicalSet search, replace;
       if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
         // e1 = e2 , e1 < e2
         search = Set::newEvent(*equalityLiteral.rightLabel);
@@ -61,10 +59,10 @@ bool Tableau::solve(int bound) {
         replace = Set::newEvent(*equalityLiteral.rightLabel);
       }
 
-      Node *cur = currentNode;
+      const Node *cur = currentNode;
       while ((cur = cur->parentNode) != nullptr) {
         // check if inside literal something can be inferred
-        auto newLiterals = substitute(cur->literal, *search, *replace);
+        const auto newLiterals = substitute(cur->literal, search, replace);
         for (auto &literal : newLiterals) {
           currentNode->appendBranch(literal);
         }
@@ -130,14 +128,12 @@ std::optional<Literal> Tableau::applyRuleA() {
     if (!result) {
       continue;
     }
-    auto modalResult = *result;
-
     // currently remove currentNode by replacing it with dummy
     // this is needed for expandNode
     currentNode->literal = TOP;
 
     // find atomic
-    for (const auto &cube : modalResult) {
+    for (const auto &cube : *result) {
       // should be only one cube
       for (const auto &literal : cube) {
         if (literal.isPositiveEdgePredicate()) {

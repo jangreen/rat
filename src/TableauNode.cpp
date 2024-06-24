@@ -2,9 +2,9 @@
 
 #include "Tableau.h"
 
-Tableau::Node::Node(Node *parent, const Literal &literal)
+Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
-      literal(literal),
+      literal(std::move(literal)),
       parentNode(parent) {}
 
 // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
@@ -27,7 +27,9 @@ bool Tableau::Node::branchContains(const Literal &lit) {
     if (node->literal == lit) {
       // Found literal
       return true;
-    } else if (lit.operation != PredicateOperation::setNonEmptiness &&
+    }
+
+    if (lit.operation != PredicateOperation::setNonEmptiness &&
                node->literal == negatedCopy) {
       // Found negated literal of atomic predicate
       // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
@@ -91,12 +93,7 @@ bool Tableau::Node::appendable(const Cube &cube) {
   // assume that it is called only on leafs
   // predicts conjunctive literal appending returns true if it would append at least some literal
   assert(isLeaf() && !isClosed());
-  for (const auto &lit : cube) {
-    if (!branchContains(lit)) {
-      return true;
-    }
-  }
-  return false;
+  return std::ranges::any_of(cube, [&](auto lit) { return !branchContains(lit); });
 }
 
 void Tableau::Node::appendBranch(const Literal &leftLiteral) {
@@ -154,8 +151,8 @@ void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &righ
 }
 
 // FIXME use in place
-std::optional<DNF> Tableau::Node::applyRule(bool modalRule) {
-  auto result = literal.applyRule(modalRule);
+std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
+  auto const result = literal.applyRule(modalRule);
   if (!result) {
     return std::nullopt;
   }
@@ -184,7 +181,7 @@ void Tableau::Node::inferModal() {
   }
 
   // Traverse bottom-up
-  Node *cur = this;
+  const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     if (!cur->literal.isNormal() || !cur->literal.isPositiveEdgePredicate()) {
       continue;
@@ -192,25 +189,23 @@ void Tableau::Node::inferModal() {
 
     // Normal and positive edge literal
     // check if inside literal can be something inferred
-    Literal edgeLiteral = cur->literal;
+    const Literal &edgeLiteral = cur->literal;
     // (e1, e2) \in b
-    CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
-    CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
-    CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
-    CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
-    CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+    const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
+    const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+    const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+    const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+    const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
 
-    CanonicalSet search1 = e1b;
-    CanonicalSet replace1 = e2;
-    CanonicalSet search2 = be2;
-    CanonicalSet replace2 = e1;
+    const CanonicalSet search1 = e1b;
+    const CanonicalSet replace1 = e2;
+    const CanonicalSet search2 = be2;
+    const CanonicalSet replace2 = e1;
 
-    auto newLiterals = substitute(literal, search1, replace1);
-    for (auto &lit : newLiterals) {
+    for (auto &lit : substitute(literal, search1, replace1)) {
       appendBranch(lit);
     }
-    auto newLiterals2 = substitute(literal, search2, replace2);
-    for (auto &lit : newLiterals2) {
+    for (auto &lit : substitute(literal, search2, replace2)) {
       appendBranch(lit);
     }
   }
@@ -222,7 +217,7 @@ void Tableau::Node::inferModalTop() {
   }
 
   // get all labels
-  Node *cur = this;
+  const Node *cur = this;
   std::vector<int> labels;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &lit = cur->literal;
@@ -232,41 +227,39 @@ void Tableau::Node::inferModalTop() {
 
     // Normal and positive literal: collect new labels
     for (auto newLabel : lit.labels()) {
-      if (std::find(labels.begin(), labels.end(), newLabel) == labels.end()) {
+      if (std::ranges::find(labels, newLabel) == labels.end()) {
         labels.push_back(newLabel);
       }
     }
   }
 
-  for (auto label : labels) {
+  for (const auto label : labels) {
     // T -> e
-    CanonicalSet search = Set::newSet(SetOperation::full);
-    CanonicalSet replace = Set::newEvent(label);
-
-    auto newLiterals = substitute(literal, search, replace);
-    for (auto &lit : newLiterals) {
+    const CanonicalSet search = Set::newSet(SetOperation::full);
+    const CanonicalSet replace = Set::newEvent(label);
+    for (auto &lit : substitute(literal, search, replace)) {
       appendBranch(lit);
     }
   }
 }
 
 void Tableau::Node::inferModalAtomic() {
-  Literal edgeLiteral = literal;
+  const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
-  CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
-  CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
-  CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
-  CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
-  CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+  const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
+  const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+  const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+  const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+  const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
 
-  CanonicalSet search1 = e1b;
-  CanonicalSet replace1 = e2;
-  CanonicalSet search2 = be2;
-  CanonicalSet replace2 = e1;
+  const CanonicalSet search1 = e1b;
+  const CanonicalSet replace1 = e2;
+  const CanonicalSet search2 = be2;
+  const CanonicalSet replace2 = e1;
   // replace T -> e
-  CanonicalSet search12 = Set::newSet(SetOperation::full);
+  const CanonicalSet search12 = Set::newSet(SetOperation::full);
 
-  Node *cur = this;
+  const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &curLit = cur->literal;
     if (!curLit.negated || !curLit.isNormal()) {
@@ -275,20 +268,16 @@ void Tableau::Node::inferModalAtomic() {
 
     // Negated and normal lit
     // check if inside literal can be something inferred
-    const auto newLiterals = substitute(curLit, search1, replace1);
-    for (auto &lit : newLiterals) {
+    for (auto &lit : substitute(curLit, search1, replace1)) {
       appendBranch(lit);
     }
-    const auto newLiterals2 = substitute(curLit, search2, replace2);
-    for (auto &lit : newLiterals2) {
+    for (auto &lit : substitute(curLit, search2, replace2)) {
       appendBranch(lit);
     }
-    const auto newLiterals3 = substitute(curLit, search12, replace1);
-    for (auto &lit : newLiterals3) {
+    for (auto &lit : substitute(curLit, search12, replace1)) {
       appendBranch(lit);
     }
-    const auto newLiterals4 = substitute(curLit, search12, replace2);
-    for (auto &lit : newLiterals4) {
+    for (auto &lit : substitute(curLit, search12, replace2)) {
       appendBranch(lit);
     }
   }

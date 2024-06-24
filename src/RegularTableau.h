@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <memory>
 #include <stack>
 #include <string>
 #include <tuple>
@@ -19,7 +18,7 @@ class RegularTableau {
  public:
   class Node {
    public:
-    Node(Cube cube);
+    explicit Node(Cube cube);
 
     Cube cube;          // must be ordered // FIXME assert this
     Renaming renaming;  // renaming for ordered cube
@@ -55,29 +54,28 @@ class RegularTableau {
 
   bool solve();
   Node *addNode(const Cube& cube, EdgeLabel &label);
-  void addEdge(Node *parent, Node *child, EdgeLabel label);
+  void addEdge(Node *parent, Node *child, const EdgeLabel& label);
   void expandNode(Node *node, Tableau *tableau);
-  bool isInconsistent(Node *parent, Node *child, EdgeLabel label);
-  static void extractCounterexample(Node *openNode);
+  bool isInconsistent(Node *parent, const Node *child, EdgeLabel label);
+  static void extractCounterexample(const Node *openNode);
   static void saturate(DNF &dnf);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;
 };
 
-namespace std {
 template <>
-struct hash<RegularTableau::Node> {
-  std::size_t operator()(const RegularTableau::Node &node) const;
-};
-}  // namespace std
+struct std::hash<RegularTableau::Node> {
+  std::size_t operator()(const RegularTableau::Node &node) const noexcept;
+};  // namespace std
 
 // helper
 // TODO: move into general vector class
 template <typename T>
 bool isSubset(std::vector<T> smallerSet, std::vector<T> largerSet) {
-  std::sort(largerSet.begin(), largerSet.end());
-  std::sort(smallerSet.begin(), smallerSet.end());
-  smallerSet.erase(unique(smallerSet.begin(), smallerSet.end()), smallerSet.end());
-  return std::includes(largerSet.begin(), largerSet.end(), smallerSet.begin(), smallerSet.end());
+  std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
+    std::make_move_iterator(largerSet.end()));
+  return std::ranges::all_of(smallerSet, [&](T &element) {
+    return set.contains(element);
+  });
 };
