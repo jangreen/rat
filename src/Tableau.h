@@ -12,9 +12,9 @@ class Tableau {
  public:
   class Node {
    private:
-    void removeLiteralFrom(DNF &dnf) const;
     void appendBranchInternalUp(DNF &dnf) const;
     void appendBranchInternalDown(DNF &dnf);
+    void closeBranch();
 
    public:
     Node(Node *parent, Literal literal);

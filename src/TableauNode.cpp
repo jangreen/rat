@@ -6,7 +6,25 @@ namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
 bool isAppendable(const DNF &dnf) {
-  return !dnf.empty() && std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
+  return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
+}
+
+// given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
+// it removes cubes with ~l from f
+// it removes l from remaining cubes
+void reduceDNF(DNF &dnf, const Literal &literal) {
+  // remove cubes with literals ~l
+  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
+    return std::ranges::any_of(
+        cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
+  });
+  dnf.erase(begin, end);
+
+  // remove l from dnf
+  for (auto &cube : dnf) {
+    auto [begin, end] = std::ranges::remove(cube, literal);
+    cube.erase(begin, end);
+  }
 }
 
 }  // namespace
@@ -38,39 +56,32 @@ bool Tableau::Node::isLeaf() const { return children.empty(); }
 // if negated literal occurs we omit the whole cube
 void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   const Node *node = this;
-
   do {
-    // remove cubes with literals p, ~p
-    auto [begin, end] = std::ranges::remove_if(dnf, [&, this](const auto &cube) {
-      return std::ranges::find_if(cube, [&, this](const auto &cubeLiteral) {
-               return literal.isNegatedOf(cubeLiteral);
-             }) != cube.end();
-    });
-    dnf.erase(begin, end);
-
-    // remove literal from dnf
-    removeLiteralFrom(dnf);
+    reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
 }
 
-void Tableau::Node::removeLiteralFrom(DNF &dnf) const {
-  for (auto &cube : dnf) {
-    auto [begin, end] = std::ranges::remove(cube, literal);
-    cube.erase(begin, end);
-  }
-}
-
 void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
+  reduceDNF(dnf, literal);
+
+  const bool contradiction = dnf.empty();
+  if (contradiction) {
+    closeBranch();
+  }
+  if (!isAppendable(dnf)) {
+    return;
+  }
+
   if (!isLeaf()) {
     // No leaf: descend recursively
-    removeLiteralFrom(dnf);
     for (const auto &child : children) {
-      child->appendBranch(dnf);
+      DNF branchCopy(dnf);
+      child->appendBranchInternalDown(branchCopy);  // copy for each branching
     }
     return;
   }
 
-  if (isClosed() || !isAppendable(dnf)) {
+  if (isClosed()) {
     // Closed leaf: nothing to do
     return;
   }
@@ -89,21 +100,24 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   }
 }
 
+void Tableau::Node::closeBranch() {
+  Node *newNode = new Node(this, BOTTOM);
+  children.emplace_back(std::unique_ptr<Node>(newNode));
+  tableau->unreducedNodes.push(newNode);
+}
+
 void Tableau::Node::appendBranch(const DNF &dnf) {
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
 
   DNF dnfCopy(dnf);
   appendBranchInternalUp(dnfCopy);
-  if (!isAppendable(dnfCopy)) {
-    return;
-  }
   appendBranchInternalDown(dnfCopy);
 }
 
-void Tableau::Node::appendBranch(const Cube &cube) { appendBranch({cube}); }
+void Tableau::Node::appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
 
-void Tableau::Node::appendBranch(const Literal &literal) { appendBranch({literal}); }
+void Tableau::Node::appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
 
 std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   auto const result = literal.applyRule(modalRule);
