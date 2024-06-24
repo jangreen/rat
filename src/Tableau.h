@@ -12,17 +12,17 @@ class Tableau {
  public:
   class Node {
    public:
-    Node(Tableau *tableau, const Literal &&literal);
-    Node(Node *parent, const Literal &&literal);
+    // Node(Tableau *tableau, const Literal &&literal);
+    Node(Node *parent, Literal literal);
 
     Tableau *tableau;
     Literal literal;
     std::vector<std::unique_ptr<Node>> children;
     Node *parentNode = nullptr;
 
-    bool isClosed() const;
-    bool isLeaf() const;
-    bool branchContains(const Literal &literal);
+    [[nodiscard]] bool isClosed() const;
+    [[nodiscard]] bool isLeaf() const;
+    bool branchContains(const Literal &lit);
     void appendBranch(const DNF &dnf);
     bool appendable(const Cube &cube);
     void appendBranch(const Literal &literal);
@@ -33,7 +33,7 @@ class Tableau {
     void inferModalAtomic();
 
     // this method assumes that tableau is already reduced
-    DNF extractDNF() const;
+    [[nodiscard]] DNF extractDNF() const;
     void dnfBuilder(DNF &dnf) const;
 
     void toDotFormat(std::ofstream &output) const;
@@ -43,8 +43,7 @@ class Tableau {
     };
   };
 
-  Tableau(std::initializer_list<Literal> initalLiterals);
-  explicit Tableau(Cube initalLiterals);
+  explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
@@ -56,14 +55,14 @@ class Tableau {
   DNF dnf();
 
   void toDotFormat(std::ofstream &output) const;
-  void exportProof(std::string filename) const;
+  void exportProof(const std::string &filename) const;
 
   // helper
-  static Cube substitute(Literal &literal, Set &search, Set &replace) {
+  static Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
     int c = 1;
     Literal copy = literal;
     Cube newLiterals;
-    while (copy.substitute(search, replace, c) == 0) {
+    while (copy.substitute(search, replace, c)) {
       newLiterals.push_back(copy);
       copy = literal;
       c++;

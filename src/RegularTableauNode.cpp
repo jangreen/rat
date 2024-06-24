@@ -1,37 +1,44 @@
-#include <boost/functional/hash.hpp>
 #include <iostream>
 
 #include "RegularTableau.h"
 
-// TODO: when hashing all sinlgeton sets are equal, when comparing search for renaming
-RegularTableau::Node::Node(std::initializer_list<Literal> cube) : cube(cube) {}
-RegularTableau::Node::Node(Cube cube) : cube(cube) {}
+// TODO: when hashing all singleton sets are equal, when comparing search for renaming
+RegularTableau::Node::Node(Cube cube) {
+  // order cube
+  std::sort(cube.begin(), cube.end());
 
-// hashing and comparision is insensitive to label renaming
+  // calculate renaming
+  Renaming renaming{};
+  for (auto &literal : cube) {
+    for (const auto &l : literal.labels()) {
+      if (std::ranges::find(renaming, l) == renaming.end()) {
+        renaming.push_back(l);
+      }
+    }
+  }
+  this->renaming = renaming;
+
+  // rename
+  for (auto &literal : cube) {
+    literal.rename(renaming, false);
+  }
+  this->cube = std::move(cube);
+}
+
+// FIXME calculate cached lazy property
+// hashing and comparison is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {
-  // shorcuts
+  // shortcuts
   if (cube.size() != otherNode.cube.size()) {
     return false;
   }
-  // copy, sort, compare
-  Cube c1 = cube;
-  Cube c2 = otherNode.cube;
-  std::sort(c1.begin(), c1.end());
-  std::sort(c2.begin(), c2.end());
-
-  // rename
-  rename(c1);
-  rename(c2);
-  return c1 == c2;
+  return cube == otherNode.cube;
 }
 
-size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const {
+size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const noexcept {
   size_t seed = 0;
-  Cube copy = node.cube;
-  std::sort(copy.begin(), copy.end());
-  RegularTableau::rename(copy);
-  for (const auto &literal : copy) {
-    boost::hash_combine(seed, literal.toString());
+  for (const auto &literal : node.cube) {
+    boost::hash_combine(seed, std::hash<Literal>()(literal));
   }
   return seed;
 }
@@ -66,22 +73,20 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto childNode : childNodes) {
-    auto edgeLabels = childNode->parentNodes[this];
-
-    for (const auto edgeLabel : edgeLabels) {
+    for (const auto &[edges, labels] : childNode->parentNodes[this]) {
       output << "N" << this << " -> " << "N" << childNode << "[";
-      if (std::get<0>(edgeLabel).empty()) {
+      if (edges.empty()) {
         output << "color=\"grey\", ";
       }
       // } else if (childNode->firstParentNode == this) {
       //   output << "color=\"blue\", ";
       // }
       output << "label =\"";
-      for (const auto &edgeValue : std::get<0>(edgeLabel)) {
+      for (const auto &edgeValue : edges) {
         output << edgeValue.toString() << ", ";
       }
       output << " | ";
-      for (const auto &v : std::get<1>(edgeLabel)) {
+      for (const auto &v : labels) {
         output << v << ", ";
       }
       output << "\n\"];" << std::endl;

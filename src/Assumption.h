@@ -1,19 +1,26 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 #include "Relation.h"
-
-enum class AssumptionType { regular, empty, identity };
-
 class Assumption {
  public:
-  Assumption(const AssumptionType type, Relation &&relation,
-             std::optional<std::string> baseRelation = std::nullopt);
+  explicit Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation = std::nullopt);
 
-  AssumptionType type;
-  Relation relation;
-  std::optional<std::string> baseRelation;  // is set iff regular
+  const CanonicalRelation relation;               // regular, empty, identity
+  const std::optional<std::string> baseRelation;  // regular
 
-  static void markBaseRelationsAsSaturated(Relation &relation, int saturatedCount, bool base);
+  static CanonicalRelation masterIdRelation() {
+    // construct master identity CanonicalRelation
+    CanonicalRelation masterId = Relation::newRelation(RelationOperation::identity);
+    for (const auto &assumption : idAssumptions) {
+      masterId = Relation::newRelation(RelationOperation::choice, masterId, assumption.relation);
+    }
+    return masterId;
+  }
+
+  static std::vector<Assumption> emptinessAssumptions;
+  static std::vector<Assumption> idAssumptions;
+  static std::unordered_map<std::string, Assumption> baseAssumptions;
 };

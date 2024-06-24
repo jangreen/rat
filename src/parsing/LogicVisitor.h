@@ -14,22 +14,6 @@
 #include "../cat/Constraint.h"
 #include "LogicVisitor.h"
 
-/*/ helper
-Relation loadModel(const std::string &file) {
-  auto sc = Logic::parseMemoryModel(file);
-  std::optional<Relation> unionR;
-  for (auto &constraint : sc) {
-    constraint.toEmptyNormalForm();
-    Relation r = constraint.relation;
-    if (unionR) {
-      unionR = Relation(RelationOperation::choice, std::move(*unionR), std::move(r));
-    } else {
-      unionR = r;
-    }
-  }
-  return *unionR;
-}
-*/
 class Logic : LogicBaseVisitor {
  public:
   /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;
@@ -45,45 +29,46 @@ class Logic : LogicBaseVisitor {
   /*void*/ std::any visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) override;
   /*void*/ std::any visitLetRecAndDefinition(
       LogicParser::LetRecAndDefinitionContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitParentheses(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitParentheses(
       LogicParser::ParenthesesContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitTransitiveClosure(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitTransitiveClosure(
       LogicParser::TransitiveClosureContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationFencerel(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationFencerel(
       LogicParser::RelationFencerelContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitSetSingleton(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitSetSingleton(
       LogicParser::SetSingletonContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationBasic(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationBasic(
       LogicParser::RelationBasicContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationMinus(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationMinus(
       LogicParser::RelationMinusContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationDomainIdentity(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationDomainIdentity(
       LogicParser::RelationDomainIdentityContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationRangeIdentity(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationRangeIdentity(
       LogicParser::RelationRangeIdentityContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitUnion(LogicParser::UnionContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitEmptyset(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitUnion(
+      LogicParser::UnionContext *context) override;
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitEmptyset(
       LogicParser::EmptysetContext *ctx) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationInverse(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationInverse(
       LogicParser::RelationInverseContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationOptional(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationOptional(
       LogicParser::RelationOptionalContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitRelationIdentity(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationIdentity(
       LogicParser::RelationIdentityContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitCartesianProduct(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitCartesianProduct(
       LogicParser::CartesianProductContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitSetBasic(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitSetBasic(
       LogicParser::SetBasicContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitTransitiveReflexiveClosure(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitTransitiveReflexiveClosure(
       LogicParser::TransitiveReflexiveClosureContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitComposition(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitComposition(
       LogicParser::CompositionContext *context) override;
-  /*std::variant<Set, Relation>*/ std::any visitIntersection(
+  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitIntersection(
       LogicParser::IntersectionContext *context) override;
-  // /*std::variant<Set, Relation>*/ std::any visitRelationComplement(
+  // /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationComplement(
   //    LogicParser::RelationComplementContext *context) override;
 
-  static std::unordered_map<std::string, Relation> definedRelations;
+  static std::unordered_map<std::string, CanonicalRelation> definedRelations;
   static std::unordered_map<std::string, int> definedSingletons;
   static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
@@ -114,7 +99,7 @@ class Logic : LogicBaseVisitor {
     return std::any_cast<std::vector<Constraint>>(visitor.visitMcm(context));
   }
 
-  static Relation parseRelation(const std::string &relationString) {
+  static CanonicalRelation parseRelation(const std::string &relationString) {
     antlr4::ANTLRInputStream input(relationString);
     LogicLexer lexer(&input);
     antlr4::CommonTokenStream tokens(&lexer);
@@ -122,21 +107,9 @@ class Logic : LogicBaseVisitor {
 
     LogicParser::ExpressionContext *context = parser.expression();  // expect expression
     Logic visitor;
-    std::variant<Set, Relation> parsedRelation =
-        std::any_cast<std::variant<Set, Relation>>(visitor.visit(context));
-    return std::get<Relation>(parsedRelation);
-  }
-
-  static Set parseSet(const std::string &setString) {
-    antlr4::ANTLRInputStream input(setString);
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::ExpressionContext *ctx = parser.expression();
-    Logic visitor;
-    std::variant<Set, Relation> set =
-        std::any_cast<std::variant<Set, Relation>>(visitor.visit(ctx));
-    return std::get<Set>(set);
+    auto parsedRelation =
+        std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(visitor.visit(context));
+    return std::get<CanonicalRelation>(parsedRelation);
+    // FIXME: clang-tidy claims address of <parsedRelation> can escape... why?
   }
 };

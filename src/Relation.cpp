@@ -1,62 +1,84 @@
 #include "Relation.h"
 
-#include <algorithm>
+#include <cassert>
+#include <unordered_set>
 
-#include "parsing/LogicVisitor.h"
+Relation::Relation(const RelationOperation operation, const CanonicalRelation left,
+                   const CanonicalRelation right, std::optional<std::string> identifier)
+    : operation(operation),
+      identifier(std::move(identifier)),
+      leftOperand(left),
+      rightOperand(right) {}
 
-Relation::Relation(const Relation &other)
+Relation::Relation(const Relation &&other) noexcept
     : operation(other.operation),
       identifier(other.identifier),
-      saturatedId(other.saturatedId),
-      saturatedBase(other.saturatedBase) {
-  if (other.leftOperand != nullptr) {
-    leftOperand = std::make_unique<Relation>(*other.leftOperand);
+      leftOperand(other.leftOperand),
+      rightOperand(other.rightOperand) {}
+
+CanonicalRelation Relation::newRelation(const RelationOperation operation) {
+  return newRelation(operation, nullptr, nullptr, std::nullopt);
+}
+CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left) {
+  return newRelation(operation, left, nullptr, std::nullopt);
+}
+CanonicalRelation Relation::newRelation(const RelationOperation operation,
+                                        const CanonicalRelation left,
+                                        const CanonicalRelation right,
+                                        const std::optional<std::string> &identifier) {
+#if (DEBUG)
+  // ------------------ Validation ------------------
+  static std::unordered_set operations = {
+      RelationOperation::identity,     RelationOperation::cartesianProduct,
+      RelationOperation::intersection, RelationOperation::composition,
+      RelationOperation::converse,     RelationOperation::transitiveClosure,
+      RelationOperation::choice,       RelationOperation::base,
+      RelationOperation::full,         RelationOperation::empty};
+  assert(operations.contains(operation));
+
+  const bool isBinary = (left != nullptr && right != nullptr);
+  const bool isUnary = (left == nullptr) == (right != nullptr);
+  const bool isNullary = (left == nullptr && right == nullptr);
+  const bool hasId = identifier.has_value();
+  switch (operation) {
+    case RelationOperation::base:
+      assert(hasId && isNullary);
+      break;
+    case RelationOperation::identity:
+    case RelationOperation::empty:
+    case RelationOperation::full:
+      assert(!hasId && isNullary);
+      break;
+    case RelationOperation::choice:
+    case RelationOperation::intersection:
+    case RelationOperation::composition:
+      assert(!hasId && isBinary);
+      break;
+    case RelationOperation::transitiveClosure:
+    case RelationOperation::converse:
+      assert(!hasId && isUnary);
+      break;
+    case RelationOperation::cartesianProduct:
+      // TODO: Cartesian product of relations???
+      break;
   }
-  if (other.rightOperand != nullptr) {
-    rightOperand = std::make_unique<Relation>(*other.rightOperand);
-  }
+#endif
+
+  static std::unordered_set<Relation> canonicalizer;
+  auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
+  return &(*iter);
 }
-Relation &Relation::operator=(const Relation &other) {
-  Relation copy(other);
-  swap(*this, copy);
-  return *this;
+CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left,
+                                        const CanonicalRelation right) {
+  return newRelation(operation, left, right, std::nullopt);
 }
-Relation::Relation(const std::string &expression) { *this = Logic::parseRelation(expression); }
-Relation::Relation(const RelationOperation operation, const std::optional<std::string> &identifier)
-    : operation(operation), identifier(identifier), leftOperand(nullptr), rightOperand(nullptr) {}
-Relation::Relation(const RelationOperation operation, Relation &&left)
-    : operation(operation), identifier(std::nullopt), rightOperand(nullptr) {
-  leftOperand = std::make_unique<Relation>(std::move(left));
-}
-Relation::Relation(const RelationOperation operation, Relation &&left, Relation &&right)
-    : operation(operation), identifier(std::nullopt) {
-  leftOperand = std::make_unique<Relation>(std::move(left));
-  rightOperand = std::make_unique<Relation>(std::move(right));
+CanonicalRelation Relation::newBaseRelation(std::string identifier) {
+  return newRelation(RelationOperation::base, nullptr, nullptr, identifier);
 }
 
 bool Relation::operator==(const Relation &other) const {
-  if (operation != other.operation) {
-    return false;
-  }
-  if ((leftOperand == nullptr) != (other.leftOperand == nullptr)) {
-    return false;
-  }
-  if (leftOperand != nullptr && *leftOperand != *other.leftOperand) {
-    return false;
-  }
-  if ((rightOperand == nullptr) != (other.rightOperand == nullptr)) {
-    return false;
-  }
-  if (rightOperand != nullptr && *rightOperand != *other.rightOperand) {
-    return false;
-  }
-  if (identifier.has_value() != other.identifier.has_value()) {
-    return false;
-  }
-  if (identifier.has_value() && *identifier != *other.identifier) {
-    return false;
-  }
-  return true;
+  return operation == other.operation && leftOperand == other.leftOperand &&
+         rightOperand == other.rightOperand && identifier == other.identifier;
 }
 
 std::string Relation::toString() const {
@@ -90,7 +112,7 @@ std::string Relation::toString() const {
       output += "1";
       break;
     case RelationOperation::cartesianProduct:
-      output += "TODO";  // "(" + TODO: leftSet + "x" + TODO: rightSet + ")";
+      output += "TODO";  // "(" + TODO: leftRelation + "x" + TODO: rightRelation + ")";
   }
   return output;
 }

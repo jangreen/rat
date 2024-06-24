@@ -100,7 +100,9 @@
         "cinttypes": "cpp",
         "format": "cpp",
         "numeric": "cpp",
-        "test1": "c"
+        "stdfloat": "cpp",
+        "stop_token": "cpp",
+        "cfenv": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,
