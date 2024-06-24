@@ -95,7 +95,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
     Node *newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
-      newNode->parentNode->children.emplace_back(std::unique_ptr<Node>(newNode));
+      newNode->parentNode->children.emplace_back(newNode);
       tableau->unreducedNodes.push(newNode);
     }
   }
@@ -104,7 +104,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 void Tableau::Node::closeBranch() {
   Node *newNode = new Node(this, BOTTOM);
   children.clear();
-  children.emplace_back(std::unique_ptr<Node>(newNode));
+  children.emplace_back(newNode);
   tableau->unreducedNodes.push(newNode);
 }
 
