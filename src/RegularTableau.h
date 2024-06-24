@@ -30,7 +30,7 @@ class RegularTableau {
     Node *firstParentNode = nullptr;  // for counterexample extraction
     EdgeLabel firstParentLabel;       // for counterexample extraction
 
-    bool printed = false;  // prevent cycling in printing
+    bool printed = false;  // prevent cycling in printing // FIXME refactor
     void toDotFormat(std::ofstream &output);
 
     bool operator==(const Node &otherNode) const;
@@ -53,8 +53,8 @@ class RegularTableau {
   std::stack<Node *> unreducedNodes;
 
   bool solve();
-  Node *addNode(const Cube& cube, EdgeLabel &label);
-  void addEdge(Node *parent, Node *child, const EdgeLabel& label);
+  Node *addNode(const Cube &cube, EdgeLabel &label);
+  void addEdge(Node *parent, Node *child, const EdgeLabel &label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, const Node *child, EdgeLabel label);
   static void extractCounterexample(const Node *openNode);
@@ -74,8 +74,6 @@ struct std::hash<RegularTableau::Node> {
 template <typename T>
 bool isSubset(std::vector<T> smallerSet, std::vector<T> largerSet) {
   std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
-    std::make_move_iterator(largerSet.end()));
-  return std::ranges::all_of(smallerSet, [&](T &element) {
-    return set.contains(element);
-  });
+                            std::make_move_iterator(largerSet.end()));
+  return std::ranges::all_of(smallerSet, [&](T &element) { return set.contains(element); });
 };

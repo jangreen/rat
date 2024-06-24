@@ -1,126 +1,129 @@
 #include "Literal.h"
-#include "Assumption.h"
 
 #include <spdlog/spdlog.h>
 
 #include <iostream>
 
+#include "Assumption.h"
+
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
-  std::optional<DNF> handleIntersectionWithEvent(const Literal *context, const CanonicalSet s,
-                                                 const CanonicalSet e, const RuleDirection direction,
-                                                 const bool modalRules) {
-    // RuleDirection::Left: handle "e & s != 0"
-    // RuleDirection::Right: handle "s & e != 0"
-    assert(e->operation == SetOperation::singleton);
-    // Do case distinction on the shape of "s"
-    switch (s->operation) {
-      case SetOperation::base:
-        // RuleDirection::Left: e & A != 0  ->  e \in A
-        // RuleDirection::Right: A & e != 0  ->  e \in A
-        return DNF{{Literal(context->negated, *e->label, *s->identifier)}};
-      case SetOperation::singleton:
-        // RuleDirection::Left: e & f != 0  ->  e == f
-        // RuleDirection::Right: f & e != 0  ->  e == f (in both cases use same here)
-        // Rule (=)
-        return DNF{{Literal(context->negated, *e->label, *s->label)}};
-      case SetOperation::empty:
-        // RuleDirection::Left: e & 0 != 0  ->  false
-        // RuleDirection::Right: 0 & e != 0  ->  false
-        return DNF{{BOTTOM}};
-      case SetOperation::full:
-        // RuleDirection::Left: e & 1 != 0  ->  true
-        // RuleDirection::Right: 1 & e != 0  ->  true
-        return std::nullopt;  // do nothing
-      case SetOperation::intersection: {
-        // RuleDirection::Left: e & (s1 & s2) -> e & s1 , e & s2
-        // RuleDirection::Right: (s1 & s2) & e -> s1 & e , s2 & e
-        const CanonicalSet e_and_s1 = direction == RuleDirection::Left
-                                    ? Set::newSet(SetOperation::intersection, e, s->leftOperand)
-                                    : Set::newSet(SetOperation::intersection, s->leftOperand, e);
-        const CanonicalSet e_and_s2 = direction == RuleDirection::Left
-                                    ? Set::newSet(SetOperation::intersection, e, s->rightOperand)
-                                    : Set::newSet(SetOperation::intersection, s->rightOperand, e);
-        // Rule (~&_1L), Rule (&_1L)
-        return context->negated
-                   ? DNF{{context->substituteSet(e_and_s1)}, {context->substituteSet(e_and_s2)}}
-                   : DNF{{context->substituteSet(e_and_s1), context->substituteSet(e_and_s2)}};
-      }
-      case SetOperation::choice: {
-        return std::nullopt;  // handled in later function
-      }
-      // -------------- Complex case --------------
-      case SetOperation::image:
-      case SetOperation::domain: {
-        // RuleDirection::Left: e & (s'r)     or      e & (rs')
-        // RuleDirection::Right: (s'r) & e    or      (rs') & e
-        const CanonicalSet sp = s->leftOperand;
-        const CanonicalRelation r = s->relation;
-        if (sp->operation != SetOperation::singleton) {
-          // RuleDirection::Left: e & s'r -> re & s'     or      e & rs' -> er & s'
-          // Rule (._12L)     or      Rule (._21L)
-          // RuleDirection::Right: s'r & e -> s' & re        or      rs' & e -> s' & er
-          // Rule (._12R)     or      Rule (._21R)
-          const SetOperation oppositeOp =
-              s->operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
-          const CanonicalSet swapped = Set::newSet(oppositeOp, e, r);  // re   or    er
-          const CanonicalSet swapped_and_sp = direction == RuleDirection::Left
-                                            ? Set::newSet(SetOperation::intersection, swapped, sp)
-                                            : Set::newSet(SetOperation::intersection, sp, swapped);
-          return DNF{{context->substituteSet(swapped_and_sp)}};
-        } else if (r->operation == RelationOperation::base) {
-          // RuleDirection::Left: e & (f.b)     or      e & (b.f)
-          // RuleDirection::Right: f.b & e      or      b.f & e
-          // shortcut multiple rules
-          const std::string b = *r->identifier;
-          int first = *e->label;
-          int second = *sp->label;
-          if (s->operation == SetOperation::image) {
-            std::swap(first, second);
-          }
-          // (first, second) \in b
-          return DNF{{Literal(context->negated, first, second, b)}};
-        } else {
-          // RuleDirection::Left: e & fr     or      e & rf
-          // RuleDirection::Right: fr & e      or      rf & e
-          // -> r is not base
-          // -> apply some rule to fr    or      rf
-
-          const auto sResult = s->applyRule(context, modalRules);
-          if (!sResult) {
-            // no rule applicable (possible since we omit rules where true is derivable)
-            return std::nullopt;
-          }
-
-          // RuleDirection::Left: e & sResult
-          // RuleDirection::Right: sResult & e
-          DNF result;
-          result.reserve(sResult->size());
-          for (const auto &partialCube : *sResult) {
-            Cube cube;
-            cube.reserve(partialCube.size());
-
-            for (const auto &partialLiteral : partialCube) {
-              if (std::holds_alternative<Literal>(partialLiteral)) {
-                auto l = std::get<Literal>(partialLiteral);
-                cube.push_back(std::move(l));
-              } else {
-                const CanonicalSet si = std::get<CanonicalSet>(partialLiteral);
-                const CanonicalSet e_and_si = direction == RuleDirection::Left
-                                            ? Set::newSet(SetOperation::intersection, e, si)
-                                            : Set::newSet(SetOperation::intersection, si, e);
-                cube.emplace_back(context->substituteSet(e_and_si));
-              }
-            }
-            result.push_back(cube);
-          }
-          return result;
+std::optional<DNF> handleIntersectionWithEvent(const Literal *context, const CanonicalSet s,
+                                               const CanonicalSet e, const RuleDirection direction,
+                                               const bool modalRules) {
+  // RuleDirection::Left: handle "e & s != 0"
+  // RuleDirection::Right: handle "s & e != 0"
+  assert(e->operation == SetOperation::singleton);
+  // Do case distinction on the shape of "s"
+  switch (s->operation) {
+    case SetOperation::base:
+      // RuleDirection::Left: e & A != 0  ->  e \in A
+      // RuleDirection::Right: A & e != 0  ->  e \in A
+      return DNF{{Literal(context->negated, *e->label, *s->identifier)}};
+    case SetOperation::singleton:
+      // RuleDirection::Left: e & f != 0  ->  e == f
+      // RuleDirection::Right: f & e != 0  ->  e == f (in both cases use same here)
+      // Rule (=)
+      return DNF{{Literal(context->negated, *e->label, *s->label)}};
+    case SetOperation::empty:
+      // RuleDirection::Left: e & 0 != 0  ->  false
+      // RuleDirection::Right: 0 & e != 0  ->  false
+      return DNF{{BOTTOM}};
+    case SetOperation::full:
+      // RuleDirection::Left: e & 1 != 0  ->  true
+      // RuleDirection::Right: 1 & e != 0  ->  true
+      return std::nullopt;  // do nothing
+    case SetOperation::intersection: {
+      // RuleDirection::Left: e & (s1 & s2) -> e & s1 , e & s2
+      // RuleDirection::Right: (s1 & s2) & e -> s1 & e , s2 & e
+      const CanonicalSet e_and_s1 =
+          direction == RuleDirection::Left
+              ? Set::newSet(SetOperation::intersection, e, s->leftOperand)
+              : Set::newSet(SetOperation::intersection, s->leftOperand, e);
+      const CanonicalSet e_and_s2 =
+          direction == RuleDirection::Left
+              ? Set::newSet(SetOperation::intersection, e, s->rightOperand)
+              : Set::newSet(SetOperation::intersection, s->rightOperand, e);
+      // Rule (~&_1L), Rule (&_1L)
+      return context->negated
+                 ? DNF{{context->substituteSet(e_and_s1)}, {context->substituteSet(e_and_s2)}}
+                 : DNF{{context->substituteSet(e_and_s1), context->substituteSet(e_and_s2)}};
+    }
+    case SetOperation::choice: {
+      return std::nullopt;  // handled in later function
+    }
+    // -------------- Complex case --------------
+    case SetOperation::image:
+    case SetOperation::domain: {
+      // RuleDirection::Left: e & (s'r)     or      e & (rs')
+      // RuleDirection::Right: (s'r) & e    or      (rs') & e
+      const CanonicalSet sp = s->leftOperand;
+      const CanonicalRelation r = s->relation;
+      if (sp->operation != SetOperation::singleton) {
+        // RuleDirection::Left: e & s'r -> re & s'     or      e & rs' -> er & s'
+        // Rule (._12L)     or      Rule (._21L)
+        // RuleDirection::Right: s'r & e -> s' & re        or      rs' & e -> s' & er
+        // Rule (._12R)     or      Rule (._21R)
+        const SetOperation oppositeOp =
+            s->operation == SetOperation::image ? SetOperation::domain : SetOperation::image;
+        const CanonicalSet swapped = Set::newSet(oppositeOp, e, r);  // re   or    er
+        const CanonicalSet swapped_and_sp =
+            direction == RuleDirection::Left ? Set::newSet(SetOperation::intersection, swapped, sp)
+                                             : Set::newSet(SetOperation::intersection, sp, swapped);
+        return DNF{{context->substituteSet(swapped_and_sp)}};
+      } else if (r->operation == RelationOperation::base) {
+        // RuleDirection::Left: e & (f.b)     or      e & (b.f)
+        // RuleDirection::Right: f.b & e      or      b.f & e
+        // shortcut multiple rules
+        const std::string b = *r->identifier;
+        int first = *e->label;
+        int second = *sp->label;
+        if (s->operation == SetOperation::image) {
+          std::swap(first, second);
         }
+        // (first, second) \in b
+        return DNF{{Literal(context->negated, first, second, b)}};
+      } else {
+        // RuleDirection::Left: e & fr     or      e & rf
+        // RuleDirection::Right: fr & e      or      rf & e
+        // -> r is not base
+        // -> apply some rule to fr    or      rf
+
+        const auto sResult = s->applyRule(context, modalRules);
+        if (!sResult) {
+          // no rule applicable (possible since we omit rules where true is derivable)
+          return std::nullopt;
+        }
+
+        // RuleDirection::Left: e & sResult
+        // RuleDirection::Right: sResult & e
+        DNF result;
+        result.reserve(sResult->size());
+        for (const auto &partialCube : *sResult) {
+          Cube cube;
+          cube.reserve(partialCube.size());
+
+          for (const auto &partialLiteral : partialCube) {
+            if (std::holds_alternative<Literal>(partialLiteral)) {
+              auto l = std::get<Literal>(partialLiteral);
+              cube.push_back(std::move(l));
+            } else {
+              const CanonicalSet si = std::get<CanonicalSet>(partialLiteral);
+              const CanonicalSet e_and_si = direction == RuleDirection::Left
+                                                ? Set::newSet(SetOperation::intersection, e, si)
+                                                : Set::newSet(SetOperation::intersection, si, e);
+              cube.emplace_back(context->substituteSet(e_and_si));
+            }
+          }
+          result.push_back(cube);
+        }
+        return result;
       }
     }
-    throw std::logic_error("unreachable");
   }
+  throw std::logic_error("unreachable");
+}
 
 }  // namespace
 
@@ -178,6 +181,12 @@ bool Literal::operator<(const Literal &other) const {
   //  If you use this in any performance critical part, you should change this.
   // sort lexicographically
   return toString() < other.toString();
+}
+
+bool Literal::isNegatedOf(const Literal &other) const {
+  return operation == other.operation && negated != other.negated && set == other.set &&
+         leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
+         identifier == other.identifier;
 }
 
 bool Literal::isNormal() const {

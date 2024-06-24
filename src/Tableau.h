@@ -11,8 +11,12 @@
 class Tableau {
  public:
   class Node {
+   private:
+    void removeLiteralFrom(DNF &dnf) const;
+    void appendBranchInternalUp(DNF &dnf) const;
+    void appendBranchInternalDown(DNF &dnf);
+
    public:
-    // Node(Tableau *tableau, const Literal &&literal);
     Node(Node *parent, Literal literal);
 
     Tableau *tableau;
@@ -22,11 +26,10 @@ class Tableau {
 
     [[nodiscard]] bool isClosed() const;
     [[nodiscard]] bool isLeaf() const;
-    bool branchContains(const Literal &lit);
+    bool branchPrefixContains(const Literal &lit) const;
     void appendBranch(const DNF &dnf);
-    bool appendable(const Cube &cube);
+    void appendBranch(const Cube &cube);
     void appendBranch(const Literal &literal);
-    void appendBranch(const Literal &leftLiteral, const Literal &rightLiteral);
     std::optional<DNF> applyRule(bool modalRule = false);
     void inferModal();
     void inferModalTop();

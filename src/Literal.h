@@ -37,10 +37,11 @@ class Literal {
 
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &other) const;  // for sorting/hashing
+  bool isNegatedOf(const Literal &other) const;
 
   bool negated;
   PredicateOperation operation;
-  CanonicalSet set;                     // setNonEmptiness
+  CanonicalSet set;                       // setNonEmptiness
   std::optional<int> leftLabel;           // edge, set, equality
   std::optional<int> rightLabel;          // edge, equality
   std::optional<std::string> identifier;  // edge, set
@@ -87,9 +88,7 @@ class Literal {
   }
 
   static int rename(int n, const Renaming &renaming, bool inverse) {
-    return inverse
-               ? renaming[n]
-               : std::distance(renaming.begin(), std::ranges::find(renaming, n));
+    return inverse ? renaming[n] : std::distance(renaming.begin(), std::ranges::find(renaming, n));
   }
 };
 
@@ -130,11 +129,10 @@ class Set {
   //  to avoid doing it for non-canonical sets.
   void completeInitialization() const;
 
-
  public:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
       std::optional<int> label, std::optional<std::string> identifier);  // do not use
-  static int maxSingletonLabel;                             // to create globally unique labels
+  static int maxSingletonLabel;  // to create globally unique labels
   static CanonicalSet newSet(SetOperation operation);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
@@ -210,6 +208,6 @@ struct std::hash<Set> {
     const size_t idHash = hash<std::optional<std::string>>()(set.identifier);
     const size_t labelHash = hash<std::optional<int>>()(set.label);
 
-    return (opHash ^(leftHash << 1) >> 1) ^ (rightHash << 1) + 31*relHash + idHash + labelHash;
+    return (opHash ^ (leftHash << 1) >> 1) ^ (rightHash << 1) + 31 * relHash + idHash + labelHash;
   }
 };

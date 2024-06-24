@@ -2,6 +2,15 @@
 
 #include "Tableau.h"
 
+namespace {
+// ---------------------- Anonymous helper functions ----------------------
+
+bool isAppendable(const DNF &dnf) {
+  return !dnf.empty() && std::ranges::any_of(dnf, [](const auto &cube) { return cube.empty(); });
+}
+
+}  // namespace
+
 Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
@@ -25,10 +34,7 @@ bool Tableau::Node::isClosed() const {
 
 bool Tableau::Node::isLeaf() const { return children.empty(); }
 
-bool Tableau::Node::branchContains(const Literal &lit) {
-  Literal negatedCopy(lit);
-  negatedCopy.negated = !negatedCopy.negated;
-
+bool Tableau::Node::branchPrefixContains(const Literal &lit) const {
   const Node *node = this;
   do {
     if (node->literal == lit) {
@@ -36,116 +42,80 @@ bool Tableau::Node::branchContains(const Literal &lit) {
       return true;
     }
 
-    if (lit.operation != PredicateOperation::setNonEmptiness && node->literal == negatedCopy) {
-      // Found negated literal of atomic predicate
-      // Rule (\bot_0): check if p & ~p (only in case of atomic predicate)
-      auto *newNode = new Node(this, lit);
-      auto *newNodeBot = new Node(newNode, BOTTOM);
-      children.emplace_back(newNodeBot);
-      newNode->children.emplace_back(newNode);
-      return true;
-    }
   } while ((node = node->parentNode) != nullptr);
 
   return false;
 }
 
-void Tableau::Node::appendBranch(const DNF &dnf) {
-  assert(!dnf.empty());     // empty DNF makes no sense
-  assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
+// deletes literals in dnf that are already in prefix
+// if negated literal occurs we omit the whole cube
+void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
+  const Node *node = this;
 
+  do {
+    // remove cubes with literals p, ~p
+    auto [begin, end] = std::ranges::remove_if(dnf, [&, this](const auto &cube) {
+      return std::ranges::find_if(cube, [&, this](const auto &cubeLiteral) {
+               return literal.isNegatedOf(cubeLiteral);
+             }) != cube.end();
+    });
+    dnf.erase(begin, end);
+
+    // remove literal from dnf
+    removeLiteralFrom(dnf);
+  } while ((node = node->parentNode) != nullptr);
+}
+
+void Tableau::Node::removeLiteralFrom(DNF &dnf) const {
+  for (auto &cube : dnf) {
+    cube.erase(std::ranges::find(cube, literal));
+  }
+}
+
+void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   if (!isLeaf()) {
     // No leaf: descend recursively
+    removeLiteralFrom(dnf);
     for (const auto &child : children) {
       child->appendBranch(dnf);
     }
     return;
   }
 
-  if (isClosed()) {
+  if (isClosed() || !isAppendable(dnf)) {
     // Closed leaf: nothing to do
     return;
   }
+
+  assert(isLeaf() && !isClosed() && isAppendable(dnf));
 
   // Open leaf: append
-  if (dnf.size() == 2) {
-    // only append if all resulting branches have new literals
-    if (!appendable(dnf[0]) || !appendable(dnf[1])) {
-      return;
-    }
-
-    // trick: lift disjunctive appendBranch to sets
-    for (const auto &lit : dnf[1]) {
-      appendBranch(lit);
-    }
-    auto temp = std::move(children.back());
-    children.pop_back();
-    for (const auto &lit : dnf[0]) {
-      appendBranch(lit);
-    }
-    children.push_back(std::move(temp));
-  } else {
-    assert(dnf.size() == 1);
-    for (const auto &lit : dnf[0]) {
-      appendBranch(lit);
+  // transform dnf into a tableau and append it
+  for (const auto &cube : dnf) {
+    Node *newNode = this;
+    for (const auto &literal : cube) {
+      newNode = new Node(newNode, literal);
+      newNode->parentNode->children.emplace_back(std::unique_ptr<Node>(newNode));
+      tableau->unreducedNodes.push(newNode);
     }
   }
 }
 
-bool Tableau::Node::appendable(const Cube &cube) {
-  // assume that it is called only on leafs
-  // predicts conjunctive literal appending returns true if it would append at least some literal
-  assert(isLeaf() && !isClosed());
-  return std::ranges::any_of(cube, [&](auto lit) { return !branchContains(lit); });
+void Tableau::Node::appendBranch(const DNF &dnf) {
+  assert(!dnf.empty());     // empty DNF makes no sense
+  assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
+
+  DNF dnfCopy(dnf);
+  appendBranchInternalUp(dnfCopy);
+  if (!isAppendable(dnfCopy)) {
+    return;
+  }
+  appendBranchInternalDown(dnfCopy);
 }
 
-void Tableau::Node::appendBranch(const Literal &leftLiteral) {
-  if (!isLeaf()) {
-    // No leaf: descend recursively
-    for (const auto &child : children) {
-      child->appendBranch(literal);
-    }
-    return;
-  }
+void Tableau::Node::appendBranch(const Cube &cube) { appendBranch({cube}); }
 
-  if (isClosed() || branchContains(leftLiteral)) {
-    // Closed leaf or literal already exists: do nothing
-    return;
-  }
-
-  // Open leaf and new literal: append
-  Node *newNode = new Node(this, leftLiteral);
-  children.emplace_back(newNode);
-  tableau->unreducedNodes.push(newNode);
-}
-
-// FIXME make faster
-void Tableau::Node::appendBranch(const Literal &leftLiteral, const Literal &rightLiteral) {
-  if (!isLeaf()) {
-    // No leaf: descend recursively
-    for (const auto &child : children) {
-      child->appendBranch(leftLiteral, rightLiteral);
-    }
-    return;
-  }
-
-  if (isClosed()) {
-    // Closed leaf: nothing to do
-    return;
-  }
-
-  // Open leaf: append literals if not already contained
-  if (!branchContains(leftLiteral)) {
-    Node *newNode = new Node(this, leftLiteral);
-    children.emplace_back(newNode);
-    tableau->unreducedNodes.push(newNode);
-  }
-  if (!branchContains(rightLiteral)) {
-    Node *newNode = new Node(this, rightLiteral);
-    children.emplace_back(newNode);
-    tableau->unreducedNodes.push(newNode);
-  }
-}
+void Tableau::Node::appendBranch(const Literal &literal) { appendBranch({literal}); }
 
 std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   auto const result = literal.applyRule(modalRule);
@@ -200,12 +170,8 @@ void Tableau::Node::inferModal() {
     const CanonicalSet search2 = be2;
     const CanonicalSet replace2 = e1;
 
-    for (auto &lit : substitute(literal, search1, replace1)) {
-      appendBranch(lit);
-    }
-    for (auto &lit : substitute(literal, search2, replace2)) {
-      appendBranch(lit);
-    }
+    appendBranch(substitute(literal, search1, replace1));
+    appendBranch(substitute(literal, search2, replace2));
   }
 }
 
