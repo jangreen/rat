@@ -30,17 +30,19 @@ void Tableau::removeNode(Node *node) {
   assert(node->parentNode != nullptr);  // there is always a dummy root node
   auto parentNode = node->parentNode;
 
-  if (!node->children.empty()) {
-    // move all other children to parents children
-    for (auto &child : node->children) {
-      child->parentNode = parentNode;
-    }
-
-    parentNode->children.insert(parentNode->children.end(),
-                                std::make_move_iterator(node->children.begin()),
-                                std::make_move_iterator(node->children.end()));
+  if (node->children.empty()) {
+    node->literal = TOP;
+    return;
   }
 
+  // move all other children to parents children
+  for (auto &child : node->children) {
+    child->parentNode = parentNode;
+  }
+
+  parentNode->children.insert(parentNode->children.end(),
+                              std::make_move_iterator(node->children.begin()),
+                              std::make_move_iterator(node->children.end()));
   auto [begin, end] = std::ranges::remove_if(parentNode->children,
                                              [&](auto &element) { return element.get() == node; });
   parentNode->children.erase(begin, end);
