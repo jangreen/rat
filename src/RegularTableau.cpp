@@ -292,6 +292,7 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
+    exportProof("debug");
     if (currentNode->closed ||
         (!contains(rootNodes, currentNode) && currentNode->rootParents.empty())) {
       // skip already closed nodes and nodes that cannot be reached by a root node

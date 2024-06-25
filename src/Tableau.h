@@ -15,7 +15,7 @@ class Tableau {
     void appendBranchInternalUp(DNF &dnf) const;
     void appendBranchInternalDown(DNF &dnf);
     void closeBranch();
-    void getNodesBehind(std::vector<Node *> nodes);
+    void getNodesBehind(std::vector<Node *> &nodes);
 
    public:
     Node(Node *parent, Literal literal);

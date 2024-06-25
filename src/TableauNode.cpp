@@ -158,11 +158,10 @@ void Tableau::Node::closeBranch() {
   children.clear();
   children.emplace_back(newNode);
   assert(newNode->validate());
-  tableau->unreducedNodes.push(newNode);
   assert(validateUnreducedNodes(tableau));
 }
 
-void Tableau::Node::getNodesBehind(std::vector<Node *> nodes) {
+void Tableau::Node::getNodesBehind(std::vector<Node *> &nodes) {
   nodes.push_back(this);
   for (const auto &child : children) {
     child->getNodesBehind(nodes);
