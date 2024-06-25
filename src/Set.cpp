@@ -10,8 +10,8 @@ namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
 std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalSet event,
-                                              const CanonicalRelation relation, const SetOperation operation,
-                                              const bool modalRules) {
+                                              const CanonicalRelation relation,
+                                              const SetOperation operation, const bool modalRules) {
   switch (relation->operation) {
     case RelationOperation::base: {
       // only use if want to
@@ -131,8 +131,8 @@ PartialDNF substituteHelper2(const bool substituteRight, const PartialDNF &disju
 int Set::maxSingletonLabel = 0;
 
 // initialization helper
-bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand, const CanonicalSet rightOperand,
-                  const CanonicalRelation relation) {
+bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
+                  const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
     case SetOperation::choice:
     case SetOperation::intersection:
@@ -199,7 +199,8 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
   }
 }
 
-bool calcHasTopSet(const SetOperation operation, const CanonicalSet leftOperand, const CanonicalSet rightOperand) {
+bool calcHasTopSet(const SetOperation operation, const CanonicalSet leftOperand,
+                   const CanonicalSet rightOperand) {
   return SetOperation::full == operation || (leftOperand != nullptr && leftOperand->hasTopSet()) ||
          (rightOperand != nullptr && rightOperand->hasTopSet());
 }
@@ -208,20 +209,15 @@ void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
   this->_hasTopSet = calcHasTopSet(operation, leftOperand, rightOperand);
   this->labels = calcLabels(operation, leftOperand, rightOperand, label);
-  this->labelBaseCombinations = calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
+  this->labelBaseCombinations =
+      calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
 }
 
-const bool &Set::isNormal() const {
-  return _isNormal;
-}
+const bool &Set::isNormal() const { return _isNormal; }
 
-const bool &Set::hasTopSet() const {
-  return _hasTopSet;
-}
+const bool &Set::hasTopSet() const { return _hasTopSet; }
 
-const std::vector<int> &Set::getLabels() const {
-  return labels;
-}
+const std::vector<int> &Set::getLabels() const { return labels; }
 
 const std::vector<CanonicalSet> &Set::getLabelBaseCombinations() const {
   return labelBaseCombinations;
@@ -248,15 +244,16 @@ Set::Set(const Set &&other) noexcept
       labels(std::move(other.labels)),
       labelBaseCombinations(std::move(other.labelBaseCombinations)) {}
 
-CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
-                         const CanonicalRelation relation, const std::optional<int> label,
+CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
+                         const CanonicalSet right, const CanonicalRelation relation,
+                         const std::optional<int> label,
                          const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
-  static std::unordered_set operations = {
-      SetOperation::image,        SetOperation::domain, SetOperation::singleton,
-      SetOperation::intersection, SetOperation::choice, SetOperation::base,
-      SetOperation::full,         SetOperation::empty};
+  static std::unordered_set operations = {SetOperation::image,     SetOperation::domain,
+                                          SetOperation::singleton, SetOperation::intersection,
+                                          SetOperation::choice,    SetOperation::base,
+                                          SetOperation::full,      SetOperation::empty};
   assert(operations.contains(operation));
 
   const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
@@ -295,11 +292,13 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, 
 CanonicalSet Set::newSet(const SetOperation operation) {
   return newSet(operation, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
 }
-CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, const CanonicalSet right) {
+CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
+                         const CanonicalSet right) {
   return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
 }
 
-CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left, const CanonicalRelation relation) {
+CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
+                         const CanonicalRelation relation) {
   return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
 }
 CanonicalSet Set::newEvent(int label) {
@@ -317,7 +316,7 @@ bool Set::operator==(const Set &other) const {
 
 CanonicalSet Set::substitute(const CanonicalSet search, const CanonicalSet replace, int *n) const {
   if (this == search) {
-    if (*n == 1) {
+    if (*n == 1 || *n == -1) {
       return replace;
     }
     (*n)--;
@@ -386,8 +385,8 @@ std::optional<PartialDNF> Set::applyRule(const Literal *context, const bool moda
                               : PartialDNF{{leftOperand}, {rightOperand}};
     }
     case SetOperation::intersection: {
-      if (leftOperand->operation != SetOperation::singleton
-        && rightOperand->operation != SetOperation::singleton) {
+      if (leftOperand->operation != SetOperation::singleton &&
+          rightOperand->operation != SetOperation::singleton) {
         // [S1 & S2]: apply rules recursively
         if (const auto leftResult = leftOperand->applyRule(context, modalRules)) {
           const auto &disjunction = *leftResult;
@@ -404,12 +403,13 @@ std::optional<PartialDNF> Set::applyRule(const Literal *context, const bool moda
       // Rule (~eL) / (~eR):
       // Rule (eL): [e & s] -> { [e], e.s }
       // Rule (eR): [s & e] -> { [e], s.e }
-      const CanonicalSet intersection = newSet(SetOperation::intersection, leftOperand, rightOperand);
-      const CanonicalSet &singleton = leftOperand->operation == SetOperation::singleton ? leftOperand : rightOperand;
+      const CanonicalSet intersection =
+          newSet(SetOperation::intersection, leftOperand, rightOperand);
+      const CanonicalSet &singleton =
+          leftOperand->operation == SetOperation::singleton ? leftOperand : rightOperand;
       const Literal substitute = context->substituteSet(intersection);
-      return context ->negated ?
-        PartialDNF{{singleton}, {substitute}}
-      : PartialDNF{{singleton, substitute}};
+      return context->negated ? PartialDNF{{singleton}, {substitute}}
+                              : PartialDNF{{singleton, substitute}};
     }
     case SetOperation::base: {
       if (context->negated) {
@@ -459,15 +459,17 @@ CanonicalSet Set::saturateBase() const {
 
     if (leftOperand->operation != SetOperation::singleton) {
       const auto leftSaturated = leftOperand->saturateBase();
-      return (leftOperand == leftSaturated) ? this :
-        newSet(operation, leftSaturated, rightOperand, relation, label, identifier);
+      return (leftOperand == leftSaturated)
+                 ? this
+                 : newSet(operation, leftSaturated, rightOperand, relation, label, identifier);
     }
 
     if (relation->operation == RelationOperation::base) {
       const auto &relationName = *relation->identifier;
       if (Assumption::baseAssumptions.contains(relationName)) {
         const auto &assumption = Assumption::baseAssumptions.at(relationName);
-        const auto r = Relation::newRelation(RelationOperation::choice, relation, assumption.relation);
+        const auto r =
+            Relation::newRelation(RelationOperation::choice, relation, assumption.relation);
         return newSet(operation, leftOperand, r);
       }
       return this;
@@ -479,7 +481,8 @@ CanonicalSet Set::saturateBase() const {
   }
 
   const CanonicalSet leftSaturated = leftOperand != nullptr ? leftOperand->saturateBase() : nullptr;
-  const CanonicalSet rightSaturated = rightOperand != nullptr ? rightOperand->saturateBase() : nullptr;
+  const CanonicalSet rightSaturated =
+      rightOperand != nullptr ? rightOperand->saturateBase() : nullptr;
   return newSet(operation, leftSaturated, rightSaturated, relation, label, identifier);
 }
 
@@ -489,21 +492,23 @@ CanonicalSet Set::saturateId() const {
 
     if (leftOperand->operation != SetOperation::singleton) {
       const auto leftSaturated = leftOperand->saturateId();
-      return (leftOperand == leftSaturated) ? this :
-        newSet(operation, leftSaturated, rightOperand, relation, label, identifier);
+      return (leftOperand == leftSaturated)
+                 ? this
+                 : newSet(operation, leftSaturated, rightOperand, relation, label, identifier);
     }
 
     if (relation->operation == RelationOperation::base) {
       // e.b -> (e.MasterId).b
       const auto eMasterId =
-        newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
+          newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
       const auto &b = relation;
       return newSet(SetOperation::image, eMasterId, b);
     }
   }
 
   const CanonicalSet leftSaturated = leftOperand != nullptr ? leftOperand->saturateId() : nullptr;
-  const CanonicalSet rightSaturated = rightOperand != nullptr ? rightOperand->saturateId() : nullptr;
+  const CanonicalSet rightSaturated =
+      rightOperand != nullptr ? rightOperand->saturateId() : nullptr;
   return newSet(operation, leftSaturated, rightSaturated, relation, label, identifier);
 }
 

@@ -307,7 +307,7 @@ std::optional<DNF> Literal::applyRule(const bool modalRules) const {
   throw std::logic_error("unreachable");
 }
 
-bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
+bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
       if (const auto newSet = set->substitute(search, replace, &n); newSet != set) {

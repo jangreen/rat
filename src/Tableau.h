@@ -51,6 +51,7 @@ class Tableau {
   std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
 
   bool solve(int bound = -1);
+  void removeNode(Node *node);
 
   // methods for regular reasoning
   std::optional<Literal> applyRuleA();

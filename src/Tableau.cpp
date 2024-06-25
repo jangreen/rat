@@ -17,16 +17,42 @@ Tableau::Tableau(const Cube &cube) {
   }
 }
 
+void Tableau::removeNode(Node *node) {
+  // only remove nodes that are not in unreduced nodes
+  assert(std::ranges::none_of(unreducedNodes.__get_container(),
+                              [&](const auto unreducedNode) { return unreducedNode == node; }));
+  assert(node != rootNode.get());
+  assert(node->parentNode != nullptr);  // there is always a dummy root node
+  auto parentNode = node->parentNode;
+
+  if (!node->children.empty()) {
+    // move all other children to parents children
+    for (auto &child : node->children) {
+      child->parentNode = parentNode;
+    }
+
+    parentNode->children.insert(parentNode->children.end(),
+                                std::make_move_iterator(node->children.begin()),
+                                std::make_move_iterator(node->children.end()));
+  }
+
+  auto [begin, end] = std::ranges::remove_if(parentNode->children,
+                                             [&](auto &element) { return element.get() == node; });
+  parentNode->children.erase(begin, end);
+}
+
 bool Tableau::solve(int bound) {
   while (!unreducedNodes.empty() && (bound > 0 || bound == -1)) {
     if (bound > 0) {
       bound--;
     }
+    exportProof("debug");
     Node *currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
+      removeNode(currentNode);  // in-place rule application
       continue;
     }
 
@@ -47,6 +73,7 @@ bool Tableau::solve(int bound) {
     } else if (currentNode->literal.isPositiveEqualityPredicate()) {
       // Rule (\equiv)
       const Literal &equalityLiteral = currentNode->literal;
+      assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
       CanonicalSet search, replace;
       if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
         // e1 = e2 , e1 < e2
@@ -57,12 +84,13 @@ bool Tableau::solve(int bound) {
         replace = Set::newEvent(*equalityLiteral.rightLabel);
       }
 
-      const Node *cur = currentNode;
-      while ((cur = cur->parentNode) != nullptr) {
+      Node *cur = currentNode->parentNode;
+      while (cur != nullptr) {
         // check if inside literal something can be inferred
-        const auto newLiterals = substitute(cur->literal, search, replace);
-        for (auto &literal : newLiterals) {
-          currentNode->appendBranch(literal);
+        Literal copy = cur->literal;
+        if (copy.substitute(search, replace, -1)) {
+          currentNode->appendBranch(copy);
+          cur->literal = TOP;  // skip proof node
         }
       }
     }
@@ -120,6 +148,7 @@ std::optional<Literal> Tableau::applyRuleA() {
     if (!result) {
       continue;
     }
+    removeNode(currentNode);
     // assert: apply rule has removed currentNode
 
     // find atomic

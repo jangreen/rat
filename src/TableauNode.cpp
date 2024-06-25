@@ -131,24 +131,6 @@ std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   auto disjunction = *result;
   appendBranch(disjunction);
 
-  // make rule application in-place
-  assert(parentNode != nullptr);  // there is always a dummy root node
-  if (!children.empty()) {
-    // move all other children to parents children
-    for (auto &child : children) {
-      child->parentNode = parentNode;
-    }
-
-    parentNode->children.insert(parentNode->children.end(),
-                                std::make_move_iterator(children.begin()),
-                                std::make_move_iterator(children.end()));
-
-    auto parentsPointerToThisIt = std::ranges::find_if(
-        parentNode->children, [this](auto &element) { return element.get() == this; });
-    auto pointerToThis = std::move(*parentsPointerToThisIt);  // ownership of this
-    parentNode->children.erase(parentsPointerToThisIt);
-  }
-
   return disjunction;
 }
 
