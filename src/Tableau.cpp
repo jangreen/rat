@@ -84,8 +84,8 @@ bool Tableau::solve(int bound) {
         replace = Set::newEvent(*equalityLiteral.rightLabel);
       }
 
-      Node *cur = currentNode->parentNode;
-      while (cur != nullptr) {
+      Node *cur = currentNode;
+      while ((cur = cur->parentNode) != nullptr) {
         // check if inside literal something can be inferred
         Literal copy = cur->literal;
         if (copy.substitute(search, replace, -1)) {
