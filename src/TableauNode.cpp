@@ -144,8 +144,11 @@ std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
     parentNode->children.insert(parentNode->children.end(),
                                 std::make_move_iterator(children.begin() + 1),
                                 std::make_move_iterator(children.end()));
-    // become first child
-    std::swap(children, firstChild->children);
+    // update unreduced nodes: remove firstChild's address and add this
+    unreducedNodes.
+
+        // become first child
+        std::swap(children, firstChild->children);
     // moving does not work: children = std::move(firstChild->children);
     // because this detroys the unique pointer of firstChild in children first, and then tries to
     // move firstChilds children
