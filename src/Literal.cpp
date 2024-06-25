@@ -167,6 +167,24 @@ Literal::Literal(const bool negated, int leftLabel, int rightLabel)
       saturatedId(0),
       saturatedBase(0) {}
 
+bool Literal::validate() const {
+  switch (operation) {
+    case PredicateOperation::edge:
+      return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
+             identifier.has_value();
+    case PredicateOperation::equality:
+      return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
+             !identifier.has_value();
+    case PredicateOperation::set:
+      return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
+             identifier.has_value();
+      break;
+    case PredicateOperation::setNonEmptiness:
+      return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
+             !identifier.has_value();
+  }
+}
+
 int Literal::saturationBoundId = 1;
 int Literal::saturationBoundBase = 1;
 
@@ -322,6 +340,7 @@ bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {
 }
 
 Literal Literal::substituteSet(const CanonicalSet set) const {
+  assert(operation == PredicateOperation::setNonEmptiness);
   Literal l(true, set);
   l.negated = negated;
   l.saturatedBase = saturatedBase;

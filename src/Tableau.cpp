@@ -2,7 +2,10 @@
 
 #include <iostream>
 
+#include "utility.h"
+
 Tableau::Tableau(const Cube &cube) {
+  assert(validateCube(cube));
   // avoids the need for multiple root nodes
   Node *dummyNode = new Node(nullptr, TOP);
   rootNode = std::unique_ptr<Node>(dummyNode);
@@ -12,6 +15,7 @@ Tableau::Tableau(const Cube &cube) {
   for (const auto &literal : cube) {
     auto *newNode = new Node(parentNode, literal);
     parentNode->children.emplace_back(newNode);
+    assert(newNode->validate());
     unreducedNodes.push(newNode);
     parentNode = newNode;
   }
@@ -19,6 +23,7 @@ Tableau::Tableau(const Cube &cube) {
 
 void Tableau::removeNode(Node *node) {
   // only remove nodes that are not in unreduced nodes
+  assert(validateUnreducedNodes(this));
   assert(std::ranges::none_of(unreducedNodes.__get_container(),
                               [&](const auto unreducedNode) { return unreducedNode == node; }));
   assert(node != rootNode.get());
@@ -39,6 +44,11 @@ void Tableau::removeNode(Node *node) {
   auto [begin, end] = std::ranges::remove_if(parentNode->children,
                                              [&](auto &element) { return element.get() == node; });
   parentNode->children.erase(begin, end);
+
+  assert(parentNode->validate());
+  assert(std::ranges::none_of(parentNode->children,
+                              [](const auto &child) { return !child->validate(); }));
+  assert(validateUnreducedNodes(this));
 }
 
 bool Tableau::solve(int bound) {
@@ -49,9 +59,15 @@ bool Tableau::solve(int bound) {
     exportProof("debug");
     Node *currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    assert(std::ranges::none_of(unreducedNodes.__get_container(), [&](const auto unreducedNode) {
+      return unreducedNode == currentNode;
+    }));
+    assert(validateUnreducedNodes(this));
+    assert(currentNode->validate());
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
+      assert(validateUnreducedNodes(this));
       removeNode(currentNode);  // in-place rule application
       continue;
     }
@@ -87,7 +103,7 @@ bool Tableau::solve(int bound) {
       Node *cur = currentNode;
       while ((cur = cur->parentNode) != nullptr) {
         // check if inside literal something can be inferred
-        Literal copy = cur->literal;
+        Literal copy = Literal(cur->literal);
         if (copy.substitute(search, replace, -1)) {
           currentNode->appendBranch(copy);
           cur->literal = TOP;  // skip proof node
@@ -148,6 +164,7 @@ std::optional<Literal> Tableau::applyRuleA() {
     if (!result) {
       continue;
     }
+    assert(validateUnreducedNodes(this));
     removeNode(currentNode);
     // assert: apply rule has removed currentNode
 

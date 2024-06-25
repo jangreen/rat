@@ -231,8 +231,8 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
 
   // don't add epsilon edges that already exist
   // what about other edges(with same label)?
-  if (edges.empty()) {
-    for (const auto &edgeLabel : child->parentNodes[parent]) {
+  if (edges.empty() && child->parentNodes.contains(parent)) {
+    for (const auto &edgeLabel : child->parentNodes.at(parent)) {
       if (std::get<0>(edgeLabel).empty()) {
         return;
       }
@@ -278,7 +278,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
 
     // if child has epsilon edge -> add shortcuts
     for (const auto childChild : child->childNodes) {
-      if (childChild->parentNodes[child].empty()) {
+      if (childChild->parentNodes.at(child).empty()) {
         for (const auto &parentLabel : child->parentNodes[parent]) {
           addEdge(parent, childChild, parentLabel);
         }

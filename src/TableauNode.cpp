@@ -2,6 +2,7 @@
 #include <ranges>
 
 #include "Tableau.h"
+#include "utility.h"
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
@@ -10,10 +11,30 @@ bool isAppendable(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
+void removeIf(std::priority_queue<Tableau::Node *, std::vector<Tableau::Node *>,
+                                  Tableau::Node::CompareNodes> &queue,
+              std::function<bool(const Tableau::Node *)> &&predicate) {
+  std::queue<Tableau::Node *> tempQueue;
+  while (!queue.empty()) {
+    auto top = queue.top();
+    queue.pop();
+    if (predicate(top)) {
+      tempQueue.push(top);
+    }
+  }
+  while (!tempQueue.empty()) {
+    auto top = tempQueue.front();
+    tempQueue.pop();
+    queue.push(top);
+  }
+}
+
 // given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
 // it removes cubes with ~l from f
 // it removes l from remaining cubes
 void reduceDNF(DNF &dnf, const Literal &literal) {
+  assert(validateDNF(dnf));
+
   // remove cubes with literals ~l
   auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
     return std::ranges::any_of(
@@ -26,6 +47,8 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
     auto [begin, end] = std::ranges::remove(cube, literal);
     cube.erase(begin, end);
   }
+
+  assert(validateDNF(dnf));
 }
 
 }  // namespace
@@ -34,6 +57,16 @@ Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
       parentNode(parent) {}
+
+bool Tableau::Node::validate() const {
+  if (tableau == nullptr) {
+    return false;
+  }
+  if (tableau->rootNode.get() != this && parentNode == nullptr) {
+    return false;
+  }
+  return literal.validate();
+}
 
 // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
 bool Tableau::Node::isClosed() const {
@@ -58,19 +91,24 @@ bool Tableau::Node::isLeaf() const { return children.empty(); }
 void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   const Node *node = this;
   do {
+    assert(validateDNF(dnf));
     reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
 }
 
 void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
+  assert(validateUnreducedNodes(tableau));
+  assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
   if (contradiction) {
     closeBranch();
+    assert(validateUnreducedNodes(tableau));
     return;
   }
   if (!isAppendable(dnf)) {
+    assert(validateUnreducedNodes(tableau));
     return;
   }
 
@@ -80,11 +118,13 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
       DNF branchCopy(dnf);
       child->appendBranchInternalDown(branchCopy);  // copy for each branching
     }
+    assert(validateUnreducedNodes(tableau));
     return;
   }
 
   if (isClosed()) {
     // Closed leaf: nothing to do
+    assert(validateUnreducedNodes(tableau));
     return;
   }
 
@@ -100,27 +140,57 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
       tableau->unreducedNodes.push(newNode);
     }
   }
+  assert(validateUnreducedNodes(tableau));
 }
 
 void Tableau::Node::closeBranch() {
+  assert(validateUnreducedNodes(tableau));
   Node *newNode = new Node(this, BOTTOM);
+
+  // remove all nodes behind this node from unreducedNodes
+  std::vector<Node *> uselessNodes;
+  getNodesBehind(uselessNodes);
+  removeIf(tableau->unreducedNodes, [&](const Node *node) {
+    return std::ranges::any_of(uselessNodes,
+                               [&](const auto &uselessNode) { return uselessNode == node; });
+  });
+  // now it is safe to clear children
   children.clear();
   children.emplace_back(newNode);
+  assert(newNode->validate());
   tableau->unreducedNodes.push(newNode);
+  assert(validateUnreducedNodes(tableau));
+}
+
+void Tableau::Node::getNodesBehind(std::vector<Node *> nodes) {
+  nodes.push_back(this);
+  for (const auto &child : children) {
+    child->getNodesBehind(nodes);
+  }
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
+  assert(validateUnreducedNodes(tableau));
+  assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
 
   DNF dnfCopy(dnf);
   appendBranchInternalUp(dnfCopy);
   appendBranchInternalDown(dnfCopy);
+
+  assert(validateUnreducedNodes(tableau));
 }
 
-void Tableau::Node::appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
+void Tableau::Node::appendBranch(const Cube &cube) {
+  assert(validateCube(cube));
+  appendBranch(DNF{cube});
+}
 
-void Tableau::Node::appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
+void Tableau::Node::appendBranch(const Literal &literal) {
+  assert(literal.validate());
+  appendBranch(Cube{literal});
+}
 
 std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   auto const result = literal.applyRule(modalRule);
@@ -150,8 +220,7 @@ void Tableau::Node::inferModal() {
     // check if inside literal can be something inferred
     const Literal &edgeLiteral = cur->literal;
     // (e1, e2) \in b
-    assert(edgeLiteral.leftLabel.has_value() && edgeLiteral.rightLabel.has_value() &&
-           edgeLiteral.identifier.has_value());
+    assert(edgeLiteral.validate());
     const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
     const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
     const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
@@ -203,8 +272,7 @@ void Tableau::Node::inferModalTop() {
 void Tableau::Node::inferModalAtomic() {
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
-  assert(edgeLiteral.leftLabel.has_value() && edgeLiteral.rightLabel.has_value() &&
-         edgeLiteral.identifier.has_value());
+  assert(edgeLiteral.validate());
   const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
   const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
   const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
