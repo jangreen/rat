@@ -268,6 +268,10 @@ std::vector<int> Literal::labels() const {
 
 std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
   switch (operation) {
+    case PredicateOperation::constant:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return {};
     case PredicateOperation::setNonEmptiness: {
       return set->getLabelBaseCombinations();
     }
@@ -282,7 +286,7 @@ std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
       return {e1b, be2};
     }
     default:
-      return {};
+      throw std::logic_error("unreachable");
   }
 }
 
