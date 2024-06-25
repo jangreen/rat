@@ -31,19 +31,19 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  Literal(bool negated);
+  explicit Literal(bool negated);
   Literal(bool negated, CanonicalSet set);
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel);
-  bool validate() const;
+  [[nodiscard]] bool validate() const;
   // Literal(const Literal &&other) = delete;
   // Literal(const Literal &other) = default;
   // Literal &operator=(const Literal &other) = default;
 
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &other) const;  // for sorting/hashing
-  bool isNegatedOf(const Literal &other) const;
+  [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;
   PredicateOperation operation;
@@ -149,6 +149,9 @@ class Set {
   Set(const Set &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
 
   bool operator==(const Set &other) const;
+  // Lexicographic compare
+  // (NOTE: we could also compare pointer values for very efficient checks, but non-deterministic order)
+  bool operator<(const Set &other) const { return this->toString() < other.toString(); }
 
   const bool &isNormal() const;
   const bool &hasTopSet() const;

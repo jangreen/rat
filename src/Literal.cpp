@@ -208,10 +208,27 @@ bool Literal::operator==(const Literal &other) const {
 }
 
 bool Literal::operator<(const Literal &other) const {
-  // FIXME (TH): toString must traverse the whole DAG to obtain the string.
-  //  If you use this in any performance critical part, you should change this.
-  // sort lexicographically
-  return toString() < other.toString();
+  // Lexicographic comparison
+  //return toString() < other.toString();
+  if (negated != other.negated) {
+    return negated < other.negated; // Negative < Positive
+  }
+  if (operation != other.operation) {
+    return operation > other.operation;
+  }
+  if (leftLabel != other.leftLabel) {
+    return leftLabel < other.leftLabel;
+  }
+  if (rightLabel != other.rightLabel) {
+    return rightLabel < other.rightLabel;
+  }
+  if (identifier != other.identifier) {
+    return identifier < other.identifier;
+  }
+  if (set != other.set) {
+    return *set < *other.set;
+  }
+  return false;
 }
 
 bool Literal::isNegatedOf(const Literal &other) const {
