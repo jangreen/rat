@@ -29,11 +29,11 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, const Can
     case SetOperation::empty:
       // RuleDirection::Left: e & 0 != 0  ->  false
       // RuleDirection::Right: 0 & e != 0  ->  false
-      return DNF{{BOTTOM}};
+      return context->negated ? DNF{{TOP}} : DNF{{BOTTOM}};
     case SetOperation::full:
       // RuleDirection::Left: e & 1 != 0  ->  true
       // RuleDirection::Right: 1 & e != 0  ->  true
-      return std::nullopt;  // do nothing
+      return context->negated ? DNF{{BOTTOM}} : DNF{{TOP}};
     case SetOperation::intersection: {
       // RuleDirection::Left: e & (s1 & s2) -> e & s1 , e & s2
       // RuleDirection::Right: (s1 & s2) & e -> s1 & e , s2 & e
