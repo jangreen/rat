@@ -168,6 +168,8 @@ void Tableau::Node::inferModal() {
     // check if inside literal can be something inferred
     const Literal &edgeLiteral = cur->literal;
     // (e1, e2) \in b
+    assert(edgeLiteral.leftLabel.has_value() && edgeLiteral.rightLabel.has_value() &&
+           edgeLiteral.identifier.has_value());
     const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
     const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
     const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
@@ -219,6 +221,8 @@ void Tableau::Node::inferModalTop() {
 void Tableau::Node::inferModalAtomic() {
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
+  assert(edgeLiteral.leftLabel.has_value() && edgeLiteral.rightLabel.has_value() &&
+         edgeLiteral.identifier.has_value());
   const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
   const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
   const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
