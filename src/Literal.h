@@ -22,14 +22,16 @@ typedef std::vector<PartialLiteral> PartialCube;
 typedef std::vector<PartialCube> PartialDNF;
 
 enum class PredicateOperation {
-  edge,            // (e1, e2) \in a
-  set,             // e1 \in A
-  equality,        // e1 = e2
-  setNonEmptiness  // s != 0
+  edge,             // (e1, e2) \in a
+  set,              // e1 \in A
+  equality,         // e1 = e2
+  setNonEmptiness,  // s != 0
+  constant,         // true or false
 };
 
 class Literal {
  public:
+  Literal(bool negated);
   Literal(bool negated, CanonicalSet set);
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
@@ -96,8 +98,8 @@ class Literal {
   }
 };
 
-static const Literal BOTTOM = Literal(false, -1, -1);
-static const Literal TOP = Literal(true, -1, -1);
+static const Literal BOTTOM = Literal(true);
+static const Literal TOP = Literal(false);
 
 //---------------- Set.h
 

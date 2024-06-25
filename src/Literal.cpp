@@ -127,6 +127,16 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, const Can
 
 }  // namespace
 
+Literal::Literal(bool negated)
+    : negated(negated),
+      operation(PredicateOperation::constant),
+      set(nullptr),
+      leftLabel(std::nullopt),
+      rightLabel(std::nullopt),
+      identifier(std::nullopt),
+      saturatedId(0),
+      saturatedBase(0) {}
+
 Literal::Literal(const bool negated, const CanonicalSet set)
     : negated(negated),
       operation(PredicateOperation::setNonEmptiness),
@@ -169,6 +179,9 @@ Literal::Literal(const bool negated, int leftLabel, int rightLabel)
 
 bool Literal::validate() const {
   switch (operation) {
+    case PredicateOperation::constant:
+      return set == nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
+             !identifier.has_value();
     case PredicateOperation::edge:
       return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
              identifier.has_value();
@@ -236,6 +249,8 @@ bool Literal::isPositiveEqualityPredicate() const {
 
 std::vector<int> Literal::labels() const {
   switch (operation) {
+    case PredicateOperation::constant:
+      return {};
     case PredicateOperation::setNonEmptiness: {
       return set->getLabels();
     }
@@ -294,6 +309,7 @@ DNF toDNF(const Literal *context, const PartialDNF &partialDNF) {
 
 std::optional<DNF> Literal::applyRule(const bool modalRules) const {
   switch (operation) {
+    case PredicateOperation::constant:
     case PredicateOperation::edge:
     case PredicateOperation::set: {
       return std::nullopt;  // no rule applicable
@@ -350,6 +366,8 @@ Literal Literal::substituteSet(const CanonicalSet set) const {
 
 void Literal::rename(const Renaming &renaming, const bool inverse) {
   switch (operation) {
+    case PredicateOperation::constant:
+      return;
     case PredicateOperation::setNonEmptiness: {
       set = set->rename(renaming, inverse);
       return;
@@ -440,16 +458,13 @@ void Literal::saturateId() {
 
 std::string Literal::toString() const {
   std::string output;
-  if (*this == BOTTOM) {
-    return "FALSE";
-  }
-  if (*this == TOP) {
-    return "TRUE";
-  }
-  if (negated) {
+  if (negated && PredicateOperation::constant != operation) {
     output += "~";
   }
   switch (operation) {
+    case PredicateOperation::constant:
+      output += negated ? "FALSE" : "TRUE";
+      break;
     case PredicateOperation::edge:
       output +=
           *identifier + "(" + std::to_string(*leftLabel) + "," + std::to_string(*rightLabel) + ")";
