@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <tuple>
+#include <unordered_set>
 
 namespace {
 // -------------------- Anonymous helper functions --------------------
@@ -82,6 +83,24 @@ void saturateWith(DNF &dnf, const std::function<void(Literal &)> &saturationFunc
                   std::make_move_iterator(saturatedDnf.end()));
   }
   swap(dnf, newDnf);
+}
+
+void findReachableNodes(RegularTableau::Node *node,
+                        std::unordered_set<RegularTableau::Node *> &reach) {
+  auto [_, inserted] = reach.insert(node);
+  if (inserted) {
+    for (auto &child : node->childNodes) {
+      auto edgeLabels = child->parentNodes.at(node);
+      if (edgeLabels.size() == 1) {
+        auto [cube, _] = edgeLabels.at(0);
+        auto isInconsistentChild = cube.empty();
+        if (isInconsistentChild) {
+          continue;
+        }
+      }
+      findReachableNodes(child, reach);
+    }
+  }
 }
 
 }  // namespace
@@ -202,6 +221,30 @@ RegularTableau::RegularTableau(const Cube &initialLiterals) {
   expandNode(nullptr, &t);
 }
 
+bool RegularTableau::validate(Node *currentNode) const {
+  std::unordered_set<Node *> reachable;
+  for (auto &root : rootNodes) {
+    findReachableNodes(root, reachable);
+  }
+
+  // get open leafs
+  std::erase_if(reachable, [&](Node *node) {
+    return !node->childNodes.empty() || node->closed || node == currentNode;
+  });
+
+  for (auto &unreducedNode : unreducedNodes.__get_container()) {
+    reachable.erase(unreducedNode);
+  }
+
+  for (auto &leakedNode : reachable) {
+    std::cout << " Leaked node: " << leakedNode << ", hash: " << std::hash<Node>()(*leakedNode)
+              << std::endl;
+    Literal::print(leakedNode->cube);
+  }
+
+  return reachable.empty();
+}
+
 // assumptions:
 // cube is in normal form
 RegularTableau::Node *RegularTableau::addNode(const Cube &cube, EdgeLabel &label) {
@@ -209,13 +252,7 @@ RegularTableau::Node *RegularTableau::addNode(const Cube &cube, EdgeLabel &label
   auto newNode = std::make_unique<Node>(cube);
   std::get<1>(label) = newNode->renaming;  // update edge label
   auto [iter, added] = nodes.insert(std::move(newNode));
-  if (added) {
-    // new node has been added (no isomorphic node existed)
-    unreducedNodes.push(iter->get());
-
-    // spdlog::debug(fmt::format("[Solver] Add node  {}",
-    // std::hash<Node>()(*insertion.first->get())));
-  }
+  unreducedNodes.push(iter->get());
   return iter->get();
 }
 
@@ -223,6 +260,7 @@ RegularTableau::Node *RegularTableau::addNode(const Cube &cube, EdgeLabel &label
 void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) {
   if (parent == nullptr) {
     // root node
+    assert(!contains(rootNodes, child));
     rootNodes.push_back(child);
     return;
   }
@@ -267,7 +305,7 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
       }
     }
     // add epsilon child of a root nodes to root nodes
-    if (contains(rootNodes, parent)) {
+    if (contains(rootNodes, parent) && !contains(rootNodes, child)) {
       rootNodes.push_back(child);
     }
   } else {
@@ -289,10 +327,15 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
 
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
+    if (!validate()) {
+      exportProof("regular");
+      assert(false);
+    }
+
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
-    if (currentNode->closed ||
+    if (currentNode->closed || !currentNode->childNodes.empty() ||
         (!contains(rootNodes, currentNode) && currentNode->rootParents.empty())) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
@@ -326,8 +369,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     node->closed = true;
     return;
   }
-  // spdlog::debug(fmt::format("[Solver] Expand node {} ", (node == nullptr ? 0 :
-  // std::hash<Node>()(*node))));
+
+  assert(validate(node));
 
   // for each cube: calculate potential child
   for (const auto &cube : dnf) {
@@ -350,6 +393,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
     Node *newNode = addNode(newCube, edgeLabel);
     addEdge(node, newNode, edgeLabel);
   }
+  assert(validate());
 }
 
 // input is edge (parent,label,child)
@@ -461,15 +505,15 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
     node->printed = false;
   }
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
+  std::unordered_set<Node *> s(rootNodes.begin(), rootNodes.end());
+  assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);
     output << "root -> " << "N" << rootNode << ";" << std::endl;
   }
-  if (allNodes) {
-    for (const auto &node : nodes) {
-      node->toDotFormat(output);
-    }
-  }
+  // for (const auto &node : nodes) {
+  //   node->toDotFormat(output);
+  // }
   output << "}" << std::endl;
 }
 

@@ -35,7 +35,8 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   return cube == otherNode.cube;
 }
 
-size_t std::hash<RegularTableau::Node>::operator()(const RegularTableau::Node &node) const noexcept {
+size_t std::hash<RegularTableau::Node>::operator()(
+    const RegularTableau::Node &node) const noexcept {
   size_t seed = 0;
   for (const auto &literal : node.cube) {
     boost::hash_combine(seed, std::hash<Literal>()(literal));
@@ -74,6 +75,9 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   // edges
   for (const auto childNode : childNodes) {
     for (const auto &[edges, labels] : childNode->parentNodes[this]) {
+      // if (edges.empty()) {
+      //   continue;
+      // }
       output << "N" << this << " -> " << "N" << childNode << "[";
       if (edges.empty()) {
         output << "color=\"grey\", ";
@@ -97,11 +101,10 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
     output << "N" << this << " -> "
            << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
   }  //*/
-  /*/ root parents
-  for (const auto parentNode : rootParents) {
-    output << "N" << this << " -> "
-           << "N" << parentNode << "[color=\"brown\"];" << std::endl;
-  }  //*/
+  // root parents
+  // for (const auto parentNode : rootParents) {
+  //   output << "N" << this << " -> " << "N" << parentNode << "[color=\"brown\"];" << std::endl;
+  // }
   printed = true;
 
   // children

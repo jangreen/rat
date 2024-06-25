@@ -47,6 +47,7 @@ class RegularTableau {
 
   RegularTableau(std::initializer_list<Literal> initialLiterals);
   explicit RegularTableau(const Cube &initialLiterals);
+  bool validate(Node *currentNode = nullptr) const;
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
