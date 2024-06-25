@@ -383,6 +383,8 @@ void Literal::saturateBase() {
 
         operation = PredicateOperation::setNonEmptiness;
         set = e1R_and_e2;
+        leftLabel = std::nullopt;
+        rightLabel = std::nullopt;
         identifier = std::nullopt;
         saturatedBase++;
       }

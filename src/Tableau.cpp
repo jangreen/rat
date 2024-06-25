@@ -5,6 +5,7 @@
 #include "utility.h"
 
 Tableau::Tableau(const Cube &cube) {
+  Literal::print(cube);
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
   Node *dummyNode = new Node(nullptr, TOP);
