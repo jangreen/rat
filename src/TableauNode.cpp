@@ -18,7 +18,7 @@ void removeIf(std::priority_queue<Tableau::Node *, std::vector<Tableau::Node *>,
   while (!queue.empty()) {
     auto top = queue.top();
     queue.pop();
-    if (predicate(top)) {
+    if (!predicate(top)) {
       tempQueue.push(top);
     }
   }
