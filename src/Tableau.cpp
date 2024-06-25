@@ -22,7 +22,6 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    exportProof("debug");
     Node *currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 

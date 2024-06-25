@@ -317,7 +317,6 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
-  tableau->exportProof("debug");
   const int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
   for (size_t i = 0; i < maxSaturationBound; i++) {
     saturate(dnf);
