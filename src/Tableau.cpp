@@ -58,7 +58,6 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    exportProof("debug");
     Node *currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     assert(std::ranges::none_of(unreducedNodes.__get_container(), [&](const auto unreducedNode) {
