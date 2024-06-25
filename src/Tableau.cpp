@@ -3,17 +3,15 @@
 #include <iostream>
 
 Tableau::Tableau(const Cube &cube) {
-  Node *parentNode = nullptr;
+  // avoids the need for multiple root nodes
+  Node *dummyNode = new Node(nullptr, TOP);
+  rootNode = std::unique_ptr<Node>(dummyNode);
+  rootNode->tableau = this;
+
+  Node *parentNode = dummyNode;
   for (const auto &literal : cube) {
     auto *newNode = new Node(parentNode, literal);
-
-    if (parentNode == nullptr) {
-      newNode->tableau = this;
-      rootNode = std::unique_ptr<Node>(newNode);
-    } else {
-      parentNode->children.emplace_back(newNode);
-    }
-
+    parentNode->children.emplace_back(newNode);
     unreducedNodes.push(newNode);
     parentNode = newNode;
   }
@@ -123,9 +121,7 @@ std::optional<Literal> Tableau::applyRuleA() {
     if (!result) {
       continue;
     }
-    // currently remove currentNode by replacing it with dummy
-    // this is needed for expandNode
-    currentNode->literal = TOP;
+    // assert: apply rule has removed currentNode
 
     // find atomic
     for (const auto &cube : *result) {

@@ -130,33 +130,23 @@ std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
 
   auto disjunction = *result;
   appendBranch(disjunction);
-  // make rule application in-place
-  if (parentNode != nullptr && !children.empty()) {
-    // become first child
-    auto firstChild = children.front().get();
-    literal = firstChild->literal;
 
+  // make rule application in-place
+  assert(parentNode != nullptr);  // there is always a dummy root node
+  if (!children.empty()) {
     // move all other children to parents children
-    for (auto &child : std::ranges::drop_view{children, 1}) {
+    for (auto &child : children) {
       child->parentNode = parentNode;
     }
 
     parentNode->children.insert(parentNode->children.end(),
-                                std::make_move_iterator(children.begin() + 1),
+                                std::make_move_iterator(children.begin()),
                                 std::make_move_iterator(children.end()));
-    // update unreduced nodes: remove firstChild's address and add this
-    unreducedNodes.
 
-        // become first child
-        std::swap(children, firstChild->children);
-    // moving does not work: children = std::move(firstChild->children);
-    // because this detroys the unique pointer of firstChild in children first, and then tries to
-    // move firstChilds children
-
-    // auto [begin, end] = std::ranges::remove_if(
-    //     parentNode->children, [this](auto &element) { return element.get() == this; });
-    // // next line destroys this
-    // parentNode->children.erase(begin, end);
+    auto parentsPointerToThisIt = std::ranges::find_if(
+        parentNode->children, [this](auto &element) { return element.get() == this; });
+    auto pointerToThis = std::move(*parentsPointerToThisIt);  // ownership of this
+    parentNode->children.erase(parentsPointerToThisIt);
   }
 
   return disjunction;
