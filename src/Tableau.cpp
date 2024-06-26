@@ -122,41 +122,6 @@ bool Tableau::solve(int bound) {
   return rootNode->isClosed();
 }
 
-void Tableau::Node::dnfBuilder(DNF &dnf) const {
-  if (isClosed()) {
-    return;
-  }
-
-  for (const auto &child : children) {
-    DNF childDNF;
-    child->dnfBuilder(childDNF);
-    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
-               std::make_move_iterator(childDNF.end()));
-  }
-
-  if (!literal.isNormal() || literal == TOP) {
-    // Ignore non-normal literals.
-    return;
-  }
-
-  if (isLeaf()) {
-    dnf.push_back({literal});
-  } else {
-    if (dnf.empty()) {
-      dnf.emplace_back();
-    }
-    for (auto &cube : dnf) {
-      cube.push_back(literal);
-    }
-  }
-}
-
-DNF Tableau::Node::extractDNF() const {
-  DNF dnf;
-  dnfBuilder(dnf);
-  return dnf;
-}
-
 std::optional<Literal> Tableau::applyRuleA() {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
@@ -200,33 +165,4 @@ void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
-}
-
-// ====================================================================================
-// ================================ Node Queue ========================================
-// ====================================================================================
-
-void Tableau::NodeQueue::push(Node *node) { queue.insert(node); }
-
-void Tableau::NodeQueue::erase(Node *node) { queue.erase(node); }
-
-Tableau::Node *Tableau::NodeQueue::pop() {
-  assert(!queue.empty());
-  return queue.extract(queue.begin()).value();
-}
-bool Tableau::NodeQueue::isEmpty() const { return queue.empty(); }
-
-void Tableau::NodeQueue::removeIf(const std::function<bool(Node *)> &predicate) {
-  // TODO: why does this not work? fails if you have two nodes with
-  // std::set<Node *, Tableau::Node::CompareNodes> filteredUnreducedNodes{};
-  // std::ranges::set_difference(
-  //     tableau->unreducedNodes, uselessNodes,
-  //     std::inserter(filteredUnreducedNodes, filteredUnreducedNodes.begin()));
-  // swap(tableau->unreducedNodes, filteredUnreducedNodes);
-  std::erase_if(queue, predicate);
-}
-
-bool Tableau::NodeQueue::validate() {
-  return std::all_of(cbegin(), cend(),
-                     [](const auto unreducedNode) { return unreducedNode->validate(); });
 }

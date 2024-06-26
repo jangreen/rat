@@ -175,6 +175,41 @@ void Tableau::Node::appendBranch(const Literal &literal) {
   appendBranch(Cube{literal});
 }
 
+void Tableau::Node::dnfBuilder(DNF &dnf) const {
+  if (isClosed()) {
+    return;
+  }
+
+  for (const auto &child : children) {
+    DNF childDNF;
+    child->dnfBuilder(childDNF);
+    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
+               std::make_move_iterator(childDNF.end()));
+  }
+
+  if (!literal.isNormal() || literal == TOP) {
+    // Ignore non-normal literals.
+    return;
+  }
+
+  if (isLeaf()) {
+    dnf.push_back({literal});
+  } else {
+    if (dnf.empty()) {
+      dnf.emplace_back();
+    }
+    for (auto &cube : dnf) {
+      cube.push_back(literal);
+    }
+  }
+}
+
+DNF Tableau::Node::extractDNF() const {
+  DNF dnf;
+  dnfBuilder(dnf);
+  return dnf;
+}
+
 std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   auto const result = literal.applyRule(modalRule);
   if (!result) {
