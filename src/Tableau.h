@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Literal.h"
+#include "utility.h"
 
 class Tableau {
  public:
@@ -47,10 +48,29 @@ class Tableau {
     };
   };
 
+  class NodeQueue {
+    typedef std::vector<Node*>::iterator iterator;
+    typedef std::vector<Node*>::const_iterator const_iterator;
+
+  private:
+    std::priority_queue<Node*, std::vector<Node*>, Node::CompareNodes> queue;
+  public:
+    void push(Node* node);
+    Node* pop();
+    [[nodiscard]] bool isEmpty() const;
+
+    void removeIf(const std::function<bool(Node *)> &predicate);
+    bool validate();
+
+    const_iterator cbegin() { return get_container(queue).cbegin(); }
+    const_iterator cend() { return get_container(queue).cend(); }
+
+  };
+
   explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
-  std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
+  NodeQueue unreducedNodes;
 
   bool solve(int bound = -1);
   void removeNode(Node *node);

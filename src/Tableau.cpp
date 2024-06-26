@@ -23,9 +23,10 @@ Tableau::Tableau(const Cube &cube) {
 
 void Tableau::removeNode(Node *node) {
   // only remove nodes that are not in unreduced nodes
-  assert(validateUnreducedNodes(this));
-  assert(std::ranges::none_of(unreducedNodes.__get_container(),
-                              [&](const auto unreducedNode) { return unreducedNode == node; }));
+  assert(unreducedNodes.validate());
+  assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(), [&](const auto unreducedNode) {
+    return unreducedNode == node;
+  }));
   assert(node != rootNode.get());
   assert(node->parentNode != nullptr);  // there is always a dummy root node
   auto parentNode = node->parentNode;
@@ -50,25 +51,24 @@ void Tableau::removeNode(Node *node) {
   assert(parentNode->validate());
   assert(std::ranges::none_of(parentNode->children,
                               [](const auto &child) { return !child->validate(); }));
-  assert(validateUnreducedNodes(this));
+  assert(unreducedNodes.validate());
 }
 
 bool Tableau::solve(int bound) {
-  while (!unreducedNodes.empty() && (bound > 0 || bound == -1)) {
+  while (!unreducedNodes.isEmpty() && (bound > 0 || bound == -1)) {
     if (bound > 0) {
       bound--;
     }
-    Node *currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    assert(std::ranges::none_of(unreducedNodes.__get_container(), [&](const auto unreducedNode) {
+    Node *currentNode = unreducedNodes.pop();
+    assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(), [&](const auto unreducedNode) {
       return unreducedNode == currentNode;
     }));
-    assert(validateUnreducedNodes(this));
+    assert(unreducedNodes.validate());
     assert(currentNode->validate());
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
-      assert(validateUnreducedNodes(this));
+      assert(unreducedNodes.validate());
       removeNode(currentNode);  // in-place rule application
       continue;
     }
@@ -114,7 +114,7 @@ bool Tableau::solve(int bound) {
   }
 
   // warning if bound is reached
-  if (bound == 0 && !unreducedNodes.empty()) {
+  if (bound == 0 && !unreducedNodes.isEmpty()) {
     std::cout << "[Warning] Configured bound is reached. Answer is imprecise." << std::endl;
   }
 
@@ -157,15 +157,14 @@ DNF Tableau::Node::extractDNF() const {
 }
 
 std::optional<Literal> Tableau::applyRuleA() {
-  while (!unreducedNodes.empty()) {
-    Node *currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
+  while (!unreducedNodes.isEmpty()) {
+    Node *currentNode = unreducedNodes.pop();
 
     auto result = currentNode->applyRule(true);
     if (!result) {
       continue;
     }
-    assert(validateUnreducedNodes(this));
+    assert(unreducedNodes.validate());
     removeNode(currentNode);
     // assert: apply rule has removed currentNode
 
@@ -206,4 +205,41 @@ bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right
   return left->literal.toString() < right->literal.toString();
   // TODO: define clever measure: should measure alpha beta rules
   // left.literal->negated < right.literal->negated;
+}
+
+// ====================================================================================
+// ================================ Node Queue ========================================
+// ====================================================================================
+
+void Tableau::NodeQueue::push(Node *node) {
+  queue.push(node);
+}
+
+Tableau::Node *Tableau::NodeQueue::pop() {
+  Node *top = queue.top();
+  queue.pop();
+  return top;
+}
+bool Tableau::NodeQueue::isEmpty() const {
+  return queue.empty();
+}
+
+void Tableau::NodeQueue::removeIf(const std::function<bool(Node *)> &predicate) {
+  std::queue<Node *> tempQueue;
+  while (!isEmpty()) {
+    auto top = pop();
+    if (!predicate(top)) {
+      tempQueue.push(top);
+    }
+  }
+  while (!tempQueue.empty()) {
+    auto top = tempQueue.front();
+    tempQueue.pop();
+    push(top);
+  }
+}
+
+bool Tableau::NodeQueue::validate() {
+  return std::all_of(cbegin(), cend(),
+                             [](const auto unreducedNode) { return unreducedNode->validate(); });
 }

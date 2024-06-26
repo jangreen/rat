@@ -11,24 +11,6 @@ bool isAppendable(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
-void removeIf(std::priority_queue<Tableau::Node *, std::vector<Tableau::Node *>,
-                                  Tableau::Node::CompareNodes> &queue,
-              std::function<bool(const Tableau::Node *)> &&predicate) {
-  std::queue<Tableau::Node *> tempQueue;
-  while (!queue.empty()) {
-    auto top = queue.top();
-    queue.pop();
-    if (!predicate(top)) {
-      tempQueue.push(top);
-    }
-  }
-  while (!tempQueue.empty()) {
-    auto top = tempQueue.front();
-    tempQueue.pop();
-    queue.push(top);
-  }
-}
-
 // given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
 // it removes cubes with ~l from f
 // it removes l from remaining cubes
@@ -97,18 +79,18 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
 }
 
 void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
   if (contradiction) {
     closeBranch();
-    assert(validateUnreducedNodes(tableau));
+    assert(tableau->unreducedNodes.validate());
     return;
   }
   if (!isAppendable(dnf)) {
-    assert(validateUnreducedNodes(tableau));
+    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -118,13 +100,13 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
       DNF branchCopy(dnf);
       child->appendBranchInternalDown(branchCopy);  // copy for each branching
     }
-    assert(validateUnreducedNodes(tableau));
+    assert(tableau->unreducedNodes.validate());
     return;
   }
 
   if (isClosed()) {
     // Closed leaf: nothing to do
-    assert(validateUnreducedNodes(tableau));
+    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -140,17 +122,17 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
       tableau->unreducedNodes.push(newNode);
     }
   }
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
 }
 
 void Tableau::Node::closeBranch() {
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
   Node *newNode = new Node(this, BOTTOM);
 
   // remove all nodes behind this node from unreducedNodes
   std::vector<Node *> uselessNodes;
   getNodesBehind(uselessNodes);
-  removeIf(tableau->unreducedNodes, [&](const Node *node) {
+  tableau->unreducedNodes.removeIf([&](const Node *node) {
     return std::ranges::any_of(uselessNodes,
                                [&](const auto &uselessNode) { return uselessNode == node; });
   });
@@ -158,7 +140,7 @@ void Tableau::Node::closeBranch() {
   children.clear();
   children.emplace_back(newNode);
   assert(newNode->validate());
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
 }
 
 void Tableau::Node::getNodesBehind(std::vector<Node *> &nodes) {
@@ -169,7 +151,7 @@ void Tableau::Node::getNodesBehind(std::vector<Node *> &nodes) {
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
@@ -178,7 +160,7 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
   appendBranchInternalUp(dnfCopy);
   appendBranchInternalDown(dnfCopy);
 
-  assert(validateUnreducedNodes(tableau));
+  assert(tableau->unreducedNodes.validate());
 }
 
 void Tableau::Node::appendBranch(const Cube &cube) {
