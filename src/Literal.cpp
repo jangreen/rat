@@ -195,6 +195,8 @@ bool Literal::validate() const {
     case PredicateOperation::setNonEmptiness:
       return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
              !identifier.has_value();
+    default:
+      return false;
   }
 }
 
@@ -225,7 +227,7 @@ bool Literal::operator<(const Literal &other) const {
   }
   if (set != other.set) {
     // compare pointer values for very efficient checks, but non-deterministic order
-    return set < other.set;
+    return set->toString() > other.set->toString();
   }
   return false;
 }
@@ -340,8 +342,11 @@ DNF toDNF(const Literal *context, const PartialDNF &partialDNF) {
 
 std::optional<DNF> Literal::applyRule(const bool modalRules) const {
   switch (operation) {
-    case PredicateOperation::constant:
     case PredicateOperation::edge:
+      if (leftLabel == rightLabel) {
+        return negated ? DNF{{BOTTOM}} : DNF{{TOP}};
+      }
+    case PredicateOperation::constant:
     case PredicateOperation::set: {
       return std::nullopt;  // no rule applicable
     }

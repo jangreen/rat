@@ -102,6 +102,7 @@ bool Tableau::solve(int bound) {
       }
 
       renameBranch(currentNode, from, to);
+      continue;
     }
 
     assert(currentNode->literal.isNormal());
@@ -115,6 +116,8 @@ bool Tableau::solve(int bound) {
       currentNode->inferModal();
     } else if (currentNode->literal.isPositiveEdgePredicate()) {
       // Rule (~a), Rule (~\top_1)
+      std::cout << currentNode->literal.toString() << std::endl;
+      assert(currentNode->literal.validate());
       currentNode->inferModalAtomic();
     }
   }
