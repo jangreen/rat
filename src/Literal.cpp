@@ -208,10 +208,8 @@ bool Literal::operator==(const Literal &other) const {
 }
 
 bool Literal::operator<(const Literal &other) const {
-  // Lexicographic comparison
-  //return toString() < other.toString();
   if (negated != other.negated) {
-    return negated < other.negated; // Negative < Positive
+    return negated < other.negated;  // Negative < Positive
   }
   if (operation != other.operation) {
     return operation > other.operation;
@@ -226,7 +224,8 @@ bool Literal::operator<(const Literal &other) const {
     return identifier < other.identifier;
   }
   if (set != other.set) {
-    return *set < *other.set;
+    // compare pointer values for very efficient checks, but non-deterministic order
+    return set < other.set;
   }
   return false;
 }

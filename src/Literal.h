@@ -42,7 +42,7 @@ class Literal {
   // Literal &operator=(const Literal &other) = default;
 
   bool operator==(const Literal &other) const;
-  bool operator<(const Literal &other) const;  // for sorting/hashing
+  bool operator<(const Literal &other) const;
   [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;
@@ -149,9 +149,6 @@ class Set {
   Set(const Set &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
 
   bool operator==(const Set &other) const;
-  // Lexicographic compare
-  // (NOTE: we could also compare pointer values for very efficient checks, but non-deterministic order)
-  bool operator<(const Set &other) const { return this->toString() < other.toString(); }
 
   const bool &isNormal() const;
   const bool &hasTopSet() const;

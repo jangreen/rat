@@ -16,23 +16,23 @@ Tableau::Tableau(const Cube &cube) {
     auto *newNode = new Node(parentNode, literal);
     parentNode->children.emplace_back(newNode);
     assert(newNode->validate());
-    unreducedNodes.push(newNode);
+    unreducedNodes.insert(newNode);
     parentNode = newNode;
   }
 }
 
 void Tableau::removeNode(Node *node) {
-  // only remove nodes that are not in unreduced nodes
-  assert(validateUnreducedNodes(this));
-  assert(std::ranges::none_of(unreducedNodes.__get_container(),
-                              [&](const auto unreducedNode) { return unreducedNode == node; }));
+  // remove Node from unreducedNodes
+  unreducedNodes.erase(node);
+  assert(validateNodes(unreducedNodes));
   assert(node != rootNode.get());
   assert(node->parentNode != nullptr);  // there is always a dummy root node
   auto parentNode = node->parentNode;
 
   if (node->children.empty()) {
-    node->literal = TOP;
-    return;
+    // insert dummy child to ensure that branch does not disappear
+    Node *dummy = new Node(node, TOP);
+    node->children.emplace_back(dummy);
   }
 
   // move all other children to parents children
@@ -50,7 +50,7 @@ void Tableau::removeNode(Node *node) {
   assert(parentNode->validate());
   assert(std::ranges::none_of(parentNode->children,
                               [](const auto &child) { return !child->validate(); }));
-  assert(validateUnreducedNodes(this));
+  assert(validateNodes(unreducedNodes));
 }
 
 bool Tableau::solve(int bound) {
@@ -58,17 +58,14 @@ bool Tableau::solve(int bound) {
     if (bound > 0) {
       bound--;
     }
-    Node *currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
-    assert(std::ranges::none_of(unreducedNodes.__get_container(), [&](const auto unreducedNode) {
-      return unreducedNode == currentNode;
-    }));
-    assert(validateUnreducedNodes(this));
+    Node *currentNode = unreducedNodes.extract(unreducedNodes.begin()).value();
+
+    assert(validateNodes(unreducedNodes));
     assert(currentNode->validate());
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
-      assert(validateUnreducedNodes(this));
+      assert(validateNodes(unreducedNodes));
       removeNode(currentNode);  // in-place rule application
       continue;
     }
@@ -107,7 +104,7 @@ bool Tableau::solve(int bound) {
         Literal copy = Literal(cur->literal);
         if (copy.substitute(search, replace, -1)) {
           currentNode->appendBranch(copy);
-          cur->literal = TOP;  // skip proof node
+          removeNode(cur);
         }
       }
     }
@@ -158,14 +155,13 @@ DNF Tableau::Node::extractDNF() const {
 
 std::optional<Literal> Tableau::applyRuleA() {
   while (!unreducedNodes.empty()) {
-    Node *currentNode = unreducedNodes.top();
-    unreducedNodes.pop();
+    Node *currentNode = unreducedNodes.extract(unreducedNodes.begin()).value();
 
     auto result = currentNode->applyRule(true);
     if (!result) {
       continue;
     }
-    assert(validateUnreducedNodes(this));
+    assert(validateNodes(unreducedNodes));
     removeNode(currentNode);
     // assert: apply rule has removed currentNode
 
@@ -200,10 +196,4 @@ void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
-}
-
-bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
-  return left->literal.toString() < right->literal.toString();
-  // TODO: define clever measure: should measure alpha beta rules
-  // left.literal->negated < right.literal->negated;
 }

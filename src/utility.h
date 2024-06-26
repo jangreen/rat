@@ -10,7 +10,6 @@ inline bool validateDNF(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return validateCube(cube); });
 }
 
-inline bool validateUnreducedNodes(Tableau *tableau) {
-  return std::ranges::all_of(tableau->unreducedNodes.__get_container(),
-                             [](const auto unreducedNode) { return unreducedNode->validate(); });
+inline bool validateNodes(std::set<Tableau::Node *, Tableau::Node::CompareNodes> s) {
+  return std::ranges::all_of(s, [](const auto node) { return node->validate(); });
 }

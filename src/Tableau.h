@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <queue>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -11,18 +11,12 @@
 class Tableau {
  public:
   class Node {
-   private:
-    void appendBranchInternalUp(DNF &dnf) const;
-    void appendBranchInternalDown(DNF &dnf);
-    void closeBranch();
-    void getNodesBehind(std::vector<Node *> &nodes);
-
    public:
     Node(Node *parent, Literal literal);
     bool validate() const;
 
     Tableau *tableau;
-    Literal literal;
+    const Literal literal;
     std::vector<std::unique_ptr<Node>> children;
     Node *parentNode = nullptr;
 
@@ -45,12 +39,18 @@ class Tableau {
     struct CompareNodes {
       bool operator()(const Node *left, const Node *right) const;
     };
+
+   private:
+    void appendBranchInternalUp(DNF &dnf) const;
+    void appendBranchInternalDown(DNF &dnf);
+    void closeBranch();
+    void getNodesBehind(std::set<Node *, CompareNodes> &nodes);
   };
 
   explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
-  std::priority_queue<Node *, std::vector<Node *>, Node::CompareNodes> unreducedNodes;
+  std::set<Node *, Node::CompareNodes> unreducedNodes;
 
   bool solve(int bound = -1);
   void removeNode(Node *node);
