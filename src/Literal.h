@@ -37,9 +37,6 @@ class Literal {
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel);
   [[nodiscard]] bool validate() const;
-  // Literal(const Literal &&other) = delete;
-  // Literal(const Literal &other) = default;
-  // Literal &operator=(const Literal &other) = default;
 
   bool operator==(const Literal &other) const;
   bool operator<(const Literal &other) const;

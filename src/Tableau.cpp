@@ -67,6 +67,8 @@ bool Tableau::solve(int bound) {
     assert(unreducedNodes.validate());
     assert(currentNode->validate());
 
+    exportProof("debug");
+
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
       assert(unreducedNodes.validate());
@@ -108,7 +110,6 @@ bool Tableau::solve(int bound) {
         Literal copy = Literal(cur->literal);
         if (copy.substitute(search, replace, -1)) {
           currentNode->appendBranch(copy);
-          removeNode(cur);
         }
       }
     }

@@ -334,6 +334,8 @@ bool RegularTableau::solve() {
       assert(false);
     }
 
+    exportProof("debug");
+
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
