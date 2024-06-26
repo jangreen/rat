@@ -118,10 +118,14 @@ bool Tableau::solve(int bound) {
       // Rule (~\top_1)
       assert(currentNode->literal.negated);
       currentNode->inferModalTop();
-    } else if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
+    }
+
+    if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
       // Rule (~aL), Rule (~aR)
       currentNode->inferModal();
-    } else if (currentNode->literal.isPositiveEdgePredicate()) {
+    }
+
+    if (currentNode->literal.isPositiveEdgePredicate()) {
       // Rule (~\top_1)
       // e=f, e\in A, (e,f)\in a, e != 0
       // Rule (~aL), Rule (~aR)
@@ -208,7 +212,8 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
 
     auto parentIsRoot = cur->parentNode == rootNode.get();
     auto parentIsBranching = cur->parentNode->children.size() > 1;
-    if (!firstBranchingNodeFound && (parentIsBranching || parentIsRoot)) {
+    auto parentIsLastNotRenamed = cur == firstToRename;
+    if (!firstBranchingNodeFound && (parentIsBranching || parentIsRoot || parentIsLastNotRenamed)) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
       auto parentNode = cur->parentNode;  // save, because next line destroys cur

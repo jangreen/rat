@@ -211,7 +211,7 @@ bool Literal::operator==(const Literal &other) const {
 
 bool Literal::operator<(const Literal &other) const {
   if (negated != other.negated) {
-    return negated < other.negated;  // Negative < Positive
+    return negated > other.negated;  // negated literals first
   }
   if (operation != other.operation) {
     return operation > other.operation;

@@ -313,8 +313,12 @@ void Tableau::Node::inferModalAtomic() {
   const CanonicalSet search2 = be2;
   const CanonicalSet replace2 = e1;
 
+  // replace T -> e
+  const CanonicalSet top = Set::newSet(SetOperation::full);
+
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
+    tableau->exportDebug("debug");
     const Literal &curLit = cur->literal;
     if (!curLit.negated || !curLit.isNormal()) {
       continue;
@@ -326,6 +330,14 @@ void Tableau::Node::inferModalAtomic() {
       appendBranch(lit);
     }
     for (auto &lit : substitute(curLit, search2, replace2)) {
+      appendBranch(lit);
+    }
+    // cases for Top -> e
+    // replace T -> e
+    for (auto &lit : substitute(curLit, top, replace1)) {
+      appendBranch(lit);
+    }
+    for (auto &lit : substitute(curLit, top, replace2)) {
       appendBranch(lit);
     }
   }
