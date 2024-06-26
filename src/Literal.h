@@ -37,8 +37,8 @@ class Literal {
   Literal(bool negated, int leftLabel, int rightLabel);
   [[nodiscard]] bool validate() const;
 
-  bool operator==(const Literal &other) const;
-  bool operator<(const Literal &other) const;
+  std::strong_ordering operator<=>(const Literal &other) const;
+  bool operator==(const Literal &other) const { return *this <=> other == 0;}
   [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;

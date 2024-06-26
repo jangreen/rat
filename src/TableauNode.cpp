@@ -381,26 +381,19 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
 }
 
 bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
-  if (left->literal.operation == PredicateOperation::equality &&
-      right->literal.operation != PredicateOperation::equality) {
-    return true;
+  if ((left->literal.operation == PredicateOperation::equality || right->literal.operation == PredicateOperation::equality)
+        && left->literal.operation != right->literal.operation) {
+    return left->literal.operation == PredicateOperation::equality;
   }
-  if (right->literal.operation == PredicateOperation::equality &&
-      left->literal.operation != PredicateOperation::equality) {
-    return false;
-  }
-
-  if (left->literal.hasTopSet() && !right->literal.hasTopSet()) {
-    return true;
-  }
-  if (right->literal.hasTopSet() && !left->literal.hasTopSet()) {
-    return false;
+  if (left->literal.hasTopSet() != right->literal.hasTopSet()) {
+    return left->literal.hasTopSet();
   }
 
-  // compare nodes by literals
-  // literals are constant to ensure that key never changes after inserting a node to unreducedNodes
-  if (left->literal == right->literal) {
-    return left < right;  // ensure that multiple nodes with same literal are totally ordered
+  // Compare nodes by literals.
+  const auto litCmp = left->literal <=> right->literal;
+  if (litCmp == 0) {
+    // ensure that multiple nodes with same literal are totally ordered (but non-deterministic)
+    return left < right;
   }
-  return left->literal < right->literal;
+  return litCmp < 0;
 }

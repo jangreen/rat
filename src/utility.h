@@ -41,3 +41,10 @@ template <typename T>
 bool contains(const std::vector<T> &vector, const T &object) {
   return std::ranges::find(vector, object) != vector.end();
 }
+
+inline std::strong_ordering lexCompare(const std::string &left, const std::string &right) {
+  if (left == right) {
+    return std::strong_ordering::equal;
+  }
+  return left < right ? std::strong_ordering::less : std::strong_ordering::greater;
+}

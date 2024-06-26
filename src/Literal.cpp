@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "Assumption.h"
+#include "utility.h"
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
@@ -203,33 +204,44 @@ bool Literal::validate() const {
 int Literal::saturationBoundId = 1;
 int Literal::saturationBoundBase = 1;
 
-bool Literal::operator==(const Literal &other) const {
+/* bool Literal::operator==(const Literal &other) const {
   return operation == other.operation && negated == other.negated && set == other.set &&
          leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
          identifier == other.identifier;
-}
+}*/
 
-bool Literal::operator<(const Literal &other) const {
-  if (negated != other.negated) {
-    return negated > other.negated;  // negated literals first
+std::strong_ordering Literal::operator<=>(const Literal &other) const {
+  if (auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
+  if (auto cmp = operation <=> other.operation; cmp != 0) return cmp;
+
+  // We assume well-formed literals
+  switch (operation) {
+    case PredicateOperation::edge: {
+      auto cmp = *leftLabel <=> *other.leftLabel;
+      cmp = (cmp != 0) ? cmp : (*rightLabel <=> *other.rightLabel);
+      cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
+      return cmp;
+    }
+    case PredicateOperation::set: {
+      auto cmp = *leftLabel <=> *other.leftLabel;
+      cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
+      return cmp;
+    }
+    case PredicateOperation::equality: {
+      auto cmp = *leftLabel <=> *other.leftLabel;
+      cmp = (cmp != 0) ? cmp : (*rightLabel <=> *other.rightLabel);
+      return cmp;
+    }
+    case PredicateOperation::setNonEmptiness:
+      // NOTE: compare pointer values for very efficient checks, but non-deterministic order
+      return set <=> other.set;
+    case PredicateOperation::constant:
+      return std::strong_ordering::equal; // Equal since we checked signs already
+    default:
+      assert(false);
+      return std::strong_ordering::equal;
   }
-  if (operation != other.operation) {
-    return operation > other.operation;
-  }
-  if (leftLabel != other.leftLabel) {
-    return leftLabel < other.leftLabel;
-  }
-  if (rightLabel != other.rightLabel) {
-    return rightLabel < other.rightLabel;
-  }
-  if (identifier != other.identifier) {
-    return identifier < other.identifier;
-  }
-  if (set != other.set) {
-    // compare pointer values for very efficient checks, but non-deterministic order
-    return set > other.set;
-  }
-  return false;
+
 }
 
 bool Literal::isNegatedOf(const Literal &other) const {
