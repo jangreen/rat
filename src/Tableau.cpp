@@ -197,7 +197,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
 
     auto parentIsRoot = cur->parentNode == rootNode.get();
     auto parentIsBranching = cur->parentNode->children.size() > 1;
-    if (!firstBranchingNodeFound && (parentIsBranching || parentIsBranching)) {
+    if (!firstBranchingNodeFound && (parentIsBranching || parentIsRoot)) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
       auto parentNode = cur->parentNode;  // save, because next line destroys cur
