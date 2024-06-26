@@ -265,7 +265,7 @@ void Tableau::Node::inferModalTop() {
   std::vector<int> labels;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &lit = cur->literal;
-    if (!lit.isNormal() || lit.negated) {
+    if (lit.negated) {
       continue;
     }
 
@@ -347,6 +347,22 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
 }
 
 bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
+  if (left->literal.operation == PredicateOperation::equality &&
+      right->literal.operation != PredicateOperation::equality) {
+    return true;
+  }
+  if (right->literal.operation == PredicateOperation::equality &&
+      left->literal.operation != PredicateOperation::equality) {
+    return false;
+  }
+
+  if (left->literal.hasTopSet() && !right->literal.hasTopSet()) {
+    return true;
+  }
+  if (right->literal.hasTopSet() && !left->literal.hasTopSet()) {
+    return false;
+  }
+
   // compare nodes by literals
   // literals are constant to ensure that key never changes after inserting a node to unreducedNodes
   if (left->literal == right->literal) {
