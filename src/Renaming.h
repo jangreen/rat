@@ -1,5 +1,5 @@
 #pragma once
-#include <iostream>
+#include <fstream>
 #include <vector>
 
 class Renaming {
@@ -18,9 +18,7 @@ class Renaming {
 
   void toDotFormat(std::ofstream &output) const {
     for (size_t i = 0; i < from.size(); i++) {
-      // FIXME
-      // output << "." << ", ";  // << from.at(i)
-      // output << ".";
+      output << from.at(i) << "." << to.at(i) << ", ";
     }
   }
 };
