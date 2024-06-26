@@ -16,7 +16,7 @@ Tableau::Tableau(const Cube &cube) {
     auto *newNode = new Node(parentNode, literal);
     parentNode->children.emplace_back(newNode);
     assert(newNode->validate());
-    unreducedNodes.insert(newNode);
+    unreducedNodes.push(newNode);
     parentNode = newNode;
   }
 }
@@ -24,7 +24,9 @@ Tableau::Tableau(const Cube &cube) {
 void Tableau::removeNode(Node *node) {
   // remove Node from unreducedNodes
   unreducedNodes.erase(node);
-  assert(validateNodes(unreducedNodes));
+  assert(unreducedNodes.validate());
+  assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(),
+                      [&](const auto unreducedNode) { return unreducedNode == node; }));
   assert(node != rootNode.get());
   assert(node->parentNode != nullptr);  // there is always a dummy root node
   auto parentNode = node->parentNode;
@@ -50,22 +52,24 @@ void Tableau::removeNode(Node *node) {
   assert(parentNode->validate());
   assert(std::ranges::none_of(parentNode->children,
                               [](const auto &child) { return !child->validate(); }));
-  assert(validateNodes(unreducedNodes));
+  assert(unreducedNodes.validate());
 }
 
 bool Tableau::solve(int bound) {
-  while (!unreducedNodes.empty() && (bound > 0 || bound == -1)) {
+  while (!unreducedNodes.isEmpty() && (bound > 0 || bound == -1)) {
     if (bound > 0) {
       bound--;
     }
-    Node *currentNode = unreducedNodes.extract(unreducedNodes.begin()).value();
 
-    assert(validateNodes(unreducedNodes));
+    Node *currentNode = unreducedNodes.pop();
+    assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(),
+                        [&](const auto unreducedNode) { return unreducedNode == currentNode; }));
+    assert(unreducedNodes.validate());
     assert(currentNode->validate());
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
-      assert(validateNodes(unreducedNodes));
+      assert(unreducedNodes.validate());
       removeNode(currentNode);  // in-place rule application
       continue;
     }
@@ -111,7 +115,7 @@ bool Tableau::solve(int bound) {
   }
 
   // warning if bound is reached
-  if (bound == 0 && !unreducedNodes.empty()) {
+  if (bound == 0 && !unreducedNodes.isEmpty()) {
     std::cout << "[Warning] Configured bound is reached. Answer is imprecise." << std::endl;
   }
 
@@ -154,14 +158,14 @@ DNF Tableau::Node::extractDNF() const {
 }
 
 std::optional<Literal> Tableau::applyRuleA() {
-  while (!unreducedNodes.empty()) {
-    Node *currentNode = unreducedNodes.extract(unreducedNodes.begin()).value();
+  while (!unreducedNodes.isEmpty()) {
+    Node *currentNode = unreducedNodes.pop();
 
     auto result = currentNode->applyRule(true);
     if (!result) {
       continue;
     }
-    assert(validateNodes(unreducedNodes));
+    assert(unreducedNodes.validate());
     removeNode(currentNode);
     // assert: apply rule has removed currentNode
 
@@ -196,4 +200,33 @@ void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
+}
+
+// ====================================================================================
+// ================================ Node Queue ========================================
+// ====================================================================================
+
+void Tableau::NodeQueue::push(Node *node) { queue.insert(node); }
+
+void Tableau::NodeQueue::erase(Node *node) { queue.erase(node); }
+
+Tableau::Node *Tableau::NodeQueue::pop() {
+  assert(!queue.empty());
+  return queue.extract(queue.begin()).value();
+}
+bool Tableau::NodeQueue::isEmpty() const { return queue.empty(); }
+
+void Tableau::NodeQueue::removeIf(const std::function<bool(Node *)> &predicate) {
+  // TODO: why does this not work? fails if you have two nodes with
+  // std::set<Node *, Tableau::Node::CompareNodes> filteredUnreducedNodes{};
+  // std::ranges::set_difference(
+  //     tableau->unreducedNodes, uselessNodes,
+  //     std::inserter(filteredUnreducedNodes, filteredUnreducedNodes.begin()));
+  // swap(tableau->unreducedNodes, filteredUnreducedNodes);
+  std::erase_if(queue, predicate);
+}
+
+bool Tableau::NodeQueue::validate() {
+  return std::all_of(cbegin(), cend(),
+                     [](const auto unreducedNode) { return unreducedNode->validate(); });
 }

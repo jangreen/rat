@@ -47,10 +47,30 @@ class Tableau {
     void getNodesBehind(std::set<Node *, CompareNodes> &nodes);
   };
 
+  class NodeQueue {
+    typedef std::set<Node *>::iterator iterator;
+    typedef std::set<Node *>::const_iterator const_iterator;
+
+   private:
+    std::set<Node *, Node::CompareNodes> queue;
+
+   public:
+    void push(Node *node);
+    void erase(Node *node);
+    Node *pop();
+    [[nodiscard]] bool isEmpty() const;
+
+    void removeIf(const std::function<bool(Node *)> &predicate);
+    bool validate();
+
+    const_iterator cbegin() { return queue.cbegin(); }
+    const_iterator cend() { return queue.cend(); }
+  };
+
   explicit Tableau(const Cube &initialLiterals);
 
   std::unique_ptr<Node> rootNode;
-  std::set<Node *, Node::CompareNodes> unreducedNodes;
+  NodeQueue unreducedNodes;
 
   bool solve(int bound = -1);
   void removeNode(Node *node);

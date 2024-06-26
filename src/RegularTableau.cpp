@@ -7,6 +7,8 @@
 #include <tuple>
 #include <unordered_set>
 
+#include "utility.h"
+
 namespace {
 // -------------------- Anonymous helper functions --------------------
 
@@ -232,7 +234,7 @@ bool RegularTableau::validate(Node *currentNode) const {
     return !node->childNodes.empty() || node->closed || node == currentNode;
   });
 
-  for (auto &unreducedNode : unreducedNodes.__get_container()) {
+  for (auto &unreducedNode : get_const_container(unreducedNodes)) {
     reachable.erase(unreducedNode);
   }
 
