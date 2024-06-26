@@ -343,17 +343,14 @@ DNF toDNF(const Literal *context, const PartialDNF &partialDNF) {
 std::optional<DNF> Literal::applyRule(const bool modalRules) const {
   switch (operation) {
     case PredicateOperation::edge:
-      if (leftLabel == rightLabel) {
-        return negated ? DNF{{BOTTOM}} : DNF{{TOP}};
-      }
     case PredicateOperation::constant:
     case PredicateOperation::set: {
       return std::nullopt;  // no rule applicable
     }
     case PredicateOperation::equality: {
-      if (negated && *leftLabel == *rightLabel) {
-        // (\neg=): ~(e = e) -> FALSE
-        return DNF{{BOTTOM}};
+      // (\neg=): ~(e = e) -> FALSE
+      if (leftLabel == rightLabel) {
+        return negated ? DNF{{BOTTOM}} : DNF{{TOP}};
       }
       return std::nullopt;  // no rule applicable in case e1 = e2
     }
