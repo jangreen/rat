@@ -81,7 +81,7 @@ class Tableau {
   void renameBranch(Node *leaf, int from, int to);
 
   // methods for regular reasoning
-  std::optional<Literal> applyRuleA();
+  bool applyRuleA();
   DNF dnf();
 
   void toDotFormat(std::ofstream &output) const;

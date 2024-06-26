@@ -237,15 +237,23 @@ bool Literal::isNegatedOf(const Literal &other) const {
 }
 
 bool Literal::isNormal() const {
-  if (operation == PredicateOperation::setNonEmptiness) {
-    if (set->operation == SetOperation::intersection &&
-        (set->leftOperand->operation == SetOperation::singleton ||
-         set->rightOperand->operation == SetOperation::singleton)) {
-      return false;
+  switch (operation) {
+    case PredicateOperation::setNonEmptiness: {
+      if (set->operation == SetOperation::intersection &&
+          (set->leftOperand->operation == SetOperation::singleton ||
+           set->rightOperand->operation == SetOperation::singleton)) {
+        return false;
+      }
+      return set->isNormal();
     }
-    return set->isNormal();
+    case PredicateOperation::constant:
+    case PredicateOperation::edge:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return true;
+    default:
+      throw std::logic_error("unreachable");
   }
-  return true;
 }
 
 bool Literal::hasTopSet() const {

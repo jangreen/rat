@@ -25,6 +25,10 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
+inline bool validateNormalizedCube(const Cube &cube) {
+  return validateCube(cube) && std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
+}
+
 inline bool validateDNF(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return validateCube(cube); });
 }

@@ -25,6 +25,12 @@ RegularTableau::Node::Node(Cube cube) {
   this->cube = std::move(cube);
 }
 
+bool RegularTableau::Node::validate() const {
+  // TODO: cube must be ordered: std::ranges::is_sorted(cube) &&
+  // literals must be normal
+  return std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
+}
+
 // FIXME calculate cached lazy property
 // hashing and comparison is insensitive to label renaming
 bool RegularTableau::Node::operator==(const Node &otherNode) const {

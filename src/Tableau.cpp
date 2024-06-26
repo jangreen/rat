@@ -123,7 +123,7 @@ bool Tableau::solve(int bound) {
   return rootNode->isClosed();
 }
 
-std::optional<Literal> Tableau::applyRuleA() {
+bool Tableau::applyRuleA() {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
 
@@ -140,13 +140,13 @@ std::optional<Literal> Tableau::applyRuleA() {
       // should be only one cube
       for (const auto &literal : cube) {
         if (literal.isPositiveEdgePredicate()) {
-          return literal;
+          return true;
         }
       }
     }
   }
 
-  return std::nullopt;
+  return false;
 }
 
 void Tableau::renameBranch(Node *leaf, int from, int to) {
@@ -171,7 +171,8 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   bool firstBranchingNodeFound = false;
   cur = leaf->parentNode;
   std::unique_ptr<Node> copiedBranch = nullptr;
-  while (cur != firstToRename->parentNode) {
+  auto lastNotRenamedNode = firstToRename->parentNode;
+  while (cur != lastNotRenamedNode) {
     // do copy
     assert(cur->validate());
     Literal litCopy = Literal(cur->literal);
@@ -185,7 +186,8 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
     }
     copiedBranch = std::unique_ptr<Node>(renamedCur);
 
-    if (!firstBranchingNodeFound && cur->parentNode->children.size() > 1) {
+    auto reachedRoot = cur->parentNode == rootNode.get();
+    if (!firstBranchingNodeFound && (cur->parentNode->children.size() > 1 || reachedRoot)) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
       auto parentNode = cur->parentNode;  // save, because next line destroys cur
@@ -198,8 +200,8 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
     cur = cur->parentNode;
   }
 
-  copiedBranch->parentNode = firstToRename->parentNode;
-  firstToRename->parentNode->children.push_back(std::move(copiedBranch));
+  copiedBranch->parentNode = lastNotRenamedNode;
+  lastNotRenamedNode->children.push_back(std::move(copiedBranch));
 }
 
 DNF Tableau::dnf() {

@@ -4,14 +4,16 @@
 
 #include <iostream>
 #include <map>
-#include <tuple>
 #include <unordered_set>
 
 #include "utility.h"
 
 namespace {
 
-std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
+std::pair<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
   std::vector<int> activeLabels;
   std::vector<CanonicalSet> activeLabelBaseCombinations;
   for (const auto &literal : cube) {
@@ -27,7 +29,7 @@ std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const
                                        std::end(literalCombinations));
   }
 
-  return std::make_tuple(activeLabels, activeLabelBaseCombinations);
+  return std::make_pair(activeLabels, activeLabelBaseCombinations);
 }
 
 void addActiveLabelsFromEdges(const Cube &edges,
@@ -46,6 +48,7 @@ std::map<int, int> computeMinimalRepresentatives(const Cube &cube) {
     if (!literal.isPositiveEqualityPredicate()) {
       continue;
     }
+    assert(false);
 
     const int i = *literal.leftLabel;
     const int j = *literal.rightLabel;
@@ -99,30 +102,28 @@ void findReachableNodes(RegularTableau::Node *node,
   }
 }
 
-}  // namespace
-
-// helper
-// assumption: input is dnf cube
-// purges useless literals
 Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
-  Cube newCube;
-  Cube &edges = std::get<0>(label);
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+  assert(dropped.empty());               // dropped is empty
 
-  // remove edge predicates and put them in the edge label
+  Cube purgedCube;
+  auto &edgePredicates = std::get<0>(label);
+
+  // remove edge predicates from cube and add them to the label
   for (const auto &literal : cube) {
-    if (literal.isPositiveEdgePredicate() || literal.isPositiveEqualityPredicate()) {
-      edges.push_back(literal);
+    if (literal.isPositiveEdgePredicate() ||
+        literal.isPositiveEqualityPredicate()) {  // FIXME: do we need isPositiveEqualityPredicate?
+      edgePredicates.push_back(literal);
     } else {
-      newCube.push_back(literal);
+      purgedCube.push_back(literal);
     }
   }
 
-  // filter none active labels + active (label,baseRel) combinations
-  // but: do not purge incoming edge labels (for recursive inconsistency checks) (*)
-  // assume already normal
-  // 1) gather all active labels
-  auto [activeLabels, activeLabelBaseCombinations] = gatherActiveLabels(newCube);
-  addActiveLabelsFromEdges(edges, activeLabelBaseCombinations);  // (*) from above
+  // 1) filter none-active labels + non-active (label,baseRel) combinations
+  // also respect edgeLabel (for recursive inconsistency checks)
+  auto [activeLabels, activeLabelBaseCombinations] = gatherActiveLabels(purgedCube);
+  addActiveLabelsFromEdges(edgePredicates, activeLabelBaseCombinations);
 
   // calculate equivalence class
   const std::map<int, int> minimalRepresentatives =
@@ -134,8 +135,8 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
     return iter != minimalRepresentatives.end() && iter->second != l;
   };
 
-  const Cube copy = std::move(newCube);
-  newCube = {};
+  const Cube copy = std::move(purgedCube);
+  purgedCube = {};
   for (const auto &literal : copy) {
     const auto &literalLabels = literal.labels();
     if (std::ranges::find_if(literalLabels, isNonMinimal) != literalLabels.end()) {
@@ -144,17 +145,17 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
     }
 
     if (isLiteralActive(literal, activeLabels, activeLabelBaseCombinations)) {
-      newCube.push_back(literal);
+      purgedCube.push_back(literal);
     } else {
       // are minimal
       // check for immediate inconsistencies
       dropped.push_back(literal);
     }
   }
-  return newCube;
+  return purgedCube;
 }
 
-// return fixed node as set, otherwise nullopt if consistent
+// returns fixed node as set, otherwise nullopt if consistent
 std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
                                             const Cube &newLiterals) {
   if (parent == nullptr) {
@@ -209,7 +210,8 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
   // alternative child
   return filteredNewLiterals;
 }
-// helper end
+
+}  // namespace
 
 RegularTableau::RegularTableau(const std::initializer_list<Literal> initialLiterals)
     : RegularTableau(std::vector(initialLiterals)) {}
@@ -223,6 +225,8 @@ bool RegularTableau::validate(Node *currentNode) const {
   for (auto &root : rootNodes) {
     findReachableNodes(root, reachable);
   }
+
+  auto allNodesValid = std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
 
   // get open leafs
   std::erase_if(reachable, [&](Node *node) {
@@ -239,7 +243,8 @@ bool RegularTableau::validate(Node *currentNode) const {
     Literal::print(leakedNode->cube);
   }
 
-  return reachable.empty();
+  auto unreducedNodesValid = reachable.empty();
+  return unreducedNodesValid && allNodesValid;
 }
 
 // assumptions:
@@ -324,12 +329,8 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
 
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
-    if (!validate()) {
-      exportProof("regular");
-      assert(false);
-    }
-
     exportDebug("debug");
+    assert(validate());
 
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
@@ -341,7 +342,7 @@ bool RegularTableau::solve() {
     }
 
     Tableau tableau{currentNode->cube};
-    if (tableau.applyRuleA() /* TODO: make return value boolean */) {
+    if (tableau.applyRuleA()) {
       expandNode(currentNode, &tableau);
     } else {
       extractCounterexample(currentNode);
@@ -356,6 +357,7 @@ bool RegularTableau::solve() {
 // assumptions:
 // node has only normal terms
 void RegularTableau::expandNode(Node *node, Tableau *tableau) {
+  assert(node == nullptr || node->validate());
   // node is expandable
   // calculate normal form
   auto dnf = tableau->dnf();
@@ -388,7 +390,7 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
 
     // add child
     // checks if renaming exists when adding and returns already existing node if possible
-    // updates edge Label with renaming
+    // updates edge label with renaming
     Node *newNode = addNode(newCube, edgeLabel);
     addEdge(node, newNode, edgeLabel);
   }

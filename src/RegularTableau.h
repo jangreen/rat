@@ -18,9 +18,10 @@ class RegularTableau {
   class Node {
    public:
     explicit Node(Cube cube);
+    bool validate() const;
 
-    Cube cube;          // must be ordered // FIXME assert this
-    Renaming renaming;  // renaming for ordered cube
+    Cube cube;          // must be ordered
+    Renaming renaming;  // renaming for ordered cube // ehat is this?
     std::vector<Node *> childNodes;
     std::map<Node *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
     bool closed = false;
