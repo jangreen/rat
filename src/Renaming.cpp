@@ -10,6 +10,4 @@ Renaming::Renaming(std::vector<int> from) : from(from) {
   this->to = to;
 }
 
-Renaming::Renaming(std::vector<int> from, std::vector<int> to) : from(from), to(to) {}
-
 Renaming::Renaming(int from, int to) : from({from}), to({to}) {}
