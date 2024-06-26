@@ -64,10 +64,10 @@ class Tableau {
     [[nodiscard]] bool isEmpty() const;
 
     void removeIf(const std::function<bool(Node *)> &predicate);
-    bool validate();
+    bool validate() const;
 
-    const_iterator cbegin() { return queue.cbegin(); }
-    const_iterator cend() { return queue.cend(); }
+    const_iterator cbegin() const { return queue.cbegin(); }
+    const_iterator cend() const { return queue.cend(); }
   };
 
   explicit Tableau(const Cube &initialLiterals);

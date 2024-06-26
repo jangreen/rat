@@ -20,7 +20,7 @@ void Tableau::NodeQueue::removeIf(const std::function<bool(Node *)> &predicate) 
   std::erase_if(queue, predicate);
 }
 
-bool Tableau::NodeQueue::validate() {
+bool Tableau::NodeQueue::validate() const {
   return std::all_of(cbegin(), cend(),
                      [](const auto unreducedNode) { return unreducedNode->validate(); });
 }

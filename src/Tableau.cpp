@@ -22,15 +22,15 @@ Tableau::Tableau(const Cube &cube) {
   }
 }
 
-bool Tableau::validate() const { return rootNode->validateRecursive(); }
+bool Tableau::validate() const {
+  return rootNode->validateRecursive() && unreducedNodes.validate();
+}
 
 void Tableau::removeNode(Node *node) {
   assert(validate());
-  assert(unreducedNodes.validate());
-  assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(),
-                      [&](const auto unreducedNode) { return unreducedNode == node; }));
-  assert(node != rootNode.get());
+  assert(node != rootNode.get());       // node is not root node
   assert(node->parentNode != nullptr);  // there is always a dummy root node
+  assert(node->parentNode->validate());
   auto parentNode = node->parentNode;
 
   if (node->children.empty()) {
@@ -70,11 +70,13 @@ bool Tableau::solve(int bound) {
                         [&](const auto unreducedNode) { return unreducedNode == currentNode; }));
     assert(unreducedNodes.validate());
     assert(currentNode->validate());
+    assert(currentNode->parentNode->validate());
     assert(validate());
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
       assert(unreducedNodes.validate());
+      assert(currentNode->parentNode->validate());
       removeNode(currentNode);  // in-place rule application
       continue;
     }
@@ -133,6 +135,7 @@ bool Tableau::applyRuleA() {
       continue;
     }
     assert(unreducedNodes.validate());
+    assert(currentNode->parentNode->validate());
     removeNode(currentNode);
     // assert: apply rule has removed currentNode
 
@@ -155,7 +158,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   assert(leaf->isLeaf());
   auto renaming = Renaming(from, to);
 
-  // determin first node that has to be renamed
+  // determine first node that has to be renamed
   Node *cur = leaf->parentNode;
   Node *firstToRename = nullptr;
   while (cur != nullptr) {
@@ -180,23 +183,21 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
     Literal litCopy = Literal(cur->literal);
     litCopy.rename(renaming);
 
-    auto [_, inserted] = allRenamedLiterals.insert(litCopy);
-    if (!inserted) {
-      cur = cur->parentNode;
-      continue;
+    auto [_, isNew] = allRenamedLiterals.insert(litCopy);
+    if (isNew) {
+      Node *renamedCur = new Node(nullptr, litCopy);
+      renamedCur->tableau = cur->tableau;
+      if (copiedBranch != nullptr) {
+        copiedBranch->parentNode = renamedCur;
+        renamedCur->children.push_back(std::move(copiedBranch));
+      }
+      unreducedNodes.push(renamedCur);
+      copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
-    Node *renamedCur = new Node(nullptr, litCopy);
-    renamedCur->tableau = cur->tableau;
-    if (copiedBranch != nullptr) {
-      copiedBranch->parentNode = cur;
-      renamedCur->children.push_back(std::move(copiedBranch));
-    }
-    unreducedNodes.push(renamedCur);
-    copiedBranch = std::unique_ptr<Node>(renamedCur);
-
-    auto reachedRoot = cur->parentNode == rootNode.get();
-    if (!firstBranchingNodeFound && (cur->parentNode->children.size() > 1 || reachedRoot)) {
+    auto parentIsRoot = cur->parentNode == rootNode.get();
+    auto parentIsBranching = cur->parentNode->children.size() > 1;
+    if (!firstBranchingNodeFound && (parentIsBranching || parentIsBranching)) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
       auto parentNode = cur->parentNode;  // save, because next line destroys cur
@@ -205,10 +206,10 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
       firstBranchingNodeFound = true;
       continue;
     }
-
     cur = cur->parentNode;
   }
 
+  assert(copiedBranch != nullptr);
   copiedBranch->parentNode = lastNotRenamedNode;
   lastNotRenamedNode->children.push_back(std::move(copiedBranch));
 }
