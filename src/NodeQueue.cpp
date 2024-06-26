@@ -1,10 +1,15 @@
 #include "Tableau.h"
 
-void Tableau::NodeQueue::push(Node *node) { queue.insert(node); }
+void Tableau::NodeQueue::push(Node *node) {
+  // TODO: remove: std::cout << "PUSH: " << node->literal.toString() << std::endl;
+  queue.insert(node);
+}
 
 void Tableau::NodeQueue::erase(Node *node) { queue.erase(node); }
 
 Tableau::Node *Tableau::NodeQueue::pop() {
+  // TODO: remove: std::cout << "POP: " << (*queue.begin())->literal.toString() << std::endl;
+
   assert(!queue.empty());
   return queue.extract(queue.begin()).value();
 }

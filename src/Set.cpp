@@ -63,11 +63,8 @@ std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalS
       return PartialDNF{{re}};
     }
     case RelationOperation::empty: {
-      if (!context->negated) {
-        // Rule (\bot_2L), (\bot_2R) + (\bot_1) -> FALSE
-        return PartialDNF{{BOTTOM}};
-      }
-      return std::nullopt;  // no rule applicabel (omit rules generating true)
+      // Rule (\bot_2L), (\bot_2R) + (\bot_1) -> FALSE
+      return context->negated ? PartialDNF{{TOP}} : PartialDNF{{BOTTOM}};
     }
     case RelationOperation::full: {
       // TODO: implement

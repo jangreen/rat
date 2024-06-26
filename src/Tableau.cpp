@@ -81,22 +81,9 @@ bool Tableau::solve(int bound) {
       continue;
     }
 
-    // 2) Rules which require context (only to normalized literals)
-    if (!currentNode->literal.isNormal()) {
-      continue;
-    }
-
-    if (currentNode->literal.hasTopSet()) {
-      // Rule (~\top_1)
-      currentNode->inferModalTop();
-    } else if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
-      // Rule (~a)
-      currentNode->inferModal();
-    } else if (currentNode->literal.isPositiveEdgePredicate()) {
-      // Rule (~a), Rule (~\top_1)
-      currentNode->inferModalAtomic();
-    } else if (currentNode->literal.isPositiveEqualityPredicate()) {
-      // we want to process euqlities first
+    // 2) Renaming rule
+    if (currentNode->literal.isPositiveEqualityPredicate()) {
+      // we want to process equalities first
       // currently we assume that there is at most one euqality predicate which is a leaf
       // we could generalize this
       assert(currentNode->isLeaf());
@@ -115,6 +102,20 @@ bool Tableau::solve(int bound) {
       }
 
       renameBranch(currentNode, from, to);
+    }
+
+    assert(currentNode->literal.isNormal());
+
+    // 2) Rules which require context (only to normalized literals)
+    if (currentNode->literal.hasTopSet()) {
+      // Rule (~\top_1)
+      currentNode->inferModalTop();
+    } else if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
+      // Rule (~a)
+      currentNode->inferModal();
+    } else if (currentNode->literal.isPositiveEdgePredicate()) {
+      // Rule (~a), Rule (~\top_1)
+      currentNode->inferModalAtomic();
     }
   }
 

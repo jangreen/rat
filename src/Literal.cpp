@@ -236,6 +236,7 @@ bool Literal::isNegatedOf(const Literal &other) const {
          identifier == other.identifier;
 }
 
+// a literal is normal if it cannot be simplified
 bool Literal::isNormal() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
@@ -247,9 +248,11 @@ bool Literal::isNormal() const {
       return set->isNormal();
     }
     case PredicateOperation::constant:
-    case PredicateOperation::edge:
+      return false;
     case PredicateOperation::equality:
+      return negated && rightLabel != leftLabel;
     case PredicateOperation::set:
+    case PredicateOperation::edge:
       return true;
     default:
       throw std::logic_error("unreachable");
