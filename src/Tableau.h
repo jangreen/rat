@@ -14,6 +14,7 @@ class Tableau {
    public:
     Node(Node *parent, Literal literal);
     Node(const Node *other) = delete;
+    ~Node();
     bool validate() const;
     bool validateRecursive() const;
 

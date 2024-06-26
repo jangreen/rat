@@ -40,11 +40,18 @@ Tableau::Node::Node(Node *parent, Literal literal)
       literal(std::move(literal)),
       parentNode(parent) {}
 
+Tableau::Node::~Node() {
+  // remove this from unreducedNodes
+  tableau->unreducedNodes.erase(this);
+}
+
 bool Tableau::Node::validate() const {
   if (tableau == nullptr) {
+    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
   if (tableau->rootNode.get() != this && parentNode == nullptr) {
+    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
   return literal.validate();
