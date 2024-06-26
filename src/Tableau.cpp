@@ -153,11 +153,23 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   assert(leaf->isLeaf());
   auto renaming = Renaming(from, to);
 
+  // determin first node that has to be renamed
+  Node *cur = leaf;
+  Node *firstToRename;
+  while (cur != nullptr) {
+    if (contains(cur->literal.labels(), from)) {
+      firstToRename = cur;
+    }
+  }
+  if (firstToRename == nullptr) {
+    return;
+  }
+
   // move until first branching (bottom-up), then copy
   bool doMove = true;
-  Node *cur = leaf;
+  cur = leaf;
   std::unique_ptr<Node> copiedBranch = nullptr;
-  while (cur != nullptr) {
+  while (cur != firstToRename->parentNode) {
     if (doMove) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
@@ -186,6 +198,8 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
 
     cur = cur->parentNode;
   }
+
+  firstToRename->parentNode->children.push_back(std::move(copiedBranch));
 }
 
 DNF Tableau::dnf() {
