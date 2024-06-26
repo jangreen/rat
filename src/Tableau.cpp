@@ -1,6 +1,7 @@
 #include "Tableau.h"
 
 #include <iostream>
+#include <unordered_set>
 
 #include "utility.h"
 
@@ -172,11 +173,18 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   cur = leaf->parentNode;
   std::unique_ptr<Node> copiedBranch = nullptr;
   auto lastNotRenamedNode = firstToRename->parentNode;
+  std::unordered_set<Literal> allRenamedLiterals;
   while (cur != lastNotRenamedNode) {
     // do copy
     assert(cur->validate());
     Literal litCopy = Literal(cur->literal);
     litCopy.rename(renaming);
+
+    auto [_, inserted] = allRenamedLiterals.insert(litCopy);
+    if (!inserted) {
+      cur = cur->parentNode;
+      continue;
+    }
 
     Node *renamedCur = new Node(nullptr, litCopy);
     renamedCur->tableau = cur->tableau;
@@ -184,6 +192,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
       copiedBranch->parentNode = cur;
       renamedCur->children.push_back(std::move(copiedBranch));
     }
+    unreducedNodes.push(renamedCur);
     copiedBranch = std::unique_ptr<Node>(renamedCur);
 
     auto reachedRoot = cur->parentNode == rootNode.get();
