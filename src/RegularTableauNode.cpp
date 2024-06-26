@@ -60,11 +60,11 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
 
   output << "N" << this << "[tooltip=\"";
   // debug
-  output << std::hash<Node>()(*this) << std::endl << std::endl;
+  output << std::hash<Node>()(*this);
   // label/cube
   output << "\", label=\"";
-  for (const auto &relation : cube) {
-    output << relation.toString() << std::endl;
+  for (const auto &lit : cube) {
+    output << lit.toString() << "\n";
   }
   output << "\"";
   // color closed branches
@@ -75,9 +75,6 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   // edges
   for (const auto childNode : childNodes) {
     for (const auto &[edges, renaming] : childNode->parentNodes[this]) {
-      // if (edges.empty()) {
-      //   continue;
-      // }
       output << "N" << this << " -> " << "N" << childNode << "[";
       if (edges.empty()) {
         output << "color=\"grey\", ";
@@ -85,13 +82,19 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
       // } else if (childNode->firstParentNode == this) {
       //   output << "color=\"blue\", ";
       // }
+
+      // tooltip = renaming
+      output << "tooltip=\"";
+      renaming.toDotFormat(output);
+      output << "\", ";
+
+      // label = edges
       output << "label =\"";
       for (const auto &edgeValue : edges) {
-        output << edgeValue.toString() << ", ";
+        output << edgeValue.toString() << " ";
       }
-      output << " | ";
-      renaming.toDotFormat(output);
-      output << "\n\"];" << std::endl;
+
+      output << "\"];" << std::endl;
     }
   }
   /*/ parents

@@ -64,7 +64,7 @@ bool Tableau::solve(int bound) {
     }
 
     Node *currentNode = unreducedNodes.pop();
-    exportProof("debug");
+    exportDebug("debug");
     assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(),
                         [&](const auto unreducedNode) { return unreducedNode == currentNode; }));
     assert(unreducedNodes.validate());
@@ -219,4 +219,10 @@ void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
+}
+
+void Tableau::exportDebug(const std::string &filename) const {
+#if (DEBUG)
+  exportProof(filename);
+#endif
 }

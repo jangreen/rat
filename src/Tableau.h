@@ -86,6 +86,7 @@ class Tableau {
 
   void toDotFormat(std::ofstream &output) const;
   void exportProof(const std::string &filename) const;
+  void exportDebug(const std::string &filename) const;
 
   // helper
   static Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {

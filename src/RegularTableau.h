@@ -62,6 +62,7 @@ class RegularTableau {
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;
+  void exportDebug(const std::string &filename) const;
 };
 
 template <>

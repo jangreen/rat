@@ -23,7 +23,7 @@ class Renaming {
 
   void toDotFormat(std::ofstream &output) const {
     for (size_t i = 0; i < from.size(); i++) {
-      output << from.at(i) << "." << to.at(i) << ", ";
+      output << from.at(i) << " -> " << to.at(i) << "\n";
     }
   }
 };

@@ -329,7 +329,7 @@ bool RegularTableau::solve() {
       assert(false);
     }
 
-    exportProof("debug");
+    exportDebug("debug");
 
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
@@ -521,4 +521,10 @@ void RegularTableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
+}
+
+void RegularTableau::exportDebug(const std::string &filename) const {
+#if (DEBUG)
+  exportProof(filename);
+#endif
 }
