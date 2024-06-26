@@ -10,12 +10,6 @@
 #include "utility.h"
 
 namespace {
-// -------------------- Anonymous helper functions --------------------
-
-template <typename T>
-bool contains(const std::vector<T> &vector, const T &object) {
-  return std::ranges::find(vector, object) != vector.end();
-}
 
 std::tuple<std::vector<int>, std::vector<CanonicalSet>> gatherActiveLabels(const Cube &cube) {
   std::vector<int> activeLabels;
@@ -174,14 +168,15 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
   for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
     for (const auto &parentLabel : parentLabels) {
       const Cube &edges = std::get<0>(parentLabel);
-      const Renaming &renaming = std::get<1>(parentLabel);
+      Renaming renaming = std::get<1>(parentLabel);
       for (const auto &edgeLiteral : edges) {
         const auto literalCombinations = edgeLiteral.labelBaseCombinations();
         // only keep combinations with labels that are still there after renaming
         for (const auto combination : literalCombinations) {
-          if (isSubset(combination->getLabels(), renaming)) {
+          if (isSubset(combination->getLabels(), renaming.from)) {
             // push renamed combination (using inverse of renaming)
-            auto renamedCombination = combination->rename(renaming, true);
+            renaming.invert();
+            auto renamedCombination = combination->rename(renaming);
             parentActiveLabelBaseCombinations.push_back(renamedCombination);
           }
         }
@@ -416,7 +411,8 @@ bool RegularTableau::isInconsistent(Node *parent, const Node *child, EdgeLabel l
   Cube converseRequest = child->cube;
   // use parent naming: label has already parent naming, rename child cube
   for (auto &literal : converseRequest) {
-    literal.rename(renaming, true);
+    renaming.invert();
+    literal.rename(renaming);
   }
 
   Tableau calcConverseReq(converseRequest);
@@ -483,7 +479,7 @@ void RegularTableau::extractCounterexample(const Node *openNode) {
       auto currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
       while (left < currentRenaming.size() && renameNode != nullptr) {
         currentRenaming = std::get<1>(renameNode->firstParentLabel);
-        left = currentRenaming[left];
+        left = currentRenaming.rename(left);
         renameNode = renameNode->firstParentNode;
       }
       // rename right
@@ -491,7 +487,7 @@ void RegularTableau::extractCounterexample(const Node *openNode) {
       currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
       while (right < currentRenaming.size() && renameNode != nullptr) {
         currentRenaming = std::get<1>(renameNode->firstParentLabel);
-        right = currentRenaming[right];
+        right = currentRenaming.rename(right);
         renameNode = renameNode->firstParentNode;
       }
 

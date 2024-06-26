@@ -384,22 +384,22 @@ Literal Literal::substituteSet(const CanonicalSet set) const {
   return l;
 }
 
-void Literal::rename(const Renaming &renaming, const bool inverse) {
+void Literal::rename(const Renaming &renaming) {
   switch (operation) {
     case PredicateOperation::constant:
       return;
     case PredicateOperation::setNonEmptiness: {
-      set = set->rename(renaming, inverse);
+      set = set->rename(renaming);
       return;
     }
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
-      leftLabel = rename(*leftLabel, renaming, inverse);
-      rightLabel = rename(*rightLabel, renaming, inverse);
+      leftLabel = renaming.rename(*leftLabel);
+      rightLabel = renaming.rename(*rightLabel);
       return;
     }
     case PredicateOperation::set: {
-      leftLabel = rename(*leftLabel, renaming, inverse);
+      leftLabel = renaming.rename(*leftLabel);
       return;
     }
   }

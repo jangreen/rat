@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Relation.h"
+#include "Renaming.h"
 
 // forward declaration
 class Literal;
@@ -12,8 +13,6 @@ class Set;
 
 typedef std::vector<Literal> Cube;
 typedef std::vector<Cube> DNF;
-typedef std::vector<int> Renaming;
-typedef std::vector<int> Renaming;
 typedef const Set *CanonicalSet;
 // a PartialPredicate can be either a Predicate or a Set that will be used to construct a
 // predicate for a given context
@@ -60,7 +59,7 @@ class Literal {
   // substitute n-th occurrence, TODO: -1 = all
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
   Literal substituteSet(CanonicalSet set) const;
-  void rename(const Renaming &renaming, bool inverse);
+  void rename(const Renaming &renaming);
 
   static int saturationBoundId;
   static int saturationBoundBase;
@@ -88,10 +87,6 @@ class Literal {
       std::cout << literal.toString() << " , ";
     }
     std::cout << std::endl;
-  }
-
-  static int rename(int n, const Renaming &renaming, bool inverse) {
-    return inverse ? renaming[n] : std::distance(renaming.begin(), std::ranges::find(renaming, n));
   }
 };
 
@@ -159,7 +154,7 @@ class Set {
   const CanonicalSet rightOperand;              // is set iff operation binary
   const CanonicalRelation relation;             // is set iff domain/image
 
-  [[nodiscard]] CanonicalSet rename(const Renaming &renaming, bool inverse) const;
+  [[nodiscard]] CanonicalSet rename(const Renaming &renaming) const;
   CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
   [[nodiscard]] std::optional<PartialDNF> applyRule(const Literal *context, bool modalRules) const;

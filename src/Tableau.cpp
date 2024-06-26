@@ -149,6 +149,45 @@ std::optional<Literal> Tableau::applyRuleA() {
   return std::nullopt;
 }
 
+void Tableau::renameBranch(Node *leaf, int from, int to) {
+  assert(leaf->isLeaf());
+  auto renaming = Renaming(from, to);
+
+  // move until first branching (bottom-up), then copy
+  bool doMove = true;
+  Node *cur = leaf;
+  std::unique_ptr<Node *> copiedBranch = nullptr;
+  while (cur != nullptr) {
+    if (doMove) {
+      auto curIt = std::ranges::find_if(cur->parentNode->children,
+                                        [&](auto &child) { return child.get() == cur; });
+      auto movedCur = std::move(*curIt);
+      if (copiedBranch != nullptr) {
+        copiedBranch->parentNode = cur;
+        movedCur->children.push_back(std::move(copiedBranch));
+      }
+      copiedBranch = std::move(movedCur);
+      cur->parentNode->children.erase(curIt);
+
+      if (!cur->parentNode->children.empty()) {
+        doMove = false;
+      }
+    } else {
+      // do copy
+      Literal litCopy = Literal(cur->literal);
+      litCopy.rename(renaming);
+
+      Node *renamedCur = new Node(nullptr, litCopy);
+      renamedCur->tableau = cur->tableau;
+      copiedBranch->parentNode = cur;
+      renamedCur->children.push_back(std::move(copiedBranch));
+      copiedBranch = std::unique_ptr<Node *>(renamedCur);
+    }
+
+    cur = cur->parentNode;
+  }
+}
+
 DNF Tableau::dnf() {
   solve();
   return rootNode->extractDNF();

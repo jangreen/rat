@@ -337,24 +337,24 @@ CanonicalSet Set::substitute(const CanonicalSet search, const CanonicalSet repla
   return this;
 }
 
-CanonicalSet Set::rename(const Renaming &renaming, const bool inverse) const {
+CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
     case SetOperation::singleton:
-      return newEvent(Literal::rename(*label, renaming, inverse));
+      return newEvent(renaming.rename(*label));
     case SetOperation::base:
     case SetOperation::empty:
     case SetOperation::full:
       return this;
     case SetOperation::choice:
     case SetOperation::intersection:
-      leftRenamed = leftOperand->rename(renaming, inverse);
-      rightRenamed = rightOperand->rename(renaming, inverse);
+      leftRenamed = leftOperand->rename(renaming);
+      rightRenamed = rightOperand->rename(renaming);
       return newSet(operation, leftRenamed, rightRenamed);
     case SetOperation::image:
     case SetOperation::domain:
-      leftRenamed = leftOperand->rename(renaming, inverse);
+      leftRenamed = leftOperand->rename(renaming);
       return newSet(operation, leftRenamed, relation);
   }
   throw std::logic_error("unreachable");

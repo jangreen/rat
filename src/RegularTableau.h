@@ -4,7 +4,6 @@
 #include <map>
 #include <stack>
 #include <string>
-#include <tuple>
 #include <unordered_set>
 #include <vector>
 
@@ -12,7 +11,7 @@
 #include "Literal.h"
 #include "Tableau.h"
 
-typedef std::tuple<Cube, Renaming> EdgeLabel;
+typedef std::pair<Cube, Renaming> EdgeLabel;
 
 class RegularTableau {
  public:

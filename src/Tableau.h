@@ -13,6 +13,7 @@ class Tableau {
   class Node {
    public:
     Node(Node *parent, Literal literal);
+    Node(const Node *other) = delete;
     bool validate() const;
 
     Tableau *tableau;
@@ -74,6 +75,7 @@ class Tableau {
 
   bool solve(int bound = -1);
   void removeNode(Node *node);
+  void renameBranch(Node *leaf, int from, int to);
 
   // methods for regular reasoning
   std::optional<Literal> applyRuleA();

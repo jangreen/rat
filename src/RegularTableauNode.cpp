@@ -8,19 +8,19 @@ RegularTableau::Node::Node(Cube cube) {
   std::sort(cube.begin(), cube.end());
 
   // calculate renaming
-  Renaming renaming{};
+  std::vector<int> labels{};
   for (auto &literal : cube) {
     for (const auto &l : literal.labels()) {
-      if (std::ranges::find(renaming, l) == renaming.end()) {
-        renaming.push_back(l);
+      if (std::ranges::find(labels, l) == labels.end()) {
+        labels.push_back(l);
       }
     }
   }
-  this->renaming = renaming;
+  this->renaming = Renaming(labels);
 
   // rename
   for (auto &literal : cube) {
-    literal.rename(renaming, false);
+    literal.rename(renaming);
   }
   this->cube = std::move(cube);
 }
@@ -74,7 +74,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto childNode : childNodes) {
-    for (const auto &[edges, labels] : childNode->parentNodes[this]) {
+    for (const auto &[edges, renaming] : childNode->parentNodes[this]) {
       // if (edges.empty()) {
       //   continue;
       // }
@@ -90,9 +90,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
         output << edgeValue.toString() << ", ";
       }
       output << " | ";
-      for (const auto &v : labels) {
-        output << v << ", ";
-      }
+      renaming.toDotFormat(output);
       output << "\n\"];" << std::endl;
     }
   }

@@ -32,3 +32,8 @@ inline bool validateDNF(const DNF &dnf) {
 inline bool validateSet(std::set<Tableau::Node *, Tableau::Node::CompareNodes> s) {
   return std::ranges::all_of(s, [](const auto node) { return node->validate(); });
 }
+
+template <typename T>
+bool contains(const std::vector<T> &vector, const T &object) {
+  return std::ranges::find(vector, object) != vector.end();
+}
