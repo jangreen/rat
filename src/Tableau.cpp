@@ -156,7 +156,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   // move until first branching (bottom-up), then copy
   bool doMove = true;
   Node *cur = leaf;
-  std::unique_ptr<Node *> copiedBranch = nullptr;
+  std::unique_ptr<Node> copiedBranch = nullptr;
   while (cur != nullptr) {
     if (doMove) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
@@ -181,7 +181,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
       renamedCur->tableau = cur->tableau;
       copiedBranch->parentNode = cur;
       renamedCur->children.push_back(std::move(copiedBranch));
-      copiedBranch = std::unique_ptr<Node *>(renamedCur);
+      copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
     cur = cur->parentNode;
