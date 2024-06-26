@@ -227,7 +227,7 @@ bool Literal::operator<(const Literal &other) const {
   }
   if (set != other.set) {
     // compare pointer values for very efficient checks, but non-deterministic order
-    return set->toString() > other.set->toString();
+    return set > other.set;
   }
   return false;
 }

@@ -88,7 +88,7 @@ bool Tableau::solve(int bound) {
       // we could generalize this
       assert(currentNode->isLeaf());
 
-      // Rule (\equiv)
+      // Rule (\equivL), Rule (\equivR)
       const Literal &equalityLiteral = currentNode->literal;
       assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
       int from, to;
@@ -108,16 +108,23 @@ bool Tableau::solve(int bound) {
     assert(currentNode->literal.isNormal());
 
     // 2) Rules which require context (only to normalized literals)
+    // if you need two premises l1, l2 and comes after l1 in the branch then the rule is applied if
+    // we consider l2
+    // we cannot consider edge predicates first and check for premise literals upwards because the
+    // conclusion could be such a predicate again
+    // TODO: maybe consider lazy T evalutaion (consider T as event)
+
     if (currentNode->literal.hasTopSet()) {
       // Rule (~\top_1)
+      assert(currentNode->literal.negated);
       currentNode->inferModalTop();
     } else if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
-      // Rule (~a)
+      // Rule (~aL), Rule (~aR)
       currentNode->inferModal();
     } else if (currentNode->literal.isPositiveEdgePredicate()) {
-      // Rule (~a), Rule (~\top_1)
-      std::cout << currentNode->literal.toString() << std::endl;
-      assert(currentNode->literal.validate());
+      // Rule (~\top_1)
+      // e=f, e\in A, (e,f)\in a, e != 0
+      // Rule (~aL), Rule (~aR)
       currentNode->inferModalAtomic();
     }
   }
