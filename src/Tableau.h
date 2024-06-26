@@ -15,6 +15,7 @@ class Tableau {
     Node(Node *parent, Literal literal);
     Node(const Node *other) = delete;
     bool validate() const;
+    bool validateRecursive() const;
 
     Tableau *tableau;
     const Literal literal;
@@ -69,6 +70,7 @@ class Tableau {
   };
 
   explicit Tableau(const Cube &initialLiterals);
+  bool validate() const;
 
   std::unique_ptr<Node> rootNode;
   NodeQueue unreducedNodes;

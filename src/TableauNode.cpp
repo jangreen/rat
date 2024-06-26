@@ -50,6 +50,10 @@ bool Tableau::Node::validate() const {
   return literal.validate();
 }
 
+bool Tableau::Node::validateRecursive() const {
+  return validate() && std::ranges::all_of(children, [](auto &child) { return child->validate(); });
+}
+
 // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
 bool Tableau::Node::isClosed() const {
   if (literal == BOTTOM) {

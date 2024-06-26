@@ -21,7 +21,10 @@ Tableau::Tableau(const Cube &cube) {
   }
 }
 
+bool Tableau::validate() const { return rootNode->validateRecursive(); }
+
 void Tableau::removeNode(Node *node) {
+  assert(validate());
   // remove Node from unreducedNodes
   unreducedNodes.erase(node);
   assert(unreducedNodes.validate());
@@ -53,6 +56,7 @@ void Tableau::removeNode(Node *node) {
   assert(std::ranges::none_of(parentNode->children,
                               [](const auto &child) { return !child->validate(); }));
   assert(unreducedNodes.validate());
+  assert(validate());
 }
 
 bool Tableau::solve(int bound) {
