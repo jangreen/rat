@@ -213,6 +213,10 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
     auto parentIsRoot = cur->parentNode == rootNode.get();
     auto parentIsBranching = cur->parentNode->children.size() > 1;
     auto parentIsLastNotRenamed = cur == firstToRename;
+    //  checke if
+    // branching -> from here copy and remove suffix from old tree
+    // root -> delete old branch
+    // lastToRename (also in case of non branching) -> delete branch except for non-renamed
     if (!firstBranchingNodeFound && (parentIsBranching || parentIsRoot || parentIsLastNotRenamed)) {
       auto curIt = std::ranges::find_if(cur->parentNode->children,
                                         [&](auto &child) { return child.get() == cur; });
