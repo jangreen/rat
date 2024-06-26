@@ -91,27 +91,25 @@ bool Tableau::solve(int bound) {
       // Rule (~a), Rule (~\top_1)
       currentNode->inferModalAtomic();
     } else if (currentNode->literal.isPositiveEqualityPredicate()) {
+      // we want to process euqlities first
+      // currently we assume that there is at most one euqality predicate which is a leaf
+      // we could generalize this
+      assert(currentNode->isLeaf());
+
       // Rule (\equiv)
       const Literal &equalityLiteral = currentNode->literal;
       assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
-      CanonicalSet search, replace;
+      int from, to;
       if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
         // e1 = e2 , e1 < e2
-        search = Set::newEvent(*equalityLiteral.rightLabel);
-        replace = Set::newEvent(*equalityLiteral.leftLabel);
+        from = *equalityLiteral.rightLabel;
+        to = *equalityLiteral.leftLabel;
       } else {
-        search = Set::newEvent(*equalityLiteral.leftLabel);
-        replace = Set::newEvent(*equalityLiteral.rightLabel);
+        from = *equalityLiteral.leftLabel;
+        to = *equalityLiteral.rightLabel;
       }
 
-      Node *cur = currentNode;
-      while ((cur = cur->parentNode) != nullptr) {
-        // check if inside literal something can be inferred
-        Literal copy = Literal(cur->literal);
-        if (copy.substitute(search, replace, -1)) {
-          currentNode->appendBranch(copy);
-        }
-      }
+      renameBranch(currentNode, from, to);
     }
   }
 
@@ -155,7 +153,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
 
   // determin first node that has to be renamed
   Node *cur = leaf;
-  Node *firstToRename;
+  Node *firstToRename = nullptr;
   while (cur != nullptr) {
     if (contains(cur->literal.labels(), from)) {
       firstToRename = cur;
