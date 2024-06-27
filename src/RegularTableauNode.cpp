@@ -5,6 +5,7 @@
 RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
 
 std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube cube) {
+  // want to calculate Canonical Cube -> probably DAG isomorphism (NP-C)
   // calculate renaming such that two isomorphic cubes C1 and C2 are identical after applying their
   // renaming
   // note that < (i.e. <=>) cannot be used here due to nondeterminism for setNonEmptiness predicates
