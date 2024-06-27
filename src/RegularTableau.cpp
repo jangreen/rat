@@ -105,15 +105,18 @@ void findReachableNodes(RegularTableau::Node *node,
 Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
-  assert(dropped.empty());               // dropped is empty
+  assert(std::ranges::none_of(cube, [](auto &lit) {
+    return lit.isPositiveEqualityPredicate();
+  }));                      // no e=f // FIXME is this included in Normal
+                            // FIXME what about set membership predicates? -> all not normal
+  assert(dropped.empty());  // dropped is empty
 
   Cube purgedCube;
   auto &edgePredicates = std::get<0>(label);
 
   // remove edge predicates from cube and add them to the label
   for (const auto &literal : cube) {
-    if (literal.isPositiveEdgePredicate() ||
-        literal.isPositiveEqualityPredicate()) {  // FIXME: do we need isPositiveEqualityPredicate?
+    if (literal.isPositiveEdgePredicate()) {  // FIXME: do we need isPositiveEqualityPredicate?
       edgePredicates.push_back(literal);
     } else {
       purgedCube.push_back(literal);
@@ -125,30 +128,13 @@ Cube purge(const Cube &cube, Cube &dropped, EdgeLabel &label) {
   auto [activeLabels, activeLabelBaseCombinations] = gatherActiveLabels(purgedCube);
   addActiveLabelsFromEdges(edgePredicates, activeLabelBaseCombinations);
 
-  // calculate equivalence class
-  const std::map<int, int> minimalRepresentatives =
-      computeMinimalRepresentatives(std::get<0>(label));
-
-  // 2) filtering: non-active labels, non-minimal labels, and non-active combinations
-  auto isNonMinimal = [&](const int l) {
-    const auto iter = minimalRepresentatives.find(l);
-    return iter != minimalRepresentatives.end() && iter->second != l;
-  };
-
+  // 2) filter non-active labels and non-active combinations
   const Cube copy = std::move(purgedCube);
   purgedCube = {};
   for (const auto &literal : copy) {
-    const auto &literalLabels = literal.labels();
-    if (std::ranges::find_if(literalLabels, isNonMinimal) != literalLabels.end()) {
-      // Has non-minimal labels
-      continue;
-    }
-
     if (isLiteralActive(literal, activeLabels, activeLabelBaseCombinations)) {
       purgedCube.push_back(literal);
     } else {
-      // are minimal
-      // check for immediate inconsistencies
       dropped.push_back(literal);
     }
   }
@@ -205,8 +191,6 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
       filteredNewLiterals.push_back(literal);
     }
   }
-  // spdlog::debug(fmt::format("[Solver] Inconsistent Node  {}",
-  // std::hash<RegularTableau::Node>()(*parent))); at this point filteredNewLiterals is the
   // alternative child
   return filteredNewLiterals;
 }
