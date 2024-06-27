@@ -114,4 +114,18 @@
         "-readability/todo"
     ],
     "graphviz-interactive-preview.renderLockAdditionalTimeout": -1,
+    "cmake.debugConfig": {
+        "name": "(lldb) Starten",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/CatInfer",
+        "args": [
+            "${file}"
+        ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}", //"${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb"
+    },
 }

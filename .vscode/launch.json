@@ -9,11 +9,11 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/CatInfer",
-            "args": [],
+            "args": ["${file}"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}", //"${fileDirname}",
             "environment": [],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "lldb"
         }
     ]
