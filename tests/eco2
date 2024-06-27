@@ -1,0 +1,8 @@
+let r1 = (a | b)^*
+let r2 = (b | id);(a | id)
+
+assume a;b <= id
+assume b^+ <= b
+assume a;a <= 0
+
+assert r1 <= r2

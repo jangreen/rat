@@ -6,18 +6,22 @@
 #include "Relation.h"
 class Assumption {
  public:
-  explicit Assumption(CanonicalRelation relation, std::optional<std::string> baseRelation = std::nullopt);
+  explicit Assumption(CanonicalRelation relation,
+                      std::optional<std::string> baseRelation = std::nullopt);
 
   const CanonicalRelation relation;               // regular, empty, identity
   const std::optional<std::string> baseRelation;  // regular
 
   static CanonicalRelation masterIdRelation() {
     // construct master identity CanonicalRelation
-    CanonicalRelation masterId = Relation::newRelation(RelationOperation::identity);
+    CanonicalRelation masterId = nullptr;
     for (const auto &assumption : idAssumptions) {
-      masterId = Relation::newRelation(RelationOperation::choice, masterId, assumption.relation);
+      masterId = masterId == nullptr ? assumption.relation
+                                     : Relation::newRelation(RelationOperation::choice, masterId,
+                                                             assumption.relation);
     }
-    return masterId;
+    auto closure = Relation::newRelation(RelationOperation::transitiveClosure, masterId);
+    return closure;
   }
 
   static std::vector<Assumption> emptinessAssumptions;

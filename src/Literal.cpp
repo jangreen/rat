@@ -84,7 +84,10 @@ std::optional<DNF> handleIntersectionWithEvent(const Literal *context, const Can
           std::swap(first, second);
         }
         // (first, second) \in b
-        return DNF{{Literal(context->negated, first, second, b)}};
+        Literal l(context->negated, first, second, b);
+        l.saturatedId = context->saturatedId;
+        l.saturatedBase = context->saturatedBase;
+        return DNF{{l}};
       } else {
         // RuleDirection::Left: e & fr     or      e & rf
         // RuleDirection::Right: fr & e      or      rf & e
@@ -236,12 +239,11 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
       // NOTE: compare pointer values for very efficient checks, but non-deterministic order
       return set <=> other.set;
     case PredicateOperation::constant:
-      return std::strong_ordering::equal; // Equal since we checked signs already
+      return std::strong_ordering::equal;  // Equal since we checked signs already
     default:
       assert(false);
       return std::strong_ordering::equal;
   }
-
 }
 
 bool Literal::isNegatedOf(const Literal &other) const {
@@ -468,8 +470,23 @@ void Literal::saturateId() {
     return;
   }
   switch (operation) {
+    case PredicateOperation::equality: {
+      // ~e1 = e2 -> ~e1R & e2
+      const CanonicalSet e1 = Set::newEvent(*leftLabel);
+      const CanonicalSet e2 = Set::newEvent(*rightLabel);
+      const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, Assumption::masterIdRelation());
+      const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::intersection, e1R, e2);
+
+      operation = PredicateOperation::setNonEmptiness;
+      set = e1R_and_e2;
+      leftLabel = std::nullopt;
+      rightLabel = std::nullopt;
+      identifier = std::nullopt;
+      saturatedId++;
+      return;
+    }
     case PredicateOperation::edge: {
-      // (e1, e2) \in b, R <= id
+      // ~(e1, e2) \in b, R <= id -> ~e1R & b.e2
       const CanonicalSet e1 = Set::newEvent(*leftLabel);
       const CanonicalSet e2 = Set::newEvent(*rightLabel);
       const CanonicalRelation b = Relation::newBaseRelation(*identifier);
