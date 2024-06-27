@@ -12,6 +12,9 @@ namespace {
 std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalSet event,
                                               const CanonicalRelation relation,
                                               const SetOperation operation, const bool modalRules) {
+  // operation indicates if left or right rule is used
+  assert(operation == SetOperation::image || operation == SetOperation::domain);
+
   switch (relation->operation) {
     case RelationOperation::base: {
       // only use if want to
@@ -51,8 +54,12 @@ std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalS
     }
     case RelationOperation::composition: {
       // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
-      const CanonicalSet ea = Set::newSet(operation, event, relation->leftOperand);
-      const CanonicalSet ea_b = Set::newSet(operation, ea, relation->rightOperand);
+      CanonicalRelation first =
+          operation == SetOperation::image ? relation->leftOperand : relation->rightOperand;
+      CanonicalRelation second =
+          operation == SetOperation::image ? relation->rightOperand : relation->leftOperand;
+      const CanonicalSet ea = Set::newSet(operation, event, first);
+      const CanonicalSet ea_b = Set::newSet(operation, ea, second);
       return PartialDNF{{ea_b}};
     }
     case RelationOperation::converse: {
@@ -84,11 +91,10 @@ std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalS
       return PartialDNF{{er1_and_er2}};
     }
     case RelationOperation::transitiveClosure: {
-      const CanonicalSet er = Set::newSet(operation, event, relation->leftOperand);
-      const CanonicalSet err_star = Set::newSet(operation, er, relation);
-
       // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
       // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
+      const CanonicalSet er = Set::newSet(operation, event, relation->leftOperand);
+      const CanonicalSet err_star = Set::newSet(operation, er, relation);
       return context->negated ? PartialDNF{{err_star, event}} : PartialDNF{{err_star}, {event}};
     }
   }
