@@ -25,3 +25,7 @@ test test5 True
 test test6 True
 test test7 True
 test test10 True
+test eco True
+test eco1f False
+test eco2f False
+test eco3f False
