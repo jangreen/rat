@@ -1,0 +1,4 @@
+assume b;b <= b
+assume a <= id
+
+assert a;b;a;b <= b

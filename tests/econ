@@ -1,0 +1,22 @@
+let eco1 = (rf | co | rf^-1;co);(rf | co | rf^-1;co)^*
+let eco2 = rf | (co | rf^-1;co);(rf | id)
+
+assume co;rf^-1 <= 0
+assume co^+ <= co
+assume rf;rf^-1 <= id
+assume rf;co <= 0
+assume rf;rf <= 0
+
+assert rf;rf^-1;co;rf;rf^-1;co <= eco2
+
+// co 52, 1
+// rf 52, 48
+// rf 42 48
+// co 38 42
+// co 37 38
+// rf 37 35
+// rf 29 35
+// co 28 29
+// rf 28 0
+
+// rf^-1;co;rf;rf^-1;co;co;rf;rf^-1;co

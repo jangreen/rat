@@ -1,0 +1,5 @@
+//assume a+ <= a
+assume a;a <= a
+assume b <= id
+
+assert a;b;a <= a

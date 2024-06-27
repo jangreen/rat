@@ -1,0 +1,4 @@
+assume b^+ <= b
+assume a;a^-1 <= id
+
+assert a;a^-1;b;a;a^-1;b <= b

@@ -498,15 +498,12 @@ void Literal::saturateId() {
       return;
     }
     case PredicateOperation::setNonEmptiness: {
-      return;
-      /* FIXME: Is this test code???
       auto saturatedSet = set->saturateId();
       if (set != saturatedSet) {
         set = saturatedSet;
         saturatedId++;
       }
       return;
-      */
     }
     default:
       return;
