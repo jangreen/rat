@@ -3,6 +3,11 @@ set(CMAKE_CXX_STANDARD 20)
 project(CatInfer LANGUAGES CXX)
 message(STATUS "system: ${CMAKE_SYSTEM_PREFIX_PATH}")
 
+# Link time optimization (LTO) // Maybe active by default?
+cmake_policy(SET CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
 # Boost
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)

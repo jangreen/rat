@@ -6,6 +6,10 @@ OccurrenceCounter::OccurrenceCounter(CounterType counter, CanonicalOccurrenceCou
                                      CanonicalOccurrenceCounter right)
     : counter(counter), left(left), right(right) {}
 
+bool OccurrenceCounter::operator==(const OccurrenceCounter& other) const {
+  return counter == other.counter && left == other.left && right == other.right;
+}
+
 bool OccurrenceCounter::validate() const { return false; }
 
 CanonicalOccurrenceCounter OccurrenceCounter::newOccurrenceCounter(

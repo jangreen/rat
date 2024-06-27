@@ -21,6 +21,8 @@ class OccurrenceCounter {
   OccurrenceCounter(const OccurrenceCounter &other) = delete;
   OccurrenceCounter(const OccurrenceCounter &&other) = delete;
 
+  bool operator==(const OccurrenceCounter &other) const;
+
   const CounterType counter;
   const CanonicalOccurrenceCounter left;   // is set iff operation unary/binary
   const CanonicalOccurrenceCounter right;  // is set iff operation binary

@@ -65,7 +65,13 @@ void Tableau::Worklist::push(Node *node) {
   } else if (node->literal.hasTopSet()) {
     insertionPoint = posTopSetHeadDummy.get();
   } else {
-    insertionPoint = positivesHeadDummy.get();
+    // Heuristic: It seems to be better to put leafs towards the end, making sure that
+    //  non-leafs get priority.
+    if (node->isLeaf()) {
+      insertionPoint = positivesTailDummy->prevInWorkList;
+    } else {
+      insertionPoint = positivesHeadDummy.get();
+    }
   }
 
   insertAfter(*insertionPoint, *node);
