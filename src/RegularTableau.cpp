@@ -181,9 +181,10 @@ bool RegularTableau::validate(Node *currentNode) const {
 // cube is in normal form
 RegularTableau::Node *RegularTableau::addNode(const Cube &cube, EdgeLabel &label) {
   // create node, add to "nodes" (returns pointer to existing node if already exists)
-  auto newNode = std::make_unique<Node>(cube);
-  std::get<1>(label) = newNode->renaming;  // update edge label
-  auto [iter, added] = nodes.insert(std::move(newNode));
+  auto [newNode, renaming] = Node::newNode(cube);
+  auto newNodePtr = std::unique_ptr<Node>(newNode);
+  std::get<1>(label) = renaming;  // update edge label
+  auto [iter, added] = nodes.insert(std::move(newNodePtr));
   unreducedNodes.push(iter->get());
   return iter->get();
 }

@@ -38,7 +38,10 @@ class Literal {
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
-  bool operator==(const Literal &other) const { return *this <=> other == 0;}
+  bool operator==(const Literal &other) const { return *this <=> other == 0; }
+  bool operator<(const Literal &other) const {
+    return *this <=> other == std::strong_ordering::less;
+  };
   [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;
@@ -175,13 +178,13 @@ template <>
 struct std::hash<Literal> {
   std::size_t operator()(const Literal &literal) const noexcept {
     const size_t opHash = hash<PredicateOperation>()(literal.operation);
-    const size_t setHash = hash<CanonicalSet>()(literal.set); // Hashes the pointer
+    const size_t setHash = hash<CanonicalSet>()(literal.set);  // Hashes the pointer
     const size_t signHash = hash<bool>()(literal.negated);
     const size_t idHash = hash<std::optional<std::string>>()(literal.identifier);
     const size_t leftLabelHash = hash<std::optional<int>>()(literal.leftLabel);
     const size_t rightLabelHash = hash<std::optional<int>>()(literal.leftLabel);
-    return ((opHash ^ (setHash << 1)) >> 1) ^ (signHash << 1)
-               + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
+    return ((opHash ^ (setHash << 1)) >> 1) ^
+           (signHash << 1) + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
   }
 };
 

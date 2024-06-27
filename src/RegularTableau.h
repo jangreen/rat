@@ -16,12 +16,14 @@ typedef std::pair<Cube, Renaming> EdgeLabel;
 class RegularTableau {
  public:
   class Node {
-   public:
+   private:
     explicit Node(Cube cube);
+
+   public:
+    static std::pair<Node *, Renaming> newNode(Cube cube);
     bool validate() const;
 
-    Cube cube;          // must be ordered
-    Renaming renaming;  // renaming for ordered cube // ehat is this?
+    const Cube cube;  // must be ordered, should not be modified
     std::vector<Node *> childNodes;
     std::map<Node *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
     bool closed = false;

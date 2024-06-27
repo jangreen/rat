@@ -2,12 +2,18 @@
 
 #include "RegularTableau.h"
 
-// TODO: when hashing all singleton sets are equal, when comparing search for renaming
-RegularTableau::Node::Node(Cube cube) {
-  // order cube
-  std::sort(cube.begin(), cube.end());
+RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
 
-  // calculate renaming
+std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube cube) {
+  // calculate renaming such that two isomorphic cubes C1 and C2 are identical after applying their
+  // renaming
+  // note that < (i.e. <=>) cannot be used here due to nondeterminism for setNonEmptiness predicates
+  // -> the ordering must be insensitive to event labels!
+  // FIXME: thus used renaming is not unqiue thus we could have different hash values for the same
+  // nodes
+  std::ranges::sort(cube);
+
+  // 1) calculate renaming
   std::vector<int> labels{};
   for (auto &literal : cube) {
     for (const auto &l : literal.labels()) {
@@ -16,13 +22,16 @@ RegularTableau::Node::Node(Cube cube) {
       }
     }
   }
-  this->renaming = Renaming(labels);
-
-  // rename
+  Renaming renaming(labels);
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
-  this->cube = std::move(cube);
+
+  // 2) sort cube after unqiue renaming
+  std::ranges::sort(cube);
+  Node *node = new Node(std::move(cube));
+  assert(std::ranges::is_sorted(node->cube));
+  return std::pair<Node *, Renaming>(node, renaming);
 }
 
 bool RegularTableau::Node::validate() const {
@@ -44,6 +53,7 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
 size_t std::hash<RegularTableau::Node>::operator()(
     const RegularTableau::Node &node) const noexcept {
   size_t seed = 0;
+  assert(std::ranges::is_sorted(node.cube));
   for (const auto &literal : node.cube) {
     boost::hash_combine(seed, std::hash<Literal>()(literal));
   }
@@ -110,7 +120,8 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   }  //*/
   // root parents
   // for (const auto parentNode : rootParents) {
-  //   output << "N" << this << " -> " << "N" << parentNode << "[color=\"brown\"];" << std::endl;
+  //   output << "N" << this << " -> " << "N" << parentNode << "[color=\"brown\"];" <<
+  //   std::endl;
   // }
   printed = true;
 
