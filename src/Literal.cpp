@@ -207,11 +207,6 @@ bool Literal::validate() const {
 int Literal::saturationBoundId = 1;
 int Literal::saturationBoundBase = 1;
 
-/* bool Literal::operator==(const Literal &other) const {
-  return operation == other.operation && negated == other.negated && set == other.set &&
-         leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
-         identifier == other.identifier;
-}*/
 
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
   if (auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
@@ -388,18 +383,17 @@ std::optional<DNF> Literal::applyRule(const bool modalRules) const {
   throw std::logic_error("unreachable");
 }
 
-bool Literal::substitute(CanonicalSet search, CanonicalSet replace, int n) {
-  switch (operation) {
-    case PredicateOperation::setNonEmptiness: {
-      if (const auto newSet = set->substitute(search, replace, &n); newSet != set) {
-        set = newSet;
-        return true;
-      }
-      return false;
-    }
-    default:
-      return false;  // only substitute in set expressions
+bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
+  if (operation != PredicateOperation::setNonEmptiness) {
+    // only substitute in set expressions
+    return false;
   }
+
+  if (const auto newSet = set->substitute(search, replace, &n); newSet != set) {
+    set = newSet;
+    return true;
+  }
+  return false;
 }
 
 Literal Literal::substituteSet(const CanonicalSet set) const {

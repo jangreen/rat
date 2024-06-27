@@ -128,8 +128,10 @@ class Set {
   void completeInitialization() const;
 
  public:
+  // WARNING: Never call this constructor: it is only public for technicaly reasons
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
-      std::optional<int> label, std::optional<std::string> identifier);  // do not use
+      std::optional<int> label, std::optional<std::string> identifier);
+
   static int maxSingletonLabel;  // to create globally unique labels
   static CanonicalSet newSet(SetOperation operation);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
@@ -137,8 +139,9 @@ class Set {
   static CanonicalSet newEvent(int label);
   static CanonicalSet newBaseSet(std::string &identifier);
 
+  // Due to canonicalization, moving or copying is not allowed
   Set(const Set &other) = delete;
-  Set(const Set &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
+  Set(const Set &&other) = delete;
 
   bool operator==(const Set &other) const;
 
@@ -171,19 +174,20 @@ class Set {
 template <>
 struct std::hash<Literal> {
   std::size_t operator()(const Literal &literal) const noexcept {
-    return ((hash<PredicateOperation>()(literal.operation) ^
-             (hash<CanonicalSet>()(literal.set) << 1)) >>
-            1) ^
-           (hash<bool>()(literal.negated) << 1);
+    const size_t opHash = hash<PredicateOperation>()(literal.operation);
+    const size_t setHash = hash<CanonicalSet>()(literal.set); // Hashes the pointer
+    const size_t signHash = hash<bool>()(literal.negated);
+    const size_t idHash = hash<std::optional<std::string>>()(literal.identifier);
+    const size_t leftLabelHash = hash<std::optional<int>>()(literal.leftLabel);
+    const size_t rightLabelHash = hash<std::optional<int>>()(literal.leftLabel);
+    return ((opHash ^ (setHash << 1)) >> 1) ^ (signHash << 1)
+               + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
   }
 };
 
 template <>
 struct std::hash<SetOperation> {
   std::size_t operator()(const SetOperation &operation) const noexcept {
-    using std::hash;
-    using std::size_t;
-    using std::string;
     return static_cast<std::size_t>(operation);
   }
 };
@@ -191,14 +195,6 @@ struct std::hash<SetOperation> {
 template <>
 struct std::hash<Set> {
   std::size_t operator()(const Set &set) const noexcept {
-    using std::hash;
-    using std::size_t;
-    using std::string;
-
-    // Compute individual hash values for first,
-    // second and third and combine them using XOR
-    // and bit shifting:
-
     const size_t opHash = hash<SetOperation>()(set.operation);
     const size_t leftHash = hash<CanonicalSet>()(set.leftOperand);
     const size_t rightHash = hash<CanonicalSet>()(set.rightOperand);

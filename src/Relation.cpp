@@ -10,12 +10,6 @@ Relation::Relation(const RelationOperation operation, const CanonicalRelation le
       leftOperand(left),
       rightOperand(right) {}
 
-Relation::Relation(const Relation &&other) noexcept
-    : operation(other.operation),
-      identifier(other.identifier),
-      leftOperand(other.leftOperand),
-      rightOperand(other.rightOperand) {}
-
 CanonicalRelation Relation::newRelation(const RelationOperation operation) {
   return newRelation(operation, nullptr, nullptr, std::nullopt);
 }
