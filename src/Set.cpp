@@ -123,10 +123,6 @@ PartialDNF substituteHelper2(const bool substituteRight, const PartialDNF &disju
   return resultDisjunction;
 }
 
-}  // namespace
-
-int Set::maxSingletonLabel = 0;
-
 // initialization helper
 bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
                   const CanonicalSet rightOperand, const CanonicalRelation relation) {
@@ -202,6 +198,10 @@ bool calcHasTopSet(const SetOperation operation, const CanonicalSet leftOperand,
          (rightOperand != nullptr && rightOperand->hasTopSet());
 }
 
+}  // namespace
+
+int Set::maxSingletonLabel = 0;
+
 void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
   this->_hasTopSet = calcHasTopSet(operation, leftOperand, rightOperand);
@@ -229,17 +229,6 @@ Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalS
       leftOperand(left),
       rightOperand(right),
       relation(relation) {}
-
-Set::Set(const Set &&other) noexcept
-    : operation(other.operation),
-      identifier(other.identifier),
-      leftOperand(other.leftOperand),
-      rightOperand(other.rightOperand),
-      relation(other.relation),
-      _isNormal(other._isNormal),
-      _hasTopSet(other._hasTopSet),
-      labels(std::move(other.labels)),
-      labelBaseCombinations(std::move(other.labelBaseCombinations)) {}
 
 CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
                          const CanonicalSet right, const CanonicalRelation relation,

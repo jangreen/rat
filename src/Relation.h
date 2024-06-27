@@ -29,8 +29,10 @@ class Relation {
                                        const std::optional<std::string> &identifier);
 
  public:
+  // WARNING: Never call this constructor: it is only public for technicaly reasons
   Relation(RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
-           std::optional<std::string> identifier);  // do not use directly
+           std::optional<std::string> identifier);
+
   static CanonicalRelation newRelation(RelationOperation operation);
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left);
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
@@ -38,16 +40,14 @@ class Relation {
   static CanonicalRelation newBaseRelation(std::string identifier);
 
   Relation(const Relation &other) = delete;
-  Relation(const Relation
-               &&other) noexcept;  // used for try_emplace (do not want to use copy constructor)
+  Relation(const Relation &&other) = delete;
 
- public:
   bool operator==(const Relation &other) const;
 
   const RelationOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
-  CanonicalRelation const leftOperand;          // is set iff operation unary/binary
-  CanonicalRelation const rightOperand;         // is set iff operation binary
+  const CanonicalRelation leftOperand;          // is set iff operation unary/binary
+  const CanonicalRelation rightOperand;         // is set iff operation binary
 
   [[nodiscard]] std::string toString() const;
 };
@@ -57,9 +57,6 @@ class Relation {
 template <>
 struct std::hash<RelationOperation> {
   std::size_t operator()(const RelationOperation &operation) const noexcept {
-    using std::hash;
-    using std::size_t;
-    using std::string;
     return static_cast<std::size_t>(operation);
   }
 };
@@ -67,17 +64,11 @@ struct std::hash<RelationOperation> {
 template <>
 struct std::hash<Relation> {
   std::size_t operator()(const Relation &relation) const noexcept {
-    using std::hash;
-    using std::size_t;
-    using std::string;
+    const size_t opHash = hash<RelationOperation>()(relation.operation);
+    const size_t leftHash = hash<CanonicalRelation>()(relation.leftOperand);
+    const size_t rightHash = hash<CanonicalRelation>()(relation.rightOperand);
+    const size_t idHash = hash<optional<std::string>>()(relation.identifier);
 
-    // Compute individual hash values for first,
-    // second and third and combine them using XOR
-    // and bit shifting:
-
-    return (hash<RelationOperation>()(relation.operation) ^
-            hash<CanonicalRelation>()(relation.leftOperand) << 1) >>
-               1 ^
-           hash<CanonicalRelation>()(relation.rightOperand) << 1;
+    return ((opHash ^ leftHash << 1) >> 1 ^ rightHash << 1) + idHash;
   }
 };
