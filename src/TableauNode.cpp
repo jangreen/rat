@@ -107,10 +107,12 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 
   if (!isLeaf()) {
     // No leaf: descend recursively
-    for (const auto &child : children) {
+    // Copy DNF for all children but the last one (for the last one we can reuse the DNF).
+    for (const auto &child : std::ranges::drop_view(children, 1)) {
       DNF branchCopy(dnf);
       child->appendBranchInternalDown(branchCopy);  // copy for each branching
     }
+    children[0]->appendBranchInternalDown(dnf);
     assert(tableau->unreducedNodes.validate());
     return;
   }
@@ -139,16 +141,8 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 void Tableau::Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   Node *newNode = new Node(this, BOTTOM);
-
-  // remove all nodes behind this node from unreducedNodes
-  std::set<Node *, Tableau::Node::CompareNodes> uselessNodes;
-  getNodesBehind(uselessNodes);
-  tableau->unreducedNodes.removeIf([&](const Node *node) {
-    return std::ranges::any_of(uselessNodes,
-                               [&](const auto &uselessNode) { return uselessNode == node; });
-  });
-
-  // now it is safe to clear children
+  // It is safe to clear the children: the Node destructor
+  // will make sure to remove them from worklist
   children.clear();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
 

@@ -358,7 +358,6 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
 }
 
 std::optional<PartialDNF> Set::applyRule(const Literal *context, const bool modalRules) const {
-  std::vector<std::vector<PartialLiteral>> result;
   switch (operation) {
     case SetOperation::singleton:
       // no rule applicable to single event constant
@@ -428,6 +427,8 @@ std::optional<PartialDNF> Set::applyRule(const Literal *context, const bool moda
         return std::nullopt;
       }
 
+      std::vector<std::vector<PartialLiteral>> result;
+      result.reserve(setResult->size());
       for (const auto &cube : *setResult) {
         std::vector<PartialLiteral> newCube;
         newCube.reserve(cube.size());
