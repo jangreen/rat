@@ -150,13 +150,6 @@ void Tableau::Node::closeBranch() {
   assert(newNode->validate());
 }
 
-void Tableau::Node::getNodesBehind(std::set<Node *, Tableau::Node::CompareNodes> &nodes) {
-  nodes.insert(this);
-  for (const auto &child : children) {
-    child->getNodesBehind(nodes);
-  }
-}
-
 void Tableau::Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
@@ -374,20 +367,3 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   }
 }
 
-bool Tableau::Node::CompareNodes::operator()(const Node *left, const Node *right) const {
-  if ((left->literal.operation == PredicateOperation::equality || right->literal.operation == PredicateOperation::equality)
-        && left->literal.operation != right->literal.operation) {
-    return left->literal.operation == PredicateOperation::equality;
-  }
-  if (left->literal.hasTopSet() != right->literal.hasTopSet()) {
-    return left->literal.hasTopSet();
-  }
-
-  // Compare nodes by literals.
-  const auto litCmp = left->literal <=> right->literal;
-  if (litCmp == 0) {
-    // ensure that multiple nodes with same literal are totally ordered (but non-deterministic)
-    return left < right;
-  }
-  return litCmp < 0;
-}

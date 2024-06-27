@@ -66,8 +66,6 @@ bool Tableau::solve(int bound) {
 
     Node *currentNode = unreducedNodes.pop();
     exportDebug("debug");
-    assert(std::none_of(unreducedNodes.cbegin(), unreducedNodes.cend(),
-                        [&](const auto unreducedNode) { return unreducedNode == currentNode; }));
     assert(unreducedNodes.validate());
     assert(currentNode->validate());
     assert(currentNode->parentNode->validate());
