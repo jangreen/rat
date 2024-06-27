@@ -491,11 +491,10 @@ CanonicalSet Set::saturateId() const {
     }
 
     if (relation->operation == RelationOperation::base) {
-      // e.b -> (e.MasterId).b
-      const auto eMasterId =
-          newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
+      // e.b -> (e.R).b
+      const auto eR = newSet(SetOperation::image, leftOperand, Assumption::masterIdRelation());
       const auto &b = relation;
-      return newSet(SetOperation::image, eMasterId, b);
+      return newSet(operation, eR, b);
     }
   }
 
