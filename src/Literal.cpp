@@ -207,7 +207,6 @@ bool Literal::validate() const {
 int Literal::saturationBoundId = 1;
 int Literal::saturationBoundBase = 1;
 
-
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
   if (auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
   if (auto cmp = operation <=> other.operation; cmp != 0) return cmp;
@@ -480,16 +479,18 @@ void Literal::saturateId() {
       return;
     }
     case PredicateOperation::edge: {
-      // ~(e1, e2) \in b, R <= id -> ~e1R & b.e2
+      // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
       const CanonicalSet e1 = Set::newEvent(*leftLabel);
       const CanonicalSet e2 = Set::newEvent(*rightLabel);
       const CanonicalRelation b = Relation::newBaseRelation(*identifier);
       const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, Assumption::masterIdRelation());
-      const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
-      const CanonicalSet e1R_and_be2 = Set::newSet(SetOperation::intersection, e1R, be2);
+      const CanonicalSet Re2 =
+          Set::newSet(SetOperation::domain, e2, Assumption::masterIdRelation());
+      const CanonicalSet b_Re2 = Set::newSet(SetOperation::domain, Re2, b);
+      const CanonicalSet e1R_and_bRe2 = Set::newSet(SetOperation::intersection, e1R, b_Re2);
 
       operation = PredicateOperation::setNonEmptiness;
-      set = e1R_and_be2;
+      set = e1R_and_bRe2;
       leftLabel = std::nullopt;
       rightLabel = std::nullopt;
       identifier = std::nullopt;
