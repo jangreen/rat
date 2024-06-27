@@ -11,9 +11,9 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
   // -> the ordering must be insensitive to event labels!
   // FIXME: thus used renaming is not unqiue thus we could have different hash values for the same
   // nodes
-  std::ranges::sort(cube);
 
   // 1) calculate renaming
+  std::ranges::sort(cube);
   std::vector<int> labels{};
   for (auto &literal : cube) {
     for (const auto &l : literal.labels()) {

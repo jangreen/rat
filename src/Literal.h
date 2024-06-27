@@ -39,9 +39,6 @@ class Literal {
 
   std::strong_ordering operator<=>(const Literal &other) const;
   bool operator==(const Literal &other) const { return *this <=> other == 0; }
-  bool operator<(const Literal &other) const {
-    return *this <=> other == std::strong_ordering::less;
-  };
   [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;
