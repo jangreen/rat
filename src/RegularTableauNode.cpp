@@ -5,18 +5,27 @@
 RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
 
 std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube cube) {
-  // want to calculate Canonical Cube -> probably DAG isomorphism (NP-C)
-  // calculate renaming such that two isomorphic cubes C1 and C2 are identical after applying their
-  // renaming
+  // Goal: calculate canonical cube:
+  // -> calculate renaming such that two isomorphic cubes C1 and C2 are identical after applying
+  // their renaming
+  // -> DAG isomorphism (NP-C)
   // note that < (i.e. <=>) cannot be used here due to nondeterminism for setNonEmptiness predicates
   // -> the ordering must be insensitive to event labels!
-  // FIXME: thus used renaming is not unqiue thus we could have different hash values for the same
-  // nodes
 
   // 1) calculate renaming
-  std::ranges::sort(cube);
+  // all events occur in positive labels
+  Cube positiveCube;
+  std::ranges::copy_if(cube, std::back_inserter(positiveCube),
+                       [](auto &literal) { return !literal.negated; });
+  std::ranges::sort(positiveCube, [](Literal &first, Literal &second) {
+    if (first.set->toString().size() != second.set->toString().size()) {
+      return first.set->toString().size() < second.set->toString().size();
+    }
+    // TODO: make smart toString comparision
+    return first.set->toString() < second.set->toString();
+  });
   std::vector<int> labels{};
-  for (auto &literal : cube) {
+  for (const auto &literal : positiveCube) {
     for (const auto &l : literal.labels()) {
       if (std::ranges::find(labels, l) == labels.end()) {
         labels.push_back(l);
