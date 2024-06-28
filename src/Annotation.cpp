@@ -3,6 +3,21 @@
 #include <cassert>
 #include <unordered_set>
 
+namespace {
+
+  std::optional<AnnotationType> meet(const std::optional<AnnotationType> a, const std::optional<AnnotationType> b) {
+    if (!a.has_value() && !b.has_value()) {
+      return std::nullopt;
+    }
+    return std::min(a.value_or(INT32_MAX), b.value_or(INT32_MAX));
+  }
+
+  std::optional<AnnotationType> getAnnotation(CanonicalAnnotation a) {
+    return a == nullptr ? std::nullopt : std::make_optional(a->value);
+  }
+
+}
+
 Annotation::Annotation(AnnotationType value, CanonicalAnnotation left, CanonicalAnnotation right)
     : value(value), left(left), right(right) {}
 
@@ -27,7 +42,11 @@ CanonicalAnnotation Annotation::newLeaf(AnnotationType value) {
 }
 
 CanonicalAnnotation Annotation::newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right) {
-  return newAnnotation(std::min(left->value, right->value), left, right);
+  const auto annotationValue = meet(getAnnotation(left), getAnnotation(right));
+  if (!annotationValue.has_value()) {
+    return nullptr;
+  }
+  return newAnnotation(annotationValue.value(), left, right);
 }
 
 CanonicalAnnotation Annotation::newAnnotation(CanonicalSet set, AnnotationType value) {

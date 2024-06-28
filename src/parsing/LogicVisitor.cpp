@@ -1,5 +1,8 @@
 #include "LogicVisitor.h"
 
+#include <any>
+#include <iostream>
+
 #include "../Annotation.h"
 #include "../RegularTableau.h"
 
@@ -80,7 +83,8 @@
     default:
       std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
                 << " <= " << ctx->rhs->getText() << std::endl;
-      throw std::format_error("");
+      throw std::runtime_error("");
+      //throw std::format_error(""); Unsupported in some compilers
   }
 }
 
