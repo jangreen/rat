@@ -45,7 +45,7 @@ class Tableau {
     void inferModal();
     void inferModalTop();
     void inferModalAtomic();
-    void replaceNegatedTopOnBranch(std::vector<int> labels);
+    void replaceNegatedTopOnBranch(const std::vector<int> &labels);
 
     // this method assumes that tableau is already reduced
     [[nodiscard]] DNF extractDNF() const;
@@ -108,7 +108,7 @@ class Tableau {
     void push(Node *node);
     Node *pop();
     void erase(Node *node);
-    bool contains(Node *node) const;
+    bool contains(const Node *node) const;
 
     [[nodiscard]] bool isEmpty() const;
     [[nodiscard]] bool validate() const;
@@ -118,7 +118,7 @@ class Tableau {
   // ================================= Tableau ==================================
   // ============================================================================
 
-  explicit Tableau(const Cube &initialLiterals);
+  explicit Tableau(const Cube &cube);
   [[nodiscard]] bool validate() const;
 
   std::unique_ptr<Node> rootNode;
@@ -126,7 +126,7 @@ class Tableau {
 
   bool solve(int bound = -1);
   void removeNode(Node *node);
-  void renameBranch(Node *leaf, int from, int to);
+  void renameBranch(const Node *leaf);
 
   // methods for regular reasoning
   bool applyRuleA();

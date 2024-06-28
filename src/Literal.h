@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Annotation.h"
+#include "CanonicalString.h"
 #include "Relation.h"
 #include "Renaming.h"
 #include "Set.h"
@@ -45,11 +46,12 @@ class Literal {
 
   bool negated;
   PredicateOperation operation;
-  CanonicalSet set;                       // setNonEmptiness
-  CanonicalAnnotation annotation;         // negated + setNonEmptiness, edge
-  std::optional<int> leftLabel;           // edge, set, equality
-  std::optional<int> rightLabel;          // edge, equality
-  std::optional<std::string> identifier;  // edge, set
+  CanonicalSet set;                // setNonEmptiness
+  CanonicalAnnotation annotation;  // negated + setNonEmptiness, edge
+  std::optional<int> leftLabel;    // edge, set, equality
+  std::optional<int> rightLabel;   // edge, equality
+  // std::optional<std::string> identifier;  // edge, set
+  std::optional<CanonicalString> identifier;  // edge, set
 
   [[nodiscard]] bool isNormal() const;
   [[nodiscard]] bool hasTopSet() const;

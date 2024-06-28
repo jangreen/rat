@@ -85,7 +85,6 @@ bool Literal::validate() const {
     case PredicateOperation::set:
       return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
              identifier.has_value() && annotation == nullptr;
-      break;
     case PredicateOperation::setNonEmptiness:
       return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
              !identifier.has_value() && (!negated || annotation != nullptr);
@@ -95,8 +94,8 @@ bool Literal::validate() const {
 }
 
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
-  if (auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
-  if (auto cmp = operation <=> other.operation; cmp != 0) return cmp;
+  if (const auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
+  if (const auto cmp = operation <=> other.operation; cmp != 0) return cmp;
 
   // We assume well-formed literals
   switch (operation) {
@@ -271,11 +270,11 @@ std::string Literal::toString() const {
       output += negated ? "FALSE" : "TRUE";
       break;
     case PredicateOperation::edge:
-      output +=
-          *identifier + "(" + std::to_string(*leftLabel) + "," + std::to_string(*rightLabel) + ")";
+      output += identifier->get() + "(" + std::to_string(*leftLabel) + "," +
+                std::to_string(*rightLabel) + ")";
       break;
     case PredicateOperation::set:
-      output += *identifier + "(" + std::to_string(*leftLabel) + ")";
+      output += identifier->get() + "(" + std::to_string(*leftLabel) + ")";
       break;
     case PredicateOperation::equality:
       output += std::to_string(*leftLabel) + " = " + std::to_string(*rightLabel);

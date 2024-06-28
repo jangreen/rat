@@ -19,7 +19,7 @@ class RegularTableau {
 
    public:
     static std::pair<Node *, Renaming> newNode(Cube cube);
-    bool validate() const;
+    [[nodiscard]] bool validate() const;
 
     const Cube cube;  // must be ordered, should not be modified
     std::vector<Node *> childNodes;
@@ -47,7 +47,7 @@ class RegularTableau {
 
   RegularTableau(std::initializer_list<Literal> initialLiterals);
   explicit RegularTableau(const Cube &initialLiterals);
-  bool validate(Node *currentNode = nullptr) const;
+  bool validate(const Node *currentNode = nullptr) const;
 
   std::vector<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
