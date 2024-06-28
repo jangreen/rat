@@ -37,7 +37,7 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
     literal.rename(renaming);
   }
 
-  // 2) sort cube after unqiue renaming
+  // 2) sort cube after unique renaming
   std::ranges::sort(cube);
   Node *node = new Node(std::move(cube));
   assert(std::ranges::is_sorted(node->cube));

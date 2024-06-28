@@ -520,10 +520,10 @@ std::string Literal::toString() const {
       break;
     case PredicateOperation::edge:
       output +=
-          *identifier + "(" + std::to_string(*leftLabel) + "," + std::to_string(*rightLabel) + ")";
+          identifier->get() + "(" + std::to_string(*leftLabel) + "," + std::to_string(*rightLabel) + ")";
       break;
     case PredicateOperation::set:
-      output += *identifier + "(" + std::to_string(*leftLabel) + ")";
+      output += identifier->get() + "(" + std::to_string(*leftLabel) + ")";
       break;
     case PredicateOperation::equality:
       output += std::to_string(*leftLabel) + " = " + std::to_string(*rightLabel);

@@ -6,6 +6,7 @@
 
 #include "Relation.h"
 #include "Renaming.h"
+#include "CanonicalString.h"
 
 // forward declaration
 class Literal;
@@ -35,6 +36,7 @@ class Literal {
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel);
+  ~Literal() = default;
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
@@ -46,7 +48,8 @@ class Literal {
   CanonicalSet set;                       // setNonEmptiness
   std::optional<int> leftLabel;           // edge, set, equality
   std::optional<int> rightLabel;          // edge, equality
-  std::optional<std::string> identifier;  // edge, set
+  //std::optional<std::string> identifier;  // edge, set
+  std::optional<CanonicalString> identifier; // edge, set
 
   [[nodiscard]] bool isNormal() const;
   [[nodiscard]] bool hasTopSet() const;
