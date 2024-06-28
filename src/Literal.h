@@ -36,7 +36,6 @@ class Literal {
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel, std::string identifier);
   Literal(bool negated, int leftLabel, int rightLabel);
-  ~Literal() = default;
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;

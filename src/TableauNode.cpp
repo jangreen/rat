@@ -69,12 +69,7 @@ bool Tableau::Node::isClosed() const {
   if (children.empty()) {
     return false;
   }
-  for (const auto &child : children) {
-    if (!child->isClosed()) {
-      return false;
-    }
-  }
-  return true;
+  return std::ranges::all_of(children, &Node::isClosed);
 }
 
 bool Tableau::Node::isLeaf() const { return children.empty(); }
@@ -140,14 +135,11 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 
 void Tableau::Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
-  Node *newNode = new Node(this, BOTTOM);
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
   children.clear();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
-
-  children.emplace_back(newNode);
-  assert(newNode->validate());
+  children.emplace_back(new Node(this, BOTTOM));
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
@@ -185,7 +177,7 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
                std::make_move_iterator(childDNF.end()));
   }
 
-  if (!literal.isNormal() || literal == TOP) {
+  if (!literal.isNormal()) {
     // Ignore non-normal literals.
     return;
   }
@@ -269,9 +261,7 @@ void Tableau::Node::inferModalTop() {
 
     // Normal and positive literal: collect new labels
     for (auto newLabel : lit.labels()) {
-      if (std::ranges::find(labels, newLabel) == labels.end()) {
-        labels.push_back(newLabel);
-      }
+      push_back_unique(labels, newLabel);
     }
   }
 

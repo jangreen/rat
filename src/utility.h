@@ -38,6 +38,15 @@ bool contains(const std::vector<T> &vector, const T &object) {
   return std::ranges::find(vector, object) != vector.end();
 }
 
+template <typename T>
+bool push_back_unique(std::vector<T> &vector, const T &object) {
+  const bool add = !contains(vector, object);
+  if (add) {
+    vector.push_back(object);
+  }
+  return add;
+}
+
 inline std::strong_ordering lexCompare(const std::string &left, const std::string &right) {
   if (left == right) {
     return std::strong_ordering::equal;
