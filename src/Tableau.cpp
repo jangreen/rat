@@ -85,21 +85,10 @@ bool Tableau::solve(int bound) {
       // currently we assume that there is at most one euqality predicate which is a leaf
       // we could generalize this
       assert(currentNode->isLeaf());
+      assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
 
       // Rule (\equivL), Rule (\equivR)
-      const Literal &equalityLiteral = currentNode->literal;
-      assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
-      int from, to;
-      if (*equalityLiteral.leftLabel < *equalityLiteral.rightLabel) {
-        // e1 = e2 , e1 < e2
-        from = *equalityLiteral.rightLabel;
-        to = *equalityLiteral.leftLabel;
-      } else {
-        from = *equalityLiteral.leftLabel;
-        to = *equalityLiteral.rightLabel;
-      }
-
-      renameBranch(currentNode, from, to);
+      renameBranch(currentNode);
       continue;
     }
 
@@ -166,36 +155,54 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
-void Tableau::renameBranch(const Node *leaf, const int from, const int to) {
+/*
+ *  Given a leaf node with an equality predicate, renames the branch according to the equality.
+ *  The original branch is destroyed and the renamed branch (minus the leaf!) is added
+ *  to the tableau.
+ *  All newly added nodes are automatically added to the worklist.
+ *
+ *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
+ */
+void Tableau::renameBranch(const Node *leaf) {
   assert(validate());
   assert(leaf->isLeaf());
+  assert(leaf->literal.operation == PredicateOperation::equality);
+
+  // Compute renaming according to equality predicate (from larger label to lower label).
+  const int e1 = *leaf->literal.leftLabel;
+  const int e2 = *leaf->literal.rightLabel;
+  const int from = (e1 < e2) ? e2 : e1;
+  const int to = (e1 < e2) ? e1 : e2;
   const auto renaming = Renaming(from, to);
 
-  // determine first node that has to be renamed
-  const Node *cur = leaf->parentNode;
+  // Determine first node (closest to root) that has to be renamed.
+  // Everything above is unaffected and thus we can share the common prefix for the renamed branch.
   const Node *firstToRename = nullptr;
-  while (cur != nullptr) {
+  const Node *cur = leaf;
+  while ((cur = cur->parentNode) != nullptr) {
     if (contains(cur->literal.labels(), from)) {
       firstToRename = cur;
     }
-    cur = cur->parentNode;
   }
+
+  // Nothing to rename: keep branch as is.
   if (firstToRename == nullptr) {
     return;
   }
+  const auto commonPrefix = firstToRename->parentNode;
 
-  // move until first branching (bottom-up), then copy
-  bool firstBranchingNodeFound = false;
-  cur = leaf->parentNode;
+  // Copy & rename branch.
+  std::unordered_set<Literal> allRenamedLiterals; // To remove identical (after renaming) literals
+  bool currentNodeIsShared = false; // Unshared nodes can be dropped after renaming.
   std::unique_ptr<Node> copiedBranch = nullptr;
-  const auto lastNotRenamedNode = firstToRename->parentNode;
-  std::unordered_set<Literal> allRenamedLiterals;
-  while (cur != lastNotRenamedNode) {
-    // do copy
+  cur = leaf->parentNode;
+  while (cur != commonPrefix) {
+    // Copy & rename literal
     assert(cur->validate());
     Literal litCopy = Literal(cur->literal);
     litCopy.rename(renaming);
 
+    // Check for duplicates & create renamed node only if new.
     auto [_, isNew] = allRenamedLiterals.insert(litCopy);
     if (isNew) {
       Node *renamedCur = new Node(nullptr, litCopy);
@@ -208,28 +215,25 @@ void Tableau::renameBranch(const Node *leaf, const int from, const int to) {
       copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
-    const auto parentIsRoot = cur->parentNode == rootNode.get();
-    const auto parentIsBranching = cur->parentNode->children.size() > 1;
-    const auto parentIsLastNotRenamed = cur == firstToRename;
-    //  checke if
-    // branching -> from here copy and remove suffix from old tree
-    // root -> delete old branch
-    // lastToRename (also in case of non branching) -> delete branch except for non-renamed
-    if (!firstBranchingNodeFound && (parentIsBranching || parentIsRoot || parentIsLastNotRenamed)) {
-      auto curIt = std::ranges::find_if(cur->parentNode->children,
-                                        [&](auto &child) { return child.get() == cur; });
-      auto parentNode = cur->parentNode;  // save, because next line destroys cur
+    // Check if we go from unshared nodes to shared nodes: if so, we can delete all unshared nodes
+    const auto parentNode = cur->parentNode;
+    const auto parentIsShared = currentNodeIsShared ||
+      (parentNode == commonPrefix || parentNode->children.size() > 1);
+    if (!currentNodeIsShared && parentIsShared) {
+      // Delete unshared nodes
+      auto curIt =
+        std::ranges::find_if(parentNode->children, [&](auto &child) { return child.get() == cur; });
       parentNode->children.erase(curIt);
-      cur = parentNode;
-      firstBranchingNodeFound = true;
-      continue;
+      currentNodeIsShared = true;
     }
-    cur = cur->parentNode;
+
+    cur = parentNode;;
   }
 
+  // Append copied branch
   assert(copiedBranch != nullptr);
-  copiedBranch->parentNode = lastNotRenamedNode;
-  lastNotRenamedNode->children.push_back(std::move(copiedBranch));
+  copiedBranch->parentNode = commonPrefix;
+  commonPrefix->children.push_back(std::move(copiedBranch));
 }
 
 DNF Tableau::dnf() {

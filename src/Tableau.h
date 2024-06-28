@@ -127,7 +127,7 @@ class Tableau {
 
   bool solve(int bound = -1);
   void removeNode(Node *node);
-  void renameBranch(const Node *leaf, int from, int to);
+  void renameBranch(const Node *leaf);
 
   // methods for regular reasoning
   bool applyRuleA();
