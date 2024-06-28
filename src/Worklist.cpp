@@ -87,7 +87,7 @@ void Tableau::Worklist::erase(Node *node) {
   disconnect(*node);
 }
 
-bool Tableau::Worklist::contains(Node *node) const {
+bool Tableau::Worklist::contains(const Node *node) const {
   // This assumes there exists only a single worklist
   return node->prevInWorkList != nullptr && node->nextInWorkList != nullptr;
 }

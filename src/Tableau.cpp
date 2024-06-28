@@ -31,7 +31,7 @@ void Tableau::removeNode(Node *node) {
   assert(node != rootNode.get());       // node is not root node
   assert(node->parentNode != nullptr);  // there is always a dummy root node
   assert(node->parentNode->validate());
-  auto parentNode = node->parentNode;
+  const auto parentNode = node->parentNode;
 
   if (node->children.empty()) {
     // insert dummy child to ensure that branch does not disappear
@@ -40,7 +40,7 @@ void Tableau::removeNode(Node *node) {
   }
 
   // move all other children to parents children
-  for (auto &child : node->children) {
+  for (const auto &child : node->children) {
     child->parentNode = parentNode;
   }
 
@@ -166,14 +166,14 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
-void Tableau::renameBranch(Node *leaf, int from, int to) {
+void Tableau::renameBranch(const Node *leaf, const int from, const int to) {
   assert(validate());
   assert(leaf->isLeaf());
-  auto renaming = Renaming(from, to);
+  const auto renaming = Renaming(from, to);
 
   // determine first node that has to be renamed
-  Node *cur = leaf->parentNode;
-  Node *firstToRename = nullptr;
+  const Node *cur = leaf->parentNode;
+  const Node *firstToRename = nullptr;
   while (cur != nullptr) {
     if (contains(cur->literal.labels(), from)) {
       firstToRename = cur;
@@ -188,7 +188,7 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
   bool firstBranchingNodeFound = false;
   cur = leaf->parentNode;
   std::unique_ptr<Node> copiedBranch = nullptr;
-  auto lastNotRenamedNode = firstToRename->parentNode;
+  const auto lastNotRenamedNode = firstToRename->parentNode;
   std::unordered_set<Literal> allRenamedLiterals;
   while (cur != lastNotRenamedNode) {
     // do copy
@@ -208,9 +208,9 @@ void Tableau::renameBranch(Node *leaf, int from, int to) {
       copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
-    auto parentIsRoot = cur->parentNode == rootNode.get();
-    auto parentIsBranching = cur->parentNode->children.size() > 1;
-    auto parentIsLastNotRenamed = cur == firstToRename;
+    const auto parentIsRoot = cur->parentNode == rootNode.get();
+    const auto parentIsBranching = cur->parentNode->children.size() > 1;
+    const auto parentIsLastNotRenamed = cur == firstToRename;
     //  checke if
     // branching -> from here copy and remove suffix from old tree
     // root -> delete old branch

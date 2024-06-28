@@ -13,7 +13,7 @@ class Annotation {
  private:
   static CanonicalAnnotation newAnnotation(AnnotationType annotation, CanonicalAnnotation left,
                                            CanonicalAnnotation right);
-  bool validate() const;  // TODO:
+  [[nodiscard]] bool validate() const;  // TODO:
 
  public:
   Annotation(AnnotationType annotation, CanonicalAnnotation left, CanonicalAnnotation right);
@@ -25,7 +25,7 @@ class Annotation {
   Annotation(const Annotation &&other) = delete;
 
   bool operator==(const Annotation &other) const;
-  bool isLeaf() const;
+  [[nodiscard]] bool isLeaf() const;
 
   const AnnotationType annotation;
   const CanonicalAnnotation left;   // is set iff operation unary/binary

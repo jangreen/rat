@@ -41,7 +41,7 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
   std::ranges::sort(cube);
   Node *node = new Node(std::move(cube));
   assert(std::ranges::is_sorted(node->cube));
-  return std::pair<Node *, Renaming>(node, renaming);
+  return std::pair{node, renaming};
 }
 
 bool RegularTableau::Node::validate() const {

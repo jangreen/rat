@@ -54,9 +54,9 @@ std::optional<PartialDNF> applyRelationalRule(const Literal *context, CanonicalS
     }
     case RelationOperation::composition: {
       // Rule (._22L): [e(a.b)] -> { [(e.a)b] }
-      CanonicalRelation first =
+      const CanonicalRelation first =
           operation == SetOperation::image ? relation->leftOperand : relation->rightOperand;
-      CanonicalRelation second =
+      const CanonicalRelation second =
           operation == SetOperation::image ? relation->rightOperand : relation->leftOperand;
       const CanonicalSet ea = Set::newSet(operation, event, first);
       const CanonicalSet ea_b = Set::newSet(operation, ea, second);

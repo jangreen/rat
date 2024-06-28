@@ -331,7 +331,7 @@ void Tableau::Node::inferModalAtomic() {
 }
 
 // FIXME: use or remove
-void Tableau::Node::replaceNegatedTopOnBranch(std::vector<int> labels) {
+void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &curLit = cur->literal;
@@ -340,7 +340,7 @@ void Tableau::Node::replaceNegatedTopOnBranch(std::vector<int> labels) {
     }
     // replace T -> e
     const CanonicalSet top = Set::newSet(SetOperation::full);
-    for (auto label : labels) {
+    for (const auto label : labels) {
       const CanonicalSet e = Set::newEvent(label);
       for (auto &lit : substitute(curLit, top, e)) {
         appendBranch(lit);

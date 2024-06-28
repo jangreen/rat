@@ -195,7 +195,6 @@ bool Literal::validate() const {
     case PredicateOperation::set:
       return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
              identifier.has_value();
-      break;
     case PredicateOperation::setNonEmptiness:
       return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
              !identifier.has_value();
@@ -208,8 +207,8 @@ int Literal::saturationBoundId = 1;
 int Literal::saturationBoundBase = 1;
 
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
-  if (auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
-  if (auto cmp = operation <=> other.operation; cmp != 0) return cmp;
+  if (const auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
+  if (const auto cmp = operation <=> other.operation; cmp != 0) return cmp;
 
   // We assume well-formed literals
   switch (operation) {

@@ -20,7 +20,7 @@ class Assumption {
                                      : Relation::newRelation(RelationOperation::choice, masterId,
                                                              assumption.relation);
     }
-    auto closure = Relation::newRelation(RelationOperation::transitiveClosure, masterId);
+    const auto closure = Relation::newRelation(RelationOperation::transitiveClosure, masterId);
     return closure;
   }
 

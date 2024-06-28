@@ -51,11 +51,11 @@ void findReachableNodes(RegularTableau::Node *node,
                         std::unordered_set<RegularTableau::Node *> &reach) {
   auto [_, inserted] = reach.insert(node);
   if (inserted) {
-    for (auto &child : node->childNodes) {
-      auto edgeLabels = child->parentNodes.at(node);
+    for (const auto &child : node->childNodes) {
+      const auto edgeLabels = child->parentNodes.at(node);
       if (edgeLabels.size() == 1) {
         auto [cube, _] = edgeLabels.at(0);
-        auto isInconsistentChild = cube.empty();
+        const auto isInconsistentChild = cube.empty();
         if (isInconsistentChild) {
           continue;
         }
@@ -109,7 +109,7 @@ void purge(Cube &cube, Cube &uselessLiterals, EdgeLabel &label) {
   });
 
   // filter non-active labels
-  auto activeLabels = gatherActiveLabels(cube);
+  const auto activeLabels = gatherActiveLabels(cube);
   uselessLiterals = filterNegatedLiterals(cube, activeLabels);
 }
 
@@ -121,7 +121,7 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
   }
 
   Cube inconsistenLiterals = newLiterals;
-  auto parentActiveLabels = gatherActiveLabels(parent->cube);
+  const auto parentActiveLabels = gatherActiveLabels(parent->cube);
 
   // 2) filter newLiterals for parent
   filterNegatedLiterals(inconsistenLiterals, parentActiveLabels);
@@ -150,13 +150,13 @@ RegularTableau::RegularTableau(const Cube &initialLiterals) {
   expandNode(nullptr, &t);
 }
 
-bool RegularTableau::validate(Node *currentNode) const {
+bool RegularTableau::validate(const Node *currentNode) const {
   std::unordered_set<Node *> reachable;
   for (auto &root : rootNodes) {
     findReachableNodes(root, reachable);
   }
 
-  auto allNodesValid = std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
+  const auto allNodesValid = std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
 
   // get open leafs
   std::erase_if(reachable, [&](Node *node) {
@@ -173,7 +173,7 @@ bool RegularTableau::validate(Node *currentNode) const {
     Literal::print(leakedNode->cube);
   }
 
-  auto unreducedNodesValid = reachable.empty();
+  const auto unreducedNodesValid = reachable.empty();
   return unreducedNodesValid && allNodesValid;
 }
 
@@ -436,7 +436,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
     node->printed = false;
   }
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
-  std::unordered_set<Node *> s(rootNodes.begin(), rootNodes.end());
+  std::unordered_set s(rootNodes.begin(), rootNodes.end());
   assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);
