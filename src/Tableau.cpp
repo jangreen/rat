@@ -33,20 +33,22 @@ void Tableau::removeNode(Node *node) {
   assert(node->parentNode->validate());
   const auto parentNode = node->parentNode;
 
-  if (node->children.empty()) {
-    // insert dummy child to ensure that branch does not disappear
-    Node *dummy = new Node(node, TOP);
-    node->children.emplace_back(dummy);
+  // Make sure to not accidentally removed branches when removing nodes.
+  const bool branchWouldDisappear = node->isLeaf() && parentNode->children.size() > 1;
+  if (branchWouldDisappear) {
+    // Insert dummy TOP node to ensure that branch does not disappear.
+    node->children.emplace_back(new Node(node, TOP));
   }
 
-  // move all other children to parents children
+  // Move all children to parent's children
   for (const auto &child : node->children) {
     child->parentNode = parentNode;
   }
-
   parentNode->children.insert(parentNode->children.end(),
                               std::make_move_iterator(node->children.begin()),
                               std::make_move_iterator(node->children.end()));
+
+  // Remove node from parent. This will automatically delete the node and remove it from the worklist.
   auto [begin, end] = std::ranges::remove_if(parentNode->children,
                                              [&](auto &element) { return element.get() == node; });
   parentNode->children.erase(begin, end);
@@ -85,7 +87,6 @@ bool Tableau::solve(int bound) {
       // currently we assume that there is at most one euqality predicate which is a leaf
       // we could generalize this
       assert(currentNode->isLeaf());
-      assert(equalityLiteral.rightLabel.has_value() && equalityLiteral.leftLabel.has_value());
 
       // Rule (\equivL), Rule (\equivR)
       renameBranch(currentNode);
@@ -144,10 +145,8 @@ bool Tableau::applyRuleA() {
     // find atomic
     for (const auto &cube : *result) {
       // should be only one cube
-      for (const auto &literal : cube) {
-        if (literal.isPositiveEdgePredicate()) {
-          return true;
-        }
+      if (std::ranges::any_of(cube, &Literal::isPositiveEdgePredicate)) {
+        return true;
       }
     }
   }
