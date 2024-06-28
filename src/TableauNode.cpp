@@ -209,7 +209,7 @@ DNF Tableau::Node::extractDNF() const {
 }
 
 std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
-  auto const result = literal.applyRule(modalRule);
+  auto const result = Rules::applyRule(literal, modalRule);
   if (!result) {
     return std::nullopt;
   }
@@ -366,4 +366,3 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
     output << "N" << this << " -- " << "N" << child << ";" << std::endl;
   }
 }
-

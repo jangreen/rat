@@ -1,30 +1,28 @@
 #pragma once
 #include <fstream>
-#include <iostream>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "Literal.h"
+#include "Rules.h"
 
 // Uncomment to use the old worklist implementation (ordered sets).
-//#define WORKLIST_ALTERNATIVE
+// #define WORKLIST_ALTERNATIVE
 
 class Tableau {
-
   // ============================================================================
   // =================================== Node ===================================
   // ============================================================================
  public:
   class Worklist;
   class Node {
-  private:
+   private:
 #ifndef WORKLIST_ALTERNATIVE
     // Intrusive worklist design for O(1) insertion and removal.
     friend class Worklist;
-    Node* nextInWorkList = nullptr;
-    Node* prevInWorkList = nullptr;
+    Node *nextInWorkList = nullptr;
+    Node *prevInWorkList = nullptr;
 #endif
    public:
     Node(Node *parent, Literal literal);
@@ -88,7 +86,8 @@ class Tableau {
     std::unique_ptr<Node> posTopSetTailDummy;
     // (3)
     std::unique_ptr<Node> negativesHeadDummy;
-    std::unique_ptr<Node> negativesTailDummy;;
+    std::unique_ptr<Node> negativesTailDummy;
+    ;
     // (4)
     std::unique_ptr<Node> positivesHeadDummy;
     std::unique_ptr<Node> positivesTailDummy;

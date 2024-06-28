@@ -5,13 +5,11 @@
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
-#include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
-#include "../Literal.h"
 #include "../cat/Constraint.h"
+#include "../Literal.h"
 #include "LogicVisitor.h"
 
 class Logic : LogicBaseVisitor {

@@ -1,9 +1,8 @@
 #pragma once
-#include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
-#include <vector>
+
+// TODO: merge with Set
 
 // forward declaration
 class Relation;

@@ -4,6 +4,7 @@
 
 #include "RegularTableau.h"
 #include "parsing/LogicVisitor.h"
+#include "utility.h"
 
 // helper
 template <class result_t = std::chrono::milliseconds, class clock_t = std::chrono::steady_clock,
@@ -36,10 +37,10 @@ int main(int argc, const char *argv[]) {
   const auto &goals = Logic::parse(path);
   spdlog::info(fmt::format("[Parser] Done: {} goal(s), {} assumption(s)", goals.size(),
                            Assumption::baseAssumptions.size() + Assumption::idAssumptions.size() +
-                            Assumption::emptinessAssumptions.size()));
+                               Assumption::emptinessAssumptions.size()));
   for (auto &goal : goals) {
     spdlog::info("[Status] Goal: ");
-    Literal::print(goal);
+    print(goal);
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
       Tableau tableau{goal};
       tableau.solve(200);

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unordered_set>
 
+#include "Assumption.h"
 #include "utility.h"
 
 Tableau::Tableau(const Cube &cube) {
@@ -128,6 +129,23 @@ bool Tableau::solve(int bound) {
       // e=f, e\in A, (e,f)\in a, e != 0
       // Rule (~aL), Rule (~aR)
       currentNode->inferModalAtomic();
+    }
+
+    // 3) Saturation Rules
+    if (!Assumption::baseAssumptions.empty()) {
+      auto literal = Rules::saturateBase(currentNode->literal);
+      if (literal) {
+        currentNode->appendBranch(*literal);
+        continue;
+      }
+    }
+
+    if (!Assumption::idAssumptions.empty()) {
+      auto literal = Rules::saturateId(currentNode->literal);
+      if (literal) {
+        currentNode->appendBranch(*literal);
+        continue;
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 #include "LogicVisitor.h"
 
+#include "../Annotation.h"
 #include "../RegularTableau.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
@@ -26,8 +27,8 @@
       const CanonicalSet fullSet = Set::newSet(SetOperation::full);
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
       const CanonicalSet TrT = Set::newSet(SetOperation::intersection, fullSet, rT);
-      Literal l(true, TrT);
-      cube.push_back(l);
+      const auto annotation = Annotation::newAnnotation(TrT, 0);
+      cube.emplace_back(TrT, annotation);
     }
   }
 
@@ -50,8 +51,9 @@
 
     const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::intersection, e1LHS, e2);
     const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::intersection, e1RHS, e2);
+    const auto e1RHS_and_e2_annotation = Annotation::newAnnotation(e1RHS_and_e2, 0);
 
-    Cube cube = {Literal(false, e1LHS_and_e2), Literal(true, e1RHS_and_e2)};
+    Cube cube = {Literal(e1LHS_and_e2), Literal(e1RHS_and_e2, e1RHS_and_e2_annotation)};
     return cube;
   }
   spdlog::error("[Parser] Unsupported assertion format.");
@@ -75,11 +77,10 @@
       Assumption::idAssumptions.emplace_back(lhs);
       return 0;
     }
-    default: {
-      std::cout << "[Parser] Ignoring unsupported hypothesis:" << ctx->lhs->getText()
+    default:
+      std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
                 << " <= " << ctx->rhs->getText() << std::endl;
-      return 0;
-    }
+      throw std::format_error("");
   }
 }
 

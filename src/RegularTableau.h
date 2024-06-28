@@ -1,13 +1,11 @@
 #pragma once
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <stack>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
-#include "Assumption.h"
 #include "Literal.h"
 #include "Tableau.h"
 
@@ -29,8 +27,8 @@ class RegularTableau {
     bool closed = false;
 
     std::vector<Node *> rootParents;  // parent nodes that are reachable by some root node
-    Node *firstParentNode = nullptr;  // for counterexample extraction
-    EdgeLabel firstParentLabel;       // for counterexample extraction
+    Node *firstParentNode = nullptr;  // for annotationexample extraction
+    EdgeLabel firstParentLabel;       // for annotationexample extraction
 
     bool printed = false;  // prevent cycling in printing // FIXME refactor
     void toDotFormat(std::ofstream &output);
@@ -60,8 +58,7 @@ class RegularTableau {
   void addEdge(Node *parent, Node *child, const EdgeLabel &label);
   void expandNode(Node *node, Tableau *tableau);
   bool isInconsistent(Node *parent, const Node *child, EdgeLabel label);
-  static void extractCounterexample(const Node *openNode);
-  static void saturate(DNF &dnf);
+  static void extractAnnotationexample(const Node *openNode);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;

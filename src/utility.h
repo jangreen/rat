@@ -1,8 +1,26 @@
 #pragma once
-#include <fmt/core.h>
+
+#include <iostream>
 
 #include "Literal.h"
-#include "Tableau.h"
+
+inline void print(const DNF &dnf) {
+  std::cout << "Cubes:";
+  for (auto &cube : dnf) {
+    std::cout << "\n";
+    for (auto &literal : cube) {
+      std::cout << literal.toString() << " , ";
+    }
+  }
+  std::cout << std::endl;
+}
+
+inline void print(const Cube &cube) {
+  for (auto &literal : cube) {
+    std::cout << literal.toString() << " , ";
+  }
+  std::cout << std::endl;
+}
 
 // Dirty hack to access internals of adapters like priority_queue
 template <class ADAPTER>
@@ -43,4 +61,25 @@ inline std::strong_ordering lexCompare(const std::string &left, const std::strin
     return std::strong_ordering::equal;
   }
   return left < right ? std::strong_ordering::less : std::strong_ordering::greater;
+}
+
+inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
+  DNF result;
+  result.reserve(partialDNF.size());
+  for (const auto &partialCube : partialDNF) {
+    Cube cube;
+    cube.reserve(partialCube.size());
+
+    for (const auto &partialLiteral : partialCube) {
+      if (std::holds_alternative<Literal>(partialLiteral)) {
+        auto l = std::get<Literal>(partialLiteral);
+        cube.push_back(std::move(l));
+      } else {
+        const auto as = std::get<AnnotatedSet>(partialLiteral);
+        cube.push_back(context.substituteSet(as));
+      }
+    }
+    result.push_back(cube);
+  }
+  return result;
 }

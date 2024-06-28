@@ -1,11 +1,11 @@
 let eco1 = (rf | co | rfinv;co); (rf | co | rfinv;co)^*
-    let eco2 = rf | (co | rfinv;co); (rf | id)
+let eco2 = rf | (co | rfinv;co); (rf | id)
 
-assume co; rfinv <= 0
-assume co ^ + <= co
-assume rf; rfinv <= id
-assume rf; rf <= 0
-assume rf; co <= 0
+assume co;rfinv <= 0
+assume co^+ <= co
+assume rf;rfinv <= id
+assume rf;rf <= 0
+assume rf;co <= 0
 
 // alternative: use preprocessing to obtain:
 // assume (rf;rfinv)* ;co^+ <= co

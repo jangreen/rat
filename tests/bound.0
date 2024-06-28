@@ -1,4 +1,4 @@
-// counter-example abbbbb
+// annotation-example abbbbb
 // exponential blow up in proof size (pspace possible)
 let s = (a | b)
 let x = s;s;s;s;s

@@ -13,12 +13,12 @@ Relation::Relation(const RelationOperation operation, const CanonicalRelation le
 CanonicalRelation Relation::newRelation(const RelationOperation operation) {
   return newRelation(operation, nullptr, nullptr, std::nullopt);
 }
-CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left) {
+CanonicalRelation Relation::newRelation(const RelationOperation operation,
+                                        const CanonicalRelation left) {
   return newRelation(operation, left, nullptr, std::nullopt);
 }
 CanonicalRelation Relation::newRelation(const RelationOperation operation,
-                                        const CanonicalRelation left,
-                                        const CanonicalRelation right,
+                                        const CanonicalRelation left, const CanonicalRelation right,
                                         const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
@@ -55,6 +55,8 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
     case RelationOperation::cartesianProduct:
       // TODO: Cartesian product of relations???
       break;
+    default:
+      throw std::logic_error("unreachable");
   }
 #endif
 
@@ -62,7 +64,8 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
   return &(*iter);
 }
-CanonicalRelation Relation::newRelation(const RelationOperation operation, const CanonicalRelation left,
+CanonicalRelation Relation::newRelation(const RelationOperation operation,
+                                        const CanonicalRelation left,
                                         const CanonicalRelation right) {
   return newRelation(operation, left, right, std::nullopt);
 }
@@ -107,6 +110,8 @@ std::string Relation::toString() const {
       break;
     case RelationOperation::cartesianProduct:
       output += "TODO";  // "(" + TODO: leftRelation + "x" + TODO: rightRelation + ")";
+    default:
+      throw std::logic_error("unreachable");
   }
   return output;
 }

@@ -31,22 +31,6 @@ bool isLiteralActive(const Literal &literal, const std::vector<int> &activeLabel
   return isSubset(literal.labels(), activeLabels);
 }
 
-void saturateWith(DNF &dnf, const std::function<void(Literal &)> &saturationFunc) {
-  DNF newDnf;
-  for (auto &cube : dnf) {
-    // saturation phase
-    for (Literal &literal : cube) {
-      saturationFunc(literal);
-    }
-    // normalize
-    Tableau saturatedTableau{cube};
-    auto saturatedDnf = saturatedTableau.dnf();
-    newDnf.insert(newDnf.end(), std::make_move_iterator(saturatedDnf.begin()),
-                  std::make_move_iterator(saturatedDnf.end()));
-  }
-  swap(dnf, newDnf);
-}
-
 void findReachableNodes(RegularTableau::Node *node,
                         std::unordered_set<RegularTableau::Node *> &reach) {
   auto [_, inserted] = reach.insert(node);
@@ -170,7 +154,7 @@ bool RegularTableau::validate(Node *currentNode) const {
   for (auto &leakedNode : reachable) {
     std::cout << " Leaked node: " << leakedNode << ", hash: " << std::hash<Node>()(*leakedNode)
               << std::endl;
-    Literal::print(leakedNode->cube);
+    print(leakedNode->cube);
   }
 
   auto unreducedNodesValid = reachable.empty();
@@ -276,7 +260,7 @@ bool RegularTableau::solve() {
     if (tableau.applyRuleA()) {
       expandNode(currentNode, &tableau);
     } else {
-      extractCounterexample(currentNode);
+      extractAnnotationexample(currentNode);
       spdlog::info("[Solver] Answer: False");
       return false;
     }
@@ -291,11 +275,8 @@ void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   assert(node == nullptr || node->validate());
   // node is expandable
   // calculate normal form
+  // TODO: assert tableau is in DNF
   auto dnf = tableau->dnf();
-  const int maxSaturationBound = std::max(Literal::saturationBoundId, Literal::saturationBoundBase);
-  for (size_t i = 0; i < maxSaturationBound; i++) {
-    saturate(dnf);
-  }
 
   if (dnf.empty() && node != nullptr) {
     node->closed = true;
@@ -386,18 +367,9 @@ bool RegularTableau::isInconsistent(Node *parent, const Node *child, EdgeLabel l
   return true;
 }
 
-void RegularTableau::saturate(DNF &dnf) {
-  if (!Assumption::baseAssumptions.empty()) {
-    saturateWith(dnf, &Literal::saturateBase);
-  }
-  if (!Assumption::idAssumptions.empty()) {
-    saturateWith(dnf, &Literal::saturateId);
-  }
-}
-
-void RegularTableau::extractCounterexample(const Node *openNode) {
-  std::ofstream counterexample("./output/counterexample.dot");
-  counterexample << "digraph { node[shape=\"point\"]" << std::endl;
+void RegularTableau::extractAnnotationexample(const Node *openNode) {
+  std::ofstream annotationexample("./output/annotationexample.dot");
+  annotationexample << "digraph { node[shape=\"point\"]" << std::endl;
 
   const Node *node = openNode;
   while (node->firstParentNode != nullptr) {
@@ -422,13 +394,13 @@ void RegularTableau::extractCounterexample(const Node *openNode) {
         renameNode = renameNode->firstParentNode;
       }
 
-      counterexample << "N" << left << " -> " << "N" << right << "[label = \"" << relation << "\"];"
-                     << std::endl;
+      annotationexample << "N" << left << " -> " << "N" << right << "[label = \"" << relation
+                        << "\"];" << std::endl;
     }
     node = node->firstParentNode;
   }
-  counterexample << "}" << std::endl;
-  counterexample.close();
+  annotationexample << "}" << std::endl;
+  annotationexample.close();
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) const {

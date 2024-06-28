@@ -1,2 +1,3 @@
-// Intersections Counterexample
-assert (a;c) & (a;b) <= a;(b & c)
+// Intersections Annotationexample
+assert(a; c) & (a; b) <= a;
+(b& c)
