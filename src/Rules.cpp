@@ -2,11 +2,10 @@
 
 #include <spdlog/spdlog.h>
 
-#include "Annotated.h"
 #include "utility.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
-                                                     AnnotatedSet annotatedSet,
+                                                     const AnnotatedSet &annotatedSet,
                                                      const bool modalRules
 
 ) {
@@ -150,7 +149,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
 
 PartialDNF Rules::substituteIntersectionOperand(const bool substituteRight,
                                                 const PartialDNF& disjunction,
-                                                const AnnotatedSet otherOperand) {
+                                                const AnnotatedSet &otherOperand) {
   std::vector<std::vector<PartialLiteral>> resultDisjunction;
   resultDisjunction.reserve(disjunction.size());
   for (const auto& conjunction : disjunction) {
@@ -179,12 +178,10 @@ PartialDNF Rules::substituteIntersectionOperand(const bool substituteRight,
   return resultDisjunction;
 }
 
-std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet annotatedSet) {
-  const auto& set = std::get<CanonicalSet>(annotatedSet);
-  const auto& annotation = std::get<CanonicalAnnotation>(annotatedSet);
-
+std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
   if (annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
-    // We reached the saturation bound in this subtree
+    // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
 
@@ -237,9 +234,12 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet annotatedSet)
   }
 }
 
-std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet annotatedSet) {
-  const auto& set = std::get<CanonicalSet>(annotatedSet);
-  const auto& annotation = std::get<CanonicalAnnotation>(annotatedSet);
+std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) {
+  const auto& [set, annotation] = annotatedSet;
+  if (annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+    // We reached the saturation bound everywhere, or there is nothing to saturate
+    return std::nullopt;
+  }
 
   switch (set->operation) {
     case SetOperation::singleton:
@@ -276,7 +276,7 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet annotatedSet) {
 
       if (set->relation->operation == RelationOperation::base) {
         // e.b -> (e.R).b
-        // TODO: cache this and its anntotation
+        // TODO: cache this and its annototation
         const auto masterId = Assumption::masterIdRelation();
         const auto saturatedRelation =
             Annotated::makeWithValue(masterId, annotation->getRight()->getValue().value() + 1);
@@ -491,7 +491,7 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
   }
 
   if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
-    // We reached the saturation bound everywhere
+    // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
 
@@ -530,6 +530,12 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
   if (!literal.negated) {
     return std::nullopt;
   }
+
+  if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+    // We reached the saturation bound everywhere, or there is nothing to saturate
+    return std::nullopt;
+  }
+
   switch (literal.operation) {
     case PredicateOperation::equality: {
       // ~e1 = e2 -> ~e1R & e2
@@ -569,7 +575,7 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
   }
 }
 
-std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet annotatedSet,
+std::optional<PartialDNF> Rules::applyRule(const Literal& context, const AnnotatedSet &annotatedSet,
                                            const bool modalRules) {
   const auto &[set, setAnnotation] = annotatedSet;
   switch (set->operation) {
