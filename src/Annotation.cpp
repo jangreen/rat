@@ -12,97 +12,115 @@ namespace {
     return std::min(a.value_or(INT32_MAX), b.value_or(INT32_MAX));
   }
 
-  std::optional<AnnotationType> getAnnotation(CanonicalAnnotation a) {
-    return a == nullptr ? std::nullopt : std::make_optional(a->value);
-  }
-
 }
 
-Annotation::Annotation(AnnotationType value, CanonicalAnnotation left, CanonicalAnnotation right)
+Annotation::Annotation(const std::optional<AnnotationType> value, const CanonicalAnnotation left,
+                                                                  const CanonicalAnnotation right)
     : value(value), left(left), right(right) {}
 
-bool Annotation::operator==(const Annotation &other) const {
-  return value == other.value && left == other.left && right == other.right;
-}
-
-bool Annotation::validate() const {
-  // TODO: validate annotation values
-  return true;
-}
-
-CanonicalAnnotation Annotation::newAnnotation(AnnotationType value, CanonicalAnnotation left,
+CanonicalAnnotation Annotation::newAnnotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
                                               CanonicalAnnotation right) {
+  assert((left == nullptr) == (right == nullptr)); // Binary or leaf
+  assert(value.has_value() || (left == nullptr && right == nullptr)); // No value => Leaf
+
   static std::unordered_set<Annotation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(value, left, right);
   return &*iter;
 }
 
-CanonicalAnnotation Annotation::newLeaf(AnnotationType value) {
+CanonicalAnnotation Annotation::newLeaf(const std::optional<AnnotationType> value) {
   return newAnnotation(value, nullptr, nullptr);
 }
 
-CanonicalAnnotation Annotation::newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right) {
-  const auto annotationValue = meet(getAnnotation(left), getAnnotation(right));
-  if (!annotationValue.has_value()) {
-    return nullptr;
+CanonicalAnnotation Annotation::newAnnotation(const CanonicalAnnotation left, const CanonicalAnnotation right) {
+  assert (left != nullptr && right != nullptr);
+  if (left == right && left->isLeaf()) {
+    // Two constant annotations (leafs) together form just the same constant annotation.
+    return left;
   }
+
+  const auto annotationValue = meet(left->getValue(), right->getValue());
+  assert(annotationValue.has_value());
   return newAnnotation(annotationValue.value(), left, right);
 }
 
-CanonicalAnnotation Annotation::newAnnotation(CanonicalSet set, AnnotationType value) {
+bool Annotation::validate() const {
+  // Binary or leaf
+  bool isValid = ((left == nullptr) == (right == nullptr));
+  // No value => Leaf
+  isValid &= value.has_value() || isLeaf();
+  // No leaf => value is meet of children.
+  isValid &= isLeaf() || value.value() == meet(left->value, right->value);
+  // TODO: Check recursively?
+  return isValid;
+}
+
+std::string Annotation::toString() const {
+  if (isLeaf()) {
+    return value.has_value() ? std::to_string(value.value()) : "_";
+  }
+  return "(" + left->toString() + ")(" + right->toString() + ")";
+}
+
+
+// ==========================================================================================
+// ========================== Helper for annotated sets/relations ===========================
+// ==========================================================================================
+
+CanonicalAnnotation Annotation::newAnnotation(const CanonicalSet set, const AnnotationType value) {
   switch (set->operation) {
     case SetOperation::singleton:
     case SetOperation::empty:
     case SetOperation::full:
     case SetOperation::base:
-      return nullptr;
+      return newLeaf(std::nullopt);
     case SetOperation::choice:
     case SetOperation::intersection: {
-      auto left = newAnnotation(set->leftOperand, value);
-      auto right = newAnnotation(set->rightOperand, value);
-      return Annotation::newAnnotation(left, right);
+      const auto left = newAnnotation(set->leftOperand, value);
+      const auto right = newAnnotation(set->rightOperand, value);
+      return newAnnotation(left, right);
     }
     case SetOperation::domain: {
-      auto left = newAnnotation(set->relation, value);
-      auto right = newAnnotation(set->leftOperand, value);
-      return Annotation::newAnnotation(left, right);
+      const auto left = newAnnotation(set->relation, value);
+      const auto right = newAnnotation(set->leftOperand, value);
+      return newAnnotation(left, right);
     }
     case SetOperation::image: {
       auto left = newAnnotation(set->leftOperand, value);
       auto right = newAnnotation(set->relation, value);
-      return Annotation::newAnnotation(left, right);
+      return newAnnotation(left, right);
     }
     default:
       throw std::logic_error("unreachable");
   }
-};
+}
 
-CanonicalAnnotation Annotation::newAnnotation(CanonicalRelation relation, AnnotationType value) {
+CanonicalAnnotation Annotation::newAnnotation(CanonicalRelation relation, const AnnotationType value) {
   switch (relation->operation) {
     case RelationOperation::identity:
     case RelationOperation::empty:
     case RelationOperation::full:
-      return nullptr;
+      return newLeaf(std::nullopt);
     case RelationOperation::intersection:
     case RelationOperation::composition:
     case RelationOperation::choice: {
-      auto left = newAnnotation(relation->leftOperand, value);
-      auto right = newAnnotation(relation->rightOperand, value);
-      return Annotation::newAnnotation(left, right);
+      const auto left = newAnnotation(relation->leftOperand, value);
+      const auto right = newAnnotation(relation->rightOperand, value);
+      return newAnnotation(left, right);
     }
     case RelationOperation::converse:
     case RelationOperation::transitiveClosure: {
-      auto left = newAnnotation(relation->leftOperand, value);
-      return Annotation::newAnnotation(left, nullptr);
+      const auto inner = newAnnotation(relation->leftOperand, value);
+      return inner;
     }
     case RelationOperation::base:
-      return Annotation::newLeaf(value);
+      return newLeaf(value);
     case RelationOperation::cartesianProduct:
       throw std::logic_error("not implemented");
     default:
       throw std::logic_error("unreachable");
   }
-};
+}
 
 AnnotatedSet Annotation::getLeft(const AnnotatedSet &annotatedSet) {
   const auto &set = std::get<CanonicalSet>(annotatedSet);
@@ -112,9 +130,9 @@ AnnotatedSet Annotation::getLeft(const AnnotatedSet &annotatedSet) {
     case SetOperation::choice:
     case SetOperation::intersection:
     case SetOperation::image:
-      return AnnotatedSet(set->leftOperand, annotation->left);
+      return { set->leftOperand, annotation->getLeft() };
     case SetOperation::domain:
-      return AnnotatedSet(set->leftOperand, annotation->right);
+      return { set->leftOperand, annotation->getRight() };
     case SetOperation::base:
     case SetOperation::empty:
     case SetOperation::full:
@@ -132,10 +150,11 @@ std::variant<AnnotatedSet, AnnotatedRelation> Annotation::getRight(
   switch (set->operation) {
     case SetOperation::choice:
     case SetOperation::intersection:
+      return AnnotatedSet(set->rightOperand, annotation->getRight());
     case SetOperation::domain:
-      return AnnotatedRelation(set->relation, annotation->right);
+      return AnnotatedRelation(set->relation, annotation->getRight());
     case SetOperation::image:
-      return AnnotatedRelation(set->relation, annotation->left);
+      return AnnotatedRelation(set->relation, annotation->getLeft());
     case SetOperation::base:
     case SetOperation::empty:
     case SetOperation::full:
@@ -145,7 +164,7 @@ std::variant<AnnotatedSet, AnnotatedRelation> Annotation::getRight(
   }
 }
 
-AnnotatedSet Annotation::newAnnotatedSet(SetOperation operation, const AnnotatedSet &left,
+AnnotatedSet Annotation::newAnnotatedSet(const SetOperation operation, const AnnotatedSet &left,
                                          const AnnotatedSet &right) {
   assert(operation == SetOperation::intersection);
 
@@ -155,8 +174,8 @@ AnnotatedSet Annotation::newAnnotatedSet(SetOperation operation, const Annotated
   const auto &rAnnotation = std::get<CanonicalAnnotation>(right);
 
   auto newSet = Set::newSet(operation, lSet, rSet);
-  auto newAnnot = Annotation::newAnnotation(lAnnotation, rAnnotation);
-  return AnnotatedSet(newSet, newAnnot);
+  auto newAnnot = newAnnotation(lAnnotation, rAnnotation);
+  return {newSet, newAnnot };
 }
 
 AnnotatedSet Annotation::newAnnotatedSet(SetOperation operation, const AnnotatedSet &annotatedSet,
@@ -169,22 +188,6 @@ AnnotatedSet Annotation::newAnnotatedSet(SetOperation operation, const Annotated
   const auto &relationAnnotation = std::get<CanonicalAnnotation>(annotatedRelation);
 
   auto newSet = Set::newSet(operation, set, relation);
-  CanonicalAnnotation newAnnot = Annotation::newAnnotation(setAnnotation, relationAnnotation);
-  return AnnotatedSet(newSet, newAnnot);
-}
-
-bool Annotation::isLeaf() const { return left == nullptr & right == nullptr; }
-
-std::string Annotation::toString() const {
-  if (isLeaf()) {
-    return std::to_string(value);
-  }
-
-  assert(left != nullptr);
-
-  if (right != nullptr) {
-    return "(" + left->toString() + ")(" + right->toString() + ")";
-  }
-
-  return left->toString();
+  auto newAnnot = newAnnotation(setAnnotation, relationAnnotation);
+  return {newSet, newAnnot };
 }
