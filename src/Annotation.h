@@ -1,16 +1,11 @@
 #pragma once
 #include <string>
 
-#include "Relation.h"
-#include "Set.h"
-
-// TODO: make occurrence trees sparse: compact representation for 0
 class Annotation;
 typedef const Annotation *CanonicalAnnotation;
-typedef std::pair<CanonicalSet, CanonicalAnnotation> AnnotatedSet;
-typedef std::pair<CanonicalRelation, CanonicalAnnotation> AnnotatedRelation;
 typedef int AnnotationType;
 
+// TODO: This doesn't belong here.
 static int saturationBound = 1;
 
 /*
@@ -57,6 +52,7 @@ static int saturationBound = 1;
  *      - Annotation is immutable and we use hash-consing for maximal sharing.
  *      - Annotation is a coinductive structure: the simplest elements (leafs) stand
  *        for constant annotations of infinite trees.
+ *      - We use integer values as fixed annotation type.
  *
  *    NOTE on alternative definition: If the leaves of trees can be implicitly classified
  *    as annotatable and non-annotatable, then we can generate even more compact representations
@@ -95,19 +91,6 @@ class Annotation {
   bool operator==(const Annotation &other) const {
      return value == other.value && left == other.left && right == other.right;
   }
-
- // ----------------------------------------------------------------------------------------
- // Helpers for working with annotated sets and relations.
- // TODO: Maybe have a proper class for annotated sets/relations and put the helper methods there.
- static CanonicalAnnotation newAnnotation(CanonicalRelation relation, AnnotationType value);
- static CanonicalAnnotation newAnnotation(CanonicalSet set, AnnotationType value);
- static AnnotatedSet getLeft(const AnnotatedSet &annotatedSet);
- static std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet);
- // TODO: Add version for AnnotatedRelation?!
- static AnnotatedSet newAnnotatedSet(SetOperation operation, const AnnotatedSet &left,
-                                     const AnnotatedSet &right);
- static AnnotatedSet newAnnotatedSet(SetOperation operation, const AnnotatedSet &annotatedSet,
-                                     const AnnotatedRelation &annotatedRelation);
 
  friend std::hash<Annotation>;
 };

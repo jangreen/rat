@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "Annotated.h"
 #include "utility.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
@@ -195,27 +196,27 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet annotatedSet)
     case SetOperation::choice:
       return std::nullopt;  // saturate only inside intersection/domain/image
     case SetOperation::intersection: {
-      const auto leftOperand = Annotation::getLeft(annotatedSet);
-      const auto rightOperand = std::get<AnnotatedSet>(Annotation::getRight(annotatedSet));
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto rightOperand = std::get<AnnotatedSet>(Annotated::getRight(annotatedSet));
       const auto leftSaturated = saturateBase(leftOperand);
       if (leftSaturated.has_value()) {
-        return Annotation::newAnnotatedSet(set->operation, *leftSaturated, rightOperand);
+        return Annotated::make(set->operation, *leftSaturated, rightOperand);
       }
       const auto rightSaturated = saturateBase(rightOperand);
       if (rightSaturated.has_value()) {
-        return Annotation::newAnnotatedSet(set->operation, leftOperand, *rightSaturated);
+        return Annotated::make(set->operation, leftOperand, *rightSaturated);
       }
       return std::nullopt;
     }
     case SetOperation::image:
     case SetOperation::domain: {
-      const auto leftOperand = Annotation::getLeft(annotatedSet);
-      const auto relation = std::get<AnnotatedRelation>(Annotation::getRight(annotatedSet));
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto relation = std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
 
       if (set->leftOperand->operation != SetOperation::singleton) {
         const auto leftSaturated = saturateBase(leftOperand);
         if (leftSaturated.has_value()) {
-          return Annotation::newAnnotatedSet(set->operation, *leftSaturated, relation);
+          return Annotated::make(set->operation, *leftSaturated, relation);
         }
         return std::nullopt;
       }
@@ -225,11 +226,8 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet annotatedSet)
         if (Assumption::baseAssumptions.contains(relationName)) {
           const auto& assumption = Assumption::baseAssumptions.at(relationName);
           const int newValue = annotation->getRight()->getValue().value_or(0) + 1;
-          const auto assumptionAnnotation =
-              Annotation::newAnnotation(assumption.relation, newValue);
-          const auto saturatedRelation =
-              AnnotatedRelation(assumption.relation, assumptionAnnotation);
-          return Annotation::newAnnotatedSet(set->operation, leftOperand, saturatedRelation);
+          const auto saturatedRelation = Annotated::makeWithValue(assumption.relation, newValue);
+          return Annotated::make(set->operation, leftOperand, saturatedRelation);
         }
       }
       return std::nullopt;
@@ -251,27 +249,27 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet annotatedSet) {
     case SetOperation::choice:
       return std::nullopt;  // saturate only inside intersection/domain/image
     case SetOperation::intersection: {
-      const auto leftOperand = Annotation::getLeft(annotatedSet);
-      const auto rightOperand = std::get<AnnotatedSet>(Annotation::getRight(annotatedSet));
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto rightOperand = std::get<AnnotatedSet>(Annotated::getRight(annotatedSet));
       const auto leftSaturated = saturateId(leftOperand);
       if (leftSaturated.has_value()) {
-        return Annotation::newAnnotatedSet(set->operation, *leftSaturated, rightOperand);
+        return Annotated::make(set->operation, *leftSaturated, rightOperand);
       }
       const auto rightSaturated = saturateId(rightOperand);
       if (rightSaturated.has_value()) {
-        return Annotation::newAnnotatedSet(set->operation, leftOperand, *rightSaturated);
+        return Annotated::make(set->operation, leftOperand, *rightSaturated);
       }
       return std::nullopt;
     }
     case SetOperation::image:
     case SetOperation::domain: {
-      const auto leftOperand = Annotation::getLeft(annotatedSet);
-      const auto relation = std::get<AnnotatedRelation>(Annotation::getRight(annotatedSet));
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto relation = std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
 
       if (set->leftOperand->operation != SetOperation::singleton) {
         const auto leftSaturated = saturateId(leftOperand);
         if (leftSaturated.has_value()) {
-          return Annotation::newAnnotatedSet(set->operation, *leftSaturated, relation);
+          return Annotated::make(set->operation, *leftSaturated, relation);
         }
         return std::nullopt;
       }
@@ -280,13 +278,11 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet annotatedSet) {
         // e.b -> (e.R).b
         // TODO: cache this and its anntotation
         const auto masterId = Assumption::masterIdRelation();
-        const auto assumptionAnnotation =
-            Annotation::newAnnotation(masterId, annotation->getRight()->getValue().value() + 1);
-        const auto saturatedRelation = AnnotatedRelation(masterId, assumptionAnnotation);
-        const auto eR =
-            Annotation::newAnnotatedSet(SetOperation::image, leftOperand, saturatedRelation);
-        const auto b = std::get<AnnotatedRelation>(Annotation::getRight(annotatedSet));
-        const auto eR_b = Annotation::newAnnotatedSet(set->operation, eR, b);
+        const auto saturatedRelation =
+            Annotated::makeWithValue(masterId, annotation->getRight()->getValue().value() + 1);
+        const auto eR = Annotated::make(SetOperation::image, leftOperand, saturatedRelation);
+        const auto b = std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
+        const auto eR_b = Annotated::make(set->operation, eR, b);
         return eR_b;
       }
       return std::nullopt;
@@ -516,15 +512,12 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::intersection, e1R, e2);
       const AnnotationType newValue = literal.annotation->getValue().value_or(0) + 1;
       // annotation tree should be the on of e1R_and_e2
-      CanonicalAnnotation newAnnotation = Annotation::newAnnotation(e1R_and_e2, newValue);
-
-      return Literal(e1R_and_e2, newAnnotation);
+      return Literal(Annotated::makeWithValue(e1R_and_e2, newValue));
     }
     case PredicateOperation::setNonEmptiness: {
       const auto saturatedLiteral = saturateBase(literal.annotatedSet());
       if (saturatedLiteral.has_value()) {
-        const auto [saturatedSet, saturatedAnnotation] = *saturatedLiteral;
-        return Literal(saturatedSet, saturatedAnnotation);
+        return Literal(*saturatedLiteral);
       }
       return std::nullopt;
     }
@@ -546,8 +539,7 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::intersection, e1R, e2);
       // annotation tree should be the on of R
       // FIXME: masterId and annotation for masterID should be cached
-      auto newAnnot = Annotation::newAnnotation(Assumption::masterIdRelation(), 1);
-      return Literal(e1R_and_e2, newAnnot);
+      return Literal(Annotated::makeWithValue(e1R_and_e2, 1));
     }
     case PredicateOperation::edge: {
       // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
@@ -563,14 +555,12 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
 
       // annotation tree should be the on of e1R_and_bRe2
       assert(literal.annotation->isLeaf());
-      auto newAnnot = Annotation::newAnnotation(e1R_and_bRe2, newValue);
-      return Literal(e1R_and_bRe2, newAnnot);
+      return Literal(Annotated::makeWithValue(e1R_and_bRe2, newValue));
     }
     case PredicateOperation::setNonEmptiness: {
       auto saturatedLiteral = saturateId(literal.annotatedSet());
       if (saturatedLiteral) {
-        const auto [saturatedSet, saturatedAnnotation] = *saturatedLiteral;
-        return Literal(saturatedSet, saturatedAnnotation);
+        return Literal(*saturatedLiteral);
       }
       return std::nullopt;
     }
@@ -581,9 +571,7 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
 
 std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet annotatedSet,
                                            const bool modalRules) {
-  const auto& set = std::get<CanonicalSet>(annotatedSet);
-  const auto& setAnnotation = std::get<CanonicalAnnotation>(annotatedSet);
-
+  const auto &[set, setAnnotation] = annotatedSet;
   switch (set->operation) {
     case SetOperation::singleton:
       // no rule applicable to single event constant
@@ -615,7 +603,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
           set->rightOperand->operation != SetOperation::singleton) {
         // [S1 & S2]: apply rules recursively
         if (const auto leftResult =
-                applyRule(context, Annotation::getLeft(annotatedSet), modalRules)) {
+                applyRule(context, Annotated::getLeft(annotatedSet), modalRules)) {
           const auto& disjunction = *leftResult;
           return substituteIntersectionOperand(
               false, disjunction, AnnotatedSet(set->rightOperand, setAnnotation->getRight()));
@@ -624,7 +612,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
                 context, AnnotatedSet(set->rightOperand, setAnnotation->getRight()), modalRules)) {
           const auto& disjunction = *rightResult;
           return substituteIntersectionOperand(true, disjunction,
-                                               Annotation::getLeft(annotatedSet));
+                                               Annotated::getLeft(annotatedSet));
         }
         return std::nullopt;
       }
@@ -634,8 +622,8 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
       // Rule (eL): [e & s] -> { [e], e.s }
       // Rule (eR): [s & e] -> { [e], s.e }
       const auto intersection =
-          Annotation::newAnnotatedSet(SetOperation::intersection, Annotation::getLeft(annotatedSet),
-                                      std::get<AnnotatedSet>(Annotation::getRight(annotatedSet)));
+          Annotated::make(SetOperation::intersection, Annotated::getLeft(annotatedSet),
+                                      std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)));
       const CanonicalSet& singleton = set->leftOperand->operation == SetOperation::singleton
                                           ? set->leftOperand
                                           : set->rightOperand;
@@ -659,7 +647,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
         return applyRelationalRule(context, annotatedSet, modalRules);
       }
 
-      const auto setResult = applyRule(context, Annotation::getLeft(annotatedSet), modalRules);
+      const auto setResult = applyRule(context, Annotated::getLeft(annotatedSet), modalRules);
       if (!setResult) {
         return std::nullopt;
       }
@@ -678,8 +666,8 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
             // otherwise we have to intersect (&) all  []'s after before replacing
             // currently we just assume this is the case without further checking
             const auto annotatedRelation =
-                std::get<AnnotatedRelation>(Annotation::getRight(annotatedSet));
-            const auto newSet = Annotation::newAnnotatedSet(set->operation, s, annotatedRelation);
+                std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
+            const auto newSet = Annotated::make(set->operation, s, annotatedRelation);
             newCube.emplace_back(newSet);
           }
         }
@@ -690,5 +678,4 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, AnnotatedSet 
     default:
       throw std::logic_error("unreachable");
   }
-  throw std::logic_error("unreachable");
 }

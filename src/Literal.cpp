@@ -26,14 +26,14 @@ Literal::Literal(CanonicalSet set)
       identifier(std::nullopt),
       annotation(Annotation::none()) {}
 
-Literal::Literal(CanonicalSet set, CanonicalAnnotation annotation)
+Literal::Literal(const AnnotatedSet &annotatedSet)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
-      set(set),
+      set(std::get<CanonicalSet>(annotatedSet)),
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
       identifier(std::nullopt),
-      annotation(annotation) {}
+      annotation(std::get<CanonicalAnnotation>(annotatedSet)) {}
 
 Literal::Literal(bool negated, int leftLabel, std::string identifier)
     : negated(negated),
@@ -228,15 +228,12 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
   return false;
 }
 
-Literal Literal::substituteSet(AnnotatedSet set) const {
+Literal Literal::substituteSet(const AnnotatedSet &set) const {
   assert(operation == PredicateOperation::setNonEmptiness);
-  auto s = std::get<CanonicalSet>(set);
-  auto a = std::get<CanonicalAnnotation>(set);
-
   if (negated) {
-    return Literal(s, a);
+    return Literal(set);
   }
-  return Literal(s);
+  return Literal(std::get<CanonicalSet>(set));
 }
 
 void Literal::rename(const Renaming &renaming) {
