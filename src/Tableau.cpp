@@ -274,6 +274,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  exportProof(filename);
+  //exportProof(filename);
 #endif
 }

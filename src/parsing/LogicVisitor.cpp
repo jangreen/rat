@@ -3,6 +3,7 @@
 #include <any>
 #include <iostream>
 
+#include "../Annotated.h"
 #include "../Annotation.h"
 #include "../RegularTableau.h"
 
@@ -30,8 +31,7 @@
       const CanonicalSet fullSet = Set::newSet(SetOperation::full);
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
       const CanonicalSet TrT = Set::newSet(SetOperation::intersection, fullSet, rT);
-      const auto annotation = Annotation::newAnnotation(TrT, 0);
-      cube.emplace_back(TrT, annotation);
+      cube.emplace_back(Annotated::makeWithValue(TrT, 0));
     }
   }
 
@@ -54,9 +54,9 @@
 
     const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::intersection, e1LHS, e2);
     const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::intersection, e1RHS, e2);
-    const auto e1RHS_and_e2_annotation = Annotation::newAnnotation(e1RHS_and_e2, 0);
+    const auto e1RHS_and_e2_annotated = Annotated::makeWithValue(e1RHS_and_e2, 0);
 
-    Cube cube = {Literal(e1LHS_and_e2), Literal(e1RHS_and_e2, e1RHS_and_e2_annotation)};
+    Cube cube = {Literal(e1LHS_and_e2), Literal(e1RHS_and_e2_annotated)};
     return cube;
   }
   spdlog::error("[Parser] Unsupported assertion format.");

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "Annotation.h"
+#include "Annotated.h"
 #include "CanonicalString.h"
 #include "Relation.h"
 #include "Renaming.h"
@@ -32,7 +32,7 @@ class Literal {
  public:
   explicit Literal(bool negated);
   explicit Literal(CanonicalSet set);                         // true
-  Literal(CanonicalSet set, CanonicalAnnotation annotation);  // false
+  explicit Literal(const AnnotatedSet &annotatedSet);
   Literal(bool negated, int leftLabel, std::string identifier);
   Literal(int leftLabel, int rightLabel, std::string identifier);  // true
   Literal(int leftLabel, int rightLabel, std::string identifier,
@@ -62,7 +62,7 @@ class Literal {
 
   // substitute n-th occurrence, TODO: -1 = all
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
-  Literal substituteSet(AnnotatedSet set) const;
+  Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);
   AnnotatedSet annotatedSet() const { return AnnotatedSet(set, annotation); };
 

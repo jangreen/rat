@@ -15,7 +15,7 @@ Literal::Literal(bool negated)
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
       identifier(std::nullopt),
-      annotation(nullptr) {}
+      annotation(Annotation::none()) {}
 
 Literal::Literal(CanonicalSet set)
     : negated(false),
@@ -24,16 +24,16 @@ Literal::Literal(CanonicalSet set)
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
       identifier(std::nullopt),
-      annotation(nullptr) {}
+      annotation(Annotation::none()) {}
 
-Literal::Literal(CanonicalSet set, CanonicalAnnotation annotation)
+Literal::Literal(const AnnotatedSet &annotatedSet)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
-      set(set),
+      set(std::get<CanonicalSet>(annotatedSet)),
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
       identifier(std::nullopt),
-      annotation(annotation) {}
+      annotation(std::get<CanonicalAnnotation>(annotatedSet)) {}
 
 Literal::Literal(bool negated, int leftLabel, std::string identifier)
     : negated(negated),
@@ -42,7 +42,7 @@ Literal::Literal(bool negated, int leftLabel, std::string identifier)
       leftLabel(leftLabel),
       rightLabel(std::nullopt),
       identifier(identifier),
-      annotation(nullptr) {}
+      annotation(Annotation::none()) {}
 
 Literal::Literal(int leftLabel, int rightLabel, std::string identifier)
     : negated(false),
@@ -51,7 +51,7 @@ Literal::Literal(int leftLabel, int rightLabel, std::string identifier)
       leftLabel(leftLabel),
       rightLabel(rightLabel),
       identifier(identifier),
-      annotation(nullptr) {}
+      annotation(Annotation::none()) {}
 
 Literal::Literal(int leftLabel, int rightLabel, std::string identifier, AnnotationType value)
     : negated(true),
@@ -69,25 +69,26 @@ Literal::Literal(bool negated, int leftLabel, int rightLabel)
       leftLabel(leftLabel),
       rightLabel(rightLabel),
       identifier(std::nullopt),
-      annotation(nullptr) {}
+      annotation(Annotation::none()) {}
 
 bool Literal::validate() const {
+  // TODO: Double check what annotations are valid.
   switch (operation) {
     case PredicateOperation::constant:
       return set == nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
-             !identifier.has_value() && annotation == nullptr;
+             !identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::edge:
       return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
-             identifier.has_value() && (!negated || annotation != nullptr);
+             identifier.has_value() && (!negated || annotation != Annotation::none());
     case PredicateOperation::equality:
       return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
-             !identifier.has_value() && annotation == nullptr;
+             !identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::set:
       return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
-             identifier.has_value() && annotation == nullptr;
+             identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::setNonEmptiness:
       return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
-             !identifier.has_value() && (!negated || annotation != nullptr);
+             !identifier.has_value() /*&& (!negated || annotation != Annotation::none()) */;
     default:
       return false;
   }
@@ -127,6 +128,7 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
 }
 
 bool Literal::isNegatedOf(const Literal &other) const {
+  // TODO: Compare annotation?
   return operation == other.operation && negated != other.negated && set == other.set &&
          leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
          identifier == other.identifier;
@@ -226,15 +228,12 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
   return false;
 }
 
-Literal Literal::substituteSet(AnnotatedSet set) const {
+Literal Literal::substituteSet(const AnnotatedSet &set) const {
   assert(operation == PredicateOperation::setNonEmptiness);
-  auto s = std::get<CanonicalSet>(set);
-  auto a = std::get<CanonicalAnnotation>(set);
-
   if (negated) {
-    return Literal(s, a);
+    return Literal(set);
   }
-  return Literal(s);
+  return Literal(std::get<CanonicalSet>(set));
 }
 
 void Literal::rename(const Renaming &renaming) {
