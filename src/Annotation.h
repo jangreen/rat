@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 
 #include "Relation.h"
@@ -15,12 +16,14 @@ static int saturationBound = 1;
 
 class Annotation {
  private:
-  static CanonicalAnnotation newAnnotation(AnnotationType value, CanonicalAnnotation left,
-                                           CanonicalAnnotation right);
+  static CanonicalAnnotation newAnnotation(std::optional<AnnotationType> value,
+                                           CanonicalAnnotation left, CanonicalAnnotation right);
   [[nodiscard]] bool validate() const;  // TODO:
 
  public:
-  Annotation(AnnotationType value, CanonicalAnnotation left, CanonicalAnnotation right);
+  Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
+             CanonicalAnnotation right);
+  static CanonicalAnnotation newDummy();
   static CanonicalAnnotation newLeaf(AnnotationType value);
   static CanonicalAnnotation newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right);
   static CanonicalAnnotation newAnnotation(CanonicalRelation relation, AnnotationType value);
@@ -39,9 +42,9 @@ class Annotation {
   bool operator==(const Annotation &other) const;
   [[nodiscard]] bool isLeaf() const;
 
-  const AnnotationType value;
-  const CanonicalAnnotation left;   // is set iff operation unary/binary
-  const CanonicalAnnotation right;  // is set iff operation binary
+  const std::optional<AnnotationType> value;  // nullopt: subtree has default annotation
+  const CanonicalAnnotation left;             // is set iff operation unary/binary
+  const CanonicalAnnotation right;            // is set iff operation binary
 
   [[nodiscard]] std::string toString() const;
 };
@@ -51,7 +54,7 @@ struct std::hash<Annotation> {
   std::size_t operator()(const Annotation &annotation) const noexcept {
     const size_t leftHash = hash<CanonicalAnnotation>()(annotation.left);
     const size_t rightHash = hash<CanonicalAnnotation>()(annotation.right);
-    const size_t annotationHash = hash<AnnotationType>()(annotation.value);
+    const size_t annotationHash = hash<std::optional<AnnotationType>>()(annotation.value);
 
     return (leftHash ^ (rightHash << 1) >> 1) + 31 * annotationHash;
   }

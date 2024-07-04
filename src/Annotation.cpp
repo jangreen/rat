@@ -5,20 +5,18 @@
 
 namespace {
 
-  std::optional<AnnotationType> meet(const std::optional<AnnotationType> a, const std::optional<AnnotationType> b) {
-    if (!a.has_value() && !b.has_value()) {
-      return std::nullopt;
-    }
-    return std::min(a.value_or(INT32_MAX), b.value_or(INT32_MAX));
+std::optional<AnnotationType> meet(const std::optional<AnnotationType> a,
+                                   const std::optional<AnnotationType> b) {
+  if (!a.has_value() && !b.has_value()) {
+    return std::nullopt;
   }
-
-  std::optional<AnnotationType> getAnnotation(CanonicalAnnotation a) {
-    return a == nullptr ? std::nullopt : std::make_optional(a->value);
-  }
-
+  return std::min(a.value_or(INT32_MAX), b.value_or(INT32_MAX));
 }
 
-Annotation::Annotation(AnnotationType value, CanonicalAnnotation left, CanonicalAnnotation right)
+}  // namespace
+
+Annotation::Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
+                       CanonicalAnnotation right)
     : value(value), left(left), right(right) {}
 
 bool Annotation::operator==(const Annotation &other) const {
@@ -30,21 +28,24 @@ bool Annotation::validate() const {
   return true;
 }
 
-CanonicalAnnotation Annotation::newAnnotation(AnnotationType value, CanonicalAnnotation left,
-                                              CanonicalAnnotation right) {
+CanonicalAnnotation Annotation::newAnnotation(std::optional<AnnotationType> value,
+                                              CanonicalAnnotation left, CanonicalAnnotation right) {
   static std::unordered_set<Annotation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(value, left, right);
   return &*iter;
 }
+
+CanonicalAnnotation Annotation::newDummy() { return newAnnotation(std::nullopt, nullptr, nullptr); }
 
 CanonicalAnnotation Annotation::newLeaf(AnnotationType value) {
   return newAnnotation(value, nullptr, nullptr);
 }
 
 CanonicalAnnotation Annotation::newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right) {
-  const auto annotationValue = meet(getAnnotation(left), getAnnotation(right));
+  assert(left != nullptr && right != nullptr);
+  const auto annotationValue = meet(left->value, right->value);
   if (!annotationValue.has_value()) {
-    return nullptr;
+    return newDummy();
   }
   return newAnnotation(annotationValue.value(), left, right);
 }
@@ -177,7 +178,7 @@ bool Annotation::isLeaf() const { return left == nullptr & right == nullptr; }
 
 std::string Annotation::toString() const {
   if (isLeaf()) {
-    return std::to_string(value);
+    return value ? "?" : std::to_string(value.value());
   }
 
   assert(left != nullptr);
