@@ -43,7 +43,12 @@ class Set {
       std::optional<int> label, std::optional<std::string> identifier);
 
   static int maxSingletonLabel;  // to create globally unique labels
-  static CanonicalSet newSet(SetOperation operation);
+  static CanonicalSet emptySet() {
+    return newSet(SetOperation::empty, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+  };
+  static CanonicalSet fullSet() {
+    return newSet(SetOperation::full, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+  };
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
   static CanonicalSet newEvent(int label);
@@ -68,7 +73,6 @@ class Set {
   const CanonicalRelation relation;             // is set iff domain/image
 
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming) const;
-  CanonicalSet substitute(CanonicalSet search, CanonicalSet replace, int *n) const;
 
   // printing
   [[nodiscard]] std::string toString() const;

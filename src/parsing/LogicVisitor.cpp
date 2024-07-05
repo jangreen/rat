@@ -28,7 +28,7 @@
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
   for (auto &cube : assertionCubes) {
     for (const auto &assumption : Assumption::emptinessAssumptions) {
-      const CanonicalSet fullSet = Set::newSet(SetOperation::full);
+      const CanonicalSet fullSet = Set::fullSet();
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
       const CanonicalSet TrT = Set::newSet(SetOperation::intersection, fullSet, rT);
       cube.emplace_back(Annotated::makeWithValue(TrT, 0));
@@ -84,7 +84,7 @@
       std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
                 << " <= " << ctx->rhs->getText() << std::endl;
       throw std::runtime_error("");
-      //throw std::format_error(""); Unsupported in some compilers
+      // throw std::format_error(""); Unsupported in some compilers
   }
 }
 
@@ -330,11 +330,11 @@
   // TODO: lookup let definitions
   std::string name = context->SETNAME()->getText();
   if (name == "E") {
-    std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::full);
+    std::variant<CanonicalSet, CanonicalRelation> result = Set::fullSet();
     return result;
   }
   if (name == "0") {
-    std::variant<CanonicalSet, CanonicalRelation> result = Set::newSet(SetOperation::empty);
+    std::variant<CanonicalSet, CanonicalRelation> result = Set::emptySet();
     return result;
   }
   CanonicalSet s = Set::newBaseSet(name);

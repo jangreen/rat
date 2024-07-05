@@ -109,7 +109,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
       //   output << "color=\"blue\", ";
       // }
 
-      // tooltip = renaming
+      // tooltip = renaming + annotation
       output << "tooltip=\"";
       renaming.toDotFormat(output);
       output << "\", ";

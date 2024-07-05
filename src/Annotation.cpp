@@ -55,7 +55,10 @@ bool Annotation::validate() const {
   isValid &= value.has_value() || isLeaf();
   // No leaf => value is meet of children.
   isValid &= isLeaf() || value.value() == meet(left->value, right->value);
-  // TODO: Check recursively?
+  // left is valid
+  isValid &= left == nullptr || left->validate();
+  // right is valid
+  isValid &= right == nullptr || right->validate();
   return isValid;
 }
 

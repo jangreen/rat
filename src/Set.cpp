@@ -174,9 +174,6 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   return &*iter;
 }
 
-CanonicalSet Set::newSet(const SetOperation operation) {
-  return newSet(operation, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
-}
 CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
                          const CanonicalSet right) {
   return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
@@ -197,29 +194,6 @@ bool Set::operator==(const Set &other) const {
   return operation == other.operation && leftOperand == other.leftOperand &&
          rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
          identifier == other.identifier;
-}
-
-CanonicalSet Set::substitute(const CanonicalSet search, const CanonicalSet replace, int *n) const {
-  if (this == search) {
-    if (*n == 1 || *n == -1) {
-      return replace;
-    }
-    (*n)--;
-    return this;
-  }
-  if (leftOperand != nullptr) {
-    const auto leftSub = leftOperand->substitute(search, replace, n);
-    if (leftSub != leftOperand) {
-      return newSet(operation, leftSub, rightOperand, relation, label, identifier);
-    }
-  }
-  if (rightOperand != nullptr) {
-    const auto rightSub = rightOperand->substitute(search, replace, n);
-    if (rightSub != rightOperand) {
-      return newSet(operation, leftOperand, rightSub, relation, label, identifier);
-    }
-  }
-  return this;
 }
 
 CanonicalSet Set::rename(const Renaming &renaming) const {

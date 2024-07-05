@@ -30,14 +30,14 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  explicit Literal(bool negated);
-  explicit Literal(CanonicalSet set);                         // true
-  explicit Literal(const AnnotatedSet &annotatedSet);
-  Literal(bool negated, int leftLabel, std::string identifier);
-  Literal(int leftLabel, int rightLabel, std::string identifier);  // true
-  Literal(int leftLabel, int rightLabel, std::string identifier,
-          AnnotationType annotation);  // false
-  Literal(bool negated, int leftLabel, int rightLabel);
+  explicit Literal(bool negated);                                  // constant
+  explicit Literal(CanonicalSet set);                              // positive setNonEmptiness
+  explicit Literal(const AnnotatedSet &annotatedSet);              // negative setNonEmptiness
+  Literal(bool negated, int leftLabel, std::string identifier);    // set
+  Literal(int leftLabel, int rightLabel, std::string identifier);  // positive edge
+  Literal(int leftLabel, int rightLabel, std::string identifier,   //
+          AnnotationType annotation);                              // negative edge
+  Literal(bool negated, int leftLabel, int rightLabel);            // equality
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;

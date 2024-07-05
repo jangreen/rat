@@ -5,16 +5,16 @@ namespace Annotated {
 
 AnnotatedSet getLeft(const AnnotatedSet &annotatedSet) {
   const auto [set, annotation] = annotatedSet;
-  assert (set->leftOperand != nullptr);
+  assert(set->leftOperand != nullptr);
   const auto leftSet = set->leftOperand;
-  const auto leftAnnotation = set->operation != SetOperation::domain ?
-    annotation->getLeft() : annotation->getRight();
+  const auto leftAnnotation =
+      set->operation != SetOperation::domain ? annotation->getLeft() : annotation->getRight();
 
   return {leftSet, leftAnnotation};
 }
 
 std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet) {
-  const auto [set, annotation] = annotatedSet;
+  const auto &[set, annotation] = annotatedSet;
   switch (set->operation) {
     case SetOperation::choice:
     case SetOperation::intersection:
@@ -86,20 +86,63 @@ AnnotatedRelation makeWithValue(const CanonicalRelation relation, const Annotati
   }
 }
 
-AnnotatedSet make(const SetOperation operation, const AnnotatedSet &left,
-                                         const AnnotatedSet &right) {
-  assert(operation == SetOperation::intersection); // TODO: WHY???
-  auto newSet = Set::newSet(operation, left.first, right.first);
-  auto newAnnot = Annotation::newAnnotation(left.second, right.second);
-  return {newSet, newAnnot };
+AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
+                        const CanonicalSet replace, int *n) {
+  const auto &[set, annotation] = annotatedSet;
+  if (*n == 0) {
+    return annotatedSet;
+  }
+
+  if (set == search) {
+    if (*n == 1 || *n == -1) {
+      return Annotated::makeWithValue(replace, 0);
+    }
+    (*n)--;
+    return annotatedSet;
+  }
+  if (set->leftOperand != nullptr) {
+    const auto leftSub = substitute(getLeft(annotatedSet), search, replace, n);
+    if (leftSub.first != set->leftOperand) {
+      switch (set->operation) {
+        case SetOperation::choice:
+        case SetOperation::intersection:
+          return Annotated::newSet(set->operation, leftSub,
+                                   std::get<AnnotatedSet>(getRight(annotatedSet)));
+        case SetOperation::domain:
+        case SetOperation::image:
+          return Annotated::newSet(set->operation, leftSub,
+                                   std::get<AnnotatedRelation>(getRight(annotatedSet)));
+        case SetOperation::singleton:
+        case SetOperation::empty:
+        case SetOperation::full:
+        case SetOperation::base:
+        // leftOperand != nullptr
+        default:
+          throw std::logic_error("unreachable");
+      }
+    }
+  }
+  if (set->rightOperand != nullptr) {
+    const auto rightSub =
+        substitute(std::get<AnnotatedSet>(getRight(annotatedSet)), search, replace, n);
+    if (rightSub.first != set->rightOperand) {
+      switch (set->operation) {
+        case SetOperation::choice:
+        case SetOperation::intersection:
+          return Annotated::newSet(set->operation, getLeft(annotatedSet), rightSub);
+        case SetOperation::domain:
+        case SetOperation::image:
+        case SetOperation::singleton:
+        case SetOperation::empty:
+        case SetOperation::full:
+        case SetOperation::base:
+        // rightOperand != nullptr
+        default:
+          throw std::logic_error("unreachable");
+      }
+    }
+  }
+  return annotatedSet;
 }
 
-AnnotatedSet make(SetOperation operation, const AnnotatedSet &annotatedSet,
-                                         const AnnotatedRelation &annotatedRelation) {
-  assert(operation == SetOperation::image || operation == SetOperation::domain);
-  auto newSet = Set::newSet(operation, annotatedSet.first, annotatedRelation.first);
-  auto newAnnot = Annotation::newAnnotation(annotatedSet.second, annotatedRelation.second);
-  return {newSet, newAnnot };
-}
-
-}
+}  // namespace Annotated

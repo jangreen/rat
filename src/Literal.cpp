@@ -221,8 +221,10 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
     return false;
   }
 
-  if (const auto newSet = set->substitute(search, replace, &n); newSet != set) {
-    set = newSet;
+  const auto newSet = Annotated::substitute(annotatedSet(), search, replace, &n);
+  if (newSet.first != set) {
+    set = newSet.first;
+    annotation = newSet.second;
     return true;
   }
   return false;

@@ -49,7 +49,8 @@ void Tableau::removeNode(Node *node) {
                               std::make_move_iterator(node->children.begin()),
                               std::make_move_iterator(node->children.end()));
 
-  // Remove node from parent. This will automatically delete the node and remove it from the worklist.
+  // Remove node from parent. This will automatically delete the node and remove it from the
+  // worklist.
   auto [begin, end] = std::ranges::remove_if(parentNode->children,
                                              [&](auto &element) { return element.get() == node; });
   parentNode->children.erase(begin, end);
@@ -209,8 +210,8 @@ void Tableau::renameBranch(const Node *leaf) {
   const auto commonPrefix = firstToRename->parentNode;
 
   // Copy & rename branch.
-  std::unordered_set<Literal> allRenamedLiterals; // To remove identical (after renaming) literals
-  bool currentNodeIsShared = false; // Unshared nodes can be dropped after renaming.
+  std::unordered_set<Literal> allRenamedLiterals;  // To remove identical (after renaming) literals
+  bool currentNodeIsShared = false;                // Unshared nodes can be dropped after renaming.
   std::unique_ptr<Node> copiedBranch = nullptr;
   cur = leaf->parentNode;
   while (cur != commonPrefix) {
@@ -234,17 +235,18 @@ void Tableau::renameBranch(const Node *leaf) {
 
     // Check if we go from unshared nodes to shared nodes: if so, we can delete all unshared nodes
     const auto parentNode = cur->parentNode;
-    const auto parentIsShared = currentNodeIsShared ||
-      (parentNode == commonPrefix || parentNode->children.size() > 1);
+    const auto parentIsShared =
+        currentNodeIsShared || (parentNode == commonPrefix || parentNode->children.size() > 1);
     if (!currentNodeIsShared && parentIsShared) {
       // Delete unshared nodes
-      auto curIt =
-        std::ranges::find_if(parentNode->children, [&](auto &child) { return child.get() == cur; });
+      auto curIt = std::ranges::find_if(parentNode->children,
+                                        [&](auto &child) { return child.get() == cur; });
       parentNode->children.erase(curIt);
       currentNodeIsShared = true;
     }
 
-    cur = parentNode;;
+    cur = parentNode;
+    ;
   }
 
   // Append copied branch
@@ -274,6 +276,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  //exportProof(filename);
+  exportProof(filename);
 #endif
 }

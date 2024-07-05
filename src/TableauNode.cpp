@@ -267,7 +267,7 @@ void Tableau::Node::inferModalTop() {
 
   for (const auto label : labels) {
     // T -> e
-    const CanonicalSet search = Set::newSet(SetOperation::full);
+    const CanonicalSet search = Set::fullSet();
     const CanonicalSet replace = Set::newEvent(label);
     for (auto &lit : substitute(literal, search, replace)) {
       appendBranch(lit);
@@ -291,7 +291,7 @@ void Tableau::Node::inferModalAtomic() {
   const CanonicalSet replace2 = e1;
 
   // replace T -> e
-  const CanonicalSet top = Set::newSet(SetOperation::full);
+  const CanonicalSet top = Set::fullSet();
 
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
@@ -329,7 +329,7 @@ void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
       continue;
     }
     // replace T -> e
-    const CanonicalSet top = Set::newSet(SetOperation::full);
+    const CanonicalSet top = Set::fullSet();
     for (const auto label : labels) {
       const CanonicalSet e = Set::newEvent(label);
       for (auto &lit : substitute(curLit, top, e)) {
@@ -340,16 +340,20 @@ void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
 }
 
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
+  // tooltip
   output << "N" << this << "[tooltip=\"";
-  // debug
-  output << this << std::endl << std::endl;
-  // label/cube
+  output << this << "\n\n";                  // address
+  output << literal.annotation->toString();  // annotation
+
+  // label
   output << "\",label=\"" << literal.toString() << "\"";
+
   // color closed branches
   if (isClosed()) {
     output << ", fontcolor=green";
   }
   output << "];" << std::endl;
+
   // children
   for (const auto &child : children) {
     child->toDotFormat(output);

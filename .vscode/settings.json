@@ -103,7 +103,8 @@
         "stdfloat": "cpp",
         "stop_token": "cpp",
         "cfenv": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "__memory": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

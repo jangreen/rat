@@ -64,7 +64,7 @@ class Annotation {
  private:
   static CanonicalAnnotation newAnnotation(std::optional<AnnotationType> value,
                                            CanonicalAnnotation left, CanonicalAnnotation right);
-  [[nodiscard]] bool validate() const;  // TODO:
+  [[nodiscard]] bool validate() const;
 
  public:
   Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
