@@ -4,8 +4,7 @@
 
 class Annotation;
 typedef const Annotation *CanonicalAnnotation;
-typedef int AnnotationType;
-// typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
+typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
 
 /*
  *  Let T be a binary tree-like structure. A leaf annotation L is a function that maps each
@@ -79,6 +78,7 @@ class Annotation {
   Annotation(const Annotation &other) = delete;
   Annotation(const Annotation &&other) = delete;
 
+  // make non-optional return type
   [[nodiscard]] std::optional<AnnotationType> getValue() const { return value; }
   [[nodiscard]] CanonicalAnnotation getLeft() const { return left == nullptr ? this : left; }
   [[nodiscard]] CanonicalAnnotation getRight() const { return right == nullptr ? this : right; }
@@ -89,6 +89,13 @@ class Annotation {
   }
 
   friend std::hash<Annotation>;
+};
+
+template <>
+struct std::hash<AnnotationType> {
+  std::size_t operator()(const AnnotationType &pair) const {
+    return ((size_t)pair.first << 32) | pair.second;
+  }
 };
 
 template <>

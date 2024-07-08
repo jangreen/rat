@@ -31,7 +31,7 @@
       const CanonicalSet fullSet = Set::fullSet();
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
       const CanonicalSet TrT = Set::newSet(SetOperation::setIntersection, fullSet, rT);
-      cube.emplace_back(Annotated::makeWithValue(TrT, 0));  // T & r.T
+      cube.emplace_back(Annotated::makeWithValue(TrT, {0, 0}));  // T & r.T
     }
   }
 
@@ -54,7 +54,7 @@
 
     const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1LHS, e2);
     const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1RHS, e2);
-    const auto e1RHS_and_e2_annotated = Annotated::makeWithValue(e1RHS_and_e2, 0);
+    const auto e1RHS_and_e2_annotated = Annotated::makeWithValue(e1RHS_and_e2, {0, 0});
 
     Cube cube = {Literal(e1LHS_and_e2), Literal(e1RHS_and_e2_annotated)};
     return cube;

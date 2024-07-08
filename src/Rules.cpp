@@ -186,7 +186,8 @@ PartialDNF Rules::substituteIntersectionOperand(const bool substituteRight,
 
 std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet) {
   const auto& [set, annotation] = annotatedSet;
-  if (annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+  if (!annotation->getValue().has_value() ||
+      annotation->getValue().value().second >= saturationBound) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
@@ -228,8 +229,9 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet
         const auto& relationName = *set->relation->identifier;
         if (Assumption::baseAssumptions.contains(relationName)) {
           const auto& assumption = Assumption::baseAssumptions.at(relationName);
-          const int newValue = annotation->getRight()->getValue().value_or(0) + 1;
-          const auto saturatedRelation = Annotated::makeWithValue(assumption.relation, newValue);
+          const auto baseAnnotation = annotation->getRight()->getValue().value();
+          const auto saturatedRelation = Annotated::makeWithValue(
+              assumption.relation, {baseAnnotation.first, baseAnnotation.second + 1});
           return Annotated::newSet(set->operation, leftOperand, saturatedRelation);
         }
       }
@@ -242,7 +244,8 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet
 
 std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) {
   const auto& [set, annotation] = annotatedSet;
-  if (annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+  if (!annotation->getValue().has_value() ||
+      annotation->getValue().value().first >= saturationBound) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
@@ -282,10 +285,11 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) 
 
       if (set->relation->operation == RelationOperation::baseRelation) {
         // e.b -> (e.R).b
-        // TODO: cache this and its annototation
+        // TODO: cache this and its annotation
         const auto masterId = Assumption::masterIdRelation();
+        const auto baseAnnotation = annotation->getRight()->getValue().value();
         const auto saturatedRelation =
-            Annotated::makeWithValue(masterId, annotation->getRight()->getValue().value() + 1);
+            Annotated::makeWithValue(masterId, {baseAnnotation.first + 1, baseAnnotation.second});
         const auto eR = Annotated::newSet(SetOperation::image, leftOperand, saturatedRelation);
         const auto b = std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
         const auto eR_b = Annotated::newSet(set->operation, eR, b);
@@ -411,8 +415,8 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
           return DNF{{Literal(first, second, b)}};
         }
 
-        assert(ra->isLeaf());
-        const int value = ra->getValue().value_or(0);
+        assert(ra->isLeaf() && ra->getValue().has_value());
+        const AnnotationType value = ra->getValue().value();
         return DNF{{Literal(first, second, b, value)}};
       } else {
         // LeftRule: e & fr     or      e & rf
@@ -500,7 +504,8 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
     return std::nullopt;  // no rule applicable
   }
 
-  if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+  if (!literal.annotation->getValue().has_value() ||
+      literal.annotation->getValue().value().second >= saturationBound) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
@@ -520,9 +525,11 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
       const CanonicalSet e2 = Set::newEvent(*literal.rightLabel);
       const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, assumption.relation);
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
-      const AnnotationType newValue = literal.annotation->getValue().value_or(0) + 1;
+      assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
+      const auto bAnnotationValue = literal.annotation->getValue().value();
       // annotation tree should be the on of e1R_and_e2
-      return Literal(Annotated::makeWithValue(e1R_and_e2, newValue));
+      return Literal(Annotated::makeWithValue(
+          e1R_and_e2, {bAnnotationValue.first, bAnnotationValue.second + 1}));
     }
     case PredicateOperation::setNonEmptiness: {
       const auto saturatedLiteral = saturateBase(literal.annotatedSet());
@@ -541,7 +548,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
     return std::nullopt;
   }
 
-  if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound &&
+  if ((!literal.annotation->getValue().has_value() ||
+       literal.annotation->getValue().value().first >= saturationBound) &&
       literal.operation != PredicateOperation::equality) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
     // negative equality predicates can be saturated but have no value
@@ -557,7 +565,7 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
       // annotation tree should be the on of R
       // FIXME: masterId and annotation for masterID should be cached
-      return Literal(Annotated::makeWithValue(e1R_and_e2, 1));
+      return Literal(Annotated::makeWithValue(e1R_and_e2, {1, 0}));
     }
     case PredicateOperation::edge: {
       // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
@@ -569,11 +577,13 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
           Set::newSet(SetOperation::domain, e2, Assumption::masterIdRelation());
       const CanonicalSet b_Re2 = Set::newSet(SetOperation::domain, Re2, b);
       const CanonicalSet e1R_and_bRe2 = Set::newSet(SetOperation::setIntersection, e1R, b_Re2);
-      const AnnotationType newValue = literal.annotation->getValue().value_or(0) + 1;
+      assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
+      const auto bAnnotationValue = literal.annotation->getValue().value();
 
       // annotation tree should be the on of e1R_and_bRe2
       assert(literal.annotation->isLeaf());
-      return Literal(Annotated::makeWithValue(e1R_and_bRe2, newValue));
+      return Literal(Annotated::makeWithValue(
+          e1R_and_bRe2, {bAnnotationValue.first + 1, bAnnotationValue.second}));
     }
     case PredicateOperation::setNonEmptiness: {
       auto saturatedLiteral = saturateId(literal.annotatedSet());

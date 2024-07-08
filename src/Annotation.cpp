@@ -10,7 +10,13 @@ std::optional<AnnotationType> meet(const std::optional<AnnotationType> a,
   if (!a.has_value() && !b.has_value()) {
     return std::nullopt;
   }
-  return std::min(a.value_or(INT32_MAX), b.value_or(INT32_MAX));
+  if (!a.has_value()) {
+    return b;
+  }
+  if (!b.has_value()) {
+    return a;
+  }
+  return AnnotationType{std::min(a->first, b->first), std::min(a->second, b->second)};
 }
 
 }  // namespace

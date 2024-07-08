@@ -345,7 +345,9 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   output << this << "\n\n";  // address
   if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
     output << "Annotation: \n";
-    output << Annotated::toString(literal.annotatedSet());  // annotation
+    output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
+    output << "\n\n";
+    output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
   }
 
   // label
