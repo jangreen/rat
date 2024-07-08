@@ -6,9 +6,6 @@ class Annotation;
 typedef const Annotation *CanonicalAnnotation;
 typedef int AnnotationType;
 
-// TODO: This doesn't belong here.
-static int saturationBound = 1;
-
 /*
  *  Let T be a binary tree-like structure. A leaf annotation L is a function that maps each
  *  leaf of T to some value (the annotation) in a complete lattice, or possibly a special
@@ -66,6 +63,10 @@ class Annotation {
                                            CanonicalAnnotation left, CanonicalAnnotation right);
   [[nodiscard]] bool validate() const;
 
+  const std::optional<AnnotationType> value;  // nullopt: subtree has default annotation
+  const CanonicalAnnotation left;             // is set iff operation unary/binary
+  const CanonicalAnnotation right;            // is set iff operation binary
+
  public:
   Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
              CanonicalAnnotation right);
@@ -76,10 +77,6 @@ class Annotation {
   // Due to canonicalization, moving or copying is not allowed
   Annotation(const Annotation &other) = delete;
   Annotation(const Annotation &&other) = delete;
-
-  const std::optional<AnnotationType> value;  // nullopt: subtree has default annotation
-  const CanonicalAnnotation left;             // is set iff operation unary/binary
-  const CanonicalAnnotation right;            // is set iff operation binary
 
   [[nodiscard]] std::string toString() const;
 

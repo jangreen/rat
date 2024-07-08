@@ -66,7 +66,6 @@ ACYCLIC: 'acyclic';
 IRREFLEXIVE: 'irreflexive';
 EMPTY: 'empty';
 
-// TODO: do other constants as well
 EMPTYSET: '0';
 EQ: '=';
 STAR: '*';

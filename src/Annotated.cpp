@@ -3,16 +3,6 @@
 
 namespace Annotated {
 
-AnnotatedSet getLeft(const AnnotatedSet &annotatedSet) {
-  const auto [set, annotation] = annotatedSet;
-  assert(set->leftOperand != nullptr);
-  const auto leftSet = set->leftOperand;
-  const auto leftAnnotation =
-      set->operation != SetOperation::domain ? annotation->getLeft() : annotation->getRight();
-
-  return {leftSet, leftAnnotation};
-}
-
 std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
   switch (set->operation) {
@@ -20,9 +10,8 @@ std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annot
     case SetOperation::intersection:
       return AnnotatedSet(set->rightOperand, annotation->getRight());
     case SetOperation::domain:
-      return AnnotatedRelation(set->relation, annotation->getRight());
     case SetOperation::image:
-      return AnnotatedRelation(set->relation, annotation->getLeft());
+      return AnnotatedRelation(set->relation, annotation->getRight());
     case SetOperation::base:
     case SetOperation::empty:
     case SetOperation::full:
@@ -143,6 +132,62 @@ AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet sear
     }
   }
   return annotatedSet;
+}
+
+bool validate(const AnnotatedSet annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+
+  switch (set->operation) {
+    case SetOperation::singleton:
+    case SetOperation::base:
+    case SetOperation::empty:
+    case SetOperation::full:
+      return annotation->isLeaf() && !annotation->getValue().has_value();
+    case SetOperation::image:
+    case SetOperation::domain: {
+      const auto &leftSet = getLeft(annotatedSet);
+      const auto &right = getRight(annotatedSet);
+      const auto &rightRelation = std::get<AnnotatedRelation>(right);
+      return validate(leftSet) && validate(rightRelation);
+    }
+    case SetOperation::intersection:
+    case SetOperation::choice: {
+      const auto &leftSet = getLeft(annotatedSet);
+      const auto &right = getRight(annotatedSet);
+      const auto &rightSet = std::get<AnnotatedSet>(right);
+      return validate(leftSet) && validate(rightSet);
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+bool validate(const AnnotatedRelation annotatedRelation) {
+  const auto &[relation, annotation] = annotatedRelation;
+
+  switch (relation->operation) {
+    case RelationOperation::identity:
+    case RelationOperation::empty:
+    case RelationOperation::full:
+      return annotation->isLeaf() && !annotation->getValue().has_value();
+    case RelationOperation::intersection:
+    case RelationOperation::composition:
+    case RelationOperation::choice: {
+      const auto &left = getLeft(annotatedRelation);
+      const auto &right = getRight(annotatedRelation);
+      return validate(left) && validate(right);
+    }
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure: {
+      const auto &left = getLeft(annotatedRelation);
+      return validate(left);
+    }
+    case RelationOperation::base:
+      return annotation->isLeaf() && annotation->getValue().has_value();
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
+    default:
+      throw std::logic_error("unreachable");
+  }
 }
 
 }  // namespace Annotated

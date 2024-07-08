@@ -543,8 +543,10 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
     return std::nullopt;
   }
 
-  if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound) {
+  if (literal.annotation->getValue().value_or(INT32_MAX) >= saturationBound &&
+      literal.operation != PredicateOperation::equality) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
+    // negative equality predicates can be saturated but have no value
     return std::nullopt;
   }
 
