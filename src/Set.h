@@ -10,6 +10,7 @@ typedef const Set *CanonicalSet;
 enum class SetOperation {
   baseSet,          // nullary function (constant): base Set
   event,            // nullary function (constant): single Set
+  topEvent,         // special event for lazy top evaluation
   emptySet,         // nullary function (constant): empty Set
   fullSet,          // nullary function (constant): full Set
   setUnion,         // binary function
@@ -55,6 +56,9 @@ class Set {
   inline static CanonicalSet newEvent(int label) {
     return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
   };
+  inline static CanonicalSet newTopEvent(int label) {
+    return newSet(SetOperation::topEvent, nullptr, nullptr, nullptr, label, std::nullopt);
+  };
   inline static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
     return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
   };
@@ -71,6 +75,9 @@ class Set {
 
   const bool &isNormal() const;
   const bool &hasTopSet() const;
+  inline const bool isEvent() const {
+    return operation == SetOperation::event || operation == SetOperation::topEvent;
+  };
   const std::vector<int> &getLabels() const;
   const std::vector<CanonicalSet> &getLabelBaseCombinations() const;
 

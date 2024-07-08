@@ -15,21 +15,21 @@ namespace {
 bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
                   const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
+    case SetOperation::topEvent:
+    case SetOperation::event:
+      return true;
     case SetOperation::setUnion:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::baseSet:
+      return false;
     case SetOperation::setIntersection:
       assert(rightOperand != nullptr);
       return leftOperand->isNormal() && rightOperand->isNormal();
-    case SetOperation::event:
-    case SetOperation::emptySet:
-    case SetOperation::fullSet:
-      return true;
-    case SetOperation::baseSet:
-      return false;
     case SetOperation::domain:
     case SetOperation::image:
-      return leftOperand->operation == SetOperation::event
-                 ? relation->operation == RelationOperation::baseRelation
-                 : leftOperand->isNormal();
+      return leftOperand->isEvent() ? relation->operation == RelationOperation::baseRelation
+                                    : leftOperand->isNormal();
     default:
       throw std::logic_error("unreachable");
   }
@@ -48,6 +48,7 @@ std::vector<int> calcLabels(const SetOperation operation, const CanonicalSet lef
     case SetOperation::domain:
     case SetOperation::image:
       return leftOperand->getLabels();
+    case SetOperation::topEvent:
     case SetOperation::event:
       return {*label};
     case SetOperation::baseSet:
@@ -134,17 +135,14 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
                          const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
-  static std::unordered_set operations = {SetOperation::image,    SetOperation::domain,
-                                          SetOperation::event,    SetOperation::setIntersection,
-                                          SetOperation::setUnion, SetOperation::baseSet,
-                                          SetOperation::fullSet,  SetOperation::emptySet};
-  assert(operations.contains(operation));
-
   const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
   const bool hasLabelOrId = (label.has_value() || identifier.has_value());
   switch (operation) {
     case SetOperation::baseSet:
       assert(identifier.has_value() && !label.has_value() && isSimple);
+      break;
+    case SetOperation::topEvent:
+      assert(label.has_value() && !identifier.has_value() && isSimple);
       break;
     case SetOperation::event:
       assert(label.has_value() && !identifier.has_value() && isSimple);
@@ -164,6 +162,7 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
       assert(left != nullptr && relation != nullptr && right == nullptr);
       break;
     default:
+      assert(false);
       throw std::logic_error("unreachable");
   }
 #endif

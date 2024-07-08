@@ -609,8 +609,9 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
       return PartialDNF{{BOTTOM}};
     case SetOperation::fullSet: {
       if (context.negated) {
-        // Rule (\neg\top_1): this case needs context (handled later)
-        return std::nullopt;
+        // Rule (\neg\top_1): use universal events optimization
+        const CanonicalSet f = Set::newTopEvent(Set::maxSingletonLabel++);
+        return PartialDNF{{AnnotatedSet(f, nullptr)}};
       }
       // Rule (\top_1): [T] -> { [f] } , only if positive
       const CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
