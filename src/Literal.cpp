@@ -143,8 +143,7 @@ bool Literal::isNormal() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
       if (set->operation == SetOperation::setIntersection &&
-          (set->leftOperand->operation == SetOperation::event ||
-           set->rightOperand->operation == SetOperation::event)) {
+          (set->leftOperand->isEvent() || set->rightOperand->isEvent())) {
         return false;
       }
       return set->isNormal();
@@ -161,9 +160,9 @@ bool Literal::isNormal() const {
   }
 }
 
-bool Literal::hasTopSet() const {
+bool Literal::hasTopEvent() const {
   if (operation == PredicateOperation::setNonEmptiness) {
-    return set->hasTopSet();
+    return set->hasTopEvent();
   }
   return false;
 }
@@ -176,12 +175,12 @@ bool Literal::isPositiveEqualityPredicate() const {
   return !negated && operation == PredicateOperation::equality;
 }
 
-std::vector<int> Literal::labels() const {
+EventSet Literal::events() const {
   switch (operation) {
     case PredicateOperation::constant:
       return {};
     case PredicateOperation::setNonEmptiness: {
-      return set->getLabels();
+      return set->getEvents();
     }
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
@@ -189,6 +188,21 @@ std::vector<int> Literal::labels() const {
     }
     case PredicateOperation::set: {
       return {*leftLabel};
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+EventSet Literal::topEvents() const {
+  switch (operation) {
+    case PredicateOperation::constant:
+    case PredicateOperation::edge:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return {};
+    case PredicateOperation::setNonEmptiness: {
+      return set->getTopEvents();
     }
     default:
       throw std::logic_error("unreachable");
@@ -217,6 +231,20 @@ std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
     default:
       throw std::logic_error("unreachable");
   }
+}
+
+std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
+                                              const CanonicalSet replace) const {
+  if (operation != PredicateOperation::setNonEmptiness) {
+    // only substitute in set expressions
+    return std::nullopt;
+  }
+
+  const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
+  if (newSet.first != set) {
+    return Literal(newSet);
+  }
+  return std::nullopt;
 }
 
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {

@@ -46,6 +46,8 @@ inline AnnotatedSet newBaseSet(std::string &identifier) {
   return {Set::newBaseSet(identifier), Annotation::none()};
 }
 
+AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet search,
+                           const CanonicalSet replace);
 AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
                         const CanonicalSet replace, int *n);
 
@@ -103,6 +105,7 @@ template <bool first>
     case SetOperation::setUnion:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + " | " +
              annotationToString<first>(std::get<AnnotatedSet>(getRight(annotatedSet))) + ")";
+    case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:

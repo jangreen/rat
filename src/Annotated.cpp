@@ -75,15 +75,49 @@ AnnotatedRelation makeWithValue(const CanonicalRelation relation, const Annotati
   }
 }
 
+// only subtitutes in set expressions
+AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet search,
+                           const CanonicalSet replace) {
+  const auto &[set, annotation] = annotatedSet;
+
+  if (set == search) {
+    return Annotated::makeWithValue(replace, {0, 0});
+  }
+  switch (set->operation) {
+    case SetOperation::topEvent:
+    case SetOperation::event:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return annotatedSet;
+    case SetOperation::image:
+    case SetOperation::domain: {
+      const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
+      const auto &relation = std::get<AnnotatedRelation>(getRight(annotatedSet));
+      return Annotated::newSet(set->operation, left, relation);
+    }
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion: {
+      const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
+      const auto &right =
+          substituteAll(std::get<AnnotatedSet>(getRight(annotatedSet)), search, replace);
+      return Annotated::newSet(set->operation, left, right);
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
                         const CanonicalSet replace, int *n) {
+  assert(*n >= 0);
   const auto &[set, annotation] = annotatedSet;
   if (*n == 0) {
     return annotatedSet;
   }
 
   if (set == search) {
-    if (*n == 1 || *n == -1) {
+    if (*n == 1) {
       return Annotated::makeWithValue(replace, {0, 0});
     }
     (*n)--;
@@ -138,6 +172,7 @@ bool validate(const AnnotatedSet annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
 
   switch (set->operation) {
+    case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:

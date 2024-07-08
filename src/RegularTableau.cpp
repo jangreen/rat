@@ -10,18 +10,18 @@
 
 namespace {
 
-std::vector<int> gatherActiveLabels(const Cube &cube) {
+EventSet gatherActiveLabels(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
 
-  std::vector<int> activeLabels;
+  EventSet activeLabels;
   for (const auto &literal : cube) {
     if (literal.negated) {
       continue;
     }
 
-    auto literalLabels = literal.labels();
-    activeLabels.insert(std::end(activeLabels), std::begin(literalLabels), std::end(literalLabels));
+    auto literalLabels = literal.events();
+    activeLabels.insert(literalLabels.begin(), literalLabels.end());
   }
 
   return activeLabels;
@@ -45,8 +45,8 @@ std::vector<CanonicalSet> gatherActiveCombinations(const Cube &cube) {
   return activeCombinations;
 }
 
-bool isLiteralActive(const Literal &literal, const std::vector<int> &activeLabels) {
-  return isSubset(literal.labels(), activeLabels);
+bool isLiteralActive(const Literal &literal, const EventSet &activeLabels) {
+  return std::ranges::includes(activeLabels, literal.events());
 }
 
 bool isLiteralActive(const Literal &literal, const std::vector<CanonicalSet> &combinations) {
@@ -73,7 +73,7 @@ void findReachableNodes(RegularTableau::Node *node,
 
 // removes all negated literals in cube with events that do not occur in events
 // returns removed literals
-Cube filterNegatedLiterals(Cube &cube, const std::vector<int> events) {
+Cube filterNegatedLiterals(Cube &cube, const EventSet events) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
     if (!isLiteralActive(literal, events)) {

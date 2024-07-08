@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/container/flat_set.hpp>
 #include <optional>
 
 #include "Relation.h"
@@ -6,6 +7,7 @@
 
 class Set;
 typedef const Set *CanonicalSet;
+typedef boost ::container::flat_set<int> EventSet;
 
 enum class SetOperation {
   baseSet,          // nullary function (constant): base Set
@@ -30,8 +32,8 @@ class Set {
 
   // properties calculated for canonical sets on initialization
   mutable bool _isNormal{};
-  mutable bool _hasTopSet{};
-  mutable std::vector<int> labels;
+  mutable EventSet topEvents;
+  mutable EventSet events;
   mutable std::vector<CanonicalSet> labelBaseCombinations;
 
   // Calculates the above properties: we do not do this inside the constructor
@@ -73,17 +75,20 @@ class Set {
 
   bool operator==(const Set &other) const;
 
-  const bool &isNormal() const;
-  const bool &hasTopSet() const;
   inline const bool isEvent() const {
     return operation == SetOperation::event || operation == SetOperation::topEvent;
   };
-  const std::vector<int> &getLabels() const;
-  const std::vector<CanonicalSet> &getLabelBaseCombinations() const;
+  inline const bool &isNormal() const { return _isNormal; }
+  inline const bool hasTopEvent() const { return !topEvents.empty(); }
+  inline const EventSet &getTopEvents() const { return topEvents; }
+  inline const EventSet &getEvents() const { return events; }
+  inline const std::vector<CanonicalSet> &getLabelBaseCombinations() const {
+    return labelBaseCombinations;
+  }
 
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
-  const std::optional<int> label;               // is set iff operation singleton
+  const std::optional<int> label;               // is set iff operation event
   const CanonicalSet leftOperand;               // is set iff operation unary/binary
   const CanonicalSet rightOperand;              // is set iff operation binary
   const CanonicalRelation relation;             // is set iff domain/image

@@ -54,14 +54,15 @@ class Literal {
   std::optional<CanonicalString> identifier;  // edge, set
 
   [[nodiscard]] bool isNormal() const;
-  [[nodiscard]] bool hasTopSet() const;
+  [[nodiscard]] bool hasTopEvent() const;
   [[nodiscard]] bool isPositiveEdgePredicate() const;
   [[nodiscard]] bool isPositiveEqualityPredicate() const;
-  [[nodiscard]] std::vector<int> labels() const;
+  [[nodiscard]] EventSet events() const;
+  [[nodiscard]] EventSet topEvents() const;
   [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
 
-  // substitute n-th occurrence, TODO: -1 = all
-  bool substitute(CanonicalSet search, CanonicalSet replace, int n);
+  std::optional<Literal> substituteAll(const CanonicalSet search, const CanonicalSet replace) const;
+  bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
   Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);
   inline AnnotatedSet annotatedSet() const { return AnnotatedSet(set, annotation); };

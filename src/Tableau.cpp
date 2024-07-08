@@ -103,8 +103,9 @@ bool Tableau::solve(int bound) {
     // conclusion could be such a predicate again
     // TODO: maybe consider lazy T evalutaion (consider T as event)
 
-    if (currentNode->literal.hasTopSet()) {
+    if (currentNode->literal.hasTopEvent()) {
       // Rule (~\top_1)
+      // here: we replace universal events by concrete positive existential events
       assert(currentNode->literal.negated);
       currentNode->inferModalTop();
     }
@@ -195,7 +196,7 @@ void Tableau::renameBranch(const Node *leaf) {
   const Node *firstToRename = nullptr;
   const Node *cur = leaf;
   while ((cur = cur->parentNode) != nullptr) {
-    if (contains(cur->literal.labels(), from)) {
+    if (cur->literal.events().contains(from)) {
       firstToRename = cur;
     }
   }

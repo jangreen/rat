@@ -22,7 +22,8 @@ void Tableau::Worklist::insertAfter(Node &location, Node &node) {
   connect(node, *next);
 }
 
-bool Tableau::Worklist::isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<Node> &tail) {
+bool Tableau::Worklist::isEmpty(const std::unique_ptr<Node> &head,
+                                const std::unique_ptr<Node> &tail) {
   return head->nextInWorkList == tail.get();
 }
 
@@ -32,17 +33,17 @@ Tableau::Worklist::Worklist() {
   posEqualitiesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
   connect(*posEqualitiesHeadDummy, *posEqualitiesTailDummy);
 
-  posTopSetHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  posTopSetTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  connect(*posTopSetHeadDummy, *posTopSetTailDummy);
+  nonNormalNegatedHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalNegatedTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  connect(*nonNormalNegatedHeadDummy, *nonNormalNegatedTailDummy);
 
-  negativesHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  negativesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  connect(*negativesHeadDummy, *negativesTailDummy);
+  nonNormalPositiveHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalPositiveTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  connect(*nonNormalPositiveHeadDummy, *nonNormalPositiveTailDummy);
 
-  positivesHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  positivesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  connect(*positivesHeadDummy, *positivesTailDummy);
+  remainingHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  remainingTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  connect(*remainingHeadDummy, *remainingTailDummy);
 }
 
 void Tableau::Worklist::push(Node *node) {
@@ -51,26 +52,25 @@ void Tableau::Worklist::push(Node *node) {
 
   const PredicateOperation &op = node->literal.operation;
   const bool negated = node->literal.negated;
+  const bool isNormal = node->literal.isNormal();
   if (op == PredicateOperation::constant) {
     // TODO: Make sure that this is correct
-    assert(!negated); // BOTTOM is not handled currently
-    return; // TOP doesn't ever need to get processed.
+    assert(!negated);  // BOTTOM is not handled currently
+    return;            // TOP doesn't ever need to get processed.
   }
 
   Node *insertionPoint;
-  if (negated) {
-    insertionPoint = negativesHeadDummy.get();
+  if (!isNormal) {
+    insertionPoint = negated ? nonNormalNegatedHeadDummy.get() : nonNormalPositiveHeadDummy.get();
   } else if (op == PredicateOperation::equality) {
     insertionPoint = posEqualitiesHeadDummy.get();
-  } else if (node->literal.hasTopSet()) {
-    insertionPoint = posTopSetHeadDummy.get();
   } else {
     // Heuristic: It seems to be better to put leafs towards the end, making sure that
-    //  non-leafs get priority.
+    // non-leafs get priority.
     if (node->isLeaf()) {
-      insertionPoint = positivesTailDummy->prevInWorkList;
+      insertionPoint = remainingTailDummy->prevInWorkList;
     } else {
-      insertionPoint = positivesHeadDummy.get();
+      insertionPoint = remainingHeadDummy.get();
     }
   }
 
@@ -96,12 +96,12 @@ Tableau::Node *Tableau::Worklist::pop() {
   Node *next;
   if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
     next = posEqualitiesHeadDummy->nextInWorkList;
-  } else if (!isEmpty(posTopSetHeadDummy, posTopSetTailDummy)) {
-    next = posTopSetHeadDummy->nextInWorkList;
-  } else if (!isEmpty(negativesHeadDummy, negativesTailDummy)) {
-    next = negativesHeadDummy->nextInWorkList;
-  } else if (!isEmpty(positivesHeadDummy, positivesTailDummy)) {
-    next = positivesHeadDummy->nextInWorkList;
+  } else if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
+    next = nonNormalNegatedHeadDummy->nextInWorkList;
+  } else if (!isEmpty(nonNormalPositiveHeadDummy, nonNormalPositiveTailDummy)) {
+    next = nonNormalPositiveHeadDummy->nextInWorkList;
+  } else if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
+    next = remainingHeadDummy->nextInWorkList;
   } else {
     next = nullptr;
   }
@@ -111,47 +111,43 @@ Tableau::Node *Tableau::Worklist::pop() {
 }
 
 bool Tableau::Worklist::isEmpty() const {
-  return isEmpty(positivesHeadDummy, positivesTailDummy) && isEmpty(negativesHeadDummy, negativesTailDummy)
-  && isEmpty(posTopSetHeadDummy, posTopSetTailDummy) && isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy);
+  return isEmpty(remainingHeadDummy, remainingTailDummy) &&
+         isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy) &&
+         isEmpty(nonNormalPositiveHeadDummy, nonNormalPositiveTailDummy) &&
+         isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy);
 }
 
 bool Tableau::Worklist::validate() const {
   // TODO: Implement iterator and use it here
-  for (const Node *cur = posEqualitiesHeadDummy->nextInWorkList; cur != posEqualitiesTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate())
-      return false;
+  for (const Node *cur = posEqualitiesHeadDummy->nextInWorkList;
+       cur != posEqualitiesTailDummy.get(); cur = cur->nextInWorkList) {
+    if (!cur->validate()) return false;
   }
-  for (const Node *cur = posTopSetHeadDummy->nextInWorkList; cur != posTopSetTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate())
-      return false;
+  for (const Node *cur = nonNormalNegatedHeadDummy->nextInWorkList;
+       cur != nonNormalNegatedTailDummy.get(); cur = cur->nextInWorkList) {
+    if (!cur->validate()) return false;
   }
-  for (const Node *cur = negativesHeadDummy->nextInWorkList; cur != negativesTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate())
-      return false;
+  for (const Node *cur = nonNormalPositiveHeadDummy->nextInWorkList;
+       cur != nonNormalPositiveTailDummy.get(); cur = cur->nextInWorkList) {
+    if (!cur->validate()) return false;
   }
-  for (const Node *cur = positivesHeadDummy->nextInWorkList; cur != positivesTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate())
-      return false;
+  for (const Node *cur = remainingHeadDummy->nextInWorkList; cur != remainingTailDummy.get();
+       cur = cur->nextInWorkList) {
+    if (!cur->validate()) return false;
   }
 
   return true;
 }
-
-
-
 
 #else
 // --------------------------------------------------------------
 // Alternative worklist implementation
 
 bool Tableau::Worklist::CompareNodes::operator()(const Node *left, const Node *right) const {
-  if ((left->literal.operation == PredicateOperation::equality || right->literal.operation == PredicateOperation::equality)
-        && left->literal.operation != right->literal.operation) {
+  if ((left->literal.operation == PredicateOperation::equality ||
+       right->literal.operation == PredicateOperation::equality) &&
+      left->literal.operation != right->literal.operation) {
     return left->literal.operation == PredicateOperation::equality;
-  }
-
-  if (left->literal.hasTopSet() != right->literal.hasTopSet()) {
-    return left->literal.hasTopSet();
   }
 
   // Compare nodes by literals.
@@ -165,9 +161,7 @@ bool Tableau::Worklist::CompareNodes::operator()(const Node *left, const Node *r
 
 Tableau::Worklist::Worklist() = default;
 
-void Tableau::Worklist::push(Node *node) {
-  queue.insert(node);
-}
+void Tableau::Worklist::push(Node *node) { queue.insert(node); }
 
 void Tableau::Worklist::erase(Node *node) { queue.erase(node); }
 
@@ -175,17 +169,10 @@ bool Tableau::Worklist::contains(Node *node) const {
   return std::ranges::any_of(queue, [&](const auto &n) { return n == node; });
 }
 
-Tableau::Node *Tableau::Worklist::pop() {
-  return queue.extract(queue.begin()).value();
-}
+Tableau::Node *Tableau::Worklist::pop() { return queue.extract(queue.begin()).value(); }
 
-bool Tableau::Worklist::isEmpty() const {
-  return queue.empty();
-}
+bool Tableau::Worklist::isEmpty() const { return queue.empty(); }
 
-bool Tableau::Worklist::validate() const {
-  return std::ranges::all_of(queue, &Node::validate);
-}
+bool Tableau::Worklist::validate() const { return std::ranges::all_of(queue, &Node::validate); }
 
 #endif
-

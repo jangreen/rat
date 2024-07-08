@@ -304,10 +304,9 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) 
 
 std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
                                                       const bool modalRules) {
-  assert(literal.set->leftOperand->operation == SetOperation::event ||
-         literal.set->rightOperand->operation == SetOperation::event);
+  assert(literal.set->leftOperand->isEvent() || literal.set->rightOperand->isEvent());
   // e & s
-  const bool leftRule = literal.set->leftOperand->operation == SetOperation::event;
+  const bool leftRule = literal.set->leftOperand->isEvent();
   CanonicalSet e = leftRule ? literal.set->leftOperand : literal.set->rightOperand;
   CanonicalSet s = leftRule ? literal.set->rightOperand : literal.set->leftOperand;
   CanonicalAnnotation sAnnotation =
@@ -316,7 +315,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
 
   // LeftRule: handle "e & s != 0"
   // RightRule: handle "s & e != 0"
-  assert(e->operation == SetOperation::event);
+  assert(e->isEvent());
   // Do case distinction on the shape of "s"
   switch (s->operation) {
     case SetOperation::baseSet:
@@ -377,7 +376,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
         ra = sAnnotation->getRight();
       }
 
-      if (sp->operation != SetOperation::event) {
+      if (!sp->isEvent()) {
         // LeftRule: e & s'r -> re & s'     or      e & rs' -> er & s'
         // Rule (._12L)     or      Rule (._21L)
         // RightRule: s'r & e -> s' & re        or      rs' & e -> s' & er
@@ -483,8 +482,7 @@ std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRule
     case PredicateOperation::setNonEmptiness:
       if (literal.set->operation == SetOperation::setIntersection) {
         // s1 & s2 != 0
-        if (literal.set->leftOperand->operation == SetOperation::event ||
-            literal.set->rightOperand->operation == SetOperation::event) {
+        if (literal.set->leftOperand->isEvent() || literal.set->rightOperand->isEvent()) {
           return handleIntersectionWithEvent(literal, modalRules);
         }
       }
@@ -601,6 +599,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
                                            const bool modalRules) {
   const auto& [set, setAnnotation] = annotatedSet;
   switch (set->operation) {
+    case SetOperation::topEvent:
     case SetOperation::event:
       // no rule applicable to single event constant
       return std::nullopt;
@@ -611,7 +610,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
       if (context.negated) {
         // Rule (\neg\top_1): use universal events optimization
         const CanonicalSet f = Set::newTopEvent(Set::maxSingletonLabel++);
-        return PartialDNF{{AnnotatedSet(f, nullptr)}};
+        return PartialDNF{{AnnotatedSet(f, Annotation::none())}};
       }
       // Rule (\top_1): [T] -> { [f] } , only if positive
       const CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
@@ -628,8 +627,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
                          std::get<AnnotatedSet>(Annotated::getRight(annotatedSet))}};
     }
     case SetOperation::setIntersection: {
-      if (set->leftOperand->operation != SetOperation::event &&
-          set->rightOperand->operation != SetOperation::event) {
+      if (!set->leftOperand->isEvent() && !set->rightOperand->isEvent()) {
         // [S1 & S2]: apply rules recursively
         const auto leftResult = applyRule(context, Annotated::getLeft(annotatedSet), modalRules);
         if (leftResult) {
@@ -659,13 +657,11 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
       const auto intersection =
           Annotated::newSet(SetOperation::setIntersection, Annotated::getLeft(annotatedSet),
                             std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)));
-      const CanonicalSet& singleton =
-          set->leftOperand->operation == SetOperation::event ? set->leftOperand : set->rightOperand;
+      const CanonicalSet& e = set->leftOperand->isEvent() ? set->leftOperand : set->rightOperand;
       const Literal substitute = context.substituteSet(intersection);
 
-      return context.negated
-                 ? PartialDNF{{AnnotatedSet(singleton, Annotation::none())}, {substitute}}
-                 : PartialDNF{{AnnotatedSet(singleton, Annotation::none()), substitute}};
+      return context.negated ? PartialDNF{{AnnotatedSet(e, Annotation::none())}, {substitute}}
+                             : PartialDNF{{AnnotatedSet(e, Annotation::none()), substitute}};
     }
     case SetOperation::baseSet: {
       if (context.negated) {
@@ -678,7 +674,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
     }
     case SetOperation::image:
     case SetOperation::domain: {
-      if (set->leftOperand->operation == SetOperation::event) {
+      if (set->leftOperand->isEvent()) {
         return applyRelationalRule(context, annotatedSet, modalRules);
       }
 

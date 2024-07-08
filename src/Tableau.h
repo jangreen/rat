@@ -68,12 +68,11 @@ class Tableau {
    * Importantly, it makes sure the processing order is sound and efficient:
    *  1. Positive equalities
    *1.5(?) Set membership (currently not used/supported)
-   *  2. top set literals
-   *  3. Negative literals
-   *  4. Positive literals (i.e., the rest)
+   *  2. Negative literals
+   *  3. Positive literals (i.e., the rest)
    *
-   *  Rules 1-2 are for soundness.
-   *  Rule 3. is for efficiency in order to close branches as soon as possible.
+   *  Rules 1 are for soundness.
+   *  Rule 2. is for efficiency in order to close branches as soon as possible.
    */
   class Worklist {
    private:
@@ -81,16 +80,15 @@ class Tableau {
     // (1)
     std::unique_ptr<Node> posEqualitiesHeadDummy;
     std::unique_ptr<Node> posEqualitiesTailDummy;
-    // (2)
-    std::unique_ptr<Node> posTopSetHeadDummy;
-    std::unique_ptr<Node> posTopSetTailDummy;
     // (3)
-    std::unique_ptr<Node> negativesHeadDummy;
-    std::unique_ptr<Node> negativesTailDummy;
-    ;
+    std::unique_ptr<Node> nonNormalNegatedHeadDummy;
+    std::unique_ptr<Node> nonNormalNegatedTailDummy;
+    // (3)
+    std::unique_ptr<Node> nonNormalPositiveHeadDummy;
+    std::unique_ptr<Node> nonNormalPositiveTailDummy;
     // (4)
-    std::unique_ptr<Node> positivesHeadDummy;
-    std::unique_ptr<Node> positivesTailDummy;
+    std::unique_ptr<Node> remainingHeadDummy;
+    std::unique_ptr<Node> remainingTailDummy;
 
     static void connect(Node &left, Node &right);
     static void disconnect(Node &node);

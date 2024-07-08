@@ -242,7 +242,7 @@ void Tableau::Node::inferModalTop() {
 
   // get all labels
   const Node *cur = this;
-  std::vector<int> labels;
+  EventSet existentialReplaceEvents;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &lit = cur->literal;
     if (lit.negated) {
@@ -250,17 +250,22 @@ void Tableau::Node::inferModalTop() {
     }
 
     // Normal and positive literal: collect new labels
-    for (auto newLabel : lit.labels()) {
-      push_back_unique(labels, newLabel);
-    }
+    const auto &newEvents = lit.events();
+    existentialReplaceEvents.insert(newEvents.begin(), newEvents.end());
   }
 
-  for (const auto label : labels) {
-    // T -> e
-    const CanonicalSet search = Set::fullSet();
-    const CanonicalSet replace = Set::newEvent(label);
-    for (auto &lit : substitute(literal, search, replace)) {
-      appendBranch(lit);
+  const auto &univeralSearchEvents = literal.topEvents();
+
+  for (const auto search : univeralSearchEvents) {
+    for (const auto replace : existentialReplaceEvents) {
+      // [search] -> {replace}
+      // replace all occurrences of the same search at once
+      const CanonicalSet searchSet = Set::newTopEvent(search);
+      const CanonicalSet replaceSet = Set::newEvent(replace);
+      const auto substituted = literal.substituteAll(searchSet, replaceSet);
+      if (substituted.has_value()) {
+        appendBranch(substituted.value());
+      }
     }
   }
 }
@@ -280,9 +285,6 @@ void Tableau::Node::inferModalAtomic() {
   const CanonicalSet search2 = be2;
   const CanonicalSet replace2 = e1;
 
-  // replace T -> e
-  const CanonicalSet top = Set::fullSet();
-
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     tableau->exportDebug("debug");
@@ -299,13 +301,20 @@ void Tableau::Node::inferModalAtomic() {
     for (auto &lit : substitute(curLit, search2, replace2)) {
       appendBranch(lit);
     }
-    // cases for Top -> e
-    // replace T -> e
-    for (auto &lit : substitute(curLit, top, replace1)) {
-      appendBranch(lit);
-    }
-    for (auto &lit : substitute(curLit, top, replace2)) {
-      appendBranch(lit);
+    // cases for [f] -> {e}
+    const auto &univeralSearchEvents = curLit.topEvents();
+    for (const auto search : univeralSearchEvents) {
+      const CanonicalSet searchSet = Set::newTopEvent(search);
+
+      const auto substituted1 = curLit.substituteAll(searchSet, replace1);
+      if (substituted1.has_value()) {
+        appendBranch(substituted1.value());
+      }
+
+      const auto substituted2 = curLit.substituteAll(searchSet, replace2);
+      if (substituted2.has_value()) {
+        appendBranch(substituted2.value());
+      }
     }
   }
 }

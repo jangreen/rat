@@ -13,11 +13,15 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
   // -> the ordering must be insensitive to event labels!
 
   // 1) calculate renaming
-  // all events occur in positive labels
-  Cube positiveCube;
-  std::ranges::copy_if(cube, std::back_inserter(positiveCube),
-                       [](auto &literal) { return !literal.negated; });
-  std::ranges::sort(positiveCube, [](Literal &first, Literal &second) {
+  // all (existential) events occur in positive literal
+  // all (universal) events (aka topEvents) occur in negated literals
+  Cube sortedCube;
+  std::ranges::copy_if(cube, std::back_inserter(sortedCube),
+                       [](auto &literal) { return !literal.negated || literal.hasTopEvent(); });
+  std::ranges::sort(sortedCube, [](Literal &first, Literal &second) {
+    if (first.negated != second.negated) {
+      return first.negated < second.negated;
+    }
     if (first.set->toString().size() != second.set->toString().size()) {
       return first.set->toString().size() < second.set->toString().size();
     }
@@ -25,8 +29,13 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
     return first.set->toString() < second.set->toString();
   });
   std::vector<int> labels{};
-  for (const auto &literal : positiveCube) {
-    for (const auto &l : literal.labels()) {
+  for (const auto &literal : sortedCube) {
+    for (const auto &l : literal.events()) {
+      if (std::ranges::find(labels, l) == labels.end()) {
+        labels.push_back(l);
+      }
+    }
+    for (const auto &l : literal.topEvents()) {
       if (std::ranges::find(labels, l) == labels.end()) {
         labels.push_back(l);
       }
