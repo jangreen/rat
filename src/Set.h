@@ -43,16 +43,25 @@ class Set {
       std::optional<int> label, std::optional<std::string> identifier);
 
   static int maxSingletonLabel;  // to create globally unique labels
-  static CanonicalSet emptySet() {
+  inline static CanonicalSet emptySet() {
     return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   };
-  static CanonicalSet fullSet() {
+  inline static CanonicalSet fullSet() {
     return newSet(SetOperation::fullSet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   };
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
-  static CanonicalSet newEvent(int label);
-  static CanonicalSet newBaseSet(std::string &identifier);
+  inline static CanonicalSet newBaseSet(std::string &identifier) {
+    return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
+  };
+  inline static CanonicalSet newEvent(int label) {
+    return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
+  };
+  inline static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
+    return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
+  };
+  inline static CanonicalSet newSet(SetOperation operation, CanonicalSet left,
+                                    CanonicalRelation relation) {
+    return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
+  };
 
   // Due to canonicalization, moving or copying is not allowed
   Set(const Set &other) = delete;

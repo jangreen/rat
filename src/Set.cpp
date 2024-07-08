@@ -175,22 +175,6 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   return &*iter;
 }
 
-CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
-                         const CanonicalSet right) {
-  return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
-}
-
-CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
-                         const CanonicalRelation relation) {
-  return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
-}
-CanonicalSet Set::newEvent(int label) {
-  return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
-}
-CanonicalSet Set::newBaseSet(std::string &identifier) {
-  return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
-}
-
 bool Set::operator==(const Set &other) const {
   return operation == other.operation && leftOperand == other.leftOperand &&
          rightOperand == other.rightOperand && relation == other.relation && label == other.label &&

@@ -44,9 +44,13 @@ class Relation {
   inline static CanonicalRelation newBaseRelation(std::string identifier) {
     return newRelation(RelationOperation::baseRelation, nullptr, nullptr, identifier);
   };
-  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left);
-  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
-                                       CanonicalRelation right);
+  inline static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left) {
+    return newRelation(operation, left, nullptr, std::nullopt);
+  };
+  inline static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
+                                              CanonicalRelation right) {
+    return newRelation(operation, left, right, std::nullopt);
+  };
 
   Relation(const Relation &other) = delete;
   Relation(const Relation &&other) = delete;

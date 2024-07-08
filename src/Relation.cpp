@@ -11,10 +11,6 @@ Relation::Relation(const RelationOperation operation, const CanonicalRelation le
       rightOperand(right) {}
 
 CanonicalRelation Relation::newRelation(const RelationOperation operation,
-                                        const CanonicalRelation left) {
-  return newRelation(operation, left, nullptr, std::nullopt);
-}
-CanonicalRelation Relation::newRelation(const RelationOperation operation,
                                         const CanonicalRelation left, const CanonicalRelation right,
                                         const std::optional<std::string> &identifier) {
 #if (DEBUG)
@@ -64,11 +60,6 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
   static std::unordered_set<Relation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier);
   return &(*iter);
-}
-CanonicalRelation Relation::newRelation(const RelationOperation operation,
-                                        const CanonicalRelation left,
-                                        const CanonicalRelation right) {
-  return newRelation(operation, left, right, std::nullopt);
 }
 
 bool Relation::operator==(const Relation &other) const {
