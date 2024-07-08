@@ -209,13 +209,11 @@
     LogicParser::RelationBasicContext *context) {
   const std::string name = context->RELNAME()->getText();
   if (name == "id") {
-    std::variant<CanonicalSet, CanonicalRelation> result =
-        Relation::newRelation(RelationOperation::idRelation);
+    std::variant<CanonicalSet, CanonicalRelation> result = Relation::idRelation();
     return result;
   }
   if (name == "0") {
-    std::variant<CanonicalSet, CanonicalRelation> result =
-        Relation::newRelation(RelationOperation::emptyRelation);
+    std::variant<CanonicalSet, CanonicalRelation> result = Relation::emptyRelation();
     return result;
   }
   if (definedRelations.contains(name)) {
@@ -270,7 +268,7 @@
 
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitEmptyset(
     LogicParser::EmptysetContext *ctx) {
-  const CanonicalRelation r = Relation::newRelation(RelationOperation::emptyRelation);
+  const CanonicalRelation r = Relation::emptyRelation();
   std::variant<CanonicalSet, CanonicalRelation> result = r;
   return result;
 }
@@ -294,7 +292,7 @@
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
     const auto r = std::get<CanonicalRelation>(relationExpression);
-    const auto id = Relation::newRelation(RelationOperation::idRelation);
+    const auto id = Relation::idRelation();
     const auto r_or_id = Relation::newRelation(RelationOperation::relationUnion, r, id);
     std::variant<CanonicalSet, CanonicalRelation> result = r_or_id;
     return result;
@@ -307,7 +305,7 @@
   if (context->TOID() == nullptr) {
     const std::string set = context->e->getText();
     const CanonicalRelation r = Relation::newBaseRelation(set + "*" + set);
-    const CanonicalRelation id = Relation::newRelation(RelationOperation::idRelation);
+    const CanonicalRelation id = Relation::idRelation();
     const CanonicalRelation r_and_id =
         Relation::newRelation(RelationOperation::relationIntersection, r, id);
     std::variant<CanonicalSet, CanonicalRelation> result = r_and_id;

@@ -10,9 +10,6 @@ Relation::Relation(const RelationOperation operation, const CanonicalRelation le
       leftOperand(left),
       rightOperand(right) {}
 
-CanonicalRelation Relation::newRelation(const RelationOperation operation) {
-  return newRelation(operation, nullptr, nullptr, std::nullopt);
-}
 CanonicalRelation Relation::newRelation(const RelationOperation operation,
                                         const CanonicalRelation left) {
   return newRelation(operation, left, nullptr, std::nullopt);
@@ -72,9 +69,6 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
                                         const CanonicalRelation left,
                                         const CanonicalRelation right) {
   return newRelation(operation, left, right, std::nullopt);
-}
-CanonicalRelation Relation::newBaseRelation(std::string identifier) {
-  return newRelation(RelationOperation::baseRelation, nullptr, nullptr, identifier);
 }
 
 bool Relation::operator==(const Relation &other) const {
