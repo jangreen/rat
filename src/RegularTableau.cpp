@@ -27,8 +27,30 @@ std::vector<int> gatherActiveLabels(const Cube &cube) {
   return activeLabels;
 }
 
+std::vector<CanonicalSet> gatherActiveCombinations(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  std::vector<CanonicalSet> activeCombinations;
+  for (const auto &literal : cube) {
+    if (literal.negated) {
+      continue;
+    }
+
+    auto literalLabels = literal.labelBaseCombinations();
+    activeCombinations.insert(std::end(activeCombinations), std::begin(literalLabels),
+                              std::end(literalLabels));
+  }
+
+  return activeCombinations;
+}
+
 bool isLiteralActive(const Literal &literal, const std::vector<int> &activeLabels) {
   return isSubset(literal.labels(), activeLabels);
+}
+
+bool isLiteralActive(const Literal &literal, const std::vector<CanonicalSet> &combinations) {
+  return isSubset(literal.labelBaseCombinations(), combinations);
 }
 
 void findReachableNodes(RegularTableau::Node *node,
@@ -63,6 +85,20 @@ Cube filterNegatedLiterals(Cube &cube, const std::vector<int> events) {
   return removedLiterals;
 }
 
+// removes all negated literals in cube with event/base relation combination that do not occur
+// positive
+// returns removed literals
+void filterNegatedLiterals(Cube &cube, const std::vector<CanonicalSet> &combinations,
+                           Cube &removedLiterals) {
+  std::erase_if(cube, [&](auto &literal) {
+    if (!isLiteralActive(literal, combinations)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+}
+
 // removes all negated literals in cube with events that do not occur in some positive literal
 // returns  - uselessLiterals = set of removed literals
 //          - label = edgePredicates from cube are moved in label
@@ -92,9 +128,14 @@ void purge(Cube &cube, Cube &uselessLiterals, EdgeLabel &label) {
     return false;
   });
 
-  // filter non-active labels
+  // 1) filter non-active labels
   const auto activeLabels = gatherActiveLabels(cube);
   uselessLiterals = filterNegatedLiterals(cube, activeLabels);
+
+  // 2) filter non-active label/base relation combinations
+  // remove next two lines to disable optimization
+  const auto activeCombinations = gatherActiveCombinations(cube);
+  filterNegatedLiterals(cube, activeCombinations, uselessLiterals);
 }
 
 // returns fixed node as set, otherwise nullopt if consistent
