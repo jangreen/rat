@@ -126,7 +126,6 @@ bool Tableau::solve(int bound) {
       auto literal = Rules::saturateBase(currentNode->literal);
       if (literal) {
         currentNode->appendBranch(*literal);
-        continue;
       }
     }
 
@@ -134,7 +133,6 @@ bool Tableau::solve(int bound) {
       auto literal = Rules::saturateId(currentNode->literal);
       if (literal) {
         currentNode->appendBranch(*literal);
-        continue;
       }
     }
   }
