@@ -138,9 +138,9 @@ bool Literal::isNegatedOf(const Literal &other) const {
 bool Literal::isNormal() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
-      if (set->operation == SetOperation::intersection &&
-          (set->leftOperand->operation == SetOperation::singleton ||
-           set->rightOperand->operation == SetOperation::singleton)) {
+      if (set->operation == SetOperation::setIntersection &&
+          (set->leftOperand->operation == SetOperation::event ||
+           set->rightOperand->operation == SetOperation::event)) {
         return false;
       }
       return set->isNormal();

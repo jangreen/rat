@@ -18,8 +18,8 @@ class Assumption {
     CanonicalRelation masterId = nullptr;
     for (const auto &assumption : idAssumptions) {
       masterId = masterId == nullptr ? assumption.relation
-                                     : Relation::newRelation(RelationOperation::choice, masterId,
-                                                             assumption.relation);
+                                     : Relation::newRelation(RelationOperation::relationUnion,
+                                                             masterId, assumption.relation);
     }
     const auto closure = Relation::newRelation(RelationOperation::transitiveClosure, masterId);
     return closure;

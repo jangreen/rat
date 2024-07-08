@@ -22,12 +22,16 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
                                         const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
-  static std::unordered_set operations = {
-      RelationOperation::identity,     RelationOperation::cartesianProduct,
-      RelationOperation::intersection, RelationOperation::composition,
-      RelationOperation::converse,     RelationOperation::transitiveClosure,
-      RelationOperation::choice,       RelationOperation::base,
-      RelationOperation::full,         RelationOperation::empty};
+  static std::unordered_set operations = {RelationOperation::idRelation,
+                                          RelationOperation::cartesianProduct,
+                                          RelationOperation::relationIntersection,
+                                          RelationOperation::composition,
+                                          RelationOperation::converse,
+                                          RelationOperation::transitiveClosure,
+                                          RelationOperation::relationUnion,
+                                          RelationOperation::baseRelation,
+                                          RelationOperation::fullRelation,
+                                          RelationOperation::emptyRelation};
   assert(operations.contains(operation));
 
   const bool isBinary = (left != nullptr && right != nullptr);
@@ -35,16 +39,16 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
   const bool isNullary = (left == nullptr && right == nullptr);
   const bool hasId = identifier.has_value();
   switch (operation) {
-    case RelationOperation::base:
+    case RelationOperation::baseRelation:
       assert(hasId && isNullary);
       break;
-    case RelationOperation::identity:
-    case RelationOperation::empty:
-    case RelationOperation::full:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
       assert(!hasId && isNullary);
       break;
-    case RelationOperation::choice:
-    case RelationOperation::intersection:
+    case RelationOperation::relationUnion:
+    case RelationOperation::relationIntersection:
     case RelationOperation::composition:
       assert(!hasId && isBinary);
       break;
@@ -70,7 +74,7 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
   return newRelation(operation, left, right, std::nullopt);
 }
 CanonicalRelation Relation::newBaseRelation(std::string identifier) {
-  return newRelation(RelationOperation::base, nullptr, nullptr, identifier);
+  return newRelation(RelationOperation::baseRelation, nullptr, nullptr, identifier);
 }
 
 bool Relation::operator==(const Relation &other) const {
@@ -81,13 +85,13 @@ bool Relation::operator==(const Relation &other) const {
 std::string Relation::toString() const {
   std::string output;
   switch (operation) {
-    case RelationOperation::intersection:
+    case RelationOperation::relationIntersection:
       output += "(" + leftOperand->toString() + " & " + rightOperand->toString() + ")";
       break;
     case RelationOperation::composition:
       output += "(" + leftOperand->toString() + ";" + rightOperand->toString() + ")";
       break;
-    case RelationOperation::choice:
+    case RelationOperation::relationUnion:
       output += "(" + leftOperand->toString() + " | " + rightOperand->toString() + ")";
       break;
     case RelationOperation::converse:
@@ -96,16 +100,16 @@ std::string Relation::toString() const {
     case RelationOperation::transitiveClosure:
       output += leftOperand->toString() + "^*";
       break;
-    case RelationOperation::base:
+    case RelationOperation::baseRelation:
       output += *identifier;
       break;
-    case RelationOperation::identity:
+    case RelationOperation::idRelation:
       output += "id";
       break;
-    case RelationOperation::empty:
+    case RelationOperation::emptyRelation:
       output += "0";
       break;
-    case RelationOperation::full:
+    case RelationOperation::fullRelation:
       output += "1";
       break;
     case RelationOperation::cartesianProduct:

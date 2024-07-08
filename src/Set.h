@@ -8,13 +8,13 @@ class Set;
 typedef const Set *CanonicalSet;
 
 enum class SetOperation {
-  base,          // nullary function (constant): base Set
-  singleton,     // nullary function (constant): single Set
-  empty,         // nullary function (constant): empty Set
-  full,          // nullary function (constant): full Set
-  choice,        // binary function
-  intersection,  // binary function
-  image,         // binary function
+  baseSet,          // nullary function (constant): base Set
+  event,            // nullary function (constant): single Set
+  emptySet,         // nullary function (constant): empty Set
+  fullSet,          // nullary function (constant): full Set
+  setUnion,         // binary function
+  setIntersection,  // binary function
+  image,            // binary function
   domain
 };
 
@@ -44,10 +44,10 @@ class Set {
 
   static int maxSingletonLabel;  // to create globally unique labels
   static CanonicalSet emptySet() {
-    return newSet(SetOperation::empty, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+    return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   };
   static CanonicalSet fullSet() {
-    return newSet(SetOperation::full, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+    return newSet(SetOperation::fullSet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   };
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);

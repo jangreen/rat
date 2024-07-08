@@ -15,20 +15,20 @@ namespace {
 bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
                   const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
-    case SetOperation::choice:
-    case SetOperation::intersection:
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
       assert(rightOperand != nullptr);
       return leftOperand->isNormal() && rightOperand->isNormal();
-    case SetOperation::singleton:
-    case SetOperation::empty:
-    case SetOperation::full:
+    case SetOperation::event:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
       return true;
-    case SetOperation::base:
+    case SetOperation::baseSet:
       return false;
     case SetOperation::domain:
     case SetOperation::image:
-      return leftOperand->operation == SetOperation::singleton
-                 ? relation->operation == RelationOperation::base
+      return leftOperand->operation == SetOperation::event
+                 ? relation->operation == RelationOperation::baseRelation
                  : leftOperand->isNormal();
     default:
       throw std::logic_error("unreachable");
@@ -38,8 +38,8 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
 std::vector<int> calcLabels(const SetOperation operation, const CanonicalSet leftOperand,
                             const CanonicalSet rightOperand, const std::optional<int> label) {
   switch (operation) {
-    case SetOperation::intersection:
-    case SetOperation::choice: {
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion: {
       auto leftLabels = leftOperand->getLabels();
       auto rightLabels = rightOperand->getLabels();
       leftLabels.insert(std::end(leftLabels), std::begin(rightLabels), std::end(rightLabels));
@@ -48,11 +48,11 @@ std::vector<int> calcLabels(const SetOperation operation, const CanonicalSet lef
     case SetOperation::domain:
     case SetOperation::image:
       return leftOperand->getLabels();
-    case SetOperation::singleton:
+    case SetOperation::event:
       return {*label};
-    case SetOperation::base:
-    case SetOperation::empty:
-    case SetOperation::full:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
       return {};
     default:
       throw std::logic_error("unreachable");
@@ -65,8 +65,8 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
                                                     const CanonicalRelation relation,
                                                     const CanonicalSet thisRef) {
   switch (operation) {
-    case SetOperation::choice:
-    case SetOperation::intersection: {
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection: {
       auto left = leftOperand->getLabelBaseCombinations();
       auto right = rightOperand->getLabelBaseCombinations();
       left.insert(std::end(left), std::begin(right), std::end(right));
@@ -74,15 +74,15 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
     }
     case SetOperation::domain:
     case SetOperation::image: {
-      return leftOperand->operation == SetOperation::singleton &&
-                     relation->operation == RelationOperation::base
+      return leftOperand->operation == SetOperation::event &&
+                     relation->operation == RelationOperation::baseRelation
                  ? std::vector{thisRef}
                  : leftOperand->getLabelBaseCombinations();
     }
-    case SetOperation::base:
-    case SetOperation::empty:
-    case SetOperation::full:
-    case SetOperation::singleton:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
       return {};
     default:
       throw std::logic_error("unreachable");
@@ -91,7 +91,8 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
 
 bool calcHasTopSet(const SetOperation operation, const CanonicalSet leftOperand,
                    const CanonicalSet rightOperand) {
-  return SetOperation::full == operation || (leftOperand != nullptr && leftOperand->hasTopSet()) ||
+  return SetOperation::fullSet == operation ||
+         (leftOperand != nullptr && leftOperand->hasTopSet()) ||
          (rightOperand != nullptr && rightOperand->hasTopSet());
 }
 
@@ -133,27 +134,27 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
                          const std::optional<std::string> &identifier) {
 #if (DEBUG)
   // ------------------ Validation ------------------
-  static std::unordered_set operations = {SetOperation::image,     SetOperation::domain,
-                                          SetOperation::singleton, SetOperation::intersection,
-                                          SetOperation::choice,    SetOperation::base,
-                                          SetOperation::full,      SetOperation::empty};
+  static std::unordered_set operations = {SetOperation::image,    SetOperation::domain,
+                                          SetOperation::event,    SetOperation::setIntersection,
+                                          SetOperation::setUnion, SetOperation::baseSet,
+                                          SetOperation::fullSet,  SetOperation::emptySet};
   assert(operations.contains(operation));
 
   const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
   const bool hasLabelOrId = (label.has_value() || identifier.has_value());
   switch (operation) {
-    case SetOperation::base:
+    case SetOperation::baseSet:
       assert(identifier.has_value() && !label.has_value() && isSimple);
       break;
-    case SetOperation::singleton:
+    case SetOperation::event:
       assert(label.has_value() && !identifier.has_value() && isSimple);
       break;
-    case SetOperation::empty:
-    case SetOperation::full:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
       assert(!hasLabelOrId && isSimple);
       break;
-    case SetOperation::choice:
-    case SetOperation::intersection:
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
       assert(!hasLabelOrId);
       assert(left != nullptr && right != nullptr && relation == nullptr);
       break;
@@ -184,10 +185,10 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
 }
 CanonicalSet Set::newEvent(int label) {
-  return newSet(SetOperation::singleton, nullptr, nullptr, nullptr, label, std::nullopt);
+  return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
 }
 CanonicalSet Set::newBaseSet(std::string &identifier) {
-  return newSet(SetOperation::base, nullptr, nullptr, nullptr, std::nullopt, identifier);
+  return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
 }
 
 bool Set::operator==(const Set &other) const {
@@ -200,14 +201,14 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
-    case SetOperation::singleton:
+    case SetOperation::event:
       return newEvent(renaming.rename(*label));
-    case SetOperation::base:
-    case SetOperation::empty:
-    case SetOperation::full:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
       return this;
-    case SetOperation::choice:
-    case SetOperation::intersection:
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
       leftRenamed = leftOperand->rename(renaming);
       rightRenamed = rightOperand->rename(renaming);
       return newSet(operation, leftRenamed, rightRenamed);
@@ -227,7 +228,7 @@ std::string Set::toString() const {
   }
   std::string output;
   switch (operation) {
-    case SetOperation::singleton:
+    case SetOperation::event:
       output += "{" + std::to_string(*label) + "}";
       break;
     case SetOperation::image:
@@ -236,19 +237,19 @@ std::string Set::toString() const {
     case SetOperation::domain:
       output += "(" + relation->toString() + ";" + leftOperand->toString() + ")";
       break;
-    case SetOperation::base:
+    case SetOperation::baseSet:
       output += *identifier;
       break;
-    case SetOperation::empty:
+    case SetOperation::emptySet:
       output += "0";
       break;
-    case SetOperation::full:
+    case SetOperation::fullSet:
       output += "T";
       break;
-    case SetOperation::intersection:
+    case SetOperation::setIntersection:
       output += "(" + leftOperand->toString() + " & " + rightOperand->toString() + ")";
       break;
-    case SetOperation::choice:
+    case SetOperation::setUnion:
       output += "(" + leftOperand->toString() + " | " + rightOperand->toString() + ")";
       break;
     default:

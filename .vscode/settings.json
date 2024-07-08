@@ -104,7 +104,8 @@
         "stop_token": "cpp",
         "cfenv": "cpp",
         "ranges": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "ciso646": "cpp"
     },
     "editor.formatOnSave": true,
     "graphviz-interactive-preview.debouncingInterval": 1000,

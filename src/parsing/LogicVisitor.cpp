@@ -30,7 +30,7 @@
     for (const auto &assumption : Assumption::emptinessAssumptions) {
       const CanonicalSet fullSet = Set::fullSet();
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
-      const CanonicalSet TrT = Set::newSet(SetOperation::intersection, fullSet, rT);
+      const CanonicalSet TrT = Set::newSet(SetOperation::setIntersection, fullSet, rT);
       cube.emplace_back(Annotated::makeWithValue(TrT, 0));
     }
   }
@@ -52,8 +52,8 @@
     const CanonicalSet e1LHS = Set::newSet(SetOperation::image, e1, lhs);
     const CanonicalSet e1RHS = Set::newSet(SetOperation::image, e1, rhs);
 
-    const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::intersection, e1LHS, e2);
-    const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::intersection, e1RHS, e2);
+    const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1LHS, e2);
+    const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1RHS, e2);
     const auto e1RHS_and_e2_annotated = Annotated::makeWithValue(e1RHS_and_e2, 0);
 
     Cube cube = {Literal(e1LHS_and_e2), Literal(e1RHS_and_e2_annotated)};
@@ -67,16 +67,16 @@
   const CanonicalRelation lhs = parseRelation(ctx->lhs->getText());
   const CanonicalRelation rhs = parseRelation(ctx->rhs->getText());
   switch (rhs->operation) {
-    case RelationOperation::base: {
+    case RelationOperation::baseRelation: {
       Assumption assumption(lhs, *rhs->identifier);
       Assumption::baseAssumptions.emplace(*assumption.baseRelation, assumption);
       return 0;
     }
-    case RelationOperation::empty: {
+    case RelationOperation::emptyRelation: {
       Assumption::emptinessAssumptions.emplace_back(lhs);
       return 0;
     }
-    case RelationOperation::identity: {
+    case RelationOperation::idRelation: {
       Assumption::idAssumptions.emplace_back(lhs);
       return 0;
     }
@@ -210,12 +210,12 @@
   const std::string name = context->RELNAME()->getText();
   if (name == "id") {
     std::variant<CanonicalSet, CanonicalRelation> result =
-        Relation::newRelation(RelationOperation::identity);
+        Relation::newRelation(RelationOperation::idRelation);
     return result;
   }
   if (name == "0") {
     std::variant<CanonicalSet, CanonicalRelation> result =
-        Relation::newRelation(RelationOperation::empty);
+        Relation::newRelation(RelationOperation::emptyRelation);
     return result;
   }
   if (definedRelations.contains(name)) {
@@ -251,7 +251,8 @@
       std::holds_alternative<CanonicalRelation>(e2)) {
     const auto &r1 = std::get<CanonicalRelation>(e1);
     const auto &r2 = std::get<CanonicalRelation>(e2);
-    const CanonicalRelation r1_or_r2 = Relation::newRelation(RelationOperation::choice, r1, r2);
+    const CanonicalRelation r1_or_r2 =
+        Relation::newRelation(RelationOperation::relationUnion, r1, r2);
     std::variant<CanonicalSet, CanonicalRelation> result = r1_or_r2;
     return result;
   }
@@ -259,7 +260,7 @@
   if (std::holds_alternative<CanonicalSet>(e1) && std::holds_alternative<CanonicalSet>(e2)) {
     const auto &s1 = std::get<CanonicalSet>(e1);
     const auto &s2 = std::get<CanonicalSet>(e2);
-    const auto s1_or_s2 = Set::newSet(SetOperation::choice, s1, s2);
+    const auto s1_or_s2 = Set::newSet(SetOperation::setUnion, s1, s2);
     std::variant<CanonicalSet, CanonicalRelation> result = s1_or_s2;
     return result;
   }
@@ -269,7 +270,7 @@
 
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitEmptyset(
     LogicParser::EmptysetContext *ctx) {
-  const CanonicalRelation r = Relation::newRelation(RelationOperation::empty);
+  const CanonicalRelation r = Relation::newRelation(RelationOperation::emptyRelation);
   std::variant<CanonicalSet, CanonicalRelation> result = r;
   return result;
 }
@@ -293,8 +294,8 @@
       std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (std::holds_alternative<CanonicalRelation>(relationExpression)) {
     const auto r = std::get<CanonicalRelation>(relationExpression);
-    const auto id = Relation::newRelation(RelationOperation::identity);
-    const auto r_or_id = Relation::newRelation(RelationOperation::choice, r, id);
+    const auto id = Relation::newRelation(RelationOperation::idRelation);
+    const auto r_or_id = Relation::newRelation(RelationOperation::relationUnion, r, id);
     std::variant<CanonicalSet, CanonicalRelation> result = r_or_id;
     return result;
   }
@@ -306,9 +307,9 @@
   if (context->TOID() == nullptr) {
     const std::string set = context->e->getText();
     const CanonicalRelation r = Relation::newBaseRelation(set + "*" + set);
-    const CanonicalRelation id = Relation::newRelation(RelationOperation::identity);
+    const CanonicalRelation id = Relation::newRelation(RelationOperation::idRelation);
     const CanonicalRelation r_and_id =
-        Relation::newRelation(RelationOperation::intersection, r, id);
+        Relation::newRelation(RelationOperation::relationIntersection, r, id);
     std::variant<CanonicalSet, CanonicalRelation> result = r_and_id;
     return result;
   }
@@ -398,7 +399,7 @@
       std::holds_alternative<CanonicalRelation>(e2)) {
     const auto r1 = std::get<CanonicalRelation>(e1);
     const auto r2 = std::get<CanonicalRelation>(e2);
-    const auto r1_and_r2 = Relation::newRelation(RelationOperation::intersection, r1, r2);
+    const auto r1_and_r2 = Relation::newRelation(RelationOperation::relationIntersection, r1, r2);
     std::variant<CanonicalSet, CanonicalRelation> result = r1_and_r2;
     return result;
   }
@@ -406,7 +407,7 @@
   if (std::holds_alternative<CanonicalSet>(e1) && std::holds_alternative<CanonicalSet>(e2)) {
     const CanonicalSet s1 = std::get<CanonicalSet>(e1);
     const CanonicalSet s2 = std::get<CanonicalSet>(e2);
-    const CanonicalSet s1_and_s2 = Set::newSet(SetOperation::intersection, s1, s2);
+    const CanonicalSet s1_and_s2 = Set::newSet(SetOperation::setIntersection, s1, s2);
     std::variant<CanonicalSet, CanonicalRelation> result = s1_and_s2;
     return result;
   }

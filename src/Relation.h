@@ -9,16 +9,16 @@ class Relation;
 typedef const Relation *CanonicalRelation;
 
 enum class RelationOperation {
-  base,               // nullary function (constant): base relation
-  identity,           // nullary function (constant): identity relation
-  empty,              // nullary function (constant): empty relation
-  full,               // nullary function (constant): full relation
-  choice,             // binary function
-  intersection,       // binary function
-  composition,        // binary function
-  transitiveClosure,  // unary function
-  converse,           // unary function
-  cartesianProduct    // TODO:
+  baseRelation,          // nullary function (constant): base relation
+  idRelation,            // nullary function (constant): identity relation
+  emptyRelation,         // nullary function (constant): empty relation
+  fullRelation,          // nullary function (constant): full relation
+  relationUnion,         // binary function
+  relationIntersection,  // binary function
+  composition,           // binary function
+  transitiveClosure,     // unary function
+  converse,              // unary function
+  cartesianProduct       // TODO:
 };
 
 class Relation {
