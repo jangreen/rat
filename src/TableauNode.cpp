@@ -155,16 +155,6 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
 }
 
-void Tableau::Node::appendBranch(const Cube &cube) {
-  assert(validateCube(cube));
-  appendBranch(DNF{cube});
-}
-
-void Tableau::Node::appendBranch(const Literal &literal) {
-  assert(literal.validate());
-  appendBranch(Cube{literal});
-}
-
 void Tableau::Node::dnfBuilder(DNF &dnf) const {
   if (isClosed()) {
     return;

@@ -39,8 +39,14 @@ class Tableau {
     [[nodiscard]] bool isClosed() const;
     [[nodiscard]] bool isLeaf() const;
     void appendBranch(const DNF &dnf);
-    void appendBranch(const Cube &cube);
-    void appendBranch(const Literal &literal);
+    inline void appendBranch(const Cube &cube) {
+      assert(validateCube(cube));
+      appendBranch(DNF{cube});
+    }
+    inline void appendBranch(const Literal &literal) {
+      assert(literal.validate());
+      appendBranch(Cube{literal});
+    }
     std::optional<DNF> applyRule(bool modalRule = false);
     void inferModal();
     void inferModalTop();
