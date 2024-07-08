@@ -310,6 +310,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
   CanonicalSet s = leftRule ? literal.set->rightOperand : literal.set->leftOperand;
   CanonicalAnnotation sAnnotation =
       leftRule ? literal.annotation->getRight() : literal.annotation->getLeft();
+  AnnotatedSet annotatedS = {s, sAnnotation};
 
   // LeftRule: handle "e & s != 0"
   // RightRule: handle "s & e != 0"
@@ -421,8 +422,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
         // -> r is not base
         // -> apply some rule to fr    or      rf
 
-        const auto sResult =
-            applyRule(literal, Annotated::getLeft(literal.annotatedSet()), modalRules);
+        const auto sResult = applyRule(literal, annotatedS, modalRules);
         if (!sResult) {
           // no rule applicable (possible since we omit rules where true is derivable)
           return std::nullopt;
