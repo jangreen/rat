@@ -43,12 +43,27 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
+inline bool validatePartialCube(const PartialCube &cube) {
+  return std::ranges::all_of(cube, [](const PartialLiteral &literal) {
+    if (std::holds_alternative<Literal>(literal)) {
+      return std::get<Literal>(literal).validate();
+    } else {
+      return Annotated::validate(std::get<AnnotatedSet>(literal));
+    }
+  });
+}
+
 inline bool validateNormalizedCube(const Cube &cube) {
   return validateCube(cube) && std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
 }
 
 inline bool validateDNF(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return validateCube(cube); });
+}
+
+inline bool validatePartialDNF(const PartialDNF &dnf) {
+  return std::ranges::all_of(dnf,
+                             [](const PartialCube &cube) { return validatePartialCube(cube); });
 }
 
 template <typename T>

@@ -33,7 +33,9 @@ Literal::Literal(const AnnotatedSet &annotatedSet)
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
       identifier(std::nullopt),
-      annotation(std::get<CanonicalAnnotation>(annotatedSet)) {}
+      annotation(std::get<CanonicalAnnotation>(annotatedSet)) {
+  assert(Annotated::validate(annotatedSet));
+}
 
 Literal::Literal(bool negated, int leftLabel, std::string identifier)
     : negated(negated),
@@ -72,7 +74,6 @@ Literal::Literal(bool negated, int leftLabel, int rightLabel)
       annotation(Annotation::none()) {}
 
 bool Literal::validate() const {
-  // TODO: Double check what annotations are valid.
   switch (operation) {
     case PredicateOperation::constant:
       return set == nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
@@ -84,6 +85,9 @@ bool Literal::validate() const {
       return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
              !identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::set:
+      // check annotations for negated literals
+      assert(!negated || Annotated::validate(annotatedSet()));
+
       return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
              identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::setNonEmptiness:

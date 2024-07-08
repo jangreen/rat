@@ -69,11 +69,10 @@ bool Tableau::solve(int bound) {
     }
 
     Node *currentNode = unreducedNodes.pop();
-    exportDebug("debug");
-    assert(unreducedNodes.validate());
     assert(currentNode->validate());
     assert(currentNode->parentNode->validate());
     assert(validate());
+    exportDebug("debug");
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {

@@ -52,6 +52,9 @@ AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet sear
 [[nodiscard]] bool validate(const AnnotatedSet annotatedSet);
 [[nodiscard]] bool validate(const AnnotatedRelation annotatedRelation);
 
-// TODO: Add toString/print method
+[[nodiscard]] std::string toString(const AnnotatedSet annotatedSet);
+[[nodiscard]] std::string toString(const AnnotatedRelation annotatedRelation);
+[[nodiscard]] std::string annotationToString(const AnnotatedSet annotatedSet);
+[[nodiscard]] std::string annotationToString(const AnnotatedRelation annotatedRelation);
 
 }  // namespace Annotated

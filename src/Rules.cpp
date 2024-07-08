@@ -81,8 +81,8 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
 
       auto a_annotation = operation == SetOperation::image ? relationAnnotation->getLeft()
                                                            : relationAnnotation->getRight();
-      auto b_annotation = operation == SetOperation::image ? relationAnnotation->getLeft()
-                                                           : relationAnnotation->getRight();
+      auto b_annotation = operation == SetOperation::image ? relationAnnotation->getRight()
+                                                           : relationAnnotation->getLeft();
       auto ea_annotation = Annotation::newAnnotation(Annotation::none(), a_annotation);
       auto ea_b_annotation = Annotation::newAnnotation(ea_annotation, b_annotation);
       return PartialDNF{{AnnotatedSet(ea_b, ea_b_annotation)}};
@@ -168,17 +168,15 @@ PartialDNF Rules::substituteIntersectionOperand(const bool substituteRight,
         auto p = std::get<Literal>(literal);
         resultConjunction.emplace_back(p);
       } else {
-        auto as = std::get<AnnotatedSet>(literal);
-        auto s = std::get<CanonicalSet>(as);
-        auto a = std::get<CanonicalAnnotation>(as);
-        auto os = std::get<CanonicalSet>(otherOperand);
-        auto oa = std::get<CanonicalAnnotation>(otherOperand);
+        const auto& [s, a] = std::get<AnnotatedSet>(literal);
+        const auto& [os, oa] = otherOperand;
         // substitute
-        s = substituteRight ? Set::newSet(SetOperation::setIntersection, os, s)
-                            : Set::newSet(SetOperation::setIntersection, s, os);
-        a = substituteRight ? Annotation::newAnnotation(oa, a) : Annotation::newAnnotation(a, oa);
-
-        resultConjunction.emplace_back(AnnotatedSet(s, a));
+        const auto& newAs = substituteRight
+                                ? AnnotatedSet{Set::newSet(SetOperation::setIntersection, os, s),
+                                               Annotation::newAnnotation(oa, a)}
+                                : AnnotatedSet{Set::newSet(SetOperation::setIntersection, s, os),
+                                               Annotation::newAnnotation(a, oa)};
+        resultConjunction.emplace_back(newAs);
       }
     }
     resultDisjunction.push_back(resultConjunction);
@@ -354,7 +352,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
                    : Annotation::newAnnotation(sAnnotation->getLeft(), Annotation::none());
       auto e_and_s2_annotation =
           leftRule ? Annotation::newAnnotation(Annotation::none(), sAnnotation->getRight())
-                   : Annotation::newAnnotation(sAnnotation->getLeft(), Annotation::none());
+                   : Annotation::newAnnotation(sAnnotation->getRight(), Annotation::none());
 
       return DNF{{literal.substituteSet(AnnotatedSet(e_and_s1, e_and_s1_annotation))},
                  {literal.substituteSet(AnnotatedSet(e_and_s2, e_and_s2_annotation))}};
@@ -413,8 +411,8 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
           return DNF{{Literal(first, second, b)}};
         }
 
-        assert(spa->isLeaf());
-        const int value = spa->getValue().value_or(0);
+        assert(ra->isLeaf());
+        const int value = ra->getValue().value_or(0);
         return DNF{{Literal(first, second, b, value)}};
       } else {
         // LeftRule: e & fr     or      e & rf
@@ -615,8 +613,8 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
         return PartialDNF{{AnnotatedSet(set->leftOperand, Annotation::none())},
                           {AnnotatedSet(set->rightOperand, Annotation::none())}};
       }
-      return PartialDNF{{AnnotatedSet(set->leftOperand, setAnnotation->getLeft()),
-                         AnnotatedSet(set->rightOperand, setAnnotation->getRight())}};
+      return PartialDNF{{Annotated::getLeft(annotatedSet),
+                         std::get<AnnotatedSet>(Annotated::getRight(annotatedSet))}};
     }
     case SetOperation::setIntersection: {
       if (set->leftOperand->operation != SetOperation::event &&
@@ -624,15 +622,15 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
         // [S1 & S2]: apply rules recursively
         const auto leftResult = applyRule(context, Annotated::getLeft(annotatedSet), modalRules);
         if (leftResult) {
-          const auto& disjunction = *leftResult;
+          const auto& dnf = *leftResult;
           return substituteIntersectionOperand(
-              false, disjunction, AnnotatedSet(set->rightOperand, setAnnotation->getRight()));
+              false, dnf, std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)));
         }
         const auto rightResult = applyRule(
-            context, AnnotatedSet(set->rightOperand, setAnnotation->getRight()), modalRules);
+            context, std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)), modalRules);
         if (rightResult) {
-          const auto& disjunction = *rightResult;
-          return substituteIntersectionOperand(true, disjunction, Annotated::getLeft(annotatedSet));
+          const auto& dnf = *rightResult;
+          return substituteIntersectionOperand(true, dnf, Annotated::getLeft(annotatedSet));
         }
         return std::nullopt;
       }

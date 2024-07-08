@@ -35,6 +35,7 @@ int main(int argc, const char *argv[]) {
 
   std::string path = programArguments[0];
   const auto &goals = Logic::parse(path);
+  assert(validateDNF(goals));
   spdlog::info(fmt::format("[Parser] Done: {} goal(s), {} assumption(s)", goals.size(),
                            Assumption::baseAssumptions.size() + Assumption::idAssumptions.size() +
                                Assumption::emptinessAssumptions.size()));

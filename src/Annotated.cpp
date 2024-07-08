@@ -35,8 +35,8 @@ AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType value) {
       return {set, Annotation::newAnnotation(left, right)};
     }
     case SetOperation::domain: {
-      const auto [_1, left] = makeWithValue(set->relation, value);
-      const auto [_2, right] = makeWithValue(set->leftOperand, value);
+      const auto [_1, left] = makeWithValue(set->leftOperand, value);
+      const auto [_2, right] = makeWithValue(set->relation, value);
       return {set, Annotation::newAnnotation(left, right)};
     }
     case SetOperation::image: {
@@ -142,6 +142,7 @@ bool validate(const AnnotatedSet annotatedSet) {
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
+      assert(annotation->isLeaf() && !annotation->getValue().has_value());
       return annotation->isLeaf() && !annotation->getValue().has_value();
     case SetOperation::image:
     case SetOperation::domain: {
@@ -168,6 +169,8 @@ bool validate(const AnnotatedRelation annotatedRelation) {
     case RelationOperation::idRelation:
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
+      assert(annotation->isLeaf());
+      assert(!annotation->getValue().has_value());
       return annotation->isLeaf() && !annotation->getValue().has_value();
     case RelationOperation::relationIntersection:
     case RelationOperation::composition:
@@ -182,7 +185,78 @@ bool validate(const AnnotatedRelation annotatedRelation) {
       return validate(left);
     }
     case RelationOperation::baseRelation:
+      assert(annotation->isLeaf());
+      assert(annotation->getValue().has_value());
       return annotation->isLeaf() && annotation->getValue().has_value();
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+std::string toString(const AnnotatedSet annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+  return set->toString() + "\n" + annotationToString(annotatedSet);
+}
+
+std::string toString(const AnnotatedRelation annotatedRelation) {
+  const auto &[relation, annotation] = annotatedRelation;
+  return relation->toString() + "\n" + annotationToString(annotatedRelation);
+}
+
+std::string annotationToString(const AnnotatedSet annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+
+  // print annotation for a given set
+  // reverse order in domain case
+  switch (set->operation) {
+    case SetOperation::image:
+      return "(" + annotationToString(getLeft(annotatedSet)) + ";" +
+             annotationToString(std::get<AnnotatedRelation>(getRight(annotatedSet))) + ")";
+    case SetOperation::domain:
+      return "(" + annotationToString(std::get<AnnotatedRelation>(getRight(annotatedSet))) + ";" +
+             annotationToString(getLeft(annotatedSet)) + ")";
+    case SetOperation::setIntersection:
+      return "(" + annotationToString(getLeft(annotatedSet)) + " & " +
+             annotationToString(std::get<AnnotatedSet>(getRight(annotatedSet))) + ")";
+    case SetOperation::setUnion:
+      return "(" + annotationToString(getLeft(annotatedSet)) + " | " +
+             annotationToString(std::get<AnnotatedSet>(getRight(annotatedSet))) + ")";
+    case SetOperation::event:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return set->toString();
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+std::string annotationToString(const AnnotatedRelation annotatedRelation) {
+  assert(validate(annotatedRelation));
+  const auto &[relation, annotation] = annotatedRelation;
+
+  switch (relation->operation) {
+    case RelationOperation::relationIntersection:
+      return "(" + annotationToString(getLeft(annotatedRelation)) + " & " +
+             annotationToString(getRight(annotatedRelation)) + ")";
+    case RelationOperation::composition:
+      return "(" + annotationToString(getLeft(annotatedRelation)) + ";" +
+             annotationToString(getRight(annotatedRelation)) + ")";
+    case RelationOperation::relationUnion:
+      return "(" + annotationToString(getLeft(annotatedRelation)) + " | " +
+             annotationToString(getRight(annotatedRelation)) + ")";
+    case RelationOperation::converse:
+      return annotationToString(getLeft(annotatedRelation)) + "^-1";
+    case RelationOperation::transitiveClosure:
+      return annotationToString(getLeft(annotatedRelation)) + "^*";
+    case RelationOperation::baseRelation:
+      return std::to_string(annotation->getValue().value());
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
+      return relation->toString();
     case RelationOperation::cartesianProduct:
       throw std::logic_error("not implemented");
     default:

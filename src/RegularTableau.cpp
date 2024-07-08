@@ -140,7 +140,8 @@ bool RegularTableau::validate(const Node *currentNode) const {
     findReachableNodes(root, reachable);
   }
 
-  const auto allNodesValid = std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
+  const auto allNodesValid =
+      std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
 
   // get open leafs
   std::erase_if(reachable, [&](Node *node) {
@@ -273,6 +274,7 @@ bool RegularTableau::solve() {
 // node has only normal terms
 void RegularTableau::expandNode(Node *node, Tableau *tableau) {
   assert(node == nullptr || node->validate());
+  assert(tableau->validate());
   // node is expandable
   // calculate normal form
   // TODO: assert tableau is in DNF

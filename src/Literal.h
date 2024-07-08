@@ -64,7 +64,7 @@ class Literal {
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
   Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);
-  AnnotatedSet annotatedSet() const { return AnnotatedSet(set, annotation); };
+  inline AnnotatedSet annotatedSet() const { return AnnotatedSet(set, annotation); };
 
   // printing
   [[nodiscard]] std::string toString() const;

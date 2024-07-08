@@ -5,6 +5,7 @@
 class Annotation;
 typedef const Annotation *CanonicalAnnotation;
 typedef int AnnotationType;
+// typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
 
 /*
  *  Let T be a binary tree-like structure. A leaf annotation L is a function that maps each
@@ -77,8 +78,6 @@ class Annotation {
   // Due to canonicalization, moving or copying is not allowed
   Annotation(const Annotation &other) = delete;
   Annotation(const Annotation &&other) = delete;
-
-  [[nodiscard]] std::string toString() const;
 
   [[nodiscard]] std::optional<AnnotationType> getValue() const { return value; }
   [[nodiscard]] CanonicalAnnotation getLeft() const { return left == nullptr ? this : left; }

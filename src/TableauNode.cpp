@@ -342,8 +342,11 @@ void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
 void Tableau::Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
-  output << this << "\n\n";                  // address
-  output << literal.annotation->toString();  // annotation
+  output << this << "\n\n";  // address
+  if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
+    output << "Annotation: \n";
+    output << Annotated::toString(literal.annotatedSet());  // annotation
+  }
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";

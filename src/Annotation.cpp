@@ -61,10 +61,3 @@ bool Annotation::validate() const {
   isValid &= right == nullptr || right->validate();
   return isValid;
 }
-
-std::string Annotation::toString() const {
-  if (isLeaf()) {
-    return value.has_value() ? std::to_string(value.value()) : "_";
-  }
-  return "(" + left->toString() + ")(" + right->toString() + ")";
-}
