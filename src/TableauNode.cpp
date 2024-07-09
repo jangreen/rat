@@ -80,6 +80,9 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   const Node *node = this;
   do {
     assert(validateDNF(dnf));
+    if (!isAppendable(dnf)) {
+      return;
+    }
     reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
 }

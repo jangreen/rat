@@ -34,14 +34,17 @@ void Tableau::removeNode(Node *node) {
   assert(node->parentNode->validate());
   const auto parentNode = node->parentNode;
 
-  // Make sure to not accidentally removed branches when removing nodes.
-  const bool branchWouldDisappear = node->isLeaf() && parentNode->children.size() > 1;
-  if (branchWouldDisappear) {
-    // Insert dummy TOP node to ensure that branch does not disappear.
-    node->children.emplace_back(new Node(node, TOP));
+  // SUPER IMPORTNANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
+  // that leaf's parent. The reason is as follows:
+  // Consider the branch "root ->* parent -> leaf" which just becomes "root ->* parent" after deletion.
+  // This new branch subsumes/dominates all branches of the form "root ->* parent ->+ ..."
+  // so we can get rid of all those branches. We do so by deleting all children from the parent node.
+  if (node->isLeaf()) {
+    parentNode->children.clear();
+    return;
   }
 
-  // Move all children to parent's children
+  // No leaf: move all children to parent's children
   for (const auto &child : node->children) {
     child->parentNode = parentNode;
   }

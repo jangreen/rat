@@ -25,13 +25,14 @@ Annotation::Annotation(std::optional<AnnotationType> value, const CanonicalAnnot
                        const CanonicalAnnotation right)
     : value(std::move(value)), left(left), right(right) {}
 
-CanonicalAnnotation Annotation::newAnnotation(std::optional<AnnotationType> value,
-                                              CanonicalAnnotation left, CanonicalAnnotation right) {
+CanonicalAnnotation Annotation::newAnnotation(const std::optional<AnnotationType> &value,
+                                              const CanonicalAnnotation left,
+                                              const CanonicalAnnotation right) {
   assert((left == nullptr) == (right == nullptr));                     // Binary or leaf
   assert(value.has_value() || (left == nullptr && right == nullptr));  // No value => Leaf
 
   static std::unordered_set<Annotation> canonicalizer;
-  auto [iter, created] = canonicalizer.emplace(value, left, right);
+  auto [iter, created] = canonicalizer.insert(std::move(Annotation(value, left, right)));
   return &*iter;
 }
 
