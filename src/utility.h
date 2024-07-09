@@ -22,6 +22,22 @@ inline void print(const Cube &cube) {
   std::cout << std::endl;
 }
 
+inline std::string toString(const EventSet &events) {
+  std::string output;
+  for (auto &event : events) {
+    output += std::to_string(event) + ", ";
+  }
+  return output;
+}
+
+inline std::string toString(const SetOfSets &sets) {
+  std::string output;
+  for (auto &set : sets) {
+    output += set->toString() + ", ";
+  }
+  return output;
+}
+
 // Dirty hack to access internals of adapters like priority_queue
 template <class ADAPTER>
 typename ADAPTER::container_type &get_container(ADAPTER &a) {
@@ -106,4 +122,46 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
     result.push_back(cube);
   }
   return result;
+}
+
+inline bool isLiteralActive(const Literal &literal, const EventSet &activeLabels) {
+  return std::ranges::includes(activeLabels, literal.events());
+}
+
+inline bool isLiteralActive(const Literal &literal, const SetOfSets &combinations) {
+  return std::ranges::includes(combinations, literal.labelBaseCombinations());
+}
+
+// removes all negated literals in cube with events that do not occur in events
+// returns removed literals
+inline Cube filterNegatedLiterals(Cube &cube, const EventSet events) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (!literal.negated) {
+      return false;
+    }
+    if (!isLiteralActive(literal, events)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
+}
+
+// removes all negated literals in cube with event/base relation combination that do not occur
+// positive
+// returns removed literals
+inline void filterNegatedLiterals(Cube &cube, const SetOfSets &combinations,
+                                  Cube &removedLiterals) {
+  std::erase_if(cube, [&](auto &literal) {
+    if (!literal.negated) {
+      return false;
+    }
+    if (!isLiteralActive(literal, combinations)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
 }

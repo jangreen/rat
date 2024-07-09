@@ -10,7 +10,7 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
   // their renaming
   // -> DAG isomorphism (NP-C)
   // note that < (i.e. <=>) cannot be used here due to nondeterminism for setNonEmptiness predicates
-  // -> the ordering must be insensitive to event labels!
+  // -> the ordering must be insensitive to events!
 
   // 1) calculate renaming
   // all (existential) events occur in positive literal
@@ -22,26 +22,26 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
     if (first.negated != second.negated) {
       return first.negated < second.negated;
     }
-    if (first.set->toString().size() != second.set->toString().size()) {
-      return first.set->toString().size() < second.set->toString().size();
+    if (first.toString().size() != second.toString().size()) {
+      return first.toString().size() < second.toString().size();
     }
     // TODO: make smart toString comparision
-    return first.set->toString() < second.set->toString();
+    return first.toString() < second.toString();
   });
-  std::vector<int> labels{};
+  std::vector<int> events{};
   for (const auto &literal : sortedCube) {
     for (const auto &l : literal.events()) {
-      if (std::ranges::find(labels, l) == labels.end()) {
-        labels.push_back(l);
+      if (std::ranges::find(events, l) == events.end()) {
+        events.push_back(l);
       }
     }
     for (const auto &l : literal.topEvents()) {
-      if (std::ranges::find(labels, l) == labels.end()) {
-        labels.push_back(l);
+      if (std::ranges::find(events, l) == events.end()) {
+        events.push_back(l);
       }
     }
   }
-  Renaming renaming(labels);
+  Renaming renaming(events);
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
@@ -95,7 +95,8 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
 
   output << "N" << this << "[tooltip=\"";
   // debug
-  output << std::hash<Node>()(*this);
+  output << this << "\n\n";
+  output << "Hash:\n" << std::hash<Node>()(*this);
   // label/cube
   output << "\", label=\"";
   for (const auto &lit : cube) {

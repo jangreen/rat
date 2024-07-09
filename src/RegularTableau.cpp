@@ -10,6 +10,15 @@
 
 namespace {
 
+// TODO: remove
+void addActivePairsFromEdges(const Cube &edges, SetOfSets &activePairs) {
+  for (const auto &edgeLiteral : edges) {
+    for (auto pair : edgeLiteral.labelBaseCombinations()) {
+      activePairs.insert(pair);
+    }
+  }
+}
+
 EventSet gatherActiveLabels(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
@@ -27,30 +36,21 @@ EventSet gatherActiveLabels(const Cube &cube) {
   return activeLabels;
 }
 
-std::vector<CanonicalSet> gatherActiveCombinations(const Cube &cube) {
+SetOfSets gatherActiveCombinations(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
 
-  std::vector<CanonicalSet> activeCombinations;
+  SetOfSets activeCombinations;
   for (const auto &literal : cube) {
     if (literal.negated) {
       continue;
     }
 
     auto literalLabels = literal.labelBaseCombinations();
-    activeCombinations.insert(std::end(activeCombinations), std::begin(literalLabels),
-                              std::end(literalLabels));
+    activeCombinations.insert(literalLabels.begin(), literalLabels.end());
   }
 
   return activeCombinations;
-}
-
-bool isLiteralActive(const Literal &literal, const EventSet &activeLabels) {
-  return std::ranges::includes(activeLabels, literal.events());
-}
-
-bool isLiteralActive(const Literal &literal, const std::vector<CanonicalSet> &combinations) {
-  return isSubset(literal.labelBaseCombinations(), combinations);
 }
 
 void findReachableNodes(RegularTableau::Node *node,
@@ -71,40 +71,12 @@ void findReachableNodes(RegularTableau::Node *node,
   }
 }
 
-// removes all negated literals in cube with events that do not occur in events
-// returns removed literals
-Cube filterNegatedLiterals(Cube &cube, const EventSet events) {
-  Cube removedLiterals;
-  std::erase_if(cube, [&](auto &literal) {
-    if (!isLiteralActive(literal, events)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-  return removedLiterals;
-}
-
-// removes all negated literals in cube with event/base relation combination that do not occur
-// positive
-// returns removed literals
-void filterNegatedLiterals(Cube &cube, const std::vector<CanonicalSet> &combinations,
-                           Cube &removedLiterals) {
-  std::erase_if(cube, [&](auto &literal) {
-    if (!isLiteralActive(literal, combinations)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-}
-
 // removes all negated literals in cube with events that do not occur in some positive literal
 // returns  - uselessLiterals = set of removed literals
 //          - label = edgePredicates from cube are moved in label
 // TODO: optimization that considers combinations may be incomplete:
 // a cube may purge some literals, later a new incoming edge is added that would be inconsistent
-// only with the purged literals. First idea was to also conisder th combination in the edge
+// only with the purged literals. First idea was to also consider the combination in the edge
 // labels. But this is not sufficient: we do not know which edge label (or fresh event constant)
 // has a future incoming edge
 
@@ -128,14 +100,14 @@ void purge(Cube &cube, Cube &uselessLiterals, EdgeLabel &label) {
     return false;
   });
 
-  // 1) filter non-active labels
+  // 1) filter non-active events
   const auto activeLabels = gatherActiveLabels(cube);
   uselessLiterals = filterNegatedLiterals(cube, activeLabels);
 
   // 2) filter non-active label/base relation combinations
   // remove next two lines to disable optimization
-  const auto activeCombinations = gatherActiveCombinations(cube);
-  filterNegatedLiterals(cube, activeCombinations, uselessLiterals);
+  auto activePairs = gatherActiveCombinations(cube);
+  filterNegatedLiterals(cube, activePairs, uselessLiterals);
 }
 
 // returns fixed node as set, otherwise nullopt if consistent
@@ -147,9 +119,13 @@ std::optional<Cube> getInconsistentLiterals(const RegularTableau::Node *parent,
 
   Cube inconsistenLiterals = newLiterals;
   const auto parentActiveLabels = gatherActiveLabels(parent->cube);
+  const auto parentActiveCombinations = gatherActiveCombinations(parent->cube);
 
-  // 2) filter newLiterals for parent
+  // 2) filter newLiterals for parent#
+  std::erase_if(inconsistenLiterals, [&](auto &literal) { return !literal.negated; });
   filterNegatedLiterals(inconsistenLiterals, parentActiveLabels);
+  Cube useless;  // not needed, FIXME
+  filterNegatedLiterals(inconsistenLiterals, parentActiveCombinations, useless);
 
   // 3) If no new literals, nothing to do
   if (isSubset(inconsistenLiterals, parent->cube)) {

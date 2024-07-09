@@ -47,8 +47,8 @@
     // currently only support relations on each side of assertion
     const CanonicalRelation lhs = parseRelation(context->e1->getText());
     const CanonicalRelation rhs = parseRelation(context->e2->getText());
-    const CanonicalSet e1 = Set::newEvent(Set::maxSingletonLabel++);
-    const CanonicalSet e2 = Set::newEvent(Set::maxSingletonLabel++);
+    const CanonicalSet e1 = Set::newEvent(Set::maxEvent++);
+    const CanonicalSet e2 = Set::newEvent(Set::maxEvent++);
     const CanonicalSet e1LHS = Set::newSet(SetOperation::image, e1, lhs);
     const CanonicalSet e1RHS = Set::newSet(SetOperation::image, e1, rhs);
 
@@ -198,7 +198,7 @@
   if (definedSingletons.contains(name)) {
     label = definedSingletons.at(name);
   } else {
-    label = Set::maxSingletonLabel++;
+    label = Set::maxEvent++;
     definedSingletons.insert({name, label});
   }
   CanonicalSet s = Set::newEvent(label);

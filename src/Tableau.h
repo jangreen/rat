@@ -24,6 +24,11 @@ class Tableau {
     Node *nextInWorkList = nullptr;
     Node *prevInWorkList = nullptr;
 #endif
+    // gather information about the prefix of the branch
+    // only at leaf nodes
+    EventSet activeEvents;
+    SetOfSets activeEventBasePairs;
+
    public:
     Node(Node *parent, Literal literal);
     explicit Node(const Node *other) = delete;
@@ -45,7 +50,7 @@ class Tableau {
     void inferModal();
     void inferModalTop();
     void inferModalAtomic();
-    void replaceNegatedTopOnBranch(const std::vector<int> &labels);
+    void replaceNegatedTopOnBranch(const std::vector<int> &events);
 
     // this method assumes that tableau is already reduced
     [[nodiscard]] DNF extractDNF() const;
@@ -68,11 +73,13 @@ class Tableau {
    * Importantly, it makes sure the processing order is sound and efficient:
    *  1. Positive equalities
    *1.5(?) Set membership (currently not used/supported)
-   *  2. Negative literals
-   *  3. Positive literals (i.e., the rest)
+   *  2. non normal positive literals (i.e., the rest)
+   *  3. non normal negative literals
+   *  4. remaining
    *
-   *  Rules 1 are for soundness.
-   *  Rule 2. is for efficiency in order to close branches as soon as possible.
+   *  Order for Rules 1. and 2.  are for soundness.
+   *  2.: we filter non active literals in appendBranch
+   *  Rule 3. is for efficiency in order to close branches as soon as possible.
    */
   class Worklist {
    private:

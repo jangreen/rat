@@ -209,7 +209,7 @@ EventSet Literal::topEvents() const {
   }
 }
 
-std::vector<CanonicalSet> Literal::labelBaseCombinations() const {
+SetOfSets Literal::labelBaseCombinations() const {
   switch (operation) {
     case PredicateOperation::constant:
     case PredicateOperation::equality:

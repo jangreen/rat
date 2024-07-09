@@ -35,7 +35,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       // -> Rule (aL)
       // RightRule: [b.e] -> { [f], (f,e) \in b }
       // -> Rule (aR)
-      CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
+      CanonicalSet f = Set::newEvent(Set::maxEvent++);
       const auto& b = *relation->identifier;
       const int first = operation == SetOperation::image ? *event->label : *f->label;
       const int second = operation == SetOperation::image ? *f->label : *event->label;
@@ -97,8 +97,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
         return PartialDNF{{AnnotatedSet(re, Annotation::none())}};
       }
 
-      auto re_annotation =
-          Annotation::newAnnotation(Annotation::none(), relationAnnotation);
+      auto re_annotation = Annotation::newAnnotation(Annotation::none(), relationAnnotation);
       return PartialDNF{{AnnotatedSet(re, re_annotation)}};
     }
     case RelationOperation::emptyRelation: {
@@ -143,8 +142,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
                           {AnnotatedSet(event, Annotation::none())}};
       }
 
-      auto er_annotation =
-          Annotation::newAnnotation(Annotation::none(), relationAnnotation);
+      auto er_annotation = Annotation::newAnnotation(Annotation::none(), relationAnnotation);
       auto err_star_annotation = Annotation::newAnnotation(er_annotation, relationAnnotation);
       return PartialDNF{
           {AnnotatedSet(err_star, err_star_annotation), AnnotatedSet(event, Annotation::none())}};
@@ -609,11 +607,11 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
     case SetOperation::fullSet: {
       if (context.negated) {
         // Rule (\neg\top_1): use universal events optimization
-        const CanonicalSet f = Set::newTopEvent(Set::maxSingletonLabel++);
+        const CanonicalSet f = Set::newTopEvent(Set::maxEvent++);
         return PartialDNF{{AnnotatedSet(f, Annotation::none())}};
       }
       // Rule (\top_1): [T] -> { [f] } , only if positive
-      const CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
+      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
       return PartialDNF{{AnnotatedSet(f, nullptr)}};
     }
     case SetOperation::setUnion: {
@@ -669,7 +667,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
         return std::nullopt;
       }
       // Rule (A): [B] -> { [f], f \in B }
-      const CanonicalSet f = Set::newEvent(Set::maxSingletonLabel++);
+      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
       return PartialDNF{{AnnotatedSet(f, nullptr), Literal(false, *f->label, *set->identifier)}};
     }
     case SetOperation::image:

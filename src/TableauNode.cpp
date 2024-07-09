@@ -38,7 +38,16 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
 Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
-      parentNode(parent) {}
+      parentNode(parent) {
+  activeEvents = !literal.negated ? literal.events() : EventSet{};
+  activeEventBasePairs = !literal.negated ? literal.labelBaseCombinations() : SetOfSets{};
+
+  if (parent != nullptr) {
+    activeEvents.insert(parent->activeEvents.begin(), parent->activeEvents.end());
+    activeEventBasePairs.insert(parent->activeEventBasePairs.begin(),
+                                parent->activeEventBasePairs.end());
+  }
+}
 
 Tableau::Node::~Node() {
   // remove this from unreducedNodes
@@ -118,10 +127,23 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
     return;
   }
 
-  assert(isLeaf() && !isClosed() && isAppendable(dnf));
+  // Open leaf
+  assert(isLeaf() && !isClosed());
+  assert(isAppendable(dnf));
 
-  // Open leaf: append
-  // transform dnf into a tableau and append it
+  // filter non-active negated literals
+  // TODO: do not need purging any more?
+  for (auto &cube : dnf) {
+    filterNegatedLiterals(cube, activeEvents);
+    Cube useless;  // TODO: not used
+    filterNegatedLiterals(cube, activeEventBasePairs, useless);
+  }
+  if (!isAppendable(dnf)) {
+    return;
+  }
+  assert(isAppendable(dnf));
+
+  // append: transform dnf into a tableau and append it
   for (const auto &cube : dnf) {
     Node *newNode = this;
     for (const auto &literal : cube) {
@@ -240,7 +262,7 @@ void Tableau::Node::inferModalTop() {
     return;
   }
 
-  // get all labels
+  // get all events
   const Node *cur = this;
   EventSet existentialReplaceEvents;
   while ((cur = cur->parentNode) != nullptr) {
@@ -249,7 +271,7 @@ void Tableau::Node::inferModalTop() {
       continue;
     }
 
-    // Normal and positive literal: collect new labels
+    // Normal and positive literal: collect new events
     const auto &newEvents = lit.events();
     existentialReplaceEvents.insert(newEvents.begin(), newEvents.end());
   }
@@ -320,7 +342,7 @@ void Tableau::Node::inferModalAtomic() {
 }
 
 // FIXME: use or remove
-void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
+void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &curLit = cur->literal;
@@ -329,7 +351,7 @@ void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &labels) {
     }
     // replace T -> e
     const CanonicalSet top = Set::fullSet();
-    for (const auto label : labels) {
+    for (const auto label : events) {
       const CanonicalSet e = Set::newEvent(label);
       for (auto &lit : substitute(curLit, top, e)) {
         appendBranch(lit);
@@ -347,7 +369,12 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
     output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
     output << "\n\n";
     output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
+    output << "\n\n";
   }
+  output << "activeEvents: \n";
+  output << toString(activeEvents);
+  output << "\n\nactiveEventBasePairs: \n";
+  output << toString(activeEventBasePairs);
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";

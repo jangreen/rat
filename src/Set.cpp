@@ -85,24 +85,22 @@ EventSet calcTopEvents(const SetOperation operation, const CanonicalSet leftOper
   }
 }
 
-std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation,
-                                                    const CanonicalSet leftOperand,
-                                                    const CanonicalSet rightOperand,
-                                                    const CanonicalRelation relation,
-                                                    const CanonicalSet thisRef) {
+SetOfSets calcLabelBaseCombinations(const SetOperation operation, const CanonicalSet leftOperand,
+                                    const CanonicalSet rightOperand,
+                                    const CanonicalRelation relation, const CanonicalSet thisRef) {
   switch (operation) {
     case SetOperation::setUnion:
     case SetOperation::setIntersection: {
       auto left = leftOperand->getLabelBaseCombinations();
       auto right = rightOperand->getLabelBaseCombinations();
-      left.insert(std::end(left), std::begin(right), std::end(right));
+      left.insert(right.begin(), right.end());
       return left;
     }
     case SetOperation::domain:
     case SetOperation::image: {
       return leftOperand->operation == SetOperation::event &&
                      relation->operation == RelationOperation::baseRelation
-                 ? std::vector{thisRef}
+                 ? SetOfSets{thisRef}
                  : leftOperand->getLabelBaseCombinations();
     }
     case SetOperation::baseSet:
@@ -118,13 +116,13 @@ std::vector<CanonicalSet> calcLabelBaseCombinations(const SetOperation operation
 
 }  // namespace
 
-int Set::maxSingletonLabel = 0;
+int Set::maxEvent = 0;
 
 void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
   this->topEvents = calcTopEvents(operation, leftOperand, rightOperand, label);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
-  this->labelBaseCombinations =
+  this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
 }
 

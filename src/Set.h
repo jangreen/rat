@@ -8,6 +8,7 @@
 class Set;
 typedef const Set *CanonicalSet;
 typedef boost ::container::flat_set<int> EventSet;
+typedef boost ::container::flat_set<CanonicalSet> SetOfSets;
 
 enum class SetOperation {
   baseSet,          // nullary function (constant): base Set
@@ -34,7 +35,7 @@ class Set {
   mutable bool _isNormal{};
   mutable EventSet topEvents;
   mutable EventSet events;
-  mutable std::vector<CanonicalSet> labelBaseCombinations;
+  mutable SetOfSets eventRelationCombinations;
 
   // Calculates the above properties: we do not do this inside the constructor
   //  to avoid doing it for non-canonical sets.
@@ -45,7 +46,7 @@ class Set {
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
       std::optional<int> label, std::optional<std::string> identifier);
 
-  static int maxSingletonLabel;  // to create globally unique labels
+  static int maxEvent;  // to create globally unique events
   inline static CanonicalSet emptySet() {
     return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   };
@@ -82,9 +83,7 @@ class Set {
   inline const bool hasTopEvent() const { return !topEvents.empty(); }
   inline const EventSet &getTopEvents() const { return topEvents; }
   inline const EventSet &getEvents() const { return events; }
-  inline const std::vector<CanonicalSet> &getLabelBaseCombinations() const {
-    return labelBaseCombinations;
-  }
+  inline const SetOfSets &getLabelBaseCombinations() const { return eventRelationCombinations; }
 
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base

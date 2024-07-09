@@ -59,7 +59,7 @@ class Literal {
   [[nodiscard]] bool isPositiveEqualityPredicate() const;
   [[nodiscard]] EventSet events() const;
   [[nodiscard]] EventSet topEvents() const;
-  [[nodiscard]] std::vector<CanonicalSet> labelBaseCombinations() const;
+  [[nodiscard]] SetOfSets labelBaseCombinations() const;
 
   std::optional<Literal> substituteAll(const CanonicalSet search, const CanonicalSet replace) const;
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
