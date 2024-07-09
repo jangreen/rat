@@ -18,8 +18,18 @@ inline AnnotatedSet getLeft(const AnnotatedSet &annotatedSet) {
 std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &relation);
 inline AnnotatedRelation getLeft(const AnnotatedRelation &annotatedRelation) {
   const auto [relation, annotation] = annotatedRelation;
+  CanonicalAnnotation nextAnnotation;
+  switch (relation->operation) {
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure:
+      // On unary operators we simulate the left move by doing nothing!
+      nextAnnotation = annotation;
+      break;
+    default:
+      nextAnnotation = annotation->getLeft();
+  }
   assert(relation->leftOperand != nullptr);
-  return {relation->leftOperand, annotation->getLeft()};
+  return {relation->leftOperand, nextAnnotation};
 };
 inline AnnotatedRelation getRight(const AnnotatedRelation &annotatedRelation) {
   const auto [relation, annotation] = annotatedRelation;

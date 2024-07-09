@@ -98,7 +98,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       }
 
       auto re_annotation =
-          Annotation::newAnnotation(Annotation::none(), relationAnnotation->getLeft());
+          Annotation::newAnnotation(Annotation::none(), relationAnnotation);
       return PartialDNF{{AnnotatedSet(re, re_annotation)}};
     }
     case RelationOperation::emptyRelation: {
@@ -144,7 +144,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       }
 
       auto er_annotation =
-          Annotation::newAnnotation(Annotation::none(), relationAnnotation->getLeft());
+          Annotation::newAnnotation(Annotation::none(), relationAnnotation);
       auto err_star_annotation = Annotation::newAnnotation(er_annotation, relationAnnotation);
       return PartialDNF{
           {AnnotatedSet(err_star, err_star_annotation), AnnotatedSet(event, Annotation::none())}};
