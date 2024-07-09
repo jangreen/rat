@@ -219,8 +219,7 @@ RegularTableau::Node *RegularTableau::addNode(const Cube &cube, EdgeLabel &label
 void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) {
   if (parent == nullptr) {
     // root node
-    assert(!contains(rootNodes, child));
-    rootNodes.push_back(child);
+    rootNodes.insert(child);
     return;
   }
 
@@ -264,12 +263,12 @@ void RegularTableau::addEdge(Node *parent, Node *child, const EdgeLabel &label) 
       }
     }
     // add epsilon child of a root nodes to root nodes
-    if (contains(rootNodes, parent) && !contains(rootNodes, child)) {
-      rootNodes.push_back(child);
+    if (rootNodes.contains(parent) && !rootNodes.contains(child)) {
+      rootNodes.insert(child);
     }
   } else {
     // update rootParents of child node
-    if (!parent->rootParents.empty() || contains(rootNodes, parent)) {
+    if (!parent->rootParents.empty() || rootNodes.contains(parent)) {
       child->rootParents.push_back(parent);
     }
 
@@ -293,7 +292,7 @@ bool RegularTableau::solve() {
     unreducedNodes.pop();
 
     if (currentNode->closed || !currentNode->childNodes.empty() ||
-        (!contains(rootNodes, currentNode) && currentNode->rootParents.empty())) {
+        (!rootNodes.contains(currentNode) && currentNode->rootParents.empty())) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }

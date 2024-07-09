@@ -49,7 +49,7 @@ class RegularTableau {
   explicit RegularTableau(const Cube &initialLiterals);
   bool validate(const Node *currentNode = nullptr) const;
 
-  std::vector<Node *> rootNodes;
+  std::unordered_set<Node *> rootNodes;
   std::unordered_set<std::unique_ptr<Node>, Node::Hash, Node::Equal> nodes;
   std::stack<Node *> unreducedNodes;
 
