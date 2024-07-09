@@ -98,10 +98,10 @@ Tableau::Node *Tableau::Worklist::pop() {
     next = posEqualitiesHeadDummy->nextInWorkList;
   } else if (!isEmpty(posTopSetHeadDummy, posTopSetTailDummy)) {
     next = posTopSetHeadDummy->nextInWorkList;
-  } else if (!isEmpty(negativesHeadDummy, negativesTailDummy)) {
-    next = negativesHeadDummy->nextInWorkList;
   } else if (!isEmpty(positivesHeadDummy, positivesTailDummy)) {
     next = positivesHeadDummy->nextInWorkList;
+  } else if (!isEmpty(negativesHeadDummy, negativesTailDummy)) {
+    next = negativesHeadDummy->nextInWorkList;
   } else {
     next = nullptr;
   }
