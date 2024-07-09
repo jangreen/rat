@@ -34,11 +34,7 @@ AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType value) {
       const auto [_2, right] = makeWithValue(set->rightOperand, value);
       return {set, Annotation::newAnnotation(left, right)};
     }
-    case SetOperation::domain: {
-      const auto [_1, left] = makeWithValue(set->leftOperand, value);
-      const auto [_2, right] = makeWithValue(set->relation, value);
-      return {set, Annotation::newAnnotation(left, right)};
-    }
+    case SetOperation::domain:
     case SetOperation::image: {
       const auto [_1, left] = makeWithValue(set->leftOperand, value);
       const auto [_2, right] = makeWithValue(set->relation, value);
@@ -184,14 +180,18 @@ bool validate(const AnnotatedSet annotatedSet) {
       const auto &leftSet = getLeft(annotatedSet);
       const auto &right = getRight(annotatedSet);
       const auto &rightRelation = std::get<AnnotatedRelation>(right);
-      return validate(leftSet) && validate(rightRelation);
+      bool validated = validate(leftSet);
+      validated &= validate(rightRelation);
+      return validated;
     }
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       const auto &leftSet = getLeft(annotatedSet);
       const auto &right = getRight(annotatedSet);
       const auto &rightSet = std::get<AnnotatedSet>(right);
-      return validate(leftSet) && validate(rightSet);
+      bool validated = validate(leftSet);
+      validated &= validate(rightSet);
+      return validated;
     }
     default:
       throw std::logic_error("unreachable");
@@ -212,7 +212,9 @@ bool validate(const AnnotatedRelation annotatedRelation) {
     case RelationOperation::relationUnion: {
       const auto &left = getLeft(annotatedRelation);
       const auto &right = getRight(annotatedRelation);
-      return validate(left) && validate(right);
+      bool validated = validate(left);
+      validated &= validate(right);
+      return validated;
     }
     case RelationOperation::converse:
     case RelationOperation::transitiveClosure: {
