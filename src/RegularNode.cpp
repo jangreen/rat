@@ -20,7 +20,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   Cube sortedCube;
   std::ranges::copy_if(cube, std::back_inserter(sortedCube),
                        [](auto &literal) { return !literal.negated || literal.hasTopEvent(); });
-  std::ranges::sort(sortedCube, [](Literal &first, Literal &second) {
+  std::ranges::sort(sortedCube, [](const Literal &first, const Literal &second) {
     if (first.negated != second.negated) {
       return first.negated < second.negated;
     }
@@ -50,7 +50,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
 
   // 2) sort cube after unique renaming
   std::ranges::sort(cube);
-  RegularNode *node = new RegularNode(std::move(cube));
+  auto *node = new RegularNode(std::move(cube));
   assert(std::ranges::is_sorted(node->cube));
   assert(node->validate());
   return std::pair{node, renaming};

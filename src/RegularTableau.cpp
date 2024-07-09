@@ -126,7 +126,7 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
   });
 
   // get open leafs
-  std::erase_if(reachable, [&](RegularNode *node) {
+  std::erase_if(reachable, [&](const RegularNode *node) {
     return !node->childNodes.empty() || node->closed || node == currentNode;
   });
 
@@ -373,7 +373,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
     node->printed = false;
   }
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
-  std::unordered_set s(rootNodes.begin(), rootNodes.end());
+  const std::unordered_set s(rootNodes.begin(), rootNodes.end());
   assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);

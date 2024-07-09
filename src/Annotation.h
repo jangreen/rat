@@ -1,4 +1,6 @@
 #pragma once
+#include <sys/stat.h>
+
 #include <optional>
 #include <string>
 
@@ -70,8 +72,17 @@ class Annotation {
  public:
   Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
              CanonicalAnnotation right);
-  static CanonicalAnnotation none();
-  static CanonicalAnnotation newLeaf(AnnotationType value);
+
+  static CanonicalAnnotation none() {
+    static CanonicalAnnotation cached = nullptr;
+    if (cached == nullptr) {
+      cached = newAnnotation(std::nullopt, nullptr, nullptr);
+    }
+    return cached;
+  }
+  static CanonicalAnnotation newLeaf(AnnotationType value) {
+    return newAnnotation(value, nullptr, nullptr);
+  }
   static CanonicalAnnotation newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right);
 
   // Due to canonicalization, moving or copying is not allowed
@@ -94,7 +105,7 @@ class Annotation {
 template <>
 struct std::hash<AnnotationType> {
   std::size_t operator()(const AnnotationType &pair) const {
-    return ((size_t)pair.first << 32) | pair.second;
+    return (static_cast<size_t>(pair.first) << 32) | pair.second;
   }
 };
 
