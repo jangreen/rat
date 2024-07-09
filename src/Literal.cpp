@@ -12,28 +12,28 @@ Literal::Literal(bool negated)
     : negated(negated),
       operation(PredicateOperation::constant),
       set(nullptr),
+      annotation(Annotation::none()),
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
-      identifier(std::nullopt),
-      annotation(Annotation::none()) {}
+      identifier(std::nullopt) {}
 
-Literal::Literal(CanonicalSet set)
+Literal::Literal(const CanonicalSet set)
     : negated(false),
       operation(PredicateOperation::setNonEmptiness),
       set(set),
+      annotation(Annotation::none()),
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
-      identifier(std::nullopt),
-      annotation(Annotation::none()) {}
+      identifier(std::nullopt) {}
 
 Literal::Literal(const AnnotatedSet &annotatedSet)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
       set(std::get<CanonicalSet>(annotatedSet)),
+      annotation(std::get<CanonicalAnnotation>(annotatedSet)),
       leftLabel(std::nullopt),
       rightLabel(std::nullopt),
-      identifier(std::nullopt),
-      annotation(std::get<CanonicalAnnotation>(annotatedSet)) {
+      identifier(std::nullopt) {
   assert(Annotated::validate(annotatedSet));
 }
 
@@ -41,37 +41,37 @@ Literal::Literal(bool negated, int leftLabel, std::string identifier)
     : negated(negated),
       operation(PredicateOperation::set),
       set(nullptr),
+      annotation(Annotation::none()),
       leftLabel(leftLabel),
       rightLabel(std::nullopt),
-      identifier(identifier),
-      annotation(Annotation::none()) {}
+      identifier(identifier) {}
 
 Literal::Literal(int leftLabel, int rightLabel, std::string identifier)
     : negated(false),
       operation(PredicateOperation::edge),
       set(nullptr),
+      annotation(Annotation::none()),
       leftLabel(leftLabel),
       rightLabel(rightLabel),
-      identifier(identifier),
-      annotation(Annotation::none()) {}
+      identifier(identifier) {}
 
-Literal::Literal(int leftLabel, int rightLabel, std::string identifier, AnnotationType value)
+Literal::Literal(int leftLabel, int rightLabel, std::string identifier, const AnnotationType &annotation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
+      annotation(Annotation::newLeaf(annotation)),
       leftLabel(leftLabel),
       rightLabel(rightLabel),
-      identifier(identifier),
-      annotation(Annotation::newLeaf(value)) {}
+      identifier(identifier) {}
 
 Literal::Literal(bool negated, int leftLabel, int rightLabel)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
+      annotation(Annotation::none()),
       leftLabel(leftLabel),
       rightLabel(rightLabel),
-      identifier(std::nullopt),
-      annotation(Annotation::none()) {}
+      identifier(std::nullopt) {}
 
 bool Literal::validate() const {
   switch (operation) {
@@ -225,10 +225,10 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
     return false;
   }
 
-  const auto newSet = Annotated::substitute(annotatedSet(), search, replace, &n);
-  if (newSet.first != set) {
-    set = newSet.first;
-    annotation = newSet.second;
+  const auto [subSet, subAnnotation] = Annotated::substitute(annotatedSet(), search, replace, &n);
+  if (subSet != set) {
+    set = subSet;
+    annotation = subAnnotation;
     return true;
   }
   return false;

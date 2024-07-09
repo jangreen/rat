@@ -17,7 +17,7 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
   Cube positiveCube;
   std::ranges::copy_if(cube, std::back_inserter(positiveCube),
                        [](auto &literal) { return !literal.negated; });
-  std::ranges::sort(positiveCube, [](Literal &first, Literal &second) {
+  std::ranges::sort(positiveCube, [](const Literal &first, const Literal &second) {
     if (first.set->toString().size() != second.set->toString().size()) {
       return first.set->toString().size() < second.set->toString().size();
     }
@@ -39,7 +39,7 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
 
   // 2) sort cube after unique renaming
   std::ranges::sort(cube);
-  Node *node = new Node(std::move(cube));
+  auto node = new Node(std::move(cube));
   assert(std::ranges::is_sorted(node->cube));
   return std::pair{node, renaming};
 }

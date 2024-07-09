@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "../Annotated.h"
-#include "../Annotation.h"
 #include "../RegularTableau.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {

@@ -5,8 +5,8 @@
 
 namespace {
 
-std::optional<AnnotationType> meet(const std::optional<AnnotationType> a,
-                                   const std::optional<AnnotationType> b) {
+std::optional<AnnotationType> meet(const std::optional<AnnotationType> &a,
+                                   const std::optional<AnnotationType> &b) {
   if (!a.has_value() && !b.has_value()) {
     return std::nullopt;
   }
@@ -21,9 +21,9 @@ std::optional<AnnotationType> meet(const std::optional<AnnotationType> a,
 
 }  // namespace
 
-Annotation::Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
-                       CanonicalAnnotation right)
-    : value(value), left(left), right(right) {}
+Annotation::Annotation(std::optional<AnnotationType> value, const CanonicalAnnotation left,
+                       const CanonicalAnnotation right)
+    : value(std::move(value)), left(left), right(right) {}
 
 CanonicalAnnotation Annotation::newAnnotation(std::optional<AnnotationType> value,
                                               CanonicalAnnotation left, CanonicalAnnotation right) {
@@ -33,12 +33,6 @@ CanonicalAnnotation Annotation::newAnnotation(std::optional<AnnotationType> valu
   static std::unordered_set<Annotation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(value, left, right);
   return &*iter;
-}
-
-CanonicalAnnotation Annotation::none() { return newAnnotation(std::nullopt, nullptr, nullptr); }
-
-CanonicalAnnotation Annotation::newLeaf(AnnotationType value) {
-  return newAnnotation(value, nullptr, nullptr);
 }
 
 CanonicalAnnotation Annotation::newAnnotation(const CanonicalAnnotation left,

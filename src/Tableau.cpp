@@ -9,7 +9,7 @@
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
-  Node *dummyNode = new Node(nullptr, TOP);
+  auto dummyNode = new Node(nullptr, TOP);
   rootNode = std::unique_ptr<Node>(dummyNode);
   rootNode->tableau = this;
 
@@ -214,13 +214,13 @@ void Tableau::renameBranch(const Node *leaf) {
   while (cur != commonPrefix) {
     // Copy & rename literal
     assert(cur->validate());
-    Literal litCopy = Literal(cur->literal);
+    auto litCopy = Literal(cur->literal);
     litCopy.rename(renaming);
 
     // Check for duplicates & create renamed node only if new.
     auto [_, isNew] = allRenamedLiterals.insert(litCopy);
     if (isNew) {
-      Node *renamedCur = new Node(nullptr, litCopy);
+      auto renamedCur = new Node(nullptr, litCopy);
       renamedCur->tableau = cur->tableau;
       if (copiedBranch != nullptr) {
         copiedBranch->parentNode = renamedCur;
@@ -243,7 +243,6 @@ void Tableau::renameBranch(const Node *leaf) {
     }
 
     cur = parentNode;
-    ;
   }
 
   // Append copied branch

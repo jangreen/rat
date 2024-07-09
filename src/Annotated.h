@@ -15,7 +15,7 @@ inline AnnotatedSet getLeft(const AnnotatedSet &annotatedSet) {
   assert(set->leftOperand != nullptr);
   return {set->leftOperand, annotation->getLeft()};
 };
-std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &relation);
+std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet);
 inline AnnotatedRelation getLeft(const AnnotatedRelation &annotatedRelation) {
   const auto [relation, annotation] = annotatedRelation;
   CanonicalAnnotation nextAnnotation;
@@ -37,8 +37,8 @@ inline AnnotatedRelation getRight(const AnnotatedRelation &annotatedRelation) {
   return {relation->rightOperand, annotation->getRight()};
 };
 
-AnnotatedSet makeWithValue(CanonicalSet set, AnnotationType value);
-AnnotatedRelation makeWithValue(CanonicalRelation relation, AnnotationType value);
+AnnotatedSet makeWithValue(CanonicalSet set, const AnnotationType &value);
+AnnotatedRelation makeWithValue(CanonicalRelation relation, const AnnotationType &value);
 
 // wrapped newSet
 inline AnnotatedSet newSet(const SetOperation operation, const AnnotatedSet &left,
@@ -56,11 +56,10 @@ inline AnnotatedSet newBaseSet(std::string &identifier) {
   return {Set::newBaseSet(identifier), Annotation::none()};
 }
 
-AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
-                        const CanonicalSet replace, int *n);
+AnnotatedSet substitute(const AnnotatedSet &annotatedSet, CanonicalSet search, CanonicalSet replace, int *n);
 
-[[nodiscard]] bool validate(const AnnotatedSet annotatedSet);
-[[nodiscard]] bool validate(const AnnotatedRelation annotatedRelation);
+[[nodiscard]] bool validate(const AnnotatedSet &annotatedSet);
+[[nodiscard]] bool validate(const AnnotatedRelation &annotatedRelation);
 
 template <bool first>
 [[nodiscard]] std::string annotationToString(const AnnotatedRelation annotatedRelation) {

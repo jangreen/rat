@@ -73,7 +73,7 @@ void findReachableNodes(RegularTableau::Node *node,
 
 // removes all negated literals in cube with events that do not occur in events
 // returns removed literals
-Cube filterNegatedLiterals(Cube &cube, const std::vector<int> events) {
+Cube filterNegatedLiterals(Cube &cube, const std::vector<int> &events) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
     if (!isLiteralActive(literal, events)) {
@@ -185,7 +185,7 @@ bool RegularTableau::validate(const Node *currentNode) const {
       std::ranges::all_of(reachable, [](auto &node) { return node->validate(); });
 
   // get open leafs
-  std::erase_if(reachable, [&](Node *node) {
+  std::erase_if(reachable, [&](const Node *node) {
     return !node->childNodes.empty() || node->closed || node == currentNode;
   });
 
@@ -450,7 +450,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
     node->printed = false;
   }
   output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
-  std::unordered_set s(rootNodes.begin(), rootNodes.end());
+  const std::unordered_set s(rootNodes.begin(), rootNodes.end());
   assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);

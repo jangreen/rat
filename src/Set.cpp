@@ -203,7 +203,6 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
     default:
       throw std::logic_error("unreachable");
   }
-  throw std::logic_error("unreachable");
 }
 
 std::string Set::toString() const {

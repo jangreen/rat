@@ -36,7 +36,7 @@ class Literal {
   Literal(bool negated, int leftLabel, std::string identifier);    // set
   Literal(int leftLabel, int rightLabel, std::string identifier);  // positive edge
   Literal(int leftLabel, int rightLabel, std::string identifier,   //
-          AnnotationType annotation);                              // negative edge
+          const AnnotationType &annotation);                              // negative edge
   Literal(bool negated, int leftLabel, int rightLabel);            // equality
   [[nodiscard]] bool validate() const;
 
@@ -62,9 +62,9 @@ class Literal {
 
   // substitute n-th occurrence, TODO: -1 = all
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);
-  Literal substituteSet(const AnnotatedSet &set) const;
+  [[nodiscard]] Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);
-  inline AnnotatedSet annotatedSet() const { return AnnotatedSet(set, annotation); };
+  [[nodiscard]] AnnotatedSet annotatedSet() const { return {set, annotation}; }
 
   // printing
   [[nodiscard]] std::string toString() const;
