@@ -1,10 +1,12 @@
+#include "RegularNode.h"
+
 #include <iostream>
 
-#include "RegularTableau.h"
+#include "utility.h"
 
-RegularTableau::Node::Node(Cube cube) : cube(std::move(cube)) {}
+RegularNode::RegularNode(Cube cube) : cube(std::move(cube)) {}
 
-std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube cube) {
+std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   // Goal: calculate canonical cube:
   // -> calculate renaming such that two isomorphic cubes C1 and C2 are identical after applying
   // their renaming
@@ -48,20 +50,30 @@ std::pair<RegularTableau::Node *, Renaming> RegularTableau::Node::newNode(Cube c
 
   // 2) sort cube after unique renaming
   std::ranges::sort(cube);
-  Node *node = new Node(std::move(cube));
+  RegularNode *node = new RegularNode(std::move(cube));
   assert(std::ranges::is_sorted(node->cube));
+  assert(node->validate());
   return std::pair{node, renaming};
 }
 
-bool RegularTableau::Node::validate() const {
+bool RegularNode::validate() const {
   // TODO: cube must be ordered: std::ranges::is_sorted(cube) &&
+  // cube s valid and has no duplicates
+  assert(validateCube(cube));
   // literals must be normal
-  return std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
+  const bool literalsAreNormal =
+      std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
+  assert(literalsAreNormal);
+  return literalsAreNormal;
+}
+
+size_t RegularNode::Hash::operator()(const std::unique_ptr<RegularNode> &node) const {
+  return std::hash<RegularNode>()(*node);
 }
 
 // FIXME calculate cached lazy property
 // hashing and comparison is insensitive to label renaming
-bool RegularTableau::Node::operator==(const Node &otherNode) const {
+bool RegularNode::operator==(const RegularNode &otherNode) const {
   // shortcuts
   if (cube.size() != otherNode.cube.size()) {
     return false;
@@ -69,26 +81,12 @@ bool RegularTableau::Node::operator==(const Node &otherNode) const {
   return cube == otherNode.cube;
 }
 
-size_t std::hash<RegularTableau::Node>::operator()(
-    const RegularTableau::Node &node) const noexcept {
-  size_t seed = 0;
-  assert(std::ranges::is_sorted(node.cube));
-  for (const auto &literal : node.cube) {
-    boost::hash_combine(seed, std::hash<Literal>()(literal));
-  }
-  return seed;
-}
-
-size_t RegularTableau::Node::Hash::operator()(const std::unique_ptr<Node> &node) const {
-  return std::hash<Node>()(*node);
-}
-
-bool RegularTableau::Node::Equal::operator()(const std::unique_ptr<Node> &node1,
-                                             const std::unique_ptr<Node> &node2) const {
+bool RegularNode::Equal::operator()(const std::unique_ptr<RegularNode> &node1,
+                                    const std::unique_ptr<RegularNode> &node2) const {
   return *node1 == *node2;
 }
 
-void RegularTableau::Node::toDotFormat(std::ofstream &output) {
+void RegularNode::toDotFormat(std::ofstream &output) {
   if (printed) {
     return;
   }
@@ -96,7 +94,7 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "N" << this << "[tooltip=\"";
   // debug
   output << this << "\n\n";
-  output << "Hash:\n" << std::hash<Node>()(*this);
+  output << "Hash:\n" << std::hash<RegularNode>()(*this);
   // label/cube
   output << "\", label=\"";
   for (const auto &lit : cube) {
@@ -110,27 +108,19 @@ void RegularTableau::Node::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto childNode : childNodes) {
-    for (const auto &[edges, renaming] : childNode->parentNodes[this]) {
+    for (const auto &edgeLabel : childNode->parentNodes[this]) {
       output << "N" << this << " -> " << "N" << childNode << "[";
-      if (edges.empty()) {
-        output << "color=\"grey\", ";
+      if (!edgeLabel.has_value()) {
+        output << "color=\"grey";
+      } else {
+        output << "tooltip=\"";
+        edgeLabel->toDotFormat(output);
       }
+      output << "\"];\n";
+
       // } else if (childNode->firstParentNode == this) {
       //   output << "color=\"blue\", ";
       // }
-
-      // tooltip = renaming + annotation
-      output << "tooltip=\"";
-      renaming.toDotFormat(output);
-      output << "\", ";
-
-      // label = edges
-      output << "label =\"";
-      for (const auto &edgeValue : edges) {
-        output << edgeValue.toString() << " ";
-      }
-
-      output << "\"];" << std::endl;
     }
   }
   /*/ parents

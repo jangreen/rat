@@ -56,6 +56,10 @@ const typename ADAPTER::container_type &get_const_container(ADAPTER &a) {
 }
 
 inline bool validateCube(const Cube &cube) {
+  Cube copy = cube;
+  std::ranges::sort(copy);
+  const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
+  assert(!hasDuplicates);
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
@@ -164,4 +168,65 @@ inline void filterNegatedLiterals(Cube &cube, const SetOfSets &combinations,
     }
     return false;
   });
+}
+
+inline void filterPositiveEdgeLiterals(Cube &cube, const EventSet activeEvents) {
+  std::erase_if(cube, [&](Literal &literal) {
+    return literal.isPositiveEdgePredicate() &&
+           std::ranges::none_of(literal.events(),
+                                [&](auto event) { return activeEvents.contains(event); });
+  });
+}
+
+// activeEvent = event occurs in positive literal
+inline EventSet gatherActiveEvents(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  EventSet activeLabels;
+  for (const auto &literal : cube) {
+    if (literal.negated) {
+      continue;
+    }
+
+    const auto &literalLabels = literal.events();
+    activeLabels.insert(literalLabels.begin(), literalLabels.end());
+  }
+
+  return activeLabels;
+}
+
+// activeEvent = event occurs in positive literal
+inline EventSet gatherActiveSetNonEmptinessEvents(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  EventSet activeSetNonEmptinessEvents;
+  for (const auto &literal : cube) {
+    if (literal.negated || literal.operation != PredicateOperation::setNonEmptiness) {
+      continue;
+    }
+
+    const auto &events = literal.events();
+    activeSetNonEmptinessEvents.insert(events.begin(), events.end());
+  }
+
+  return activeSetNonEmptinessEvents;
+}
+
+inline SetOfSets gatherActivePairs(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  SetOfSets activeCombinations;
+  for (const auto &literal : cube) {
+    if (literal.negated) {
+      continue;
+    }
+
+    auto literalLabels = literal.labelBaseCombinations();
+    activeCombinations.insert(literalLabels.begin(), literalLabels.end());
+  }
+
+  return activeCombinations;
 }

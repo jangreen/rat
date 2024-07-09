@@ -157,7 +157,6 @@ bool Tableau::applyRuleA() {
     assert(unreducedNodes.validate());
     assert(currentNode->parentNode->validate());
     removeNode(currentNode);
-    // assert: apply rule has removed currentNode
 
     // find atomic
     for (const auto &cube : *result) {
@@ -166,6 +165,7 @@ bool Tableau::applyRuleA() {
         return true;
       }
     }
+    // TODO: clear worklist and add only result of modal rule to it
   }
 
   return false;
@@ -211,7 +211,7 @@ void Tableau::renameBranch(const Node *leaf) {
   std::unordered_set<Literal> allRenamedLiterals;  // To remove identical (after renaming) literals
   bool currentNodeIsShared = false;                // Unshared nodes can be dropped after renaming.
   std::unique_ptr<Node> copiedBranch = nullptr;
-  cur = leaf->parentNode;
+  cur = leaf;
   while (cur != commonPrefix) {
     // Copy & rename literal
     assert(cur->validate());
@@ -255,7 +255,22 @@ void Tableau::renameBranch(const Node *leaf) {
 
 DNF Tableau::dnf() {
   solve();
-  return rootNode->extractDNF();
+  auto dnf = rootNode->extractDNF();
+
+  // Rule (W)
+  for (auto &cube : dnf) {
+    const auto &events = gatherActiveSetNonEmptinessEvents(cube);
+    filterPositiveEdgeLiterals(cube, events);
+    // after filtering positive edge literals we have to filter negated
+    const auto &activeEvents = gatherActiveEvents(cube);
+    const auto &activePairs = gatherActivePairs(cube);
+    filterNegatedLiterals(cube, activeEvents);
+    Cube unused;  // TODO: unused
+    filterNegatedLiterals(cube, activePairs, unused);
+  }
+
+  assert(validateDNF(dnf));
+  return dnf;
 }
 
 void Tableau::toDotFormat(std::ofstream &output) const {
