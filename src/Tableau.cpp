@@ -175,8 +175,9 @@ bool Tableau::applyRuleA() {
 
 /*
  *  Given a leaf node with an equality predicate, renames the branch according to the equality.
- *  The original branch is destroyed and the renamed branch (minus the leaf!) is added
- *  to the tableau.
+ *  The original branch is destroyed and the renamed branch is added to the tableau.
+ *  The renamed branch will contain a trivial leaf of the shape "l = l" which is likely
+ *  to get removed in the next step.
  *  All newly added nodes are automatically added to the worklist.
  *
  *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
@@ -192,6 +193,7 @@ void Tableau::renameBranch(const Node *leaf) {
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
   const auto renaming = Renaming(from, to);
+  assert(from != to);
 
   // Determine first node (closest to root) that has to be renamed.
   // Everything above is unaffected and thus we can share the common prefix for the renamed branch.
@@ -213,7 +215,7 @@ void Tableau::renameBranch(const Node *leaf) {
   std::unordered_set<Literal> allRenamedLiterals;  // To remove identical (after renaming) literals
   bool currentNodeIsShared = false;                // Unshared nodes can be dropped after renaming.
   std::unique_ptr<Node> copiedBranch = nullptr;
-  cur = leaf->parentNode;
+  cur = leaf;
   while (cur != commonPrefix) {
     // Copy & rename literal
     assert(cur->validate());
