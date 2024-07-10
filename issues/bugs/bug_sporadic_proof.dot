@@ -1,0 +1,305 @@
+digraph {
+node[shape="box"]
+N0x600000b24480[tooltip="12232366830865569721", label="~loc-base(0,0)
+~loc-base(0,1)
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~((({0};loc-base);loc-base^*) & (loc-base;{0}))
+~((({0};loc-base);loc-base^*) & (loc-base;{1}))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24240[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b2c480[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b24300[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b243c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b20000[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b20000[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b200c0[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b20180[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b20180[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24480 -> N0x600000b20180[tooltip="4 -> 0
+1 -> 1
+", label ="W*W(4,4) loc-base(4,0) rf-base(4,0) "];
+N0x600000b24240[tooltip="4706969403239707377", label="~loc-base(0,1)
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b2c480[tooltip="1957674787519430151", label="~co-base(0,1)
+~(({0};co-base) & (co-base^*;(co-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+", color=green];
+N0x600000b24300[tooltip="6170908761445284636", label="~co-base(0,1)
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+~(({0};co-base) & (co-base^*;(co-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+", color=green];
+N0x600000b243c0[tooltip="6791682338346900955", label="~loc-base(0,1)
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+~(({0};co-base) & (co-base^*;(co-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b20000[tooltip="1722204993308209625", label="~co-base(0,1)
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b20000 -> N0x600000b20240[tooltip="", label ="W*W(9,9) co-base(9,1) loc-base(9,1) loc-base(0,9) co-base(0,9) "];
+N0x600000b20240[tooltip="0", label=""];
+N0x600000b200c0[tooltip="5400527009272892832", label="~co-base(0,1)
+~loc-base(0,1)
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+", color=green];
+N0x600000b20180[tooltip="8192101561797681240", label="~co-base(0,1)
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+", color=green];
+root -> N0x600000b24480;
+N0x600000b2c780[tooltip="9935810455168589748", label="~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+root -> N0x600000b2c780;
+N0x600000b2c9c0[tooltip="17201211609339658555", label="~0 = 1
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+root -> N0x600000b2c9c0;
+N0x600000b2c6c0[tooltip="4815672790568963784", label="~0 = 1
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & ((((W*W & id);co-base) & (loc-base | id));(((W*W & id);(co-base;{1})) & (loc-base;{1}))))
+"];
+root -> N0x600000b2c6c0;
+N0x600000b2c600[tooltip="6339526212772212871", label="~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & ((((W*W & id);co-base) & (loc-base | id));(((W*W & id);(co-base;{1})) & (loc-base;{1}))))
+"];
+root -> N0x600000b2c600;
+N0x600000b2c300[tooltip="3271511697767703544", label="~co-base(0,1)
+~(({0};co-base) & (co-base^*;(co-base;{1})))
+((({0};co-base) & ({0};loc-base)) & ((((W*W & id);co-base) & (loc-base | id));(((W*W & id);(co-base;{1})) & (loc-base;{1}))))
+"];
+root -> N0x600000b2c300;
+N0x600000b2c540[tooltip="1735607206863708085", label="~co-base(0,1)
+~(({0};co-base) & (co-base^*;(co-base;{1})))
+~((({0};co-base);co-base^*) & (co-base;{1}))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+root -> N0x600000b2c540;
+N0x600000b2c900[tooltip="7631709084308664177", label="~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b2c900 -> N0x600000b24000[color="grey", tooltip="", label =""];
+N0x600000b2c900 -> N0x600000b24480[color="grey", tooltip="", label =""];
+N0x600000b24000[tooltip="15418758571048701861", label="~loc-base(0,1)
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~((({0};loc-base);loc-base^*) & (loc-base;{1}))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+N0x600000b24000 -> N0x600000b24240[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24240[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24240[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b2c480[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24300[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24300[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24300[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b243c0[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b243c0[tooltip="3 -> 0
+1 -> 1
+", label ="W*W(3,3) loc-base(3,0) rf-base(3,0) "];
+N0x600000b24000 -> N0x600000b24480[color="grey", tooltip="", label =""];
+root -> N0x600000b2c900;
+N0x600000b2c3c0[tooltip="12107499470067615588", label="~loc-base(0,1)
+~0 = 1
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+((({0};co-base) & ({0};loc-base)) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+root -> N0x600000b2c3c0;
+root -> N0x600000b2c480;
+root -> N0x600000b24000;
+N0x600000b2c840[tooltip="490795901836160085", label="~0 = 1
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;{1})))
+~(((rf-base;{0}) & (loc-base;(loc-base^*;(loc-base;{0})))) & (((W*W & id);(co-base;(co-base^*;(co-base;{1})))) & (loc-base;(loc-base^*;(loc-base;{1})))))
+~(((rf-base;{0}) & (loc-base;{0})) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+((((rf-base;{0}) & (loc-base;{0}));(((W*W & id);co-base) & (loc-base | id))) & (((W*W & id);(co-base;{1})) & (loc-base;{1})))
+"];
+root -> N0x600000b2c840;
+N0x600000b2c240[tooltip="9986818043795856037", label="~loc-base(0,1)
+~0 = 1
+~(({0};loc-base) & (loc-base^*;(loc-base;{1})))
+((({0};co-base) & ({0};loc-base)) & ((((W*W & id);co-base) & (loc-base | id));(((W*W & id);(co-base;{1})) & (loc-base;{1}))))
+"];
+root -> N0x600000b2c240;
+}

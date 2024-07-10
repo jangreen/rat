@@ -1,0 +1,3 @@
+// Gives TRUE. Gives (correctly) FALSE for any smaller version
+
+assert a;b;c <= a;b;c;c
