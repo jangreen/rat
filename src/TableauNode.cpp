@@ -135,10 +135,10 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   assert(isAppendable(dnf));
 
   // filter non-active negated literals
-  // TODO: do not need weakening any more?
-  // Yes: get all for inconsistency checking weaken all later
   for (auto &cube : dnf) {
     filterNegatedLiterals(cube, activeEvents);
+    // TODO: labelBase optimization
+    // filterNegatedLiterals(cube, activeEventBasePairs);
   }
   if (!isAppendable(dnf)) {
     return;

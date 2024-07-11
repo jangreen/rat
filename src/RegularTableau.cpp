@@ -155,7 +155,8 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   }
 }
 
-void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child) {
+void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
+                                    const EdgeLabel &label) {
   assert(parent != nullptr);
   assert(child != nullptr);
 
@@ -164,15 +165,15 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child) {
     assert(child->epsilonParents.contains(parent));
     return;
   }
-  child->epsilonParents.insert(parent);
+  child->epsilonParents.insert({parent, label});
   exportDebug("debug");
 
   // add shortcuts
   for (const auto &[grandparentNode, grandparentLabel] : parent->parents) {
-    newEdge(grandparentNode, child, grandparentLabel);
+    newEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
-  for (const auto &grandparentNode : parent->epsilonParents) {
-    newEpsilonEdge(grandparentNode, child);
+  for (const auto &[grandparentNode, grandparentLabel] : parent->epsilonParents) {
+    newEpsilonEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
   // add epsilon child of a root nodes to root nodes
   if (rootNodes.contains(parent)) {
@@ -282,6 +283,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
   if (fixedCube.has_value()) {
+    exportDebug("debug");
+    print(*fixedCube);
     Tableau t(fixedCube.value());
     const DNF dnf = t.dnf();
     if (dnf.empty()) {
@@ -289,8 +292,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
     }
     // create new fixed Node
     for (const auto &cube : dnf) {
-      const auto [fixedNode, _label] = newNode(cube);
-      newEpsilonEdge(parent, fixedNode);
+      const auto [fixedNode, renaming] = newNode(cube);
+      newEpsilonEdge(parent, fixedNode, renaming);
     }
     return true;
   }

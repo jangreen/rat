@@ -23,7 +23,7 @@ class RegularTableau {
   bool solve();
   std::pair<RegularNode *, Renaming> newNode(const Cube &cube);
   void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
-  void newEpsilonEdge(RegularNode *parent, RegularNode *child);
+  void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void expandNode(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, EdgeLabel label);
   static void extractAnnotationexample(const RegularNode *openNode);

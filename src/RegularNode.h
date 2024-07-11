@@ -19,8 +19,8 @@ class RegularNode {
   const Cube cube;  // must be ordered, should not be modified
   NodeSet children;
   NodeSet epsilonChildren;
-  std::map<RegularNode *, EdgeLabel> parents;  // TODO: use multimap instead?
-  NodeSet epsilonParents;
+  std::map<RegularNode *, EdgeLabel> parents;
+  std::map<RegularNode *, EdgeLabel> epsilonParents;
   bool closed = false;
 
   NodeSet rootParents;                     // parent nodes that are reachable by some root node

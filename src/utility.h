@@ -17,7 +17,7 @@ inline void print(const DNF &dnf) {
 
 inline void print(const Cube &cube) {
   for (auto &literal : cube) {
-    std::cout << literal.toString() << " , ";
+    std::cout << literal.toString() << "\n";
   }
   std::cout << std::endl;
 }
@@ -123,6 +123,10 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
   return std::ranges::includes(activeEvents, literal.normalEvents());
 }
 
+inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
+  return std::ranges::includes(activePairs, literal.labelBaseCombinations());
+}
+
 // activeEvent = event occurs in positive literal
 inline EventSet gatherActiveEvents(const Cube &cube) {
   // preconditions:
@@ -160,4 +164,19 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet activeEvents) {
 inline Cube filterNegatedLiterals(Cube &cube) {
   const auto &activeEvents = gatherActiveEvents(cube);
   return filterNegatedLiterals(cube, activeEvents);
+}
+
+inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets activePairs) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (!literal.negated) {
+      return false;
+    }
+    if (!isLiteralActive(literal, activePairs)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
 }

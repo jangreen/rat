@@ -1,6 +1,7 @@
 #include "RegularNode.h"
 
 #include <iostream>
+#include <ranges>
 
 #include "utility.h"
 
@@ -17,6 +18,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   // 1) calculate renaming
   // all (existential) events occur in positive literal
   // all (universal) events (aka topEvents) occur in negated literals
+  assert(validateNormalizedCube(cube));
   Cube sortedCube;
   std::ranges::copy_if(cube, std::back_inserter(sortedCube),
                        [](auto &literal) { return !literal.negated || literal.hasTopEvent(); });
@@ -53,6 +55,22 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
+
+#if (DEBUG)
+  // validate: all events must be continuous integer interval from 0
+  EventSet allEvents;
+  for (const auto &literal : cube) {
+    const auto &events = literal.events();
+    const auto &topEvents = literal.topEvents();
+    allEvents.insert(events.begin(), events.end());
+    allEvents.insert(topEvents.begin(), topEvents.end());
+  }
+  if (!allEvents.empty()) {
+    const auto maxEvent = std::ranges::max(allEvents);
+    assert(maxEvent == allEvents.size() - 1);
+  }
+  assert(allEvents.size() == events.size());
+#endif
 
   // 2) sort cube after unique renaming
   std::ranges::sort(cube);
@@ -114,8 +132,11 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto epsilonChild : epsilonChildren) {
+    const auto label = epsilonChild->parents.at(this);
     output << "N" << this << " -> " << "N" << epsilonChild;
-    output << "[" << "color=\"grey" << "\"];\n";
+    output << "[tooltip=\"";
+    label.toDotFormat(output);
+    output << "\", color=\"grey\"];\n";
   }
 
   for (const auto child : children) {
