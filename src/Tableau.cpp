@@ -34,14 +34,17 @@ void Tableau::removeNode(Node *node) {
   assert(node->parentNode->validate());
   const auto parentNode = node->parentNode;
 
-  // Make sure to not accidentally removed branches when removing nodes.
-  const bool branchWouldDisappear = node->isLeaf() && parentNode->children.size() > 1;
-  if (branchWouldDisappear) {
-    // Insert dummy TOP node to ensure that branch does not disappear.
-    node->children.emplace_back(new Node(node, TOP));
+  // SUPER IMPORTNANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
+  // that leaf's parent. The reason is as follows:
+  // Consider the branch "root ->* parent -> leaf" which just becomes "root ->* parent" after deletion.
+  // This new branch subsumes/dominates all branches of the form "root ->* parent ->+ ..."
+  // so we can get rid of all those branches. We do so by deleting all children from the parent node.
+  if (node->isLeaf()) {
+    parentNode->children.clear();
+    return;
   }
 
-  // Move all children to parent's children
+  // No leaf: move all children to parent's children
   for (const auto &child : node->children) {
     child->parentNode = parentNode;
   }
@@ -174,8 +177,9 @@ bool Tableau::applyRuleA() {
 
 /*
  *  Given a leaf node with an equality predicate, renames the branch according to the equality.
- *  The original branch is destroyed and the renamed branch (minus the leaf!) is added
- *  to the tableau.
+ *  The original branch is destroyed and the renamed branch is added to the tableau.
+ *  The renamed branch will contain a trivial leaf of the shape "l = l" which is likely
+ *  to get removed in the next step.
  *  All newly added nodes are automatically added to the worklist.
  *
  *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
@@ -191,6 +195,7 @@ void Tableau::renameBranch(const Node *leaf) {
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
   const auto renaming = Renaming(from, to);
+  assert(from != to);
 
   // Determine first node (closest to root) that has to be renamed.
   // Everything above is unaffected and thus we can share the common prefix for the renamed branch.

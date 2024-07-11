@@ -1,0 +1,13 @@
+// All following bugs are likely related to transitive closures around id.
+
+// (1) Simple non-termination
+
+assert id+ <= 0
+
+// (2) Non-termination while generating a node with unboundedly many children (over 50k within seconds)
+
+assert (co | id)+ <= 0
+
+// (3) Non-terminating variant of above (same behaviour but slower growth rate).
+
+assert (co & (loc | id))+ <= 0

@@ -1,0 +1,26 @@
+let loc = loc-base | id
+let rf = [W];rf-base;[R] & loc
+let co = [W];co-base;[W] & loc
+let fr = rf^-1;co
+
+assume co-base+ <= co-base
+assume loc-base+ <= loc-base
+
+assert fr;(co;(id | co)) <= fr
+
+
+// Above version is very likely to be wrong
+// ------------------------------------------
+// Below version is smaller, but more rarely wrong
+// The provided model/proof files correspond to this version.
+
+
+let loc = loc-base | id
+let rf = rf-base & loc
+let co = [W];co-base & loc
+let fr = rf^-1;co
+
+assume co-base+ <= co-base
+assume loc-base+ <= loc-base
+
+assert fr;(co;(id | co)) <= fr

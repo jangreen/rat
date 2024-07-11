@@ -4,6 +4,7 @@
 
 #include "Relation.h"
 #include "Renaming.h"
+#include "unordered_set"
 
 class Set;
 typedef const Set *CanonicalSet;
@@ -24,6 +25,9 @@ enum class SetOperation {
 
 class Set {
  private:
+  Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
+      std::optional<int> label, std::optional<std::string> identifier);
+  // Due to canonicalization, moving or copying is not allowed
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
@@ -42,20 +46,20 @@ class Set {
   void completeInitialization() const;
 
  public:
-  // WARNING: Never call this constructor: it is only public for technicaly reasons
-  Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
-      std::optional<int> label, std::optional<std::string> identifier);
+  // WARNING: Never call these constructors: they are only public for technical reasons
+  Set(const Set &other) = default;
+  // Set(const Set &&other) = default;
 
   static int maxEvent;  // to create globally unique events
   inline static CanonicalSet emptySet() {
     return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
-  };
+  }
   inline static CanonicalSet fullSet() {
     return newSet(SetOperation::fullSet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
-  };
+  }
   inline static CanonicalSet newBaseSet(std::string &identifier) {
     return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
-  };
+  }
   inline static CanonicalSet newEvent(int label) {
     return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
   };
@@ -64,15 +68,11 @@ class Set {
   };
   inline static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
     return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
-  };
+  }
   inline static CanonicalSet newSet(SetOperation operation, CanonicalSet left,
                                     CanonicalRelation relation) {
     return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
-  };
-
-  // Due to canonicalization, moving or copying is not allowed
-  Set(const Set &other) = delete;
-  Set(const Set &&other) = delete;
+  }
 
   bool operator==(const Set &other) const;
 

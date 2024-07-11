@@ -1,0 +1,10 @@
+digraph { node[shape="point"]
+N9 -> N9[label = "W*W"];
+N9 -> N1[label = "co-base"];
+N9 -> N1[label = "loc-base"];
+N0 -> N9[label = "loc-base"];
+N0 -> N9[label = "co-base"];
+N4 -> N4[label = "W*W"];
+N4 -> N0[label = "loc-base"];
+N4 -> N0[label = "rf-base"];
+}

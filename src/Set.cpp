@@ -174,7 +174,9 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   }
 #endif
   static std::unordered_set<Set> canonicalizer;
-  auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
+  auto [iter, created] =
+    canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
+  //= canonicalizer.emplace(operation, left, right, relation, label, identifier);
   if (created) {
     iter->completeInitialization();
   }

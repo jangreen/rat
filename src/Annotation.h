@@ -61,8 +61,11 @@ typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
  */
 class Annotation {
  private:
-  static CanonicalAnnotation newAnnotation(std::optional<AnnotationType> value,
+  Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
+         CanonicalAnnotation right);
+  static CanonicalAnnotation newAnnotation(const std::optional<AnnotationType> &value,
                                            CanonicalAnnotation left, CanonicalAnnotation right);
+
   [[nodiscard]] bool validate() const;
 
   const std::optional<AnnotationType> value;  // nullopt: subtree has default annotation
@@ -70,8 +73,9 @@ class Annotation {
   const CanonicalAnnotation right;            // is set iff operation binary
 
  public:
-  Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
-             CanonicalAnnotation right);
+  // WARNING: Never call these constructors: they are only public for technical reasons
+  Annotation(const Annotation &other) = default;
+  //Annotation(const Annotation &&other) = default;
 
   static CanonicalAnnotation none() {
     static CanonicalAnnotation cached = nullptr;
@@ -84,10 +88,6 @@ class Annotation {
     return newAnnotation(value, nullptr, nullptr);
   }
   static CanonicalAnnotation newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right);
-
-  // Due to canonicalization, moving or copying is not allowed
-  Annotation(const Annotation &other) = delete;
-  Annotation(const Annotation &&other) = delete;
 
   // make non-optional return type
   [[nodiscard]] std::optional<AnnotationType> getValue() const { return value; }
@@ -104,7 +104,7 @@ class Annotation {
 
 template <>
 struct std::hash<AnnotationType> {
-  std::size_t operator()(const AnnotationType &pair) const {
+  std::size_t operator()(const AnnotationType &pair) const noexcept {
     return (static_cast<size_t>(pair.first) << 32) | pair.second;
   }
 };
