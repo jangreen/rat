@@ -91,15 +91,6 @@ bool contains(const std::vector<T> &vector, const T &object) {
   return std::ranges::find(vector, object) != vector.end();
 }
 
-template <typename T>
-bool push_back_unique(std::vector<T> &vector, const T &object) {
-  const bool add = !contains(vector, object);
-  if (add) {
-    vector.push_back(object);
-  }
-  return add;
-}
-
 inline std::strong_ordering lexCompare(const std::string &left, const std::string &right) {
   if (left == right) {
     return std::strong_ordering::equal;
@@ -128,56 +119,8 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
   return result;
 }
 
-inline bool isLiteralActive(const Literal &literal, const EventSet &activeLabels) {
-  return std::ranges::includes(activeLabels, literal.events());
-}
-
-inline bool isLiteralActive(const Literal &literal, const SetOfSets &combinations) {
-  return std::ranges::includes(combinations, literal.labelBaseCombinations());
-}
-
-// removes all negated literals in cube with events that do not occur in events
-// returns removed literals
-inline Cube filterNegatedLiterals(Cube &cube, const EventSet events) {
-  Cube removedLiterals;
-  std::erase_if(cube, [&](auto &literal) {
-    if (!literal.negated) {
-      return false;
-    }
-    if (!isLiteralActive(literal, events)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-  return removedLiterals;
-}
-
-// removes all negated literals in cube with event/base relation combination that do not occur
-// positive
-// returns removed literals
-inline void filterNegatedLiterals(Cube &cube, const SetOfSets &combinations,
-                                  Cube &removedLiterals) {
-  // comment next line to enable optimization
-  return;
-  std::erase_if(cube, [&](auto &literal) {
-    if (!literal.negated) {
-      return false;
-    }
-    if (!isLiteralActive(literal, combinations)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-}
-
-inline void filterPositiveEdgeLiterals(Cube &cube, const EventSet activeEvents) {
-  std::erase_if(cube, [&](Literal &literal) {
-    return literal.isPositiveEdgePredicate() &&
-           std::ranges::none_of(literal.events(),
-                                [&](auto event) { return activeEvents.contains(event); });
-  });
+inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {
+  return std::ranges::includes(activeEvents, literal.normalEvents());
 }
 
 // activeEvent = event occurs in positive literal
@@ -185,50 +128,36 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
 
-  EventSet activeLabels;
+  EventSet activeEvents;
   for (const auto &literal : cube) {
     if (literal.negated) {
       continue;
     }
 
     const auto &literalLabels = literal.events();
-    activeLabels.insert(literalLabels.begin(), literalLabels.end());
+    activeEvents.insert(literalLabels.begin(), literalLabels.end());
   }
 
-  return activeLabels;
+  return activeEvents;
 }
 
-// activeEvent = event occurs in positive literal
-inline EventSet gatherActiveSetNonEmptinessEvents(const Cube &cube) {
-  // preconditions:
-  assert(validateNormalizedCube(cube));  // cube is normal
-
-  EventSet activeSetNonEmptinessEvents;
-  for (const auto &literal : cube) {
-    if (literal.negated || literal.operation != PredicateOperation::setNonEmptiness) {
-      continue;
+// removes all negated literals in cube with events that do not occur in events
+// returns removed literals
+inline Cube filterNegatedLiterals(Cube &cube, const EventSet activeEvents) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (!literal.negated) {
+      return false;
     }
-
-    const auto &events = literal.events();
-    activeSetNonEmptinessEvents.insert(events.begin(), events.end());
-  }
-
-  return activeSetNonEmptinessEvents;
+    if (!isLiteralActive(literal, activeEvents)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
 }
-
-inline SetOfSets gatherActivePairs(const Cube &cube) {
-  // preconditions:
-  assert(validateNormalizedCube(cube));  // cube is normal
-
-  SetOfSets activeCombinations;
-  for (const auto &literal : cube) {
-    if (literal.negated) {
-      continue;
-    }
-
-    auto literalLabels = literal.labelBaseCombinations();
-    activeCombinations.insert(literalLabels.begin(), literalLabels.end());
-  }
-
-  return activeCombinations;
+inline Cube filterNegatedLiterals(Cube &cube) {
+  const auto &activeEvents = gatherActiveEvents(cube);
+  return filterNegatedLiterals(cube, activeEvents);
 }

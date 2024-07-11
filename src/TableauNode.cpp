@@ -139,8 +139,6 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   // Yes: get all for inconsistency checking weaken all later
   for (auto &cube : dnf) {
     filterNegatedLiterals(cube, activeEvents);
-    Cube useless;  // TODO: not used
-    // filterNegatedLiterals(cube, activeEventBasePairs, useless);
   }
   if (!isAppendable(dnf)) {
     return;
@@ -368,16 +366,23 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
+  output << "--- LITERAL --- \n";
   if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
-    output << "Annotation: \n";
+    output << "annotation: \n";
     output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
     output << "\n\n";
     output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
-    output << "\n\n";
+    output << "\n";
   }
+  output << "events: \n";
+  output << toString(literal.events()) << "\n";
+  output << "normalEvents: \n";
+  output << toString(literal.normalEvents()) << "\n";
+  output << "--- BRANCH --- \n";
   output << "activeEvents: \n";
-  output << toString(activeEvents);
-  output << "\n\nactiveEventBasePairs: \n";
+  output << toString(activeEvents) << "\n";
+  output << "\n";
+  output << "activeEventBasePairs: \n";
   output << toString(activeEventBasePairs);
 
   // label

@@ -29,59 +29,6 @@ void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &re
   }
 }
 
-// removes all negated literals in cube with events that do not occur in some positive literal
-// returns  - uselessLiterals = set of removed literals
-//          - label = edgePredicates from cube are moved in label
-// TODO: optimization that considers combinations may be incomplete:
-// a cube may weaken some literals, later a new incoming edge is added that would be inconsistent
-// only with the weakened literals. First idea was to also consider the combination in the edge
-// labels. But this is not sufficient: we do not know which edge label (or fresh event constant)
-// has a future incoming edge
-
-void weakening(Cube &cube, Cube &weakenedLiterals) {
-  // preconditions:
-  assert(validateNormalizedCube(cube));  // cube is normal
-  assert(std::ranges::none_of(cube, [](auto &lit) {
-    return lit.isPositiveEqualityPredicate();
-  }));  // no e=f // FIXME is this included in Normal
-        // FIXME what about set membership predicates? -> all not normal
-  assert(weakenedLiterals.empty());  // uselessLiterals is empty
-
-  // Rule (W)
-  // const auto &events = gatherActiveSetNonEmptinessEvents(cube);
-  // if (!events.empty()) {
-  //   // only filter if not empty
-  //   // if empty, all positive literals are edge predicates
-  //   // -> there is finite tableau
-  //   // -> for inconsistency checks we want to keep all
-  //   filterPositiveEdgeLiterals(cube, events);
-  // }
-  // after filtering positive edge literals we have to filter negated
-  const auto &activeEvents = gatherActiveEvents(cube);
-  weakenedLiterals = filterNegatedLiterals(cube, activeEvents);
-  // const auto &activePairs = gatherActivePairs(cube);
-  // filterNegatedLiterals(cube, activePairs, weakenedLiterals);
-
-  // apply weakening to ...
-  // - positive edge predicates with no event that occurs in some setNonEmptiness
-  // - negated literal with non active events
-  // - negated literal with non active pairs
-
-  // TODO: get rid of all those helper functions
-  // const auto cubeActiveEvents = gatherActiveEvents(cube);
-  // const auto cubeActivePairs = gatherActivePairs(cube);
-  // std::erase_if(cube, [&](auto &literal) {
-  //   bool weakening = false;
-  //   weakening &= literal.isPositiveEdgePredicate() && ...;
-  //   weakening &= literal.negated && !isLiteralActive(literal, cubeActiveEvents);
-  //   weakening &= literal.negated && !isLiteralActive(literal, cubeActivePairs);
-  //   if (weakening) {
-  //     weakenedLiterals.push_back(literal);
-  //   }
-  //   return weakening;
-  // });
-}
-
 // returns fixed node as set, otherwise nullopt if consistent
 std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cube &newLiterals) {
   if (parent == nullptr) {
@@ -91,13 +38,10 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
   Cube inconsistenLiterals = newLiterals;
 
   const auto parentActiveEvents = gatherActiveEvents(parentCube);
-  // const auto parentActivePairs = gatherActivePairs(parentCube);
 
   // 2) filter newLiterals for parent
   std::erase_if(inconsistenLiterals, [&](auto &literal) { return !literal.negated; });
   filterNegatedLiterals(inconsistenLiterals, parentActiveEvents);
-  Cube useless;  // not needed, FIXME
-  // filterNegatedLiterals(inconsistenLiterals, parentActivePairs, useless);
 
   // 3) If no new literals, nothing to do
   if (isSubset(inconsistenLiterals, parentCube)) {
@@ -266,8 +210,7 @@ bool RegularTableau::solve() {
       Cube newCube = currentNode->cube;
       std::erase_if(newCube,
                     [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
-      const auto &activeEvents = gatherActiveEvents(newCube);
-      filterNegatedLiterals(newCube, activeEvents);
+      filterNegatedLiterals(newCube);
 
       const auto &[childNode, edgeLabel] = newNode(newCube);
       newEdge(currentNode, childNode, edgeLabel);

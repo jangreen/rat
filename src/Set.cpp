@@ -49,7 +49,36 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
     case SetOperation::image:
       return leftOperand->getEvents();
     case SetOperation::event:
-      return {*label};
+      return {label.value()};
+    case SetOperation::topEvent:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return {};
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftOperand,
+                          const CanonicalSet rightOperand, const CanonicalRelation relation,
+                          const std::optional<int> label) {
+  switch (operation) {
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion: {
+      auto leftLabels = leftOperand->getNormalEvents();
+      auto rightLabels = rightOperand->getNormalEvents();
+      leftLabels.insert(rightLabels.begin(), rightLabels.end());
+      return leftLabels;
+    }
+    case SetOperation::domain:
+    case SetOperation::image:
+      if (leftOperand->operation == SetOperation::event &&
+          relation->operation == RelationOperation::baseRelation) {
+        return {leftOperand->label.value()};
+      }
+      return leftOperand->getNormalEvents();
+    case SetOperation::event:
     case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
@@ -122,6 +151,7 @@ void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
   this->topEvents = calcTopEvents(operation, leftOperand, rightOperand, label);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
+  this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation, label);
   this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
 }
@@ -175,7 +205,7 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
 #endif
   static std::unordered_set<Set> canonicalizer;
   auto [iter, created] =
-    canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
+      canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
   //= canonicalizer.emplace(operation, left, right, relation, label, identifier);
   if (created) {
     iter->completeInitialization();

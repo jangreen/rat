@@ -177,6 +177,31 @@ bool Literal::isPositiveEqualityPredicate() const {
   return !negated && operation == PredicateOperation::equality;
 }
 
+EventSet Literal::normalEvents() const {
+  switch (operation) {
+    case PredicateOperation::constant:
+      return {};
+    case PredicateOperation::setNonEmptiness: {
+      return set->getNormalEvents();
+    }
+    case PredicateOperation::edge:
+    case PredicateOperation::equality: {
+      if (!isNormal()) {
+        return {};
+      }
+      auto events = leftEvent->getEvents();
+      auto rightEvents = rightEvent->getEvents();
+      events.insert(rightEvents.begin(), rightEvents.end());
+      return events;
+    }
+    case PredicateOperation::set: {
+      return leftEvent->getEvents();
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 EventSet Literal::events() const {
   switch (operation) {
     case PredicateOperation::constant:

@@ -43,6 +43,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
       }
     }
   }
+  assert(validateNormalizedCube(cube));
   assert(std::ranges::all_of(cube, [&](const auto &literal) {
     assert(std::ranges::all_of(literal.events(),
                                [&](const auto event) { return contains(events, event); }));

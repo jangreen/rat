@@ -39,6 +39,7 @@ class Set {
   mutable bool _isNormal{};
   mutable EventSet topEvents;
   mutable EventSet events;
+  mutable EventSet normalEvents;
   mutable SetOfSets eventRelationCombinations;
 
   // Calculates the above properties: we do not do this inside the constructor
@@ -83,6 +84,7 @@ class Set {
   inline const bool hasTopEvent() const { return !topEvents.empty(); }
   inline const EventSet &getTopEvents() const { return topEvents; }
   inline const EventSet &getEvents() const { return events; }
+  inline const EventSet &getNormalEvents() const { return normalEvents; }
   inline const SetOfSets &getLabelBaseCombinations() const { return eventRelationCombinations; }
 
   const SetOperation operation;
