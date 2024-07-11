@@ -151,7 +151,8 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
 
   // if child has epsilon edge -> add shortcuts
   for (const auto epsilonChildChild : child->epsilonChildren) {
-    newEdge(parent, epsilonChildChild, label);
+    const auto &childRenaming = epsilonChildChild->epsilonParents.at(child);
+    newEdge(parent, epsilonChildChild, label.compose(childRenaming));
   }
 }
 
@@ -283,8 +284,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
   if (fixedCube.has_value()) {
-    exportDebug("debug");
-    print(*fixedCube);
+    // exportDebug("debug");
+    // print(*fixedCube);
     Tableau t(fixedCube.value());
     const DNF dnf = t.dnf();
     if (dnf.empty()) {
