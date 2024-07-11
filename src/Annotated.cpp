@@ -90,7 +90,7 @@ AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet s
     case SetOperation::image:
     case SetOperation::domain: {
       const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
-      const auto &relation = std::get<AnnotatedRelation>(getRight(annotatedSet));
+      const auto relation = std::get<AnnotatedRelation>(getRight(annotatedSet));
       return Annotated::newSet(set->operation, left, relation);
     }
     case SetOperation::setIntersection:
