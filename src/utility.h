@@ -158,6 +158,8 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet events) {
 // returns removed literals
 inline void filterNegatedLiterals(Cube &cube, const SetOfSets &combinations,
                                   Cube &removedLiterals) {
+  // comment next line to enable optimization
+  return;
   std::erase_if(cube, [&](auto &literal) {
     if (!literal.negated) {
       return false;

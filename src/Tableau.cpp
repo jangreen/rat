@@ -150,6 +150,7 @@ bool Tableau::applyRuleA() {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
 
+    exportDebug("debug");
     auto result = currentNode->applyRule(true);
     if (!result) {
       continue;
@@ -185,8 +186,8 @@ void Tableau::renameBranch(const Node *leaf) {
   assert(leaf->literal.operation == PredicateOperation::equality);
 
   // Compute renaming according to equality predicate (from larger label to lower label).
-  const int e1 = *leaf->literal.leftLabel;
-  const int e2 = *leaf->literal.rightLabel;
+  const int e1 = leaf->literal.leftEvent->label.value();
+  const int e2 = leaf->literal.rightEvent->label.value();
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
   const auto renaming = Renaming(from, to);
@@ -255,19 +256,6 @@ void Tableau::renameBranch(const Node *leaf) {
 DNF Tableau::dnf() {
   solve();
   auto dnf = rootNode->extractDNF();
-
-  // Rule (W)
-  for (auto &cube : dnf) {
-    const auto &events = gatherActiveSetNonEmptinessEvents(cube);
-    filterPositiveEdgeLiterals(cube, events);
-    // after filtering positive edge literals we have to filter negated
-    const auto &activeEvents = gatherActiveEvents(cube);
-    const auto &activePairs = gatherActivePairs(cube);
-    filterNegatedLiterals(cube, activeEvents);
-    Cube unused;  // TODO: unused
-    filterNegatedLiterals(cube, activePairs, unused);
-  }
-
   assert(validateDNF(dnf));
   return dnf;
 }

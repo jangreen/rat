@@ -22,15 +22,8 @@ void addActivePairsFromEdges(const Cube &edges, SetOfSets &activePairs) {
 void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &reach) {
   auto [_, inserted] = reach.insert(node);
   if (inserted) {
-    for (const auto &child : node->childNodes) {
-      const auto edgeLabels = child->parentNodes.at(node);
-
-      if (edgeLabels.size() == 1) {
-        const bool isEpsilonEdge = !edgeLabels.at(0).has_value();
-        if (isEpsilonEdge) {
-          continue;
-        }
-      }
+    for (const auto &child : node->children) {
+      const auto edgeLabels = child->parents.at(node);
       findReachableNodes(child, reach);
     }
   }
@@ -54,22 +47,39 @@ void weakening(Cube &cube, Cube &weakenedLiterals) {
         // FIXME what about set membership predicates? -> all not normal
   assert(weakenedLiterals.empty());  // uselessLiterals is empty
 
+  // Rule (W)
+  // const auto &events = gatherActiveSetNonEmptinessEvents(cube);
+  // if (!events.empty()) {
+  //   // only filter if not empty
+  //   // if empty, all positive literals are edge predicates
+  //   // -> there is finite tableau
+  //   // -> for inconsistency checks we want to keep all
+  //   filterPositiveEdgeLiterals(cube, events);
+  // }
+  // after filtering positive edge literals we have to filter negated
+  const auto &activeEvents = gatherActiveEvents(cube);
+  weakenedLiterals = filterNegatedLiterals(cube, activeEvents);
+  // const auto &activePairs = gatherActivePairs(cube);
+  // filterNegatedLiterals(cube, activePairs, weakenedLiterals);
+
   // apply weakening to ...
   // - positive edge predicates with no event that occurs in some setNonEmptiness
   // - negated literal with non active events
   // - negated literal with non active pairs
-  const auto cubeActiveEvents = gatherActiveEvents(cube);
-  const auto cubeActivePairs = gatherActivePairs(cube);
-  std::erase_if(cube, [&](auto &literal) {
-    bool weakening = false;
-    weakening &= literal.isPositiveEdgePredicate() && !isLiteralActive(literal, cubeActiveEvents);
-    weakening &= literal.negated && !isLiteralActive(literal, cubeActiveEvents);
-    weakening &= literal.negated && !isLiteralActive(literal, cubeActivePairs);
-    if (weakening) {
-      weakenedLiterals.push_back(literal);
-    }
-    return weakening;
-  });
+
+  // TODO: get rid of all those helper functions
+  // const auto cubeActiveEvents = gatherActiveEvents(cube);
+  // const auto cubeActivePairs = gatherActivePairs(cube);
+  // std::erase_if(cube, [&](auto &literal) {
+  //   bool weakening = false;
+  //   weakening &= literal.isPositiveEdgePredicate() && ...;
+  //   weakening &= literal.negated && !isLiteralActive(literal, cubeActiveEvents);
+  //   weakening &= literal.negated && !isLiteralActive(literal, cubeActivePairs);
+  //   if (weakening) {
+  //     weakenedLiterals.push_back(literal);
+  //   }
+  //   return weakening;
+  // });
 }
 
 // returns fixed node as set, otherwise nullopt if consistent
@@ -81,13 +91,13 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
   Cube inconsistenLiterals = newLiterals;
 
   const auto parentActiveEvents = gatherActiveEvents(parentCube);
-  const auto parentActivePairs = gatherActivePairs(parentCube);
+  // const auto parentActivePairs = gatherActivePairs(parentCube);
 
   // 2) filter newLiterals for parent
   std::erase_if(inconsistenLiterals, [&](auto &literal) { return !literal.negated; });
   filterNegatedLiterals(inconsistenLiterals, parentActiveEvents);
   Cube useless;  // not needed, FIXME
-  filterNegatedLiterals(inconsistenLiterals, parentActivePairs, useless);
+  // filterNegatedLiterals(inconsistenLiterals, parentActivePairs, useless);
 
   // 3) If no new literals, nothing to do
   if (isSubset(inconsistenLiterals, parentCube)) {
@@ -127,7 +137,8 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
 
   // get open leafs
   std::erase_if(reachable, [&](const RegularNode *node) {
-    return !node->childNodes.empty() || node->closed || node == currentNode;
+    return !node->children.empty() || !node->epsilonChildren.empty() || node->closed ||
+           node == currentNode;
   });
 
   for (auto &unreducedNode : get_const_container(unreducedNodes)) {
@@ -149,7 +160,7 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
 // assumptions:
 // cube is in normal form
 // checks if renaming exists when adding and returns already existing node if possible
-std::pair<RegularNode *, Renaming> RegularTableau::addNode(const Cube &cube) {
+std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   const auto &[newNode, renaming] = RegularNode::newNode(cube);
   assert(newNode->validate());
@@ -160,75 +171,77 @@ std::pair<RegularNode *, Renaming> RegularTableau::addNode(const Cube &cube) {
 }
 
 // parent == nullptr -> rootNode
-void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
-  const bool isRootNode = parent == nullptr;
-  if (isRootNode) {
-    rootNodes.insert(child);
-    return;
-  }
+void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
+  assert(parent != nullptr);
+  assert(child != nullptr);
   assert(validate(parent));
 
-  // don't add epsilon edges that already exist
-  // TODO: what about other edges(with same label)?
-  const bool isEpsilonEdge = !label.has_value();
-  if (isEpsilonEdge && child->parentNodes.contains(parent)) {
-    for (const auto &edgeLabel : child->parentNodes.at(parent)) {  // TODO: get rid of vector?
-      const bool hasAlreadyEpsilonEdge = !edgeLabel.has_value();
-      if (hasAlreadyEpsilonEdge) {
-        return;
-      }
-    }
-  }
-  assert(validate(parent));
-  // check if consistent (otherwise fixed child is created in isInconsistent)
-  // never add inconsistent edges
-  if (!isEpsilonEdge && isInconsistent(parent, child, label)) {
+  // TODO: shortcut: do not need to check inconsistency
+  // // don't add edges that already exist
+  // if (child->parentNodes.contains(parent)) {
+  //   for (const auto &edgeLabel : child->parentNodes.at(parent)) {  // TODO: get rid of vector?
+  //     if (label.has_value() == edgeLabel.has_value()) {
+  //       return;
+  //     }
+  //   }
+  // }
+
+  // don't add inconsistent edges
+  if (isInconsistent(parent, child, label)) {
     return;
   }
 
-  // add edge, only add each child once to childNodes
-  if (!contains(parent->childNodes, child)) {  // TODO: use flat_set?
-    parent->childNodes.push_back(child);
+  // add edge
+  const auto [_, inserted] = parent->children.insert(child);
+  if (!inserted) {
+    assert(child->parents.contains(parent));
+    return;
   }
-  child->parentNodes[parent].push_back(label);
+  child->parents.insert({parent, label});
+  exportDebug("debug");
 
-  // set first parent node if not already set & not epsilon
-  if (child->firstParentNode == nullptr && !isEpsilonEdge) {
+  // counterexample: set first parent node if not already set
+  if (child->firstParentNode == nullptr) {
     child->firstParentNode = parent;
     child->firstParentLabel = label;
   }
-  assert(validate(parent));
-  if (isEpsilonEdge) {
-    // if epsilon edge is added -> add shortcuts
-    for (const auto &[grandparentNode, parentLabels] : parent->parentNodes) {
-      for (const auto &parentLabel : parentLabels) {
-        addEdge(grandparentNode, child, parentLabel);
-      }
-    }
-    assert(validate(parent));
-    // add epsilon child of a root nodes to root nodes
-    if (rootNodes.contains(parent) && !rootNodes.contains(child)) {
-      rootNodes.insert(child);
-    }
-    assert(validate(parent));
-  } else {
-    // update rootParents of child node
-    if (!parent->rootParents.empty() || rootNodes.contains(parent)) {
-      child->rootParents.push_back(parent);
-    }
-    assert(validate(parent));
-
-    // if child has epsilon edge -> add shortcuts
-    for (const auto childChild : child->childNodes) {
-      if (childChild->parentNodes.at(child).empty()) {
-        for (const auto &parentLabel : child->parentNodes[parent]) {
-          addEdge(parent, childChild, parentLabel);
-        }
-      }
-    }
-    assert(validate(parent));
+  // update rootParents of child node
+  if (!parent->rootParents.empty() || rootNodes.contains(parent)) {
+    child->rootParents.insert(parent);
   }
-  assert(validate(parent));
+
+  // if child has epsilon edge -> add shortcuts
+  for (const auto epsilonChildChild : child->epsilonChildren) {
+    newEdge(parent, epsilonChildChild, label);
+  }
+}
+
+void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child) {
+  assert(parent != nullptr);
+  assert(child != nullptr);
+
+  const auto [_, inserted] = parent->epsilonChildren.insert(child);
+  if (!inserted) {
+    assert(child->epsilonParents.contains(parent));
+    return;
+  }
+  child->epsilonParents.insert(parent);
+  exportDebug("debug");
+
+  // add shortcuts
+  for (const auto &[grandparentNode, grandparentLabel] : parent->parents) {
+    // if (grandparentNode == parent) {
+    //   continue;  // TODO: is this correct?
+    // }
+    newEdge(grandparentNode, child, grandparentLabel);
+  }
+  for (const auto &grandparentNode : parent->epsilonParents) {
+    newEpsilonEdge(grandparentNode, child);
+  }
+  // add epsilon child of a root nodes to root nodes
+  if (rootNodes.contains(parent)) {
+    rootNodes.insert(child);
+  }
 }
 
 bool RegularTableau::solve() {
@@ -239,20 +252,38 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
-    if (currentNode->closed || !currentNode->childNodes.empty() ||
+    if (currentNode->closed || !currentNode->children.empty() ||
+        !currentNode->epsilonChildren.empty() ||
         (!rootNodes.contains(currentNode) && currentNode->rootParents.empty())) {
       // skip already closed nodes and nodes that cannot be reached by a root node
+      continue;
+    }
+
+    // 1) weaken positive edge predicates
+    if (std::ranges::any_of(currentNode->cube, [](const Literal &literal) {
+          return literal.isPositiveEdgePredicate();
+        })) {
+      Cube newCube = currentNode->cube;
+      std::erase_if(newCube,
+                    [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+      const auto &activeEvents = gatherActiveEvents(newCube);
+      filterNegatedLiterals(newCube, activeEvents);
+
+      const auto &[childNode, edgeLabel] = newNode(newCube);
+      newEdge(currentNode, childNode, edgeLabel);
       continue;
     }
 
     Tableau tableau{currentNode->cube};
     if (tableau.applyRuleA()) {
       expandNode(currentNode, &tableau);
-    } else {
-      extractAnnotationexample(currentNode);
-      spdlog::info("[Solver] Answer: False");
-      return false;
+      continue;
     }
+
+    // 3) open leaf, extract counterexample
+    extractAnnotationexample(currentNode);
+    spdlog::info("[Solver] Answer: False");
+    return false;
   }
   spdlog::info("[Solver] Answer: True");
   return true;
@@ -260,6 +291,7 @@ bool RegularTableau::solve() {
 
 // assumptions:
 // node has only normal terms
+// node == nullptr -> node is rootNode
 void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
   assert(node == nullptr || node->validate());
   assert(tableau->validate());
@@ -275,27 +307,33 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
 
   // for each cube: calculate potential child
   for (auto &cube : dnf) {
-    Cube weakenedLiterals;
-    weakening(cube, weakenedLiterals);
+    Cube weakenedLiterals;  // TODO: unused
+    // weakening(cube, weakenedLiterals);
     assert(validateCube(cube));
     assert(validate(node));
 
-    // check if immediate inconsistency exists (inconsistent literals that are immediately
-    // dropped)
-    const auto fixedCube = getInconsistentLiterals(node, weakenedLiterals);
-    if (fixedCube.has_value()) {
-      // create new fixed Node
-      const auto &[fixedNode, _edgeLabel] = addNode(fixedCube.value());
-      addEdge(node, fixedNode, std::nullopt);
-      return;
-    }
+    // TODO: do we need this check?
+    // // check if immediate inconsistency exists (inconsistent literals that are immediately
+    // // dropped)
+    // const auto fixedCube = getInconsistentLiterals(node, weakenedLiterals);
+    // if (fixedCube.has_value()) {
+    //   // create new fixed Node
+    //   const auto &[fixedNode, _edgeLabel] = addNode(fixedCube.value());
+    //   addEdge(node, fixedNode, std::nullopt);
+    //   return;
+    // }
 
     // add node and edge
     assert(validateCube(cube));
-    const auto &[newNode, edgeLabel] = addNode(cube);
+    const auto &[childNode, edgeLabel] = newNode(cube);
     assert(validateCube(cube));
-    assert(newNode->validate());
-    addEdge(node, newNode, edgeLabel);
+    assert(childNode->validate());
+    const bool isRootNode = node == nullptr;
+    if (isRootNode) {
+      rootNodes.insert(childNode);
+    } else {
+      newEdge(node, childNode, edgeLabel);
+    }
   }
   assert(validate());
 }
@@ -305,26 +343,68 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
 // returns if given edge is inconsistent
 bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *child,
                                     EdgeLabel label) {
-  assert(label.has_value());  // is already fixed node to its parent (by def inconsistent)
-  auto &renaming = *label;
+  assert(parent != nullptr);
+  assert(child != nullptr);
 
   if (child->cube.empty()) {
     // empty child not inconsistent
     return false;
   }
-  // calculate converse request
+
   // use parent naming: label has already parent naming, rename child cube
   Cube renamedChild = child->cube;
-  renaming.invert();
+  label.invert();
   for (auto &literal : renamedChild) {
-    literal.rename(renaming);
+    literal.rename(label);
   }
+
+  // // calculate converse request: child cube + parent positive edge predicates
+  // Tableau convReq(renamedChild);
+  // // add cube of label (adding them to converseRequest is incomplete,
+  // // because initial contradiction are not checked)
+  // for (const auto &literal : parent->cube) {
+  //   if (literal.isPositiveEdgePredicate()) {
+  //     convReq.rootNode->appendBranch(literal);
+  //   }
+  // }
+  // const DNF dnf = convReq.dnf();
+  // if (dnf.empty()) {
+  //   // const auto &[fixedNode, _] = newNode({});
+  //   // fixedNode->closed = true;
+  //   // newEpsilonEdge(parent, fixedNode);
+  //   return true;
+  // }
+  // // each Disjunct must have some inconsistency to have an inconsistency
+  // // otherwise the proof for one cube without inconsistency would
+  // // subsume the others (which have more literals) if this is the case:
+  // // add one epsilon edge for each cube
+  // for (const auto &cube : dnf) {
+  //   if (!getInconsistentLiterals(parent, cube)) {
+  //     return false;
+  //   }
+  // }
+  // for (const auto &cube : dnf) {
+  //   const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
+  //   if (fixedCube.has_value()) {
+  //     // create new fixed Node
+  //     const auto [fixedNode, _label] = newNode(fixedCube.value());
+  //     newEpsilonEdge(parent, fixedNode);
+  //     return true;
+  //   }
+  // }
 
   const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
   if (fixedCube.has_value()) {
+    Tableau t(fixedCube.value());
+    const DNF dnf = t.dnf();
+    if (dnf.empty()) {
+      return true;
+    }
     // create new fixed Node
-    const auto [fixedNode, _label] = addNode(fixedCube.value());
-    addEdge(parent, fixedNode, {});
+    for (const auto &cube : dnf) {
+      const auto [fixedNode, _label] = newNode(cube);
+      newEpsilonEdge(parent, fixedNode);
+    }
     return true;
   }
 

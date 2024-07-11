@@ -43,6 +43,11 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
       }
     }
   }
+  assert(std::ranges::all_of(cube, [&](const auto &literal) {
+    assert(std::ranges::all_of(literal.events(),
+                               [&](const auto event) { return contains(events, event); }));
+    return true;
+  }));
   Renaming renaming(events);
   for (auto &literal : cube) {
     literal.rename(renaming);
@@ -107,21 +112,17 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   }
   output << "];" << std::endl;
   // edges
-  for (const auto childNode : childNodes) {
-    for (const auto &edgeLabel : childNode->parentNodes[this]) {
-      output << "N" << this << " -> " << "N" << childNode << "[";
-      if (!edgeLabel.has_value()) {
-        output << "color=\"grey";
-      } else {
-        output << "tooltip=\"";
-        edgeLabel->toDotFormat(output);
-      }
-      output << "\"];\n";
+  for (const auto epsilonChild : epsilonChildren) {
+    output << "N" << this << " -> " << "N" << epsilonChild;
+    output << "[" << "color=\"grey" << "\"];\n";
+  }
 
-      // } else if (childNode->firstParentNode == this) {
-      //   output << "color=\"blue\", ";
-      // }
-    }
+  for (const auto child : children) {
+    const auto label = child->parents.at(this);
+    output << "N" << this << " -> " << "N" << child;
+    output << "[tooltip=\"";
+    label.toDotFormat(output);
+    output << "\"];\n";
   }
   /*/ parents
   for (const auto parentNode : parentNodes) {
@@ -136,7 +137,10 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   printed = true;
 
   // children
-  for (const auto childNode : childNodes) {
-    childNode->toDotFormat(output);
+  for (const auto child : children) {
+    child->toDotFormat(output);
+  }
+  for (const auto child : epsilonChildren) {
+    child->toDotFormat(output);
   }
 }

@@ -132,11 +132,12 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   assert(isAppendable(dnf));
 
   // filter non-active negated literals
-  // TODO: do not need purging any more?
+  // TODO: do not need weakening any more?
+  // Yes: get all for inconsistency checking weaken all later
   for (auto &cube : dnf) {
     filterNegatedLiterals(cube, activeEvents);
     Cube useless;  // TODO: not used
-    filterNegatedLiterals(cube, activeEventBasePairs, useless);
+    // filterNegatedLiterals(cube, activeEventBasePairs, useless);
   }
   if (!isAppendable(dnf)) {
     return;
@@ -241,8 +242,8 @@ void Tableau::Node::inferModal() {
     const Literal &edgeLiteral = cur->literal;
     // (e1, e2) \in b
     assert(edgeLiteral.validate());
-    const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
-    const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+    const CanonicalSet e1 = edgeLiteral.leftEvent;
+    const CanonicalSet e2 = edgeLiteral.rightEvent;
     const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
     const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
     const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
@@ -296,8 +297,8 @@ void Tableau::Node::inferModalAtomic() {
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
   assert(edgeLiteral.validate());
-  const CanonicalSet e1 = Set::newEvent(*edgeLiteral.leftLabel);
-  const CanonicalSet e2 = Set::newEvent(*edgeLiteral.rightLabel);
+  const CanonicalSet e1 = edgeLiteral.leftEvent;
+  const CanonicalSet e2 = edgeLiteral.rightEvent;
   const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
   const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
   const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);

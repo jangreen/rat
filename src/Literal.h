@@ -30,14 +30,15 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  explicit Literal(bool negated);                                  // constant
-  explicit Literal(CanonicalSet set);                              // positive setNonEmptiness
-  explicit Literal(const AnnotatedSet &annotatedSet);              // negative setNonEmptiness
-  Literal(bool negated, int leftLabel, std::string identifier);    // set
-  Literal(int leftLabel, int rightLabel, std::string identifier);  // positive edge
-  Literal(int leftLabel, int rightLabel, std::string identifier,   //
-          const AnnotationType &annotation);                       // negative edge
-  Literal(bool negated, int leftLabel, int rightLabel);            // equality
+  explicit Literal(bool negated);                                // constant
+  explicit Literal(CanonicalSet set);                            // positive setNonEmptiness
+  explicit Literal(const AnnotatedSet &annotatedSet);            // negative setNonEmptiness
+  Literal(bool negated, int leftLabel, std::string identifier);  // set
+  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,       //
+          std::string identifier);                               // positive edge
+  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
+          const AnnotationType &annotation);                                        // negative edge
+  Literal(bool negated, int leftLabel, int rightLabel);                             // equality
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
@@ -48,13 +49,13 @@ class Literal {
   PredicateOperation operation;
   CanonicalSet set;                // setNonEmptiness
   CanonicalAnnotation annotation;  // negated + setNonEmptiness, edge
-  std::optional<int> leftLabel;    // edge, set, equality
-  std::optional<int> rightLabel;   // edge, equality
+  CanonicalSet leftEvent;          // edge, set, equality
+  CanonicalSet rightEvent;         // edge, equality
   // std::optional<std::string> identifier;  // edge, set
   std::optional<CanonicalString> identifier;  // edge, set
 
   [[nodiscard]] bool isNormal() const;
-  [[nodiscard]] bool hasTopEvent() const;
+  [[nodiscard]] bool hasTopEvent() const { return !topEvents().empty(); };
   [[nodiscard]] bool isPositiveEdgePredicate() const;
   [[nodiscard]] bool isPositiveEqualityPredicate() const;
   [[nodiscard]] EventSet events() const;
@@ -84,8 +85,8 @@ struct std::hash<Literal> {
     const size_t setHash = hash<CanonicalSet>()(literal.set);  // Hashes the pointer
     const size_t signHash = hash<bool>()(literal.negated);
     const size_t idHash = hash<std::optional<std::string>>()(literal.identifier);
-    const size_t leftLabelHash = hash<std::optional<int>>()(literal.leftLabel);
-    const size_t rightLabelHash = hash<std::optional<int>>()(literal.leftLabel);
+    const size_t leftLabelHash = hash<CanonicalSet>()(literal.leftEvent);
+    const size_t rightLabelHash = hash<CanonicalSet>()(literal.leftEvent);
     return ((opHash ^ (setHash << 1)) >> 1) ^
            (signHash << 1) + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
   }

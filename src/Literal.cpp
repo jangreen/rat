@@ -13,8 +13,8 @@ Literal::Literal(bool negated)
       operation(PredicateOperation::constant),
       set(nullptr),
       annotation(Annotation::none()),
-      leftLabel(std::nullopt),
-      rightLabel(std::nullopt),
+      leftEvent(nullptr),
+      rightEvent(nullptr),
       identifier(std::nullopt) {}
 
 Literal::Literal(const CanonicalSet set)
@@ -22,8 +22,8 @@ Literal::Literal(const CanonicalSet set)
       operation(PredicateOperation::setNonEmptiness),
       set(set),
       annotation(Annotation::none()),
-      leftLabel(std::nullopt),
-      rightLabel(std::nullopt),
+      leftEvent(nullptr),
+      rightEvent(nullptr),
       identifier(std::nullopt) {}
 
 Literal::Literal(const AnnotatedSet &annotatedSet)
@@ -31,8 +31,8 @@ Literal::Literal(const AnnotatedSet &annotatedSet)
       operation(PredicateOperation::setNonEmptiness),
       set(std::get<CanonicalSet>(annotatedSet)),
       annotation(std::get<CanonicalAnnotation>(annotatedSet)),
-      leftLabel(std::nullopt),
-      rightLabel(std::nullopt),
+      leftEvent(nullptr),
+      rightEvent(nullptr),
       identifier(std::nullopt) {
   assert(Annotated::validate(annotatedSet));
 }
@@ -42,56 +42,65 @@ Literal::Literal(bool negated, int leftLabel, std::string identifier)
       operation(PredicateOperation::set),
       set(nullptr),
       annotation(Annotation::none()),
-      leftLabel(leftLabel),
-      rightLabel(std::nullopt),
+      leftEvent(Set::newEvent(leftLabel)),
+      rightEvent(nullptr),
       identifier(identifier) {}
 
-Literal::Literal(int leftLabel, int rightLabel, std::string identifier)
+Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier)
     : negated(false),
       operation(PredicateOperation::edge),
       set(nullptr),
       annotation(Annotation::none()),
-      leftLabel(leftLabel),
-      rightLabel(rightLabel),
-      identifier(identifier) {}
+      leftEvent(leftEvent),
+      rightEvent(rightEvent),
+      identifier(identifier) {
+  assert(leftEvent->isEvent());
+  assert(rightEvent->isEvent());
+}
 
-Literal::Literal(int leftLabel, int rightLabel, std::string identifier, const AnnotationType &annotation)
+Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,
+                 const AnnotationType &annotation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
       annotation(Annotation::newLeaf(annotation)),
-      leftLabel(leftLabel),
-      rightLabel(rightLabel),
-      identifier(identifier) {}
+      leftEvent(leftEvent),
+      rightEvent(rightEvent),
+      identifier(identifier) {
+  assert(leftEvent->isEvent());
+  assert(rightEvent->isEvent());
+}
 
 Literal::Literal(bool negated, int leftLabel, int rightLabel)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
       annotation(Annotation::none()),
-      leftLabel(leftLabel),
-      rightLabel(rightLabel),
+      leftEvent(Set::newEvent(leftLabel)),
+      rightEvent(Set::newEvent(rightLabel)),
       identifier(std::nullopt) {}
 
 bool Literal::validate() const {
   switch (operation) {
     case PredicateOperation::constant:
-      return set == nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
+      return set == nullptr && leftEvent == nullptr && rightEvent == nullptr &&
              !identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::edge:
-      return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
-             identifier.has_value() && (!negated || annotation != Annotation::none());
+      return set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
+             leftEvent->isEvent() && rightEvent->isEvent() && identifier.has_value() &&
+             (!negated || annotation != Annotation::none());
     case PredicateOperation::equality:
-      return set == nullptr && leftLabel.has_value() && rightLabel.has_value() &&
-             !identifier.has_value() && annotation == Annotation::none();
+      return set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
+             leftEvent->isEvent() && rightEvent->isEvent() && !identifier.has_value() &&
+             annotation == Annotation::none();
     case PredicateOperation::set:
       // check annotations for negated literals
       assert(!negated || Annotated::validate(annotatedSet()));
 
-      return set == nullptr && leftLabel.has_value() && !rightLabel.has_value() &&
-             identifier.has_value() && annotation == Annotation::none();
+      return set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
+             leftEvent->isEvent() && identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::setNonEmptiness:
-      return set != nullptr && !leftLabel.has_value() && !rightLabel.has_value() &&
+      return set != nullptr && leftEvent == nullptr && rightEvent == nullptr &&
              !identifier.has_value() /*&& (!negated || annotation != Annotation::none()) */;
     default:
       return false;
@@ -105,19 +114,19 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
   // We assume well-formed literals
   switch (operation) {
     case PredicateOperation::edge: {
-      auto cmp = *leftLabel <=> *other.leftLabel;
-      cmp = (cmp != 0) ? cmp : (*rightLabel <=> *other.rightLabel);
+      auto cmp = leftEvent <=> other.leftEvent;
+      cmp = (cmp != 0) ? cmp : (rightEvent <=> other.rightEvent);
       cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
       return cmp;
     }
     case PredicateOperation::set: {
-      auto cmp = *leftLabel <=> *other.leftLabel;
+      auto cmp = leftEvent <=> other.leftEvent;
       cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
       return cmp;
     }
     case PredicateOperation::equality: {
-      auto cmp = *leftLabel <=> *other.leftLabel;
-      cmp = (cmp != 0) ? cmp : (*rightLabel <=> *other.rightLabel);
+      auto cmp = leftEvent <=> other.leftEvent;
+      cmp = (cmp != 0) ? cmp : (rightEvent <=> other.rightEvent);
       return cmp;
     }
     case PredicateOperation::setNonEmptiness:
@@ -134,7 +143,7 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
 bool Literal::isNegatedOf(const Literal &other) const {
   // TODO: Compare annotation?
   return operation == other.operation && negated != other.negated && set == other.set &&
-         leftLabel == other.leftLabel && rightLabel == other.rightLabel &&
+         leftEvent == other.leftEvent && rightEvent == other.rightEvent &&
          identifier == other.identifier;
 }
 
@@ -151,20 +160,13 @@ bool Literal::isNormal() const {
     case PredicateOperation::constant:
       return false;
     case PredicateOperation::equality:
-      return negated && rightLabel != leftLabel;
+      return negated && rightEvent != leftEvent;
     case PredicateOperation::set:
     case PredicateOperation::edge:
       return true;
     default:
       throw std::logic_error("unreachable");
   }
-}
-
-bool Literal::hasTopEvent() const {
-  if (operation == PredicateOperation::setNonEmptiness) {
-    return set->hasTopEvent();
-  }
-  return false;
 }
 
 bool Literal::isPositiveEdgePredicate() const {
@@ -184,10 +186,13 @@ EventSet Literal::events() const {
     }
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
-      return {*leftLabel, *rightLabel};
+      auto events = leftEvent->getEvents();
+      auto rightEvents = rightEvent->getEvents();
+      events.insert(rightEvents.begin(), rightEvents.end());
+      return events;
     }
     case PredicateOperation::set: {
-      return {*leftLabel};
+      return leftEvent->getEvents();
     }
     default:
       throw std::logic_error("unreachable");
@@ -196,14 +201,20 @@ EventSet Literal::events() const {
 
 EventSet Literal::topEvents() const {
   switch (operation) {
-    case PredicateOperation::constant:
-    case PredicateOperation::edge:
-    case PredicateOperation::equality:
-    case PredicateOperation::set:
-      return {};
     case PredicateOperation::setNonEmptiness: {
       return set->getTopEvents();
     }
+    case PredicateOperation::constant:
+      return {};
+    case PredicateOperation::equality:
+    case PredicateOperation::edge: {
+      auto events = leftEvent->getTopEvents();
+      auto rightEvents = rightEvent->getTopEvents();
+      events.insert(rightEvents.begin(), rightEvents.end());
+      return events;
+    }
+    case PredicateOperation::set:
+      return leftEvent->getTopEvents();
     default:
       throw std::logic_error("unreachable");
   }
@@ -220,8 +231,8 @@ SetOfSets Literal::labelBaseCombinations() const {
     }
     case PredicateOperation::edge: {
       // (e1,e2) \in b
-      const CanonicalSet e1 = Set::newEvent(*leftLabel);
-      const CanonicalSet e2 = Set::newEvent(*rightLabel);
+      const CanonicalSet e1 = leftEvent;
+      const CanonicalSet e2 = rightEvent;
       const CanonicalRelation b = Relation::newBaseRelation(*identifier);
 
       const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
@@ -280,12 +291,12 @@ void Literal::rename(const Renaming &renaming) {
     }
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
-      leftLabel = renaming.rename(*leftLabel);
-      rightLabel = renaming.rename(*rightLabel);
+      leftEvent = leftEvent->rename(renaming);
+      rightEvent = rightEvent->rename(renaming);
       return;
     }
     case PredicateOperation::set: {
-      leftLabel = renaming.rename(*leftLabel);
+      leftEvent = leftEvent->rename(renaming);
       return;
     }
     default:
@@ -303,14 +314,14 @@ std::string Literal::toString() const {
       output += negated ? "FALSE" : "TRUE";
       break;
     case PredicateOperation::edge:
-      output += identifier->get() + "(" + std::to_string(*leftLabel) + "," +
-                std::to_string(*rightLabel) + ")";
+      output +=
+          identifier->get() + "(" + leftEvent->toString() + "," + rightEvent->toString() + ")";
       break;
     case PredicateOperation::set:
-      output += identifier->get() + "(" + std::to_string(*leftLabel) + ")";
+      output += identifier->get() + "(" + leftEvent->toString() + ")";
       break;
     case PredicateOperation::equality:
-      output += std::to_string(*leftLabel) + " = " + std::to_string(*rightLabel);
+      output += leftEvent->toString() + " = " + rightEvent->toString();
       break;
     case PredicateOperation::setNonEmptiness:
       output += set->toString();

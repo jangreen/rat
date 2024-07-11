@@ -192,9 +192,9 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet rightRenamed;
   switch (operation) {
     case SetOperation::topEvent:
-      return newTopEvent(renaming.rename(*label));
+      return newTopEvent(renaming.rename(label.value()));
     case SetOperation::event:
-      return newEvent(renaming.rename(*label));
+      return newEvent(renaming.rename(label.value()));
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -223,7 +223,7 @@ std::string Set::toString() const {
       output += "[" + std::to_string(*label) + "]";
       break;
     case SetOperation::event:
-      output += "{" + std::to_string(*label) + "}";
+      output += std::to_string(*label);
       break;
     case SetOperation::image:
       output += "(" + leftOperand->toString() + ";" + relation->toString() + ")";

@@ -3,7 +3,10 @@
 #include <vector>
 
 #include "Literal.h"
-typedef std::optional<Renaming> EdgeLabel;
+
+class RegularNode;
+typedef Renaming EdgeLabel;
+typedef boost::container::flat_set<RegularNode *> NodeSet;
 
 class RegularNode {
  private:
@@ -14,11 +17,13 @@ class RegularNode {
   [[nodiscard]] bool validate() const;
 
   const Cube cube;  // must be ordered, should not be modified
-  std::vector<RegularNode *> childNodes;
-  std::map<RegularNode *, std::vector<EdgeLabel>> parentNodes;  // TODO: use multimap instead?
+  NodeSet children;
+  NodeSet epsilonChildren;
+  std::map<RegularNode *, EdgeLabel> parents;  // TODO: use multimap instead?
+  NodeSet epsilonParents;
   bool closed = false;
 
-  std::vector<RegularNode *> rootParents;  // parent nodes that are reachable by some root node
+  NodeSet rootParents;                     // parent nodes that are reachable by some root node
   RegularNode *firstParentNode = nullptr;  // for annotationexample extraction
   EdgeLabel firstParentLabel;              // for annotationexample extraction
 

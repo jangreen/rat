@@ -35,10 +35,10 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       // -> Rule (aL)
       // RightRule: [b.e] -> { [f], (f,e) \in b }
       // -> Rule (aR)
-      CanonicalSet f = Set::newEvent(Set::maxEvent++);
+      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
       const auto& b = *relation->identifier;
-      const int first = operation == SetOperation::image ? *event->label : *f->label;
-      const int second = operation == SetOperation::image ? *f->label : *event->label;
+      const CanonicalSet first = operation == SetOperation::image ? event : f;
+      const CanonicalSet second = operation == SetOperation::image ? f : event;
 
       return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(first, second, b)}};
     }
@@ -398,9 +398,11 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
         // LeftRule: e & (f.b)     or      e & (b.f)
         // RightRule: f.b & e      or      b.f & e
         // shortcut multiple rules
+        assert(e->isEvent());
+        assert(sp->isEvent());
         const std::string b = *r->identifier;
-        int first = *e->label;
-        int second = *sp->label;
+        auto first = e;
+        auto second = sp;
         if (s->operation == SetOperation::image) {
           std::swap(first, second);
         }
@@ -470,7 +472,7 @@ std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRule
     }
     case PredicateOperation::equality: {
       // (\neg=): ~(e = e) -> FALSE
-      if (literal.leftLabel == literal.rightLabel) {
+      if (literal.leftEvent == literal.rightEvent) {
         return literal.negated ? DNF{{BOTTOM}} : DNF{{TOP}};
       }
       return std::nullopt;  // no rule applicable in case e1 = e2
@@ -514,8 +516,8 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
 
       // (e1, e2) \in b, R <= b -> e1R & e2
       const auto assumption = std::get<Assumption>(*it);
-      const CanonicalSet e1 = Set::newEvent(*literal.leftLabel);
-      const CanonicalSet e2 = Set::newEvent(*literal.rightLabel);
+      const CanonicalSet e1 = literal.leftEvent;
+      const CanonicalSet e2 = literal.rightEvent;
       const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, assumption.relation);
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
       assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
@@ -551,8 +553,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
   switch (literal.operation) {
     case PredicateOperation::equality: {
       // ~e1 = e2 -> ~e1R & e2
-      const CanonicalSet e1 = Set::newEvent(*literal.leftLabel);
-      const CanonicalSet e2 = Set::newEvent(*literal.rightLabel);
+      const CanonicalSet e1 = literal.leftEvent;
+      const CanonicalSet e2 = literal.rightEvent;
       const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, Assumption::masterIdRelation());
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
       // annotation tree should be the on of R
@@ -561,8 +563,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
     }
     case PredicateOperation::edge: {
       // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
-      const CanonicalSet e1 = Set::newEvent(*literal.leftLabel);
-      const CanonicalSet e2 = Set::newEvent(*literal.rightLabel);
+      const CanonicalSet e1 = literal.leftEvent;
+      const CanonicalSet e2 = literal.rightEvent;
       const CanonicalRelation b = Relation::newBaseRelation(*literal.identifier);
       const CanonicalSet e1R = Set::newSet(SetOperation::image, e1, Assumption::masterIdRelation());
       const CanonicalSet Re2 =
