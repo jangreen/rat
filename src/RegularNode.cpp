@@ -132,7 +132,7 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   output << "];" << std::endl;
   // edges
   for (const auto epsilonChild : epsilonChildren) {
-    const auto label = epsilonChild->parents.at(this);
+    const auto label = epsilonChild->epsilonParents.at(this);
     output << "N" << this << " -> " << "N" << epsilonChild;
     output << "[tooltip=\"";
     label.toDotFormat(output);
