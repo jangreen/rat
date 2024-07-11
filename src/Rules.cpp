@@ -319,7 +319,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
     case SetOperation::baseSet:
       // LeftRule: e & A != 0  ->  e \in A
       // RightRule: A & e != 0  ->  e \in A
-      return DNF{{Literal(literal.negated, *e->label, *s->identifier)}};
+      return DNF{{Literal(literal.negated, e, *s->identifier)}};
     case SetOperation::event:
       // LeftRule: e & f != 0  ->  e == f
       // RightRule: f & e != 0  ->  e == f (in both cases use same here)
@@ -665,7 +665,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
       }
       // Rule (A): [B] -> { [f], f \in B }
       const CanonicalSet f = Set::newEvent(Set::maxEvent++);
-      return PartialDNF{{AnnotatedSet(f, nullptr), Literal(false, *f->label, *set->identifier)}};
+      return PartialDNF{{AnnotatedSet(f, nullptr), Literal(false, f, *set->identifier)}};
     }
     case SetOperation::image:
     case SetOperation::domain: {

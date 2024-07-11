@@ -37,12 +37,12 @@ Literal::Literal(const AnnotatedSet &annotatedSet)
   assert(Annotated::validate(annotatedSet));
 }
 
-Literal::Literal(bool negated, int leftLabel, std::string identifier)
+Literal::Literal(bool negated, CanonicalSet event, std::string identifier)
     : negated(negated),
       operation(PredicateOperation::set),
       set(nullptr),
       annotation(Annotation::none()),
-      leftEvent(Set::newEvent(leftLabel)),
+      leftEvent(event),
       rightEvent(nullptr),
       identifier(identifier) {}
 
@@ -246,16 +246,45 @@ SetOfSets Literal::labelBaseCombinations() const {
 
 std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
                                               const CanonicalSet replace) const {
-  if (operation != PredicateOperation::setNonEmptiness) {
-    // only substitute in set expressions
-    return std::nullopt;
-  }
+  switch (operation) {
+    case PredicateOperation::setNonEmptiness: {
+      const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
+      if (newSet.first != set) {
+        return Literal(newSet);
+      }
+      return std::nullopt;
+    }
+    case PredicateOperation::constant:
+      return std::nullopt;
+    case PredicateOperation::equality:
+    case PredicateOperation::edge: {
+      assert(annotation->isLeaf() && annotation->getValue().has_value());
+      if (!search->isEvent() || !replace->isEvent()) {
+        return std::nullopt;
+      }
+      const auto left = leftEvent == search ? replace : leftEvent;
+      const auto right = rightEvent == search ? replace : rightEvent;
 
-  const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
-  if (newSet.first != set) {
-    return Literal(newSet);
+      if (left != leftEvent || right != rightEvent) {
+        return negated ? Literal(left, right, identifier.value(), annotation->getValue().value())
+                       : Literal(left, right, identifier.value());
+      }
+      return std::nullopt;
+    }
+    case PredicateOperation::set: {
+      if (!search->isEvent() || !replace->isEvent()) {
+        return std::nullopt;
+      }
+      const auto left = leftEvent == search ? replace : leftEvent;
+
+      if (left != leftEvent) {
+        return Literal(negated, left, identifier.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      throw std::logic_error("unreachable");
   }
-  return std::nullopt;
 }
 
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {

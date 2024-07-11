@@ -33,7 +33,7 @@ class Literal {
   explicit Literal(bool negated);                                // constant
   explicit Literal(CanonicalSet set);                            // positive setNonEmptiness
   explicit Literal(const AnnotatedSet &annotatedSet);            // negative setNonEmptiness
-  Literal(bool negated, int leftLabel, std::string identifier);  // set
+  Literal(bool negated, CanonicalSet event, std::string identifier);  // set
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,       //
           std::string identifier);                               // positive edge
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
