@@ -23,6 +23,7 @@ std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annot
 
 AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType &value) {
   switch (set->operation) {
+    case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
