@@ -1,5 +1,3 @@
-#include <spdlog/spdlog.h>
-
 #include <cassert>
 #include <unordered_set>
 
