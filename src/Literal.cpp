@@ -71,13 +71,13 @@ Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string id
   assert(rightEvent->isEvent());
 }
 
-Literal::Literal(bool negated, int leftLabel, int rightLabel)
+Literal::Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
       annotation(Annotation::none()),
-      leftEvent(Set::newEvent(leftLabel)),
-      rightEvent(Set::newEvent(rightLabel)),
+      leftEvent(leftEvent),
+      rightEvent(rightEvent),
       identifier(std::nullopt) {}
 
 bool Literal::validate() const {

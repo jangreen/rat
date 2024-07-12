@@ -321,11 +321,12 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
       // LeftRule: e & A != 0  ->  e \in A
       // RightRule: A & e != 0  ->  e \in A
       return DNF{{Literal(literal.negated, e, *s->identifier)}};
+    case SetOperation::topEvent:
     case SetOperation::event:
       // LeftRule: e & f != 0  ->  e == f
       // RightRule: f & e != 0  ->  e == f (in both cases use same here)
       // Rule (=)
-      return DNF{{Literal(literal.negated, *e->label, *s->label)}};
+      return DNF{{Literal(literal.negated, e, s)}};
     case SetOperation::emptySet:
       // LeftRule: e & 0 != 0  ->  false
       // RightRule: 0 & e != 0  ->  false
@@ -476,6 +477,13 @@ std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRule
       // (\neg=): ~(e = e) -> FALSE
       if (literal.leftEvent == literal.rightEvent) {
         return literal.negated ? DNF{{BOTTOM}} : DNF{{TOP}};
+      }
+      // (\neg=): ~([e] = f) -> FALSE
+      // (\neg=): ~(e = [f]) -> FALSE
+      // (\neg=): ~([e] = [f]) -> FALSE
+      if (literal.negated && (literal.leftEvent->operation == SetOperation::topEvent ||
+                              literal.rightEvent->operation == SetOperation::topEvent)) {
+        return DNF{{BOTTOM}};
       }
       return std::nullopt;  // no rule applicable in case e1 = e2
     }

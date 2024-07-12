@@ -38,7 +38,7 @@ class Literal {
           std::string identifier);                                    // positive edge
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
           const AnnotationType &annotation);                                        // negative edge
-  Literal(bool negated, int leftLabel, int rightLabel);                             // equality
+  Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent);           // equality
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
