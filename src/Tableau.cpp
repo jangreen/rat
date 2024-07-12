@@ -82,7 +82,9 @@ bool Tableau::solve(int bound) {
     if (currentNode->applyRule()) {
       assert(unreducedNodes.validate());
       assert(currentNode->parentNode->validate());
-      removeNode(currentNode);  // in-place rule application
+      if (!Rules::lastRuleWasUnrolling) {
+        removeNode(currentNode);  // in-place rule application
+      }
       continue;
     }
 

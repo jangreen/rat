@@ -24,4 +24,5 @@ PartialDNF substituteIntersectionOperand(bool substituteRight, const PartialDNF 
                                          const AnnotatedSet &otherOperand);
 
 static int saturationBound = 1;
+inline bool lastRuleWasUnrolling = false;
 }  // namespace Rules

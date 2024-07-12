@@ -191,20 +191,18 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
                std::make_move_iterator(childDNF.end()));
   }
 
+  if (isLeaf()) {
+    dnf.push_back(literal.isNormal() ? Cube{literal} : Cube{});
+    return;
+  }
+
   if (!literal.isNormal()) {
     // Ignore non-normal literals.
     return;
   }
 
-  if (isLeaf()) {
-    dnf.push_back({literal});
-  } else {
-    if (dnf.empty()) {
-      dnf.emplace_back();
-    }
-    for (auto &cube : dnf) {
-      cube.push_back(literal);
-    }
+  for (auto &cube : dnf) {
+    cube.push_back(literal);
   }
 }
 
