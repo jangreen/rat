@@ -36,6 +36,8 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
   }
   const Cube &parentCube = parent->cube;
   Cube inconsistenLiterals = newLiterals;
+  assert(validateNormalizedCube(parentCube));
+  assert(validateNormalizedCube(newLiterals));
 
   const auto parentActiveEvents = gatherActiveEvents(parentCube);
 
@@ -269,6 +271,10 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
                                     EdgeLabel label) {
   assert(parent != nullptr);
   assert(child != nullptr);
+  assert(validateNormalizedCube(child->cube));
+
+  // return false; // uncomment for no inverses optimizations, then also labelBase opitmization is
+  // possible
 
   if (child->cube.empty()) {
     // empty child not inconsistent
@@ -278,14 +284,19 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   // use parent naming: label has already parent naming, rename child cube
   Cube renamedChild = child->cube;
   label.invert();
+  // erase literals that cannot be renamed
+  std::erase_if(renamedChild, [&](const Literal &literal) {
+    return !std::ranges::includes(label.from, literal.events()) ||
+           !std::ranges::includes(label.from, literal.topEvents());
+  });
   for (auto &literal : renamedChild) {
     literal.rename(label);
   }
+  assert(validateNormalizedCube(renamedChild));
 
   const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
   if (fixedCube.has_value()) {
-    // exportDebug("debug");
-    // print(*fixedCube);
+    exportDebug("debug");
     Tableau t(fixedCube.value());
     const DNF dnf = t.dnf();
     if (dnf.empty()) {

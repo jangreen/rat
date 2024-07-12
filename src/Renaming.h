@@ -1,4 +1,5 @@
 #pragma once
+
 #include <boost/container/flat_set.hpp>
 #include <fstream>
 #include <vector>
@@ -23,20 +24,15 @@ class Renaming {
   }
   void invert() { swap(from, to); };
   [[nodiscard]] Renaming compose(const Renaming &other) const {
-    IntSet potentialDomain;
-    potentialDomain.insert(from.begin(), from.end());
-    potentialDomain.insert(other.from.begin(), other.from.end());
-
     Renaming composedRenaming;
-    composedRenaming.from.reserve(potentialDomain.size());
-    composedRenaming.to.reserve(potentialDomain.size());
+    composedRenaming.from.reserve(from.size());
 
-    for (auto potentialFrom : potentialDomain) {
-      const auto potentialTo = other.rename(rename(potentialFrom));
-
-      if (potentialFrom != potentialTo) {
-        composedRenaming.from.push_back(potentialFrom);
-        composedRenaming.to.push_back(potentialTo);
+    for (auto newFrom : from) {
+      const auto intermediate = rename(newFrom);
+      if (std::ranges::find(other.from, intermediate) != other.from.end()) {
+        const auto newTo = other.rename(intermediate);
+        composedRenaming.from.push_back(newFrom);
+        composedRenaming.to.push_back(newTo);
       }
     }
     return composedRenaming;
