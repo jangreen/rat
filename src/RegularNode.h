@@ -25,7 +25,6 @@ class RegularNode {
 
   NodeSet rootParents;                     // parent nodes that are reachable by some root node
   RegularNode *firstParentNode = nullptr;  // for annotationexample extraction
-  EdgeLabel firstParentLabel;              // for annotationexample extraction
 
   bool printed = false;  // prevent cycling in printing // FIXME refactor
   void toDotFormat(std::ofstream &output);

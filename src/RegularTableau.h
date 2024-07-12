@@ -25,7 +25,7 @@ class RegularTableau {
   void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void expandNode(RegularNode *node, Tableau *tableau);
-  bool isInconsistent(RegularNode *parent, const RegularNode *child, EdgeLabel label);
+  bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   static void extractAnnotationexample(const RegularNode *openNode);
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;

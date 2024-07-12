@@ -144,7 +144,6 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   // counterexample: set first parent node if not already set
   if (child->firstParentNode == nullptr) {
     child->firstParentNode = parent;
-    child->firstParentLabel = label;
   }
   // update rootParents of child node
   if (!parent->rootParents.empty() || rootNodes.contains(parent)) {
@@ -268,7 +267,7 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
 // must not be part of the proof graph
 // returns if given edge is inconsistent
 bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *child,
-                                    EdgeLabel label) {
+                                    const EdgeLabel &label) {
   assert(parent != nullptr);
   assert(child != nullptr);
   assert(validateNormalizedCube(child->cube));
@@ -283,14 +282,16 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   // use parent naming: label has already parent naming, rename child cube
   Cube renamedChild = child->cube;
-  label.invert();
+  Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    return !std::ranges::includes(label.from, literal.events()) ||
-           !std::ranges::includes(label.from, literal.topEvents());
+    return !inverted.isStrictlyRenameable(literal.events())
+        && !inverted.isStrictlyRenameable(literal.topEvents());
+    /*return !std::ranges::includes(label.from, literal.events()) ||
+           !std::ranges::includes(label.from, literal.topEvents());*/
   });
   for (auto &literal : renamedChild) {
-    literal.rename(label);
+    literal.rename(inverted);
   }
   assert(validateNormalizedCube(renamedChild));
 

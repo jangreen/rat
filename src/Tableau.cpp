@@ -195,7 +195,7 @@ void Tableau::renameBranch(const Node *leaf) {
   const int e2 = leaf->literal.rightEvent->label.value();
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
-  const auto renaming = Renaming(from, to);
+  const auto renaming = Renaming::simple(from, to);
   assert(from != to);
 
   // Determine first node (closest to root) that has to be renamed.

@@ -1,47 +1,49 @@
 #pragma once
-
 #include <boost/container/flat_set.hpp>
 #include <fstream>
 #include <vector>
 
-typedef boost::container::flat_set<int> IntSet;
-
+/*
+ * A Renaming is a partial permutation int -> int.
+ */
 class Renaming {
- public:
-  explicit Renaming(const std::vector<int> &from);
-  Renaming(int from, int to);
-  Renaming() = default;
+private:
+  typedef std::vector<std::pair<int, int>> Mapping;
+  explicit Renaming(Mapping mapping);
 
-  std::vector<int> from = {};
-  std::vector<int> to = {};
+  Mapping mapping;
+ public:
+  static Renaming minimal(const std::vector<int> &from);
+  static Renaming simple(int from, int to);
+
+  [[nodiscard]] Renaming inverted() const;
+  [[nodiscard]] Renaming compose(const Renaming &other) const;
+
+  [[nodiscard]] size_t size() const { return mapping.size(); }
+  [[nodiscard]] const std::vector<std::pair<int, int>>& getMapping() const { return mapping; }
+
+  [[nodiscard]] std::optional<int> renameStrict(const int n) const {
+    const auto iter = std::ranges::find(mapping, n, &std::pair<int, int>::first);
+    return iter == mapping.end() ? std::nullopt : std::optional(iter->second) ;
+  }
+
+  [[nodiscard]] bool isStrictlyRenameable(const std::vector<int>& toRename) const {
+    return std::ranges::all_of(toRename, [&](const auto x) { return renameStrict(x).has_value(); });
+  }
+
+  [[nodiscard]] bool isStrictlyRenameable(const boost::container::flat_set<int>& toRename) const {
+    return std::ranges::all_of(toRename, [&](const auto x) { return renameStrict(x).has_value(); });
+  }
 
   [[nodiscard]] int rename(const int n) const {
-    const auto index = std::ranges::find(from, n);
-    if (index == from.end()) {
-      return n;
-    }
-    return to.at(std::distance(from.begin(), index));
+    return renameStrict(n).value_or(n);
   }
-  void invert() { swap(from, to); };
-  [[nodiscard]] Renaming compose(const Renaming &other) const {
-    Renaming composedRenaming;
-    composedRenaming.from.reserve(from.size());
-
-    for (auto newFrom : from) {
-      const auto intermediate = rename(newFrom);
-      if (std::ranges::find(other.from, intermediate) != other.from.end()) {
-        const auto newTo = other.rename(intermediate);
-        composedRenaming.from.push_back(newFrom);
-        composedRenaming.to.push_back(newTo);
-      }
-    }
-    return composedRenaming;
-  }
-  [[nodiscard]] size_t size() const { return from.size(); };
 
   void toDotFormat(std::ofstream &output) const {
-    for (size_t i = 0; i < from.size(); i++) {
-      output << from.at(i) << " -> " << to.at(i) << "\n";
+    for (auto [from, to] : mapping) {
+      output << from << " -> " << to << "\n";
     }
   }
+
 };
+

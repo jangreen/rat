@@ -51,7 +51,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
                                [&](const auto event) { return contains(events, event); }));
     return true;
   }));
-  Renaming renaming(events);
+  Renaming renaming = Renaming::minimal(events);
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
