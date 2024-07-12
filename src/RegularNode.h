@@ -1,12 +1,13 @@
 #pragma once
 #include <map>
+#include <set>
 #include <vector>
 
 #include "Literal.h"
 
 class RegularNode;
 typedef Renaming EdgeLabel;
-typedef boost::container::flat_set<RegularNode *> NodeSet;
+typedef std::set<RegularNode *> NodeSet;
 
 class RegularNode {
  private:
@@ -21,6 +22,7 @@ class RegularNode {
   NodeSet epsilonChildren;
   std::map<RegularNode *, EdgeLabel> parents;
   std::map<RegularNode *, EdgeLabel> epsilonParents;
+  std::map<RegularNode *, EdgeLabel> inconsistentParents;
   bool closed = false;
 
   NodeSet rootParents;                     // parent nodes that are reachable by some root node

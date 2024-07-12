@@ -168,6 +168,7 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
     return;
   }
   child->epsilonParents.insert({parent, label});
+  child->inconsistentParents.insert({parent, label});
   exportDebug("debug");
 
   // add shortcuts
@@ -272,7 +273,11 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   assert(child != nullptr);
   assert(validateNormalizedCube(child->cube));
 
-  // return false; // uncomment for no inverses optimizations, then also labelBase opitmization is
+  if (child->inconsistentParents.contains(parent)) {
+    return true;  // already inconsistent
+  }
+
+  // return false;  // uncomment for no inverses optimizations, then also labelBase opitmization is
   // possible
 
   if (child->cube.empty()) {
@@ -285,8 +290,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    return !inverted.isStrictlyRenameable(literal.events())
-        && !inverted.isStrictlyRenameable(literal.topEvents());
+    return !inverted.isStrictlyRenameable(literal.events()) &&
+           !inverted.isStrictlyRenameable(literal.topEvents());
     /*return !std::ranges::includes(label.from, literal.events()) ||
            !std::ranges::includes(label.from, literal.topEvents());*/
   });
