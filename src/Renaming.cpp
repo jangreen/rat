@@ -33,7 +33,8 @@ Renaming Renaming::simple(int from, int to) {
 }
 
 Renaming Renaming::inverted() const {
-  Mapping inverted(mapping.size());
+  Mapping inverted;
+  inverted.reserve(mapping.size());
   for (auto [from, to] : mapping) {
     inverted.emplace_back(to, from);
   }
