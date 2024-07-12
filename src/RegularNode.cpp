@@ -81,13 +81,15 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
 }
 
 bool RegularNode::validate() const {
-  // TODO: cube must be ordered: std::ranges::is_sorted(cube) &&
-  // cube s valid and has no duplicates
+  // cube is valid and has no duplicates
   assert(validateCube(cube));
   // literals must be normal
   const bool literalsAreNormal =
       std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
   assert(literalsAreNormal);
+  assert(std::ranges::all_of(epsilonChildren, [](const RegularNode *epsilonChild) {
+    return epsilonChild->epsilonParents.contains(epsilonChild);
+  }));
   return literalsAreNormal;
 }
 
