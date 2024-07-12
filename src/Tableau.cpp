@@ -236,7 +236,10 @@ void Tableau::renameBranch(const Node *leaf) {
         copiedBranch->parentNode = renamedCur;
         renamedCur->children.push_back(std::move(copiedBranch));
       }
-      unreducedNodes.push(renamedCur);
+      // if cur is in unreduced nodes push renamedCur
+      if (cur == leaf || unreducedNodes.contains(cur)) {
+        unreducedNodes.push(renamedCur);
+      }
       copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
