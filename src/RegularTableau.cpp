@@ -168,7 +168,6 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
     return;
   }
   child->epsilonParents.insert({parent, label});
-  child->inconsistentParents.insert({parent, label});
   exportDebug("debug");
 
   // add shortcuts
@@ -273,9 +272,10 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   assert(child != nullptr);
   assert(validateNormalizedCube(child->cube));
 
-  if (child->inconsistentParents.contains(parent)) {
+  if (parent->inconsistentChildrenChecked.contains(child)) {
     return true;  // already inconsistent
   }
+  parent->inconsistentChildrenChecked.insert({child, label});
 
   // return false;  // uncomment for no inverses optimizations, then also labelBase opitmization is
   // possible

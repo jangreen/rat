@@ -22,7 +22,7 @@ class RegularNode {
   NodeSet epsilonChildren;
   std::map<RegularNode *, EdgeLabel> parents;
   std::map<RegularNode *, EdgeLabel> epsilonParents;
-  std::map<RegularNode *, EdgeLabel> inconsistentParents;
+  std::map<const RegularNode *, EdgeLabel> inconsistentChildrenChecked;
   bool closed = false;
 
   NodeSet rootParents;                     // parent nodes that are reachable by some root node
