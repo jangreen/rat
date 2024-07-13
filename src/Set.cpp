@@ -204,27 +204,39 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   static std::unordered_set<Set> canonicalizer;
   auto [iter, created] =
       canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
-  //= canonicalizer.emplace(operation, left, right, relation, label, identifier);
   if (created) {
     iter->completeInitialization();
   }
-  return &*iter;
-}
 
-bool Set::operator==(const Set &other) const {
-  return operation == other.operation && leftOperand == other.leftOperand &&
-         rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
-         identifier == other.identifier;
+  /*
+  static size_t attempts = 0;
+  if (++attempts % 1000000 == 0) {
+    std::cout << attempts << "\n";
+  }
+  if (canonicalizer.size() % 500 == 0) {
+    auto [total, max] = countCollisions(canonicalizer);
+    std::cout << "#Entries/#Buckets/#Collisions/#MaxCollision: "
+    << canonicalizer.size()
+    << "/" << canonicalizer.bucket_count()
+    << "/" << total
+    << "/" << max << "\n";
+    std::cout << "Badness factor: " << measure_unordered_badness(canonicalizer) << "\n";
+  }*/
+  return &*iter;
 }
 
 CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
-    case SetOperation::topEvent:
-      return newTopEvent(renaming.rename(label.value()));
-    case SetOperation::event:
-      return newEvent(renaming.rename(label.value()));
+    case SetOperation::topEvent: {
+      const int renamed = renaming.rename(label.value());
+      return label.value() == renamed ? this : newTopEvent(renaming.rename(label.value()));
+    }
+    case SetOperation::event: {
+      const int renamed = renaming.rename(label.value());
+      return label.value() == renamed ? this : newEvent(renaming.rename(label.value()));
+    }
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -233,11 +245,14 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
     case SetOperation::setIntersection:
       leftRenamed = leftOperand->rename(renaming);
       rightRenamed = rightOperand->rename(renaming);
+      if (leftRenamed == leftOperand && rightRenamed == rightOperand) {
+        return this;
+      }
       return newSet(operation, leftRenamed, rightRenamed);
     case SetOperation::image:
     case SetOperation::domain:
       leftRenamed = leftOperand->rename(renaming);
-      return newSet(operation, leftRenamed, relation);
+      return leftRenamed == leftOperand ? this : newSet(operation, leftRenamed, relation);
     default:
       throw std::logic_error("unreachable");
   }

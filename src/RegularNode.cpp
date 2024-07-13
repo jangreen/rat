@@ -87,8 +87,8 @@ bool RegularNode::validate() const {
   const bool literalsAreNormal =
       std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
   assert(literalsAreNormal);
-  assert(std::ranges::all_of(epsilonChildren, [](const RegularNode *epsilonChild) {
-    return epsilonChild->epsilonParents.contains(this);
+  assert(std::ranges::all_of(epsilonChildren, [&](const RegularNode *epsilonChild) {
+    return epsilonChild->epsilonParents.contains(const_cast<RegularNode*>(this));
   }));
   return literalsAreNormal;
 }

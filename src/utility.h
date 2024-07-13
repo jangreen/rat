@@ -147,7 +147,7 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
 
 // removes all negated literals in cube with events that do not occur in events
 // returns removed literals
-inline Cube filterNegatedLiterals(Cube &cube, const EventSet activeEvents) {
+inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
     if (!literal.negated) {
@@ -161,22 +161,53 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet activeEvents) {
   });
   return removedLiterals;
 }
+
+// TODO: Return value unused
 inline Cube filterNegatedLiterals(Cube &cube) {
   const auto &activeEvents = gatherActiveEvents(cube);
   return filterNegatedLiterals(cube, activeEvents);
 }
 
-inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets activePairs) {
+inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
-    if (!literal.negated) {
-      return false;
-    }
-    if (!isLiteralActive(literal, activePairs)) {
+    if (literal.negated && !isLiteralActive(literal, activePairs)) {
       removedLiterals.push_back(literal);
       return true;
     }
     return false;
   });
   return removedLiterals;
+}
+
+
+// ===================================================================================
+// ============================ Benchmarking utility =================================
+// ===================================================================================
+
+template <class Unordered>
+double measure_unordered_badness(Unordered const& map)
+{
+  auto const lambda = map.size() / static_cast<double>(map.bucket_count());
+
+  auto cost = 0.;
+  for (int i = 0; i < map.bucket_count(); i++)
+    cost += map.bucket_size(i) * map.bucket_size(i);
+  cost /= map.size();
+
+  return std::max(0., cost / (1 + lambda) - 1);
+}
+
+template <class Unordered>
+std::pair<int, int> countCollisions(const Unordered &map) {
+  int totalCollisions = 0;
+  int maxCollisions = 0;
+  for (int i = 0; i < map.bucket_count(); i++) {
+    int collisions = map.bucket_size(i) - 1;
+    if (collisions > 0) {
+      totalCollisions += collisions;
+      maxCollisions = std::max(maxCollisions, collisions);
+    }
+  }
+  return {totalCollisions, maxCollisions};
 }
