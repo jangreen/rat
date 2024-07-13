@@ -1,10 +1,10 @@
 #include <cassert>
-#include <unordered_set>
 
 #include "Annotation.h"
 #include "Assumption.h"
 #include "Literal.h"
 #include "utility.h"
+#include <boost/unordered/unordered_node_set.hpp>
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
@@ -157,7 +157,8 @@ void Set::completeInitialization() const {
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
          const CanonicalRelation relation, const std::optional<int> label,
          std::optional<std::string> identifier)
-    : operation(operation),
+    : _isNormal(false),
+      operation(operation),
       identifier(std::move(identifier)),
       label(label),
       leftOperand(left),
@@ -201,7 +202,7 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
       throw std::logic_error("unreachable");
   }
 #endif
-  static std::unordered_set<Set> canonicalizer;
+  static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
   auto [iter, created] =
       canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
   if (created) {
