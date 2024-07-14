@@ -264,9 +264,35 @@ void Tableau::renameBranch(const Node *leaf) {
   commonPrefix->children.push_back(std::move(copiedBranch));
 }
 
+bool isSubsumed(const Cube &a, const Cube &b) {
+  if (a.size() < b.size()) {
+    return false;
+  }
+  return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
+}
+
+DNF simplifyDnf(const DNF &dnf) {
+  // return dnf;  // To disable simplification
+  DNF sortedDnf = dnf;
+  std::ranges::sort(sortedDnf, std::less<int>(), &Cube::size);
+
+  DNF simplified;
+  simplified.reserve(sortedDnf.size());
+  for (const auto & c1 : sortedDnf) {
+    const bool subsumed = std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
+    if (!subsumed) {
+      simplified.push_back(c1);
+    }
+  }
+  /*if (simplified.size() < dnf.size()) {
+    std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
+  }*/
+  return simplified;
+}
+
 DNF Tableau::dnf() {
   solve();
-  auto dnf = rootNode->extractDNF();
+  auto dnf = simplifyDnf(rootNode->extractDNF());
   assert(validateDNF(dnf));
   return dnf;
 }
@@ -287,6 +313,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  exportProof(filename);
+  //exportProof(filename);
 #endif
 }
