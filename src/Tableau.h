@@ -8,7 +8,7 @@ class Tableau {
   explicit Tableau(const Cube &cube);
   [[nodiscard]] bool validate() const;
 
-  std::unique_ptr<const Node> rootNode;
+  std::unique_ptr<Node> rootNode;
   Worklist unreducedNodes;
 
   bool solve(int bound = -1);
