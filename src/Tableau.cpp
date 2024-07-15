@@ -293,6 +293,7 @@ DNF simplifyDnf(const DNF &dnf) {
 DNF Tableau::dnf() {
   solve();
   auto dnf = simplifyDnf(rootNode->extractDNF());
+  exportDebug("debug");
   assert(validateDNF(dnf));
   return dnf;
 }
@@ -313,6 +314,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  // exportProof(filename);
+  exportProof(filename);
 #endif
 }

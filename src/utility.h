@@ -119,6 +119,11 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
   return result;
 }
 
+inline bool cubeHasNegatedLiteral(const Cube &cube, const Literal &literal) {
+  return std::ranges::any_of(
+      cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
+}
+
 inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {
   return std::ranges::includes(activeEvents, literal.normalEvents());
 }

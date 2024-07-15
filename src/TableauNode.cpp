@@ -18,10 +18,8 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 
   // remove cubes with literals ~l
-  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
-    return std::ranges::any_of(
-        cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
-  });
+  auto [begin, end] = std::ranges::remove_if(
+      dnf, [&](const auto &cube) { return cubeHasNegatedLiteral(cube, literal); });
   dnf.erase(begin, end);
 
   // remove l from dnf
@@ -97,6 +95,27 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
     }
     reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
+}
+
+void Tableau::Node::reduceBranchInternalDown(const Cube &cube) {
+  assert(tableau->unreducedNodes.validate());
+
+  if (isClosed()) {
+    return;
+  }
+
+  if (cubeHasNegatedLiteral(cube, literal)) {
+    closeBranch();
+    return;
+  }
+
+  for (const auto &child : children) {
+    child->reduceBranchInternalDown(cube);
+  }
+
+  if (contains(cube, literal)) {
+    tableau->removeNode(this);
+  }
 }
 
 void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
@@ -176,6 +195,39 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
 
   DNF dnfCopy(dnf);
   appendBranchInternalUp(dnfCopy);
+
+  // empy dnf
+  const bool contradiction = dnfCopy.empty();
+  if (contradiction) {
+    closeBranch();
+    return;
+  }
+
+  // conjuncitve
+  const bool isConjunctive = dnfCopy.size() == 1;
+  if (isConjunctive) {
+    auto &cube = dnfCopy.at(0);
+    // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
+    // down in the tree
+    filterNegatedLiterals(cube, activeEvents);
+
+    // insert cube in-place
+    auto thisChildren = std::move(children);
+    children.clear();
+    Node *newNode = this;
+    for (const auto &literal : cube) {
+      newNode = new Node(newNode, literal);
+      tableau->unreducedNodes.push(newNode);
+    }
+    newNode->children = std::move(thisChildren);
+    for (const auto &newNodeChild : newNode->children) {
+      newNodeChild->parentNode = newNode;
+      newNodeChild->reduceBranchInternalDown(cube);
+    }
+    return;
+  }
+
+  // disjunctive
   appendBranchInternalDown(dnfCopy);
 
   assert(tableau->unreducedNodes.validate());
