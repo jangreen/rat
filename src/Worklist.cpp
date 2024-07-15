@@ -1,13 +1,13 @@
-#include "Tableau.h"
+#include "TableauNode.h"
 
 #ifndef WORKLIST_ALTERNATIVE
 
-void Tableau::Worklist::connect(Node &left, Node &right) {
+void Worklist::connect(Node &left, Node &right) {
   left.nextInWorkList = &right;
   right.prevInWorkList = &left;
 }
 
-void Tableau::Worklist::disconnect(Node &node) {
+void Worklist::disconnect(Node &node) {
   assert(node.nextInWorkList != nullptr);
   assert(node.prevInWorkList != nullptr);
   connect(*node.prevInWorkList, *node.nextInWorkList);
@@ -15,19 +15,18 @@ void Tableau::Worklist::disconnect(Node &node) {
   node.nextInWorkList = nullptr;
 }
 
-void Tableau::Worklist::insertAfter(Node &location, Node &node) {
+void Worklist::insertAfter(Node &location, Node &node) {
   assert(location.nextInWorkList != nullptr);
   Node *next = location.nextInWorkList;
   connect(location, node);
   connect(node, *next);
 }
 
-bool Tableau::Worklist::isEmpty(const std::unique_ptr<Node> &head,
-                                const std::unique_ptr<Node> &tail) {
+bool Worklist::isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<Node> &tail) {
   return head->nextInWorkList == tail.get();
 }
 
-Tableau::Worklist::Worklist() {
+Worklist::Worklist() {
   // Setup dummy sentinel nodes for the doubly linked lists
   posEqualitiesHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
   posEqualitiesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
@@ -46,7 +45,7 @@ Tableau::Worklist::Worklist() {
   connect(*remainingHeadDummy, *remainingTailDummy);
 }
 
-void Tableau::Worklist::push(Node *node) {
+void Worklist::push(Node *node) {
   assert(node->prevInWorkList == nullptr);
   assert(node->nextInWorkList == nullptr);
 
@@ -77,7 +76,7 @@ void Tableau::Worklist::push(Node *node) {
   insertAfter(*insertionPoint, *node);
 }
 
-void Tableau::Worklist::erase(Node *node) {
+void Worklist::erase(Node *node) {
   if (node->prevInWorkList == nullptr || node->nextInWorkList == nullptr) {
     // The node is a dummy that cannot be erased.
     // TODO: Double check edge case: Worklist gets destroyed, causing dummies to get deleted,
@@ -87,12 +86,12 @@ void Tableau::Worklist::erase(Node *node) {
   disconnect(*node);
 }
 
-bool Tableau::Worklist::contains(const Node *node) const {
+bool Worklist::contains(const Node *node) const {
   // This assumes there exists only a single worklist
   return node->prevInWorkList != nullptr && node->nextInWorkList != nullptr;
 }
 
-Tableau::Node *Tableau::Worklist::pop() {
+Node *Worklist::pop() {
   Node *next;
   if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
     next = posEqualitiesHeadDummy->nextInWorkList;
@@ -110,14 +109,14 @@ Tableau::Node *Tableau::Worklist::pop() {
   return next;
 }
 
-bool Tableau::Worklist::isEmpty() const {
+bool Worklist::isEmpty() const {
   return isEmpty(remainingHeadDummy, remainingTailDummy) &&
          isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy) &&
          isEmpty(nonNormalPositiveHeadDummy, nonNormalPositiveTailDummy) &&
          isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy);
 }
 
-bool Tableau::Worklist::validate() const {
+bool Worklist::validate() const {
   // TODO: Implement iterator and use it here
   for (const Node *cur = posEqualitiesHeadDummy->nextInWorkList;
        cur != posEqualitiesTailDummy.get(); cur = cur->nextInWorkList) {
@@ -143,7 +142,7 @@ bool Tableau::Worklist::validate() const {
 // --------------------------------------------------------------
 // Alternative worklist implementation
 
-bool Tableau::Worklist::CompareNodes::operator()(const Node *left, const Node *right) const {
+bool Worklist::CompareNodes::operator()(const Node *left, const Node *right) const {
   if ((left->literal.operation == PredicateOperation::equality ||
        right->literal.operation == PredicateOperation::equality) &&
       left->literal.operation != right->literal.operation) {
@@ -159,20 +158,20 @@ bool Tableau::Worklist::CompareNodes::operator()(const Node *left, const Node *r
   return litCmp < 0;
 }
 
-Tableau::Worklist::Worklist() = default;
+Worklist::Worklist() = default;
 
-void Tableau::Worklist::push(Node *node) { queue.insert(node); }
+void Worklist::push(Node *node) { queue.insert(node); }
 
-void Tableau::Worklist::erase(Node *node) { queue.erase(node); }
+void Worklist::erase(Node *node) { queue.erase(node); }
 
-bool Tableau::Worklist::contains(Node *node) const {
+bool Worklist::contains(Node *node) const {
   return std::ranges::any_of(queue, [&](const auto &n) { return n == node; });
 }
 
-Tableau::Node *Tableau::Worklist::pop() { return queue.extract(queue.begin()).value(); }
+Tableau::Node *Worklist::pop() { return queue.extract(queue.begin()).value(); }
 
-bool Tableau::Worklist::isEmpty() const { return queue.empty(); }
+bool Worklist::isEmpty() const { return queue.empty(); }
 
-bool Tableau::Worklist::validate() const { return std::ranges::all_of(queue, &Node::validate); }
+bool Worklist::validate() const { return std::ranges::all_of(queue, &Node::validate); }
 
 #endif

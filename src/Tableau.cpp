@@ -1,17 +1,67 @@
 #include "Tableau.h"
 
 #include <iostream>
+#include <ranges>
 #include <unordered_set>
 
 #include "Assumption.h"
+#include "Rules.h"
 #include "utility.h"
+
+namespace {
+// ---------------------- Anonymous helper functions ----------------------
+
+bool isAppendable(const DNF &dnf) {
+  return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
+}
+
+// given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
+// it removes cubes with ~l from f
+// it removes l from remaining cubes
+void reduceDNF(DNF &dnf, const Literal &literal) {
+  assert(validateDNF(dnf));
+
+  // remove cubes with literals ~l
+  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
+    return std::ranges::any_of(
+        cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
+  });
+  dnf.erase(begin, end);
+
+  // remove l from dnf
+  for (auto &cube : dnf) {
+    auto [begin, end] = std::ranges::remove(cube, literal);
+    cube.erase(begin, end);
+  }
+
+  assert(validateDNF(dnf));
+}
+
+}  // namespace
+
+Node::~Node() {
+  // remove this from unreducedNodes
+  tableau->unreducedNodes.erase(this);
+}
+
+bool Node::validate() const {
+  if (tableau == nullptr) {
+    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
+    return false;
+  }
+  if (tableau->rootNode.get() != this && parentNode == nullptr) {
+    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
+    return false;
+  }
+  return literal.validate();
+}
 
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
   auto dummyNode = new Node(nullptr, TOP);
+  dummyNode->tableau = this;
   rootNode = std::unique_ptr<Node>(dummyNode);
-  rootNode->tableau = this;
 
   Node *parentNode = dummyNode;
   for (const auto &literal : cube) {
@@ -79,7 +129,7 @@ bool Tableau::solve(int bound) {
     exportDebug("debug");
 
     // 1) Rules that just rewrite a single literal
-    if (currentNode->applyRule()) {
+    if (applyRule(currentNode)) {
       assert(unreducedNodes.validate());
       assert(currentNode->parentNode->validate());
       if (!Rules::lastRuleWasUnrolling) {
@@ -113,33 +163,33 @@ bool Tableau::solve(int bound) {
       // Rule (~\top_1)
       // here: we replace universal events by concrete positive existential events
       assert(currentNode->literal.negated);
-      currentNode->inferModalTop();
+      inferModalTop(currentNode);
     }
 
     if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
       // Rule (~aL), Rule (~aR)
-      currentNode->inferModal();
+      inferModal(currentNode);
     }
 
     if (currentNode->literal.isPositiveEdgePredicate()) {
       // Rule (~\top_1)
       // e=f, e\in A, (e,f)\in a, e != 0
       // Rule (~aL), Rule (~aR)
-      currentNode->inferModalAtomic();
+      inferModalAtomic(currentNode);
     }
 
     // 3) Saturation Rules
     if (!Assumption::baseAssumptions.empty()) {
       auto literal = Rules::saturateBase(currentNode->literal);
       if (literal) {
-        currentNode->appendBranch(*literal);
+        appendBranch(currentNode, literal.value());
       }
     }
 
     if (!Assumption::idAssumptions.empty()) {
       auto literal = Rules::saturateId(currentNode->literal);
       if (literal) {
-        currentNode->appendBranch(*literal);
+        appendBranch(currentNode, literal.value());
       }
     }
   }
@@ -157,7 +207,7 @@ bool Tableau::applyRuleA() {
     Node *currentNode = unreducedNodes.pop();
 
     exportDebug("debug");
-    auto result = currentNode->applyRule(true);
+    auto result = applyRule(currentNode, true);
     if (!result) {
       continue;
     }
@@ -264,6 +314,249 @@ void Tableau::renameBranch(const Node *leaf) {
   commonPrefix->children.push_back(std::move(copiedBranch));
 }
 
+void Tableau::appendBranch(Node *node, const DNF &dnf) {
+  assert(unreducedNodes.validate());
+  assert(validateDNF(dnf));
+  assert(!dnf.empty());     // empty DNF makes no sense
+  assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
+
+  DNF dnfCopy(dnf);
+  appendBranchInternalUp(node, dnfCopy);
+  appendBranchInternalDown(node, dnfCopy);
+
+  assert(unreducedNodes.validate());
+}
+
+// deletes literals in dnf that are already in prefix
+// if negated literal occurs we omit the whole cube
+void Tableau::appendBranchInternalUp(const Node *node, DNF &dnf) {
+  do {
+    assert(validateDNF(dnf));
+    if (!isAppendable(dnf)) {
+      return;
+    }
+    reduceDNF(dnf, node->literal);
+  } while ((node = node->parentNode) != nullptr);
+}
+
+void Tableau::appendBranchInternalDown(Node *node, DNF &dnf) {
+  assert(unreducedNodes.validate());
+  assert(validateDNF(dnf));
+  reduceDNF(dnf, node->literal);
+
+  const bool contradiction = dnf.empty();
+  if (contradiction) {
+    closeBranch(node);
+    assert(unreducedNodes.validate());
+    return;
+  }
+  if (!isAppendable(dnf)) {
+    assert(unreducedNodes.validate());
+    return;
+  }
+
+  if (!node->isLeaf()) {
+    // No leaf: descend recursively
+    // Copy DNF for all children but the last one (for the last one we can reuse the DNF).
+    for (const auto &child : std::ranges::drop_view(node->children, 1)) {
+      DNF branchCopy(dnf);
+      appendBranchInternalDown(child.get(), branchCopy);  // copy for each branching
+    }
+    appendBranchInternalDown(node->children[0].get(), dnf);
+    assert(unreducedNodes.validate());
+    return;
+  }
+
+  if (node->isClosed()) {
+    // Closed leaf: nothing to do
+    assert(unreducedNodes.validate());
+    return;
+  }
+
+  // Open leaf
+  assert(node->isLeaf() && !node->isClosed());
+  assert(isAppendable(dnf));
+
+  // filter non-active negated literals
+  for (auto &cube : dnf) {
+    filterNegatedLiterals(cube, node->activeEvents);
+    // TODO: labelBase optimization
+    // filterNegatedLiterals(cube, activeEventBasePairs);
+  }
+  if (!isAppendable(dnf)) {
+    return;
+  }
+  assert(isAppendable(dnf));
+
+  // append: transform dnf into a tableau and append it
+  for (const auto &cube : dnf) {
+    Node *newNode = node;
+    for (const auto &literal : cube) {
+      newNode = new Node(newNode, literal);
+      newNode->parentNode->children.emplace_back(newNode);
+      unreducedNodes.push(newNode);
+    }
+  }
+  assert(unreducedNodes.validate());
+}
+
+void Tableau::closeBranch(Node *node) {
+  assert(unreducedNodes.validate());
+  // It is safe to clear the children: the Node destructor
+  // will make sure to remove them from worklist
+  node->children.clear();
+  assert(unreducedNodes.validate());  // validate that it was indeed safe to clear
+  node->children.emplace_back(new Node(node, BOTTOM));
+}
+
+std::optional<DNF> Tableau::applyRule(Node *node, const bool modalRule) {
+  auto const result = Rules::applyRule(node->literal, modalRule);
+  if (!result) {
+    return std::nullopt;
+  }
+
+  auto disjunction = *result;
+  appendBranch(node, disjunction);
+
+  return disjunction;
+}
+
+void Tableau::inferModal(Node *node) {
+  if (!node->literal.negated) {
+    return;
+  }
+
+  // Traverse bottom-up
+  const Node *cur = node;
+  while ((cur = cur->parentNode) != nullptr) {
+    if (!cur->literal.isNormal() || !cur->literal.isPositiveEdgePredicate()) {
+      continue;
+    }
+
+    // Normal and positive edge literal
+    // check if inside literal can be something inferred
+    const Literal &edgeLiteral = cur->literal;
+    // (e1, e2) \in b
+    assert(edgeLiteral.validate());
+    const CanonicalSet e1 = edgeLiteral.leftEvent;
+    const CanonicalSet e2 = edgeLiteral.rightEvent;
+    const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+    const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+    const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+
+    const CanonicalSet search1 = e1b;
+    const CanonicalSet replace1 = e2;
+    const CanonicalSet search2 = be2;
+    const CanonicalSet replace2 = e1;
+
+    appendBranch(node, substitute(node->literal, search1, replace1));
+    appendBranch(node, substitute(node->literal, search2, replace2));
+  }
+}
+
+void Tableau::inferModalTop(Node *node) {
+  if (!node->literal.negated) {
+    return;
+  }
+
+  // get all events
+  const Node *cur = node;
+  EventSet existentialReplaceEvents;
+  while ((cur = cur->parentNode) != nullptr) {
+    const Literal &lit = cur->literal;
+    if (lit.negated) {
+      continue;
+    }
+
+    // Normal and positive literal: collect new events
+    const auto &newEvents = lit.events();
+    existentialReplaceEvents.insert(newEvents.begin(), newEvents.end());
+  }
+
+  const auto &univeralSearchEvents = node->literal.topEvents();
+
+  for (const auto search : univeralSearchEvents) {
+    for (const auto replace : existentialReplaceEvents) {
+      // [search] -> {replace}
+      // replace all occurrences of the same search at once
+      const CanonicalSet searchSet = Set::newTopEvent(search);
+      const CanonicalSet replaceSet = Set::newEvent(replace);
+      const auto substituted = node->literal.substituteAll(searchSet, replaceSet);
+      if (substituted.has_value()) {
+        appendBranch(node, substituted.value());
+      }
+    }
+  }
+}
+
+void Tableau::inferModalAtomic(Node *node) {
+  const Literal &edgeLiteral = node->literal;
+  // (e1, e2) \in b
+  assert(edgeLiteral.validate());
+  const CanonicalSet e1 = edgeLiteral.leftEvent;
+  const CanonicalSet e2 = edgeLiteral.rightEvent;
+  const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
+  const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+  const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+
+  const CanonicalSet search1 = e1b;
+  const CanonicalSet replace1 = e2;
+  const CanonicalSet search2 = be2;
+  const CanonicalSet replace2 = e1;
+
+  const Node *cur = node;
+  while ((cur = cur->parentNode) != nullptr) {
+    exportDebug("debug");
+    const Literal &curLit = cur->literal;
+    if (!curLit.negated || !curLit.isNormal()) {
+      continue;
+    }
+
+    // Negated and normal lit
+    // check if inside literal can be something inferred
+    for (auto &lit : substitute(curLit, search1, replace1)) {
+      appendBranch(node, lit);
+    }
+    for (auto &lit : substitute(curLit, search2, replace2)) {
+      appendBranch(node, lit);
+    }
+    // cases for [f] -> {e}
+    const auto &univeralSearchEvents = curLit.topEvents();
+    for (const auto search : univeralSearchEvents) {
+      const CanonicalSet searchSet = Set::newTopEvent(search);
+
+      const auto substituted1 = curLit.substituteAll(searchSet, replace1);
+      if (substituted1.has_value()) {
+        appendBranch(node, substituted1.value());
+      }
+
+      const auto substituted2 = curLit.substituteAll(searchSet, replace2);
+      if (substituted2.has_value()) {
+        appendBranch(node, substituted2.value());
+      }
+    }
+  }
+}
+
+// FIXME: use or remove
+void Tableau::replaceNegatedTopOnBranch(Node *node, const std::vector<int> &events) {
+  const Node *cur = node;
+  while ((cur = cur->parentNode) != nullptr) {
+    const Literal &curLit = cur->literal;
+    if (!curLit.negated || !curLit.isNormal()) {
+      continue;
+    }
+    // replace T -> e
+    const CanonicalSet top = Set::fullSet();
+    for (const auto label : events) {
+      const CanonicalSet e = Set::newEvent(label);
+      for (auto &lit : substitute(curLit, top, e)) {
+        appendBranch(node, lit);
+      }
+    }
+  }
+}
+
 bool isSubsumed(const Cube &a, const Cube &b) {
   if (a.size() < b.size()) {
     return false;
@@ -278,8 +571,9 @@ DNF simplifyDnf(const DNF &dnf) {
 
   DNF simplified;
   simplified.reserve(sortedDnf.size());
-  for (const auto & c1 : sortedDnf) {
-    const bool subsumed = std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
+  for (const auto &c1 : sortedDnf) {
+    const bool subsumed =
+        std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
     if (!subsumed) {
       simplified.push_back(c1);
     }
@@ -313,6 +607,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  //exportProof(filename);
+  exportProof(filename);
 #endif
 }
