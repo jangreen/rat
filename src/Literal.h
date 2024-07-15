@@ -63,7 +63,7 @@ class Literal {
   [[nodiscard]] EventSet topEvents() const;
   [[nodiscard]] SetOfSets labelBaseCombinations() const;
 
-  std::optional<Literal> substituteAll(const CanonicalSet search, const CanonicalSet replace) const;
+  std::optional<Literal> substituteAll(CanonicalSet search, CanonicalSet replace) const;
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
   [[nodiscard]] Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);
@@ -90,26 +90,5 @@ struct std::hash<Literal> {
     const size_t rightLabelHash = hash<CanonicalSet>()(literal.leftEvent);
     return ((opHash ^ (setHash << 1)) >> 1) ^
            (signHash << 1) + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
-  }
-};
-
-template <>
-struct std::hash<SetOperation> {
-  std::size_t operator()(const SetOperation &operation) const noexcept {
-    return static_cast<std::size_t>(operation);
-  }
-};
-
-template <>
-struct std::hash<Set> {
-  std::size_t operator()(const Set &set) const noexcept {
-    const size_t opHash = hash<SetOperation>()(set.operation);
-    const size_t leftHash = hash<CanonicalSet>()(set.leftOperand);
-    const size_t rightHash = hash<CanonicalSet>()(set.rightOperand);
-    const size_t relHash = hash<CanonicalRelation>()(set.relation);
-    const size_t idHash = hash<std::optional<std::string>>()(set.identifier);
-    const size_t labelHash = hash<std::optional<int>>()(set.label);
-
-    return (opHash ^ (leftHash << 1) >> 1) ^ (rightHash << 1) + 31 * relHash + idHash + labelHash;
   }
 };

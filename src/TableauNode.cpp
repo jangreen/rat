@@ -39,13 +39,14 @@ Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
       parentNode(parent) {
-  activeEvents = !literal.negated ? literal.events() : EventSet{};
-  activeEventBasePairs = !literal.negated ? literal.labelBaseCombinations() : SetOfSets{};
-
   if (parent != nullptr) {
-    activeEvents.insert(parent->activeEvents.begin(), parent->activeEvents.end());
-    activeEventBasePairs.insert(parent->activeEventBasePairs.begin(),
-                                parent->activeEventBasePairs.end());
+    activeEvents = parent->activeEvents;
+    activeEventBasePairs = parent->activeEventBasePairs;
+  }
+
+  if (!literal.negated) {
+    activeEvents.merge(literal.events());
+    activeEventBasePairs.merge(literal.labelBaseCombinations());
   }
 }
 
