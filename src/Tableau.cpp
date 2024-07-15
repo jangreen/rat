@@ -131,8 +131,9 @@ bool Tableau::solve(int bound) {
     // 1) Rules that just rewrite a single literal
     if (applyRule(currentNode)) {
       assert(unreducedNodes.validate());
-      assert(currentNode->parentNode->validate());
-      if (!Rules::lastRuleWasUnrolling) {
+      const bool hasParent =
+          currentNode->parentNode != nullptr;  // this happens if branchs has been closed
+      if (!Rules::lastRuleWasUnrolling && hasParent) {
         removeNode(currentNode);  // in-place rule application
       }
       continue;
@@ -400,13 +401,30 @@ void Tableau::appendBranchInternalDown(Node *node, DNF &dnf) {
   assert(unreducedNodes.validate());
 }
 
+// removes subtree form node
 void Tableau::closeBranch(Node *node) {
+  assert(node != rootNode.get());
   assert(unreducedNodes.validate());
-  // It is safe to clear the children: the Node destructor
-  // will make sure to remove them from worklist
-  node->children.clear();
+  // remove branch by deleting respective child of first branching parent
+  Node *deletedChild = node;
+  while (deletedChild->parentNode != rootNode.get() &&
+         deletedChild->parentNode->children.size() <= 1) {
+    deletedChild = deletedChild->parentNode;
+  }
+  const auto firstBranchingParent = deletedChild->parentNode;
+
+  // It is safe to remove deletedChild from children:
+  // Node destructor will make sure to remove subtree from worklist
+  auto [begin, end] =
+      std::ranges::remove_if(firstBranchingParent->children,
+                             [&](const auto &child) { return child.get() == deletedChild; });
+  firstBranchingParent->children.erase(begin, end);
   assert(unreducedNodes.validate());  // validate that it was indeed safe to clear
-  node->children.emplace_back(new Node(node, BOTTOM));
+
+  if (firstBranchingParent == rootNode.get() && rootNode->children.empty()) {
+    // single closed branch
+    rootNode->children.emplace_back(new Node(node, BOTTOM));
+  }
 }
 
 std::optional<DNF> Tableau::applyRule(Node *node, const bool modalRule) {
