@@ -16,7 +16,6 @@ Tableau::Tableau(const Cube &cube) {
   Node *parentNode = dummyNode;
   for (const auto &literal : cube) {
     auto *newNode = new Node(parentNode, literal);
-    parentNode->children.emplace_back(newNode);
     assert(newNode->validate());
     unreducedNodes.push(newNode);
     parentNode = newNode;
@@ -278,8 +277,9 @@ DNF simplifyDnf(const DNF &dnf) {
 
   DNF simplified;
   simplified.reserve(sortedDnf.size());
-  for (const auto & c1 : sortedDnf) {
-    const bool subsumed = std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
+  for (const auto &c1 : sortedDnf) {
+    const bool subsumed =
+        std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
     if (!subsumed) {
       simplified.push_back(c1);
     }
@@ -313,6 +313,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  //exportProof(filename);
+  // exportProof(filename);
 #endif
 }

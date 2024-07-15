@@ -180,19 +180,16 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   return removedLiterals;
 }
 
-
 // ===================================================================================
 // ============================ Benchmarking utility =================================
 // ===================================================================================
 
 template <class Unordered>
-double measure_unordered_badness(Unordered const& map)
-{
+double measure_unordered_badness(Unordered const &map) {
   auto const lambda = map.size() / static_cast<double>(map.bucket_count());
 
   auto cost = 0.;
-  for (int i = 0; i < map.bucket_count(); i++)
-    cost += map.bucket_size(i) * map.bucket_size(i);
+  for (int i = 0; i < map.bucket_count(); i++) cost += map.bucket_size(i) * map.bucket_size(i);
   cost /= map.size();
 
   return std::max(0., cost / (1 + lambda) - 1);

@@ -40,6 +40,8 @@ Tableau::Node::Node(Node *parent, Literal literal)
       literal(std::move(literal)),
       parentNode(parent) {
   if (parent != nullptr) {
+    parent->children.emplace_back(this);
+
     activeEvents = parent->activeEvents;
     activeEventBasePairs = parent->activeEventBasePairs;
   }
@@ -151,7 +153,6 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
     Node *newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
-      newNode->parentNode->children.emplace_back(newNode);
       tableau->unreducedNodes.push(newNode);
     }
   }
@@ -164,7 +165,7 @@ void Tableau::Node::closeBranch() {
   // will make sure to remove them from worklist
   children.clear();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
-  children.emplace_back(new Node(this, BOTTOM));
+  const auto bottom = new Node(this, BOTTOM);
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
