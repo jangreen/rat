@@ -1,10 +1,32 @@
+time=0
+layout="%s%s%s       %s   %s   %s\n"
+
+result() {
+    output=$1 
+    passed=$(echo $output | grep $result | wc -l)
+    durations=$(echo $output | grep -Eo 'Duration: *[0-9\.]+' | grep -o '[0-9\.]*')
+    space='                  '
+    printf "$layout" $name "${space:${#name}}" $passed $durations
+
+    while IFS= read -r line; do
+    time=$(echo $time + $line | bc)
+    done <<< "$durations"
+}
+
 test() {
     name=$1
     result=$2
-    passed=$(./build/CatInfer "./tests/${name}" | grep $result | wc -l)
-    space='              '
-    printf "%s%s%s\n" $name "${space:${#name}}" $passed
+    output=$(./build/CatInfer "./tests/${name}")
+    result "$output"
 }
+
+proof() {
+    name=$1
+    result=$2
+    output=$(./build/CatInfer "./proofs/${name}")
+    result "$output"  
+}
+
 
 # no assumptions
 test hard True
@@ -33,3 +55,13 @@ test eco2f False
 test eco3f False
 test eco True
 test eco2 True
+
+# proofs
+proof kater_3_1-eco True
+proof kater_3_1-eco-n True
+proof kater_3_2-ra True
+proof kater_3_3-ra True
+#proof kater_3_3-ra-2 True
+#proof kater_3_3-ra-n True
+
+printf "\nElapsed time: %s\n" $time
