@@ -68,7 +68,30 @@ bool Tableau::Node::validate() const {
 }
 
 bool Tableau::Node::validateRecursive() const {
-  return validate() && std::ranges::all_of(children, [](auto &child) { return child->validate(); });
+  assert(validate());
+  assert(std::ranges::all_of(children, [](auto &child) { return child->validate(); }));
+  return true;
+}
+
+void Tableau::Node::newChild(std::unique_ptr<Node> child) {
+  child->parentNode = this;
+  children.push_back(std::move(child));
+}
+
+void Tableau::Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
+  for (const auto &newChild : newChildren) {
+    newChild->parentNode = this;
+  }
+  children.insert(children.end(), std::make_move_iterator(newChildren.begin()),
+                  std::make_move_iterator(newChildren.end()));
+}
+
+std::unique_ptr<Tableau::Node> Tableau::Node::removeChild(Tableau::Node *child) {
+  auto firstUnsharedNodeIt =
+      std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
+  auto removedChild = std::move(*firstUnsharedNodeIt);
+  children.erase(firstUnsharedNodeIt);
+  return removedChild;
 }
 
 // TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
@@ -83,6 +106,16 @@ bool Tableau::Node::isClosed() const {
 }
 
 bool Tableau::Node::isLeaf() const { return children.empty(); }
+
+void Tableau::Node::rename(const Renaming &renaming) {
+  literal.rename(renaming);
+
+  EventSet renamedEvents;
+  for (const auto &event : activeEvents) {
+    renamedEvents.insert(renaming.rename(event));
+  }
+  activeEvents = std::move(renamedEvents);
+}
 
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
@@ -192,6 +225,10 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
+
+  if (isClosed()) {
+    return;
+  }
 
   DNF dnfCopy(dnf);
   appendBranchInternalUp(dnfCopy);

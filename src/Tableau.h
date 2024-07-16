@@ -2,6 +2,7 @@
 #include <fstream>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "Literal.h"
@@ -29,6 +30,10 @@ class Tableau {
     EventSet activeEvents;
     SetOfSets activeEventBasePairs;
 
+    Literal literal;
+    std::vector<std::unique_ptr<Node>> children;
+    Node *parentNode = nullptr;
+
    public:
     Node(Node *parent, Literal literal);
     explicit Node(const Node *other) = delete;
@@ -36,13 +41,19 @@ class Tableau {
     [[nodiscard]] bool validate() const;
     [[nodiscard]] bool validateRecursive() const;
 
-    Tableau *tableau;
-    const Literal literal;
-    std::vector<std::unique_ptr<Node>> children;
-    Node *parentNode = nullptr;
+    Tableau *tableau;  // TODO: use getter
+
+    Node *getParentNode() const { return parentNode; }
+    const Literal &getLiteral() const { return literal; }
+    std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
+    void newChild(std::unique_ptr<Node> child);
+    void newChildren(std::vector<std::unique_ptr<Node>> children);
+    std::unique_ptr<Node> removeChild(Node *child);
+    std::vector<std::unique_ptr<Node>> removeAllChildren() { return std::move(children); }
 
     [[nodiscard]] bool isClosed() const;
     [[nodiscard]] bool isLeaf() const;
+    void rename(const Renaming &renaming);
     void appendBranch(const DNF &dnf);
     inline void appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
     inline void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
@@ -132,7 +143,7 @@ class Tableau {
 
   bool solve(int bound = -1);
   void removeNode(Node *node);
-  void renameBranch(const Node *leaf);
+  void renameBranches(Node *node);
 
   // methods for regular reasoning
   bool applyRuleA();
@@ -154,4 +165,10 @@ class Tableau {
     }
     return newLiterals;
   }
+
+ private:
+  Node *renameBranchesInternalUp(Node *node, int from, int to,
+                                 std::unordered_set<Literal> &allRenamedLiterals);
+  void renameBranchesInternalDown(Node *node, const Renaming &renaming,
+                                  std::unordered_set<Literal> &allRenamedLiterals);
 };
