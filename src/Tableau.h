@@ -29,6 +29,7 @@ class Tableau {
     // only at leaf nodes
     EventSet activeEvents;
     SetOfSets activeEventBasePairs;
+    mutable bool _isClosed;
 
     Literal literal;
     std::vector<std::unique_ptr<Node>> children;
@@ -51,7 +52,7 @@ class Tableau {
     std::unique_ptr<Node> removeChild(Node *child);
     std::vector<std::unique_ptr<Node>> removeAllChildren() { return std::move(children); }
 
-    [[nodiscard]] bool isClosed() const;
+    [[nodiscard]] const bool isClosed() const { return _isClosed; }
     [[nodiscard]] bool isLeaf() const;
     void rename(const Renaming &renaming);
     void appendBranch(const DNF &dnf);

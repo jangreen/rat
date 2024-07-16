@@ -36,7 +36,8 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
 Tableau::Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
-      parentNode(parent) {
+      parentNode(parent),
+      _isClosed(false) {
   if (parent != nullptr) {
     parent->children.emplace_back(this);
 
@@ -92,17 +93,6 @@ std::unique_ptr<Tableau::Node> Tableau::Node::removeChild(Tableau::Node *child) 
   auto removedChild = std::move(*firstUnsharedNodeIt);
   children.erase(firstUnsharedNodeIt);
   return removedChild;
-}
-
-// TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
-bool Tableau::Node::isClosed() const {
-  if (literal == BOTTOM) {
-    return true;
-  }
-  if (children.empty()) {
-    return false;
-  }
-  return std::ranges::all_of(children, &Node::isClosed);
 }
 
 bool Tableau::Node::isLeaf() const { return children.empty(); }
@@ -222,6 +212,17 @@ void Tableau::Node::closeBranch() {
   children.clear();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
   const auto bottom = new Node(this, BOTTOM);
+  bottom->_isClosed = true;
+
+  // update isClosed cache
+  Node *cur = this;
+  while (cur != nullptr) {
+    if (std::ranges::any_of(cur->children, [](const auto &child) { return !child->isClosed(); })) {
+      break;
+    }
+    cur->_isClosed = true;
+    cur = cur->parentNode;
+  };
 }
 
 void Tableau::Node::appendBranch(const DNF &dnf) {
