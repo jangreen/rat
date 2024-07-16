@@ -52,14 +52,13 @@ inline AnnotatedSet newSet(const SetOperation operation, const AnnotatedSet &lef
           Annotation::newAnnotation(left.second, relation.second)};
 }
 inline AnnotatedSet newEvent(int label) { return {Set::newEvent(label), Annotation::none()}; }
-inline AnnotatedSet newBaseSet(std::string &identifier) {
+inline AnnotatedSet newBaseSet(const std::string &identifier) {
   return {Set::newBaseSet(identifier), Annotation::none()};
 }
 
-AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet search,
-                           const CanonicalSet replace);
-AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
-                        const CanonicalSet replace, int *n);
+AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, CanonicalSet search,
+                           CanonicalSet replace);
+AnnotatedSet substitute(const AnnotatedSet &annotatedSet, CanonicalSet search, CanonicalSet replace, int *n);
 
 [[nodiscard]] bool validate(const AnnotatedSet &annotatedSet);
 [[nodiscard]] bool validate(const AnnotatedRelation &annotatedRelation);

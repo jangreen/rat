@@ -236,7 +236,7 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
   assert(validate(node));
   // node is expandable
   // calculate dnf
-  auto dnf = tableau->dnf();
+  const auto dnf = tableau->dnf();
 
   if (dnf.empty() && node != nullptr) {
     node->closed = true;
@@ -287,7 +287,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   // use parent naming: label has already parent naming, rename child cube
   Cube renamedChild = child->cube;
-  Renaming inverted = label.inverted();
+  const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
     return !inverted.isStrictlyRenameable(literal.events()) &&

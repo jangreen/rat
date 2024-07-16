@@ -134,7 +134,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       return PartialDNF{{AnnotatedSet(er1_and_er2, er1_and_er2_annotation)}};
     }
     case RelationOperation::transitiveClosure: {
-      Rules::lastRuleWasUnrolling = true;
+      lastRuleWasUnrolling = true;
       // Rule (\neg*\lrule): ~[e.r*] -> { ~[(e.r)r*], ~[e] }
       // Rule (*\lrule): [e.r*] -> { [(e.r)r*] }, { [e] }
       const CanonicalSet er = Set::newSet(operation, event, relation->leftOperand);
@@ -466,7 +466,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
 }
 
 std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRules) {
-  Rules::lastRuleWasUnrolling = false;
+  lastRuleWasUnrolling = false;
   switch (literal.operation) {
     case PredicateOperation::edge:
     case PredicateOperation::constant:

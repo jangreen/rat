@@ -9,7 +9,7 @@
 class Renaming {
 private:
   typedef std::vector<std::pair<int, int>> Mapping;
-  explicit Renaming(Mapping mapping);
+  explicit Renaming(Mapping &&map);
 
   Mapping mapping;
  public:
@@ -27,11 +27,8 @@ private:
     return iter == mapping.end() ? std::nullopt : std::optional(iter->second) ;
   }
 
-  [[nodiscard]] bool isStrictlyRenameable(const std::vector<int>& toRename) const {
-    return std::ranges::all_of(toRename, [&](const auto x) { return renameStrict(x).has_value(); });
-  }
-
-  [[nodiscard]] bool isStrictlyRenameable(const boost::container::flat_set<int>& toRename) const {
+  template <class Container>
+  [[nodiscard]] bool isStrictlyRenameable(const Container& toRename) const {
     return std::ranges::all_of(toRename, [&](const auto x) { return renameStrict(x).has_value(); });
   }
 

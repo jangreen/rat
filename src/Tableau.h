@@ -55,8 +55,8 @@ class Tableau {
     [[nodiscard]] bool isLeaf() const;
     void rename(const Renaming &renaming);
     void appendBranch(const DNF &dnf);
-    inline void appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
-    inline void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
+    void appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
+    void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
     std::optional<DNF> applyRule(bool modalRule = false);
     void inferModal();
     void inferModalTop();

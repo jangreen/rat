@@ -10,7 +10,7 @@
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
-  auto dummyNode = new Node(nullptr, TOP);
+  const auto dummyNode = new Node(nullptr, TOP);
   rootNode = std::unique_ptr<Node>(dummyNode);
   rootNode->tableau = this;
 
@@ -296,7 +296,7 @@ bool isSubsumed(const Cube &a, const Cube &b) {
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
   DNF sortedDnf = dnf;
-  std::ranges::sort(sortedDnf, std::less<int>(), &Cube::size);
+  std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
   DNF simplified;
   simplified.reserve(sortedDnf.size());
