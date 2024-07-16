@@ -130,7 +130,7 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   } while ((node = node->parentNode) != nullptr);
 }
 
-void Tableau::Node::reduceBranchInternalDown(const Cube &cube) {
+void Tableau::Node::reduceBranchInternalDown(Cube &cube) {
   assert(tableau->unreducedNodes.validate());
 
   if (isClosed()) {
@@ -146,7 +146,11 @@ void Tableau::Node::reduceBranchInternalDown(const Cube &cube) {
     child->reduceBranchInternalDown(cube);
   }
 
-  if (contains(cube, literal)) {
+  auto litIt = std::ranges::find(cube, literal);
+  const bool cubeContainsLiteral = litIt != cube.end();
+  if (cubeContainsLiteral) {
+    // choose minimal annotation
+    litIt->annotation = Annotation::min(litIt->annotation, literal.annotation);
     tableau->removeNode(this);
   }
 }
@@ -249,6 +253,12 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
     filterNegatedLiterals(cube, activeEvents);
 
     // insert cube in-place
+    // 1. reduce branch
+    // IMPORTANT that we do this first to choose the minimal annotation
+    for (const auto &child : children) {
+      child->reduceBranchInternalDown(cube);
+    }
+    // 2. insert cube
     auto thisChildren = std::move(children);
     children.clear();
     Node *newNode = this;
@@ -259,7 +269,6 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
     newNode->children = std::move(thisChildren);
     for (const auto &newNodeChild : newNode->children) {
       newNodeChild->parentNode = newNode;
-      newNodeChild->reduceBranchInternalDown(cube);
     }
     return;
   }

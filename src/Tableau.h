@@ -72,7 +72,7 @@ class Tableau {
    private:
     void appendBranchInternalUp(DNF &dnf) const;
     void appendBranchInternalDown(DNF &dnf);
-    void reduceBranchInternalDown(const Cube &cube);
+    void reduceBranchInternalDown(Cube &cube);
     void closeBranch();
   };
 
