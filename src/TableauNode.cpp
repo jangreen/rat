@@ -120,7 +120,7 @@ void Tableau::Node::rename(const Renaming &renaming) {
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
 void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
-  const Node *node = this;
+  auto node = this;
   do {
     assert(validateDNF(dnf));
     if (!isAppendable(dnf)) {
@@ -206,7 +206,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 
   // append: transform dnf into a tableau and append it
   for (const auto &cube : dnf) {
-    Node *newNode = this;
+    auto newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
       tableau->unreducedNodes.push(newNode);

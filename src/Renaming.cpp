@@ -7,16 +7,16 @@ const auto projFirst = &std::pair<int, int>::first;
 const auto projSecond = &std::pair<int, int>::second;
 
 // Private constructor
-Renaming::Renaming(Mapping mapping) : mapping(std::move(mapping)) {
-  assert(std::ranges::is_sorted(mapping, std::less<int>{}, projFirst) && "from is unsorted");
-  assert(std::ranges::adjacent_find(mapping, std::equal_to<int>{}, projFirst) == mapping.end() &&
-       "duplicates in from");
+Renaming::Renaming(Mapping &&map) : mapping(std::move(map))  {
+  assert(std::ranges::is_sorted(mapping, std::less(), projFirst) && "domain is unsorted");
+  assert(std::ranges::adjacent_find(mapping, std::equal_to(), projFirst) == mapping.end() &&
+         "duplicates in domain");
   assert(({
-    boost::container::flat_set<int> rangeSet;
-    rangeSet.reserve(mapping.size());
-    std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
-    rangeSet.size() == mapping.size();
-  }));
+           boost::container::flat_set<int> rangeSet;
+           rangeSet.reserve(mapping.size());
+           std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
+           rangeSet.size() == mapping.size();
+         }) && "duplicates in range");
 }
 
 Renaming Renaming::minimal(const std::vector<int>& from) {
@@ -25,7 +25,8 @@ Renaming Renaming::minimal(const std::vector<int>& from) {
   for (int i = 0; i < from.size(); i++) {
     mapping.emplace_back(from[i], i);
   }
-  return Renaming(mapping);
+  std::ranges::sort(mapping, std::less<int>{}, projFirst);
+  return Renaming(std::move(mapping));
 }
 
 Renaming Renaming::simple(int from, int to) {
@@ -39,7 +40,7 @@ Renaming Renaming::inverted() const {
     inverted.emplace_back(to, from);
   }
   std::ranges::sort(inverted, std::less<int>{}, projFirst);
-  return Renaming(inverted);
+  return Renaming(std::move(inverted));
 }
 
 Renaming Renaming::compose(const Renaming& other) const {
@@ -50,6 +51,6 @@ Renaming Renaming::compose(const Renaming& other) const {
       composed.emplace_back(a, c.value());
     }
   }
-  return Renaming(composed);
+  return Renaming(std::move(composed));
 }
 
