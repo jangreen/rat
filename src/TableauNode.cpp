@@ -132,8 +132,12 @@ void Tableau::Node::reduceBranchInternalDown(Cube &cube) {
     return;
   }
 
-  for (const auto &child : children) {
-    child->reduceBranchInternalDown(cube);
+  // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
+  // children, potentially invalidating the iterator.
+  for (int i = children.size() - 1; i >= 0; i--) {
+    if (!children.empty()) {
+      children[i]->reduceBranchInternalDown(cube);
+    }
   }
 
   auto litIt = std::ranges::find(cube, literal);
@@ -256,9 +260,14 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
     // insert cube in-place
     // 1. reduce branch
     // IMPORTANT that we do this first to choose the minimal annotation
-    for (const auto &child : children) {
-      child->reduceBranchInternalDown(cube);
+    // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
+    // children, potentially invalidating the iterator.
+    for (int i = children.size() - 1; i >= 0; i--) {
+      if (!children.empty()) {
+        children[i]->reduceBranchInternalDown(cube);
+      }
     }
+
     // 2. insert cube
     auto thisChildren = std::move(children);
     children.clear();
@@ -353,8 +362,15 @@ void Tableau::Node::inferModal() {
     const CanonicalSet search2 = be2;
     const CanonicalSet replace2 = e1;
 
-    appendBranch(substitute(literal, search1, replace1));
-    appendBranch(substitute(literal, search2, replace2));
+    // Compute substituted literals and append.
+    Cube subResult = substitute(literal, search1, replace1);
+    for (const auto &lit : substitute(literal, search2, replace2)) {
+      if (!contains(subResult, lit)) {
+        subResult.push_back(lit);
+      }
+    }
+    appendBranch(subResult);
+
   }
 }
 
@@ -394,6 +410,7 @@ void Tableau::Node::inferModalTop() {
 }
 
 void Tableau::Node::inferModalAtomic() {
+  //throw std::logic_error("error");
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
   assert(edgeLiteral.validate());
