@@ -62,6 +62,10 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
 
 }  // namespace
 
+bool RegularTableau::isReachableFromRoots(const RegularNode *node) const {
+  return node->reachabilityTreeParent != nullptr || rootNodes.contains(const_cast<RegularNode *>(node));
+}
+
 RegularTableau::RegularTableau(const std::initializer_list<Literal> initialLiterals)
     : RegularTableau(std::vector(initialLiterals)) {}
 RegularTableau::RegularTableau(const Cube &initialLiterals) {
@@ -191,7 +195,7 @@ bool RegularTableau::solve() {
     unreducedNodes.pop();
 
     if (!currentNode->isOpenLeaf() || !currentNode->epsilonChildren.empty() ||
-        !currentNode->isReachableFromRoot()) {
+      !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
@@ -367,7 +371,7 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, Regul
 }
 
 void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
-  if (child->isReachableFromRoot() || !parent->isReachableFromRoot()) {
+  if (isReachableFromRoots(child) || !isReachableFromRoots(parent)) {
     return;
   }
   child->reachabilityTreeParent = parent;
@@ -384,7 +388,7 @@ void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularN
     }
 
     for (const auto child : node->children) {
-      if (!child->isReachableFromRoot()) {
+      if (!isReachableFromRoots(child)) {
         child->reachabilityTreeParent = node;
         worklist.push_back(child);
       }
@@ -479,7 +483,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
 void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
   assert(!openLeaf->closed);
   assert(openLeaf->children.empty());
-  assert(openLeaf->isReachableFromRoot());
+  assert(isReachableFromRoots(openLeaf));
 
   std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
@@ -490,7 +494,7 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
     std::ranges::copy_if(cur->cube, std::back_inserter(edges),
                          [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
     // rename to parent
-    assert(cur->isReachableFromRoot());
+    assert(isReachableFromRoots(cur));
     const auto renaming = cur->parents.at(cur->reachabilityTreeParent);
     for (auto &edge : edges) {
       edge.rename(renaming.inverted());

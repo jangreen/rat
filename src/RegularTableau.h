@@ -11,6 +11,8 @@
 #include "Tableau.h"
 
 class RegularTableau {
+private:
+  bool isReachableFromRoots(const RegularNode *node) const;
  public:
   RegularTableau(std::initializer_list<Literal> initialLiterals);
   explicit RegularTableau(const Cube &initialLiterals);

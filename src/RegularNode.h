@@ -27,7 +27,6 @@ class RegularNode {
 
   // for dynamic multi source reachability
   RegularNode *reachabilityTreeParent = nullptr;
-  bool isReachableFromRoot() const { return reachabilityTreeParent != nullptr; }
   bool isOpenLeaf() const { return children.empty() && !closed; }
 
   bool printed = false;  // prevent cycling in printing // FIXME refactor
