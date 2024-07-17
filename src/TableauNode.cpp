@@ -76,6 +76,7 @@ bool Tableau::Node::validateRecursive() const {
 
 void Tableau::Node::newChild(std::unique_ptr<Node> child) {
   child->parentNode = this;
+  child->activeEvents.merge(activeEvents);
   children.push_back(std::move(child));
 }
 
@@ -370,7 +371,6 @@ void Tableau::Node::inferModal() {
       }
     }
     appendBranch(subResult);
-
   }
 }
 
@@ -410,7 +410,7 @@ void Tableau::Node::inferModalTop() {
 }
 
 void Tableau::Node::inferModalAtomic() {
-  //throw std::logic_error("error");
+  // throw std::logic_error("error");
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
   assert(edgeLiteral.validate());
