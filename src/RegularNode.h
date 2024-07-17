@@ -25,8 +25,10 @@ class RegularNode {
   std::map<const RegularNode *, EdgeLabel> inconsistentChildrenChecked;
   bool closed = false;
 
-  NodeSet rootParents;                     // parent nodes that are reachable by some root node
-  RegularNode *firstParentNode = nullptr;  // for annotationexample extraction
+  // for dynamic multi source reachability
+  RegularNode *reachabilityTreeParent = nullptr;
+  bool isReachableFromRoot() const { return reachabilityTreeParent != nullptr; }
+  bool isOpenLeaf() const { return children.empty() && !closed; }
 
   bool printed = false;  // prevent cycling in printing // FIXME refactor
   void toDotFormat(std::ofstream &output);

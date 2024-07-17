@@ -23,10 +23,16 @@ class RegularTableau {
   bool solve();
   std::pair<RegularNode *, Renaming> newNode(const Cube &cube);
   void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
+  void removeEdge(RegularNode *parent, RegularNode *child);
   void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void expandNode(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
-  static void extractCounterexample(const RegularNode *openNode);
+  bool isInconsistentLazy(RegularNode *openLeaf);
+  typedef std::vector<RegularNode *> Path;
+  void findAllPathsToRoots(RegularNode *node, Path &currentPath, std::vector<Path> &allPaths) const;
+  void newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
+  void removeEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
+  void extractCounterexample(const RegularNode *openLeaf) const;
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;

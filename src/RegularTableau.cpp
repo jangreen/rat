@@ -83,8 +83,7 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
 
   // get open leafs
   std::erase_if(reachable, [&](const RegularNode *node) {
-    return !node->children.empty() || !node->epsilonChildren.empty() || node->closed ||
-           node == currentNode;
+    return !node->isOpenLeaf() || !node->epsilonChildren.empty() || node == currentNode;
   });
 
   for (auto &unreducedNode : get_const_container(unreducedNodes)) {
@@ -116,6 +115,12 @@ std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   return {iter->get(), renaming};
 }
 
+void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) {
+  parent->children.erase(child);
+  child->parents.erase(parent);
+  removeEdgeUpdateReachabilityTree(parent, child);
+}
+
 // parent == nullptr -> rootNode
 void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
   assert(parent != nullptr);
@@ -127,10 +132,11 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
     return;
   }
 
-  // don't add inconsistent edges
-  if (isInconsistent(parent, child, label)) {
-    return;
-  }
+  // don't check inconsistent edges
+  // do this lazy
+  // if (isInconsistent(parent, child, label)) {
+  //   return;
+  // }
 
   // add edge
   const auto [_, inserted] = parent->children.insert(child);
@@ -139,16 +145,9 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
     return;
   }
   child->parents.insert({parent, label});
-  exportDebug("debug");
+  newEdgeUpdateReachabilityTree(parent, child);
 
-  // counterexample: set first parent node if not already set
-  if (child->firstParentNode == nullptr) {
-    child->firstParentNode = parent;
-  }
-  // update rootParents of child node
-  if (!parent->rootParents.empty() || rootNodes.contains(parent)) {
-    child->rootParents.insert(parent);
-  }
+  exportDebug("debug");
 
   // if child has epsilon edge -> add shortcuts
   for (const auto epsilonChildChild : child->epsilonChildren) {
@@ -191,9 +190,8 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
-    if (currentNode->closed || !currentNode->children.empty() ||
-        !currentNode->epsilonChildren.empty() ||
-        (!rootNodes.contains(currentNode) && currentNode->rootParents.empty())) {
+    if (!currentNode->isOpenLeaf() || !currentNode->epsilonChildren.empty() ||
+        !currentNode->isReachableFromRoot()) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
@@ -218,7 +216,19 @@ bool RegularTableau::solve() {
       continue;
     }
 
-    // 3) open leaf, extract counterexample
+    // current node is open leaf
+    assert(!currentNode->closed);
+    assert(currentNode->children.empty());
+
+    // 2) Test whether counterexample is spurious
+    // TODO:
+
+    // 3) Check inconsistencies lazy
+    if (isInconsistentLazy(currentNode)) {
+      continue;
+    };
+
+    // 4) open leaf, extract counterexample
     extractCounterexample(currentNode);
     spdlog::info("[Solver] Answer: False");
     return false;
@@ -319,24 +329,173 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   return false;
 }
 
-void RegularTableau::extractCounterexample(const RegularNode *openNode) {
+void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
+  if (child->reachabilityTreeParent != parent) {
+    return;
+  }
+
+  // bfs from root nodes
+  std::deque<RegularNode *> worklist;
+  std::unordered_set<RegularNode *> visited;
+  for (const auto rootNode : rootNodes) {
+    worklist.push_back(rootNode);
+  }
+
+  while (!worklist.empty()) {
+    const auto node = worklist.front();
+    worklist.pop_front();
+    visited.insert(node);
+
+    for (const auto curChild : node->children) {
+      if (curChild == child) {
+        // child reconnected to alternative parent, nothing else changed
+        curChild->reachabilityTreeParent = node;
+        return;
+      }
+      if (!visited.contains(curChild)) {
+        worklist.push_back(curChild);
+      }
+    }
+  }
+
+  // update all non reachable nodes
+  for (const auto &node : nodes) {
+    if (!visited.contains(node.get())) {
+      node->reachabilityTreeParent = nullptr;
+    }
+  }
+}
+
+void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
+  if (child->isReachableFromRoot() || !parent->isReachableFromRoot()) {
+    return;
+  }
+  child->reachabilityTreeParent = parent;
+
+  std::deque<RegularNode *> worklist;
+  worklist.push_back(child);
+
+  while (!worklist.empty()) {
+    const auto node = worklist.front();
+    worklist.pop_front();
+
+    if (node->isOpenLeaf()) {
+      unreducedNodes.push(node);
+    }
+
+    for (const auto child : node->children) {
+      if (!child->isReachableFromRoot()) {
+        child->reachabilityTreeParent = node;
+        worklist.push_back(child);
+      }
+    }
+  }
+}
+
+void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
+                                         std::vector<Path> &allPaths) const {
+  if (contains(currentPath, node)) {
+    return;
+  }
+
+  currentPath.push_back(node);
+
+  if (rootNodes.contains(const_cast<RegularNode *>(node))) {
+    allPaths.push_back(currentPath);
+  }
+
+  for (const auto parent : node->parents) {
+    findAllPathsToRoots(parent.first, currentPath, allPaths);
+  }
+
+  currentPath.pop_back();
+}
+
+// inconsistencies
+// soundness: there are more(or equal) models for children than parent
+// you cannot guarantee equal during the proof immediately, but in hindsight
+// inconsistency indicates that children might have more models (but this is not guaranteed)
+// fixing: fixed parent could have less parents
+// fixing: fixed parent + consistent children of parent = models of parent
+
+bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
+  assert(openLeaf != nullptr);
+  assert(!openLeaf->closed);
+  assert(openLeaf->children.empty());
+
+  std::vector<Path> allPaths;
+  Path intialPath;
+  findAllPathsToRoots(openLeaf, intialPath, allPaths);
+
+  while (!allPaths.empty()) {
+    const auto path = std::move(allPaths.back());
+    allPaths.pop_back();
+    bool pathInconsistent = false;
+
+    for (size_t i = path.size() - 1; i > 0; i--) {
+      auto parent = path.at(i);
+      const auto child = path.at(i - 1);
+
+      const auto &renaming = child->parents.at(parent);
+      if (isInconsistent(parent, child, renaming)) {
+        pathInconsistent = true;
+        // remove inconsistent edge parent -> child
+        removeEdge(parent, child);
+
+        // remove all paths that contain parent -> child
+        const auto &[begin, end] = std::ranges::remove_if(allPaths, [&](const Path &path) {
+          for (auto it = path.rbegin(); it != path.rend(); it++) {
+            const bool parentMatch = parent == it[0];
+            const bool childMatch = child == it[1];
+            if (parentMatch || childMatch) {
+              return parentMatch && childMatch;
+            }
+          }
+          return false;
+        });
+        allPaths.erase(begin, end);
+      }
+    }
+    if (!pathInconsistent) {
+      return false;
+    }
+  }
+  return true;
+
+  // if (node->firstParentNode == nullptr) {
+  //   return false;
+  // }
+
+  // if (isInconsistentLazy(node->firstParentNode)) {
+  //   // edge: firstParentNode -> node is inconsistent
+  //   // remove it
+  //   node->firstParentNode->removeChild(node);
+  //   return true;
+  // }
+
+  // return isInconsistent(node->firstParentNode, node, node->parents.at(node->firstParentNode));
+}
+
+void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
+  assert(!openLeaf->closed);
+  assert(openLeaf->children.empty());
+  assert(openLeaf->isReachableFromRoot());
+
   std::ofstream counterexample("./output/counterexample.dot");
   counterexample << "digraph { node[shape=\"point\"]" << std::endl;
 
-  const RegularNode *cur = openNode;
+  const RegularNode *cur = openLeaf;
   Cube edges;
   while (cur != nullptr) {
     std::ranges::copy_if(cur->cube, std::back_inserter(edges),
                          [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
-    const bool hasParent = cur->firstParentNode != nullptr;
-    if (hasParent) {
-      // rename to parent
-      const auto renaming = cur->parents.at(cur->firstParentNode);
-      for (auto &edge : edges) {
-        edge.rename(renaming.inverted());
-      }
+    // rename to parent
+    assert(cur->isReachableFromRoot());
+    const auto renaming = cur->parents.at(cur->reachabilityTreeParent);
+    for (auto &edge : edges) {
+      edge.rename(renaming.inverted());
     }
-    cur = cur->firstParentNode;
+    cur = cur->reachabilityTreeParent;
   }
 
   for (const auto &edge : edges) {
