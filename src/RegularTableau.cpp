@@ -219,7 +219,7 @@ bool RegularTableau::solve() {
     }
 
     // 3) open leaf, extract counterexample
-    extractAnnotationexample(currentNode);
+    extractCounterexample(currentNode);
     spdlog::info("[Solver] Answer: False");
     return false;
   }
@@ -319,41 +319,37 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   return false;
 }
 
-void RegularTableau::extractAnnotationexample(const RegularNode *openNode) {
-  // TODO:
-  // std::ofstream annotationexample("./output/annotationexample.dot");
-  // annotationexample << "digraph { node[shape=\"point\"]" << std::endl;
+void RegularTableau::extractCounterexample(const RegularNode *openNode) {
+  std::ofstream counterexample("./output/counterexample.dot");
+  counterexample << "digraph { node[shape=\"point\"]" << std::endl;
 
-  // const Node *node = openNode;
-  // while (node->firstParentNode != nullptr) {
-  //   for (const auto &edge : std::get<0>(node->firstParentLabel)) {
-  //     int left = *edge.leftLabel;
-  //     int right = *edge.rightLabel;
-  //     std::string relation = *edge.identifier;
-  //     // rename left
-  //     const Node *renameNode = node->firstParentNode;
-  //     auto currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
-  //     while (left < currentRenaming.size() && renameNode != nullptr) {
-  //       currentRenaming = std::get<1>(renameNode->firstParentLabel);
-  //       left = currentRenaming.rename(left);
-  //       renameNode = renameNode->firstParentNode;
-  //     }
-  //     // rename right
-  //     renameNode = node->firstParentNode;
-  //     currentRenaming = std::get<Renaming>(renameNode->firstParentLabel);
-  //     while (right < currentRenaming.size() && renameNode != nullptr) {
-  //       currentRenaming = std::get<1>(renameNode->firstParentLabel);
-  //       right = currentRenaming.rename(right);
-  //       renameNode = renameNode->firstParentNode;
-  //     }
+  const RegularNode *cur = openNode;
+  Cube edges;
+  while (cur != nullptr) {
+    std::ranges::copy_if(cur->cube, std::back_inserter(edges),
+                         [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+    const bool hasParent = cur->firstParentNode != nullptr;
+    if (hasParent) {
+      // rename to parent
+      const auto renaming = cur->parents.at(cur->firstParentNode);
+      for (auto &edge : edges) {
+        edge.rename(renaming.inverted());
+      }
+    }
+    cur = cur->firstParentNode;
+  }
 
-  //     annotationexample << "N" << left << " -> " << "N" << right << "[label = \"" << relation
-  //                       << "\"];" << std::endl;
-  //   }
-  //   node = node->firstParentNode;
-  // }
-  // annotationexample << "}" << std::endl;
-  // annotationexample.close();
+  for (const auto &edge : edges) {
+    int left = edge.leftEvent->label.value();
+    int right = edge.rightEvent->label.value();
+    auto baseRelation = edge.identifier.value();
+
+    counterexample << "N" << left << " -> " << "N" << right << "[label = \"" << baseRelation
+                   << "\"];" << std::endl;
+  }
+
+  counterexample << "}" << std::endl;
+  counterexample.close();
 }
 
 void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) const {
