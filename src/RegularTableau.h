@@ -11,12 +11,14 @@
 #include "Tableau.h"
 
 class RegularTableau {
-private:
+ private:
   bool isReachableFromRoots(const RegularNode *node) const;
+
  public:
   RegularTableau(std::initializer_list<Literal> initialLiterals);
   explicit RegularTableau(const Cube &initialLiterals);
   bool validate(const RegularNode *currentNode = nullptr) const;
+  bool validateReachabilityTree() const;
 
   std::unordered_set<RegularNode *> rootNodes;
   std::unordered_set<std::unique_ptr<RegularNode>, RegularNode::Hash, RegularNode::Equal> nodes;

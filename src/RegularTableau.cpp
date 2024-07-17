@@ -63,7 +63,8 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
 }  // namespace
 
 bool RegularTableau::isReachableFromRoots(const RegularNode *node) const {
-  return node->reachabilityTreeParent != nullptr || rootNodes.contains(const_cast<RegularNode *>(node));
+  return node->reachabilityTreeParent != nullptr ||
+         rootNodes.contains(const_cast<RegularNode *>(node));
 }
 
 RegularTableau::RegularTableau(const std::initializer_list<Literal> initialLiterals)
@@ -79,9 +80,13 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
     findReachableNodes(root, reachable);
   }
 
-  const auto allNodesValid = std::ranges::all_of(reachable, [](auto &node) {
+  assert(validateReachabilityTree());
+
+  const auto allNodesValid = std::ranges::all_of(reachable, [&](auto &node) {
     const bool nodeValid = node->validate();
     assert(nodeValid);
+    // all reachable nodes have reachablilityTreeParent
+    assert(isReachableFromRoots(node));
     return nodeValid;
   });
 
@@ -106,6 +111,30 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
   return unreducedNodesValid && allNodesValid;
 }
 
+bool RegularTableau::validateReachabilityTree() const {
+  std::unordered_set<RegularNode *> reachable;
+  for (auto &root : rootNodes) {
+    findReachableNodes(root, reachable);
+  }
+
+  // all reachable nodes have reachablilityTreeParent
+  // tree is actual tree
+  for (const auto &node : reachable) {
+    std::unordered_set<RegularNode *> visited;
+
+    RegularNode *cur = node;
+    while (cur != nullptr) {
+      const auto &[_, isNew] = visited.insert(cur);
+      if (!isNew) {
+        exportDebug("debug");
+      }
+      assert(isNew);
+      cur = cur->reachabilityTreeParent;
+    }
+  }
+  return true;
+}
+
 // assumptions:
 // cube is in normal form
 // checks if renaming exists when adding and returns already existing node if possible
@@ -123,13 +152,13 @@ void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) {
   parent->children.erase(child);
   child->parents.erase(parent);
   removeEdgeUpdateReachabilityTree(parent, child);
+  assert(validateReachabilityTree());
 }
 
 // parent == nullptr -> rootNode
 void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
   assert(parent != nullptr);
   assert(child != nullptr);
-  assert(validate(parent));
 
   // don't add edges that already exist
   if (child->parents.contains(parent)) {
@@ -152,6 +181,7 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   newEdgeUpdateReachabilityTree(parent, child);
 
   exportDebug("debug");
+  assert(validateReachabilityTree());
 
   // if child has epsilon edge -> add shortcuts
   for (const auto epsilonChildChild : child->epsilonChildren) {
@@ -195,7 +225,7 @@ bool RegularTableau::solve() {
     unreducedNodes.pop();
 
     if (!currentNode->isOpenLeaf() || !currentNode->epsilonChildren.empty() ||
-      !isReachableFromRoots(currentNode)) {
+        !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
@@ -286,10 +316,11 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   assert(child != nullptr);
   assert(validateNormalizedCube(child->cube));
 
-  if (parent->inconsistentChildrenChecked.contains(child)) {
-    return true;  // already inconsistent
-  }
-  parent->inconsistentChildrenChecked.insert({child, label});
+  // TODO: fix
+  // if (parent->inconsistentChildrenChecked.contains(child)) {
+  //   return true;  // already inconsistent
+  // }
+  // parent->inconsistentChildrenChecked.insert({child, label});
 
   // return false;  // uncomment for no inverses optimizations, then also labelBase opitmization is
   // possible
@@ -338,6 +369,11 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, Regul
     return;
   }
 
+  // reset all nodes
+  for (const auto &node : nodes) {
+    node->reachabilityTreeParent = nullptr;
+  }
+
   // bfs from root nodes
   std::deque<RegularNode *> worklist;
   std::unordered_set<RegularNode *> visited;
@@ -351,21 +387,10 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, Regul
     visited.insert(node);
 
     for (const auto curChild : node->children) {
-      if (curChild == child) {
-        // child reconnected to alternative parent, nothing else changed
-        curChild->reachabilityTreeParent = node;
-        return;
-      }
       if (!visited.contains(curChild)) {
+        curChild->reachabilityTreeParent = node;
         worklist.push_back(curChild);
       }
-    }
-  }
-
-  // update all non reachable nodes
-  for (const auto &node : nodes) {
-    if (!visited.contains(node.get())) {
-      node->reachabilityTreeParent = nullptr;
     }
   }
 }
@@ -458,6 +483,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
           return false;
         });
         allPaths.erase(begin, end);
+        break;  // only fix first inconsistency on path
       }
     }
     if (!pathInconsistent) {
@@ -495,10 +521,13 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
                          [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
     // rename to parent
     assert(isReachableFromRoots(cur));
-    const auto renaming = cur->parents.at(cur->reachabilityTreeParent);
-    for (auto &edge : edges) {
-      edge.rename(renaming.inverted());
+    if (cur->reachabilityTreeParent != nullptr) {
+      const auto renaming = cur->parents.at(cur->reachabilityTreeParent);
+      for (auto &edge : edges) {
+        edge.rename(renaming.inverted());
+      }
     }
+
     cur = cur->reachabilityTreeParent;
   }
 
@@ -524,7 +553,7 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
   assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);
-    output << "root -> " << "N" << rootNode << ";" << std::endl;
+    output << "root -> " << "N" << rootNode << "[color=\"red\"];" << std::endl;
   }
   // for (const auto &node : nodes) {
   //   node->toDotFormat(output);
