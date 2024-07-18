@@ -14,6 +14,12 @@ bool isAppendable(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
+void reduceDNFAtAWorldCycle(DNF &dnf, const Literal &literal) {
+  auto [begin, end] = std::ranges::remove_if(
+      dnf, [&](const auto &cube) { return !literal.negated && contains(cube, literal); });
+  dnf.erase(begin, end);
+}
+
 // given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
 // it removes cubes with ~l from f
 // it removes l from remaining cubes
@@ -133,6 +139,7 @@ void Node::appendBranchInternalUp(DNF &dnf) const {
     if (!isAppendable(dnf)) {
       return;
     }
+    reduceDNFAtAWorldCycle(dnf, node->literal);
     reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
 }
@@ -169,6 +176,7 @@ void Node::reduceBranchInternalDown(Cube &cube) {
 void Node::appendBranchInternalDown(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
+  reduceDNFAtAWorldCycle(dnf, literal);
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
