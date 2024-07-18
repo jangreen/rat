@@ -40,6 +40,8 @@ test test3f False
 test test4 True
 test test4f False
 test test9 True
+test id5 True
+test id6 True
 
 # with assumptions
 test test0 True
