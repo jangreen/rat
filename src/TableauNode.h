@@ -54,7 +54,6 @@ class Node {
   void inferModal();
   void inferModalTop();
   void inferModalAtomic();
-  void replaceNegatedTopOnBranch(const std::vector<int> &events);
 
   // this method assumes that tableau is already reduced
   [[nodiscard]] DNF extractDNF() const;

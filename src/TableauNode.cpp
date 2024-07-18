@@ -475,25 +475,6 @@ void Node::inferModalAtomic() {
   }
 }
 
-// FIXME: use or remove
-void Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
-  const Node *cur = this;
-  while ((cur = cur->parentNode) != nullptr) {
-    const Literal &curLit = cur->literal;
-    if (!curLit.negated || !curLit.isNormal()) {
-      continue;
-    }
-    // replace T -> e
-    const CanonicalSet top = Set::fullSet();
-    for (const auto label : events) {
-      const CanonicalSet e = Set::newEvent(label);
-      for (auto &lit : substitute(curLit, top, e)) {
-        appendBranch(lit);
-      }
-    }
-  }
-}
-
 void Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
