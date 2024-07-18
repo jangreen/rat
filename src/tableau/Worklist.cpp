@@ -32,20 +32,20 @@ bool Worklist::isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<
 
 Worklist::Worklist() {
   // Setup dummy sentinel nodes for the doubly linked lists
-  posEqualitiesHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  posEqualitiesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  posEqualitiesHeadDummy = std::unique_ptr<Node>(new Node());
+  posEqualitiesTailDummy = std::unique_ptr<Node>(new Node());
   connect(*posEqualitiesHeadDummy, *posEqualitiesTailDummy);
 
-  nonNormalNegatedHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  nonNormalNegatedTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalNegatedHeadDummy = std::unique_ptr<Node>(new Node());
+  nonNormalNegatedTailDummy = std::unique_ptr<Node>(new Node());
   connect(*nonNormalNegatedHeadDummy, *nonNormalNegatedTailDummy);
 
-  nonNormalPositiveHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  nonNormalPositiveTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalPositiveHeadDummy = std::unique_ptr<Node>(new Node());
+  nonNormalPositiveTailDummy = std::unique_ptr<Node>(new Node());
   connect(*nonNormalPositiveHeadDummy, *nonNormalPositiveTailDummy);
 
-  remainingHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  remainingTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  remainingHeadDummy = std::unique_ptr<Node>(new Node());
+  remainingTailDummy = std::unique_ptr<Node>(new Node());
   connect(*remainingHeadDummy, *remainingTailDummy);
 }
 

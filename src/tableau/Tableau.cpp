@@ -11,9 +11,8 @@
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
-  const auto dummyNode = new Node(nullptr, TOP);
+  const auto dummyNode = new Node(this, TOP);
   rootNode = std::unique_ptr<Node>(dummyNode);
-  rootNode->tableau = this;
 
   Node *parentNode = dummyNode;
   for (const auto &literal : cube) {
@@ -211,9 +210,8 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
     // Check for duplicates & create renamed node only if new.
     auto [_, isNew] = allRenamedLiterals.insert(litCopy);
     if (isNew) {
-      auto renamedCur = new Node(nullptr, litCopy);
+      auto renamedCur = new Node(cur->getTableau(), litCopy);
       originalToCopy.insert({cur, renamedCur});
-      renamedCur->tableau = cur->tableau;
       renamedCur->setLastUnrollingParent(cur->getLastUnrollingParent());
       if (copiedBranch != nullptr) {
         renamedCur->newChild(std::move(copiedBranch));

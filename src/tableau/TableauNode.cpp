@@ -66,16 +66,23 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : _isClosed(false),
-      literal(std::move(literal)),
+    : literal(std::move(literal)),
       parentNode(parent),
-      tableau(parent != nullptr ? parent->tableau : nullptr) {
-  if (parent != nullptr) {
-    parent->children.emplace_back(this);
-
-    activeEvents = parent->activeEvents;
-    activeEventBasePairs = parent->activeEventBasePairs;
+      tableau(parent->tableau) {
+  assert(parent != nullptr);
+  parent->children.emplace_back(this);
+  activeEvents = parent->activeEvents;
+  activeEventBasePairs = parent->activeEventBasePairs;
+  if (!literal.negated) {
+    activeEvents.merge(literal.events());
+    activeEventBasePairs.merge(literal.labelBaseCombinations());
   }
+}
+
+Node::Node(Tableau *tableau, Literal literal)
+  : literal(std::move(literal)),
+  tableau(tableau) {
+  assert(tableau != nullptr);
 
   if (!literal.negated) {
     activeEvents.merge(literal.events());
@@ -127,8 +134,6 @@ std::unique_ptr<Node> Node::removeChild(Node *child) {
   children.erase(firstUnsharedNodeIt);
   return removedChild;
 }
-
-bool Node::isLeaf() const { return children.empty(); }
 
 void Node::rename(const Renaming &renaming) {
   literal.rename(renaming);
