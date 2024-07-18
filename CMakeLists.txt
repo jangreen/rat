@@ -32,7 +32,8 @@ find_package(spdlog)
 # project executable
 file(GLOB_RECURSE CatInfer_SRC "src/*.cpp")
 add_compile_definitions("DEBUG=$<CONFIG:Debug>")
-add_executable(${PROJECT_NAME} src/main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS} ${ANTLR_LogicParser_CXX_OUTPUTS})
+add_executable(${PROJECT_NAME} src/main.cpp ${CatInfer_SRC} ${ANTLR_CatParser_CXX_OUTPUTS} ${ANTLR_LogicParser_CXX_OUTPUTS}
+        src/tableau/Worklist.h)
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_CatParser_OUTPUT_DIR}) # add generated parser files
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR_LogicParser_OUTPUT_DIR}) # add generated parser files
 target_include_directories(${PROJECT_NAME} PUBLIC ${ANTLR4_INCLUDE_DIRS}) # add antrl4cpp artifacts to project environment

@@ -5,18 +5,14 @@
 #include "../basic/Literal.h"
 
 class Tableau;
-// Uncomment to use the old worklist implementation (ordered sets).
-// #define WORKLIST_ALTERNATIVE
-class Worklist;
 
 class Node {
  private:
-#ifndef WORKLIST_ALTERNATIVE
   // Intrusive worklist design for O(1) insertion and removal.
   friend class Worklist;
-  Node *nextInWorkList = nullptr;
-  Node *prevInWorkList = nullptr;
-#endif
+  mutable Node *nextInWorkList = nullptr;
+  mutable Node *prevInWorkList = nullptr;
+
   // gather information about the prefix of the branch
   // only at leaf nodes
   EventSet activeEvents;
@@ -26,8 +22,8 @@ class Node {
   const Node *lastUnrollingParent = nullptr;  // to detect at the world cycles
 
   Literal literal;
-  std::vector<std::unique_ptr<Node>> children;
   Node *parentNode = nullptr;
+  std::vector<std::unique_ptr<Node>> children;
 
   void appendBranchInternalUp(DNF &dnf) const;
   void appendBranchInternalDown(DNF &dnf);
@@ -78,58 +74,3 @@ class Node {
 };
 
 inline const Node *Node::transitiveClosureNode = nullptr;
-
-// ============================================================================
-// ================================= Worklist =================================
-// ============================================================================
-
-/*
- * The worklist manages the nodes that need to get processed.
- * Importantly, it makes sure the processing order is sound and efficient:
- *  1. Positive equalities
- *1.5(?) Set membership (currently not used/supported)
- *  2. non normal positive literals (i.e., the rest)
- *  3. non normal negative literals
- *  4. remaining
- *
- *  Order for Rules 1. and 2.  are for soundness.
- *  2.: we filter non active literals in appendBranch
- *  Rule 3. is for efficiency in order to close branches as soon as possible.
- */
-class Worklist {
- private:
-#ifndef WORKLIST_ALTERNATIVE
-  // (1)
-  std::unique_ptr<Node> posEqualitiesHeadDummy;
-  std::unique_ptr<Node> posEqualitiesTailDummy;
-  // (3)
-  std::unique_ptr<Node> nonNormalNegatedHeadDummy;
-  std::unique_ptr<Node> nonNormalNegatedTailDummy;
-  // (3)
-  std::unique_ptr<Node> nonNormalPositiveHeadDummy;
-  std::unique_ptr<Node> nonNormalPositiveTailDummy;
-  // (4)
-  std::unique_ptr<Node> remainingHeadDummy;
-  std::unique_ptr<Node> remainingTailDummy;
-
-  static void connect(Node &left, Node &right);
-  static void disconnect(Node &node);
-  static void insertAfter(Node &location, Node &node);
-  static bool isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<Node> &tail);
-#else
-  struct CompareNodes {
-    bool operator()(const Node *left, const Node *right) const;
-  };
-
-  std::set<Node *, CompareNodes> queue;
-#endif
- public:
-  Worklist();
-  void push(Node *node);
-  Node *pop();
-  void erase(Node *node);
-  bool contains(const Node *node) const;
-
-  [[nodiscard]] bool isEmpty() const;
-  [[nodiscard]] bool validate() const;
-};

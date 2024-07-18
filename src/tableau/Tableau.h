@@ -3,13 +3,12 @@
 
 #include "../basic/Literal.h"
 #include "TableauNode.h"
+#include "Worklist.h"
 
 class Tableau {
  public:
   explicit Tableau(const Cube &cube);
   [[nodiscard]] bool validate() const;
-
-  Worklist unreducedNodes;
 
   [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
   bool solve(int bound = -1);
@@ -25,6 +24,8 @@ class Tableau {
   void exportDebug(const std::string &filename) const;
 
  private:
+  friend class Node;
+  Worklist unreducedNodes;
   std::unique_ptr<Node> rootNode;
 
   Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
