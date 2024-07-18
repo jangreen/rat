@@ -221,9 +221,10 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
         renamedNodeCopy = renamedCur;
       }
       // if cur is in unreduced nodes push renamedCur
-      if (unreducedNodes.contains(cur)) {
-        unreducedNodes.push(renamedCur);
-      }
+      // TODO: check if this is sound
+      // if (unreducedNodes.contains(cur)) {
+      //   unreducedNodes.push(renamedCur);
+      // }
       copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
@@ -267,6 +268,7 @@ void Tableau::renameBranchesInternalDown(
       renameBranchesInternalDown(child.get(), renaming, allRenamedLiteralsCopy, originalToCopy,
                                  unrollingParents);  // copy for each branching
     }
+    // FIXME: bug dont delete while iterating
     renameBranchesInternalDown(node->getChildren()[0].get(), renaming, allRenamedLiterals,
                                originalToCopy, unrollingParents);
   }
