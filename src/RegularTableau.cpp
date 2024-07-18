@@ -10,20 +10,10 @@
 
 namespace {
 
-// TODO: remove
-void addActivePairsFromEdges(const Cube &edges, SetOfSets &activePairs) {
-  for (const auto &edgeLiteral : edges) {
-    for (auto pair : edgeLiteral.labelBaseCombinations()) {
-      activePairs.insert(pair);
-    }
-  }
-}
-
 void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &reach) {
   auto [_, inserted] = reach.insert(node);
   if (inserted) {
     for (const auto &child : node->getChildren()) {
-      const auto edgeLabels = node->getLabelForChild(child);
       findReachableNodes(child, reach);
     }
   }
@@ -216,7 +206,7 @@ bool RegularTableau::solve() {
     exportDebug("debug");
     assert(validate());
 
-    auto currentNode = unreducedNodes.top();
+    const auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
     if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
@@ -428,8 +418,8 @@ void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
     allPaths.push_back(currentPath);
   }
 
-  for (const auto parent : node->getParents()) {
-    findAllPathsToRoots(parent.first, currentPath, allPaths);
+  for (const auto &[parent, _] : node->getParents()) {
+    findAllPathsToRoots(parent, currentPath, allPaths);
   }
 
   currentPath.pop_back();
@@ -468,7 +458,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
 
         // remove all paths that contain parent -> child
         const auto &[begin, end] = std::ranges::remove_if(allPaths, [&](const Path &path) {
-          for (auto it = path.rbegin(); it != path.rend(); it++) {
+          for (auto it = path.rbegin(); it != path.rend(); ++it) {
             const bool parentMatch = parent == it[0];
             const bool childMatch = child == it[1];
             if (parentMatch || childMatch) {
@@ -527,8 +517,8 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
   }
 
   for (const auto &edge : edges) {
-    int left = edge.leftEvent->label.value();
-    int right = edge.rightEvent->label.value();
+    const int left = edge.leftEvent->label.value();
+    const int right = edge.rightEvent->label.value();
     auto baseRelation = edge.identifier.value();
 
     counterexample << "N" << left << " -> " << "N" << right << "[label = \"" << baseRelation

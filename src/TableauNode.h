@@ -53,7 +53,7 @@ class Node {
   const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
   void setLastUnrollingParent(const Node *node) { lastUnrollingParent = node; }
 
-  [[nodiscard]] const bool isClosed() const { return _isClosed; }
+  [[nodiscard]] bool isClosed() const { return _isClosed; }
   [[nodiscard]] bool isLeaf() const;
   void rename(const Renaming &renaming);
   void appendBranch(const DNF &dnf);

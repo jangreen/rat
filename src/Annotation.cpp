@@ -49,7 +49,7 @@ CanonicalAnnotation Annotation::newAnnotation(const CanonicalAnnotation left,
   return newAnnotation(annotationValue.value(), left, right);
 }
 
-CanonicalAnnotation Annotation::min(CanonicalAnnotation first, CanonicalAnnotation second) {
+CanonicalAnnotation Annotation::min(const CanonicalAnnotation first, const CanonicalAnnotation second) {
   if (first->isLeaf() && first->getValue() <= second->getValue()) {
     return first;
   }

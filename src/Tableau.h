@@ -11,7 +11,7 @@ class Tableau {
 
   Worklist unreducedNodes;
 
-  const Node *getRoot() const { return rootNode.get(); }
+  [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
   bool solve(int bound = -1);
   void removeNode(Node *node);
   void renameBranches(Node *node);
@@ -27,7 +27,7 @@ class Tableau {
  private:
   std::unique_ptr<Node> rootNode;
 
-  Node *renameBranchesInternalUp(Node *node, int from, int to,
+  Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
                                  std::unordered_set<Literal> &allRenamedLiterals,
                                  std::unordered_map<const Node *, Node *> &originalToCopy);
   void renameBranchesInternalDown(Node *node, const Renaming &renaming,
