@@ -247,7 +247,7 @@ bool RegularTableau::solve() {
 
     // current node is open leaf
     assert(!currentNode->closed);
-    assert(currentNode->children.empty());
+    assert(currentNode->getChildren().empty());
 
     // 2) Test whether counterexample is spurious
     // TODO:
@@ -445,7 +445,7 @@ void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
 bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
   assert(openLeaf != nullptr);
   assert(!openLeaf->closed);
-  assert(openLeaf->children.empty());
+  assert(openLeaf->getChildren().empty());
 
   std::vector<Path> allPaths;
   Path intialPath;
@@ -503,7 +503,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
 
 void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
   assert(!openLeaf->closed);
-  assert(openLeaf->children.empty());
+  assert(openLeaf->getChildren().empty());
   assert(isReachableFromRoots(openLeaf));
 
   std::ofstream counterexample("./output/counterexample.dot");
