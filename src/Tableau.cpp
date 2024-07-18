@@ -78,6 +78,8 @@ bool Tableau::solve(int bound) {
     }
     exportDebug("debug");
 
+    Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
+
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
       assert(unreducedNodes.validate());
@@ -174,15 +176,16 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
-Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
-                                        std::unordered_set<Literal> &allRenamedLiterals) {
+Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
+                                        std::unordered_set<Literal> &allRenamedLiterals,
+                                        std::unordered_map<const Node *, Node *> &originalToCopy) {
   const Renaming renaming = Renaming::simple(from, to);
 
   // Determine first node (closest to root) that has to be renamed.
   // Everything above is unaffected and thus we can share the common prefix for the renamed
   // branch.
   const Node *firstToRename = nullptr;
-  const Node *cur = node;
+  const Node *cur = lastSharedNode;
   while (cur != nullptr) {
     if (cur->getLiteral().events().contains(from)) {
       firstToRename = cur;
@@ -192,14 +195,14 @@ Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
 
   // Nothing to rename: keep branch as is.
   if (firstToRename == nullptr) {
-    return node;
+    return lastSharedNode;
   }
   const auto commonPrefix = firstToRename->getParentNode();
 
-  // Copy & rename from node to firstToRename.
+  // Copy & rename from lastSharedNode to firstToRename.
   Node *renamedNodeCopy = nullptr;
   std::unique_ptr<Node> copiedBranch = nullptr;
-  cur = node;
+  cur = lastSharedNode;
   while (cur != commonPrefix) {
     assert(cur->validate());
     auto litCopy = Literal(cur->getLiteral());
@@ -209,7 +212,9 @@ Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
     auto [_, isNew] = allRenamedLiterals.insert(litCopy);
     if (isNew) {
       auto renamedCur = new Node(nullptr, litCopy);
+      originalToCopy.insert({cur, renamedCur});
       renamedCur->tableau = cur->tableau;
+      renamedCur->setLastUnrollingParent(cur->getLastUnrollingParent());
       if (copiedBranch != nullptr) {
         renamedCur->newChild(std::move(copiedBranch));
       } else {
@@ -224,13 +229,34 @@ Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
 
     cur = cur->getParentNode();
   }
+  // update meta data based on originalToCopy
+  Node *curCopy = originalToCopy.at(lastSharedNode);
+  assert(curCopy->isLeaf());
+  while (curCopy != nullptr) {
+    if (originalToCopy.contains(curCopy->getLastUnrollingParent())) {
+      curCopy->setLastUnrollingParent(originalToCopy.at(curCopy->getLastUnrollingParent()));
+    }
+    curCopy = curCopy->getParentNode();
+  }
+
   commonPrefix->newChild(std::move(copiedBranch));
   return renamedNodeCopy;
 }
 
-void Tableau::renameBranchesInternalDown(Node *node, const Renaming &renaming,
-                                         std::unordered_set<Literal> &allRenamedLiterals) {
+void Tableau::renameBranchesInternalDown(
+    Node *node, const Renaming &renaming, std::unordered_set<Literal> &allRenamedLiterals,
+    const std::unordered_map<const Node *, Node *> &originalToCopy,
+    std::unordered_set<const Node *> &unrollingParents) {
   node->rename(renaming);
+  // gather all unrollingParents in the subtree to prevent deleting them
+  if (node->getLastUnrollingParent() != nullptr) {
+    unrollingParents.insert(node->getLastUnrollingParent());
+
+    if (originalToCopy.contains(node->getLastUnrollingParent())) {
+      node->setLastUnrollingParent(originalToCopy.at(node->getLastUnrollingParent()));
+    }
+  }
+
   auto [_, isNew] = allRenamedLiterals.insert(node->getLiteral());
 
   if (!node->isLeaf()) {
@@ -238,12 +264,13 @@ void Tableau::renameBranchesInternalDown(Node *node, const Renaming &renaming,
     // Copy allRenamedLiterals for all children but the last one
     for (const auto &child : std::ranges::drop_view(node->getChildren(), 1)) {
       auto allRenamedLiteralsCopy(allRenamedLiterals);
-      renameBranchesInternalDown(child.get(), renaming,
-                                 allRenamedLiteralsCopy);  // copy for each branching
+      renameBranchesInternalDown(child.get(), renaming, allRenamedLiteralsCopy, originalToCopy,
+                                 unrollingParents);  // copy for each branching
     }
-    renameBranchesInternalDown(node->getChildren()[0].get(), renaming, allRenamedLiterals);
+    renameBranchesInternalDown(node->getChildren()[0].get(), renaming, allRenamedLiterals,
+                               originalToCopy, unrollingParents);
   }
-  if (!isNew) {
+  if (!isNew && !unrollingParents.contains(node)) {
     removeNode(node);
   }
   assert(unreducedNodes.validate());
@@ -279,9 +306,13 @@ void Tableau::renameBranches(Node *node) {
   const auto lastSharedNode = firstUnsharedNode->getParentNode();
 
   std::unordered_set<Literal> renamedLiterals;  // To remove identical (after renaming) literals
+  std::unordered_map<const Node *, Node *> originalToCopy;
+  std::unordered_set<const Node *> unrollingParents;
 
-  auto renamedLastSharedNode = renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals);
-  renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals);
+  auto renamedLastSharedNode =
+      renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals, originalToCopy);
+  renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
+                             unrollingParents);
 
   auto movedChild = lastSharedNode->removeChild(firstUnsharedNode);
   renamedLastSharedNode->newChild(std::move(movedChild));

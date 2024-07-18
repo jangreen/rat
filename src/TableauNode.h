@@ -23,9 +23,16 @@ class Node {
   SetOfSets activeEventBasePairs;
   mutable bool _isClosed;
 
+  const Node *lastUnrollingParent = nullptr;  // to detect at the world cycles
+
   Literal literal;
   std::vector<std::unique_ptr<Node>> children;
   Node *parentNode = nullptr;
+
+  void appendBranchInternalUp(DNF &dnf) const;
+  void appendBranchInternalDown(DNF &dnf);
+  void reduceBranchInternalDown(Cube &cube);
+  void closeBranch();
 
  public:
   Node(Node *parent, Literal literal);
@@ -43,6 +50,8 @@ class Node {
   void newChildren(std::vector<std::unique_ptr<Node>> children);
   std::unique_ptr<Node> removeChild(Node *child);
   std::vector<std::unique_ptr<Node>> removeAllChildren() { return std::move(children); }
+  const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
+  void setLastUnrollingParent(const Node *node) { lastUnrollingParent = node; }
 
   [[nodiscard]] const bool isClosed() const { return _isClosed; }
   [[nodiscard]] bool isLeaf() const;
@@ -61,12 +70,10 @@ class Node {
 
   void toDotFormat(std::ofstream &output) const;
 
- private:
-  void appendBranchInternalUp(DNF &dnf) const;
-  void appendBranchInternalDown(DNF &dnf);
-  void reduceBranchInternalDown(Cube &cube);
-  void closeBranch();
+  static const Node *transitiveClosureNode;
 };
+
+inline const Node *Node::transitiveClosureNode = nullptr;
 
 // ============================================================================
 // ================================= Worklist =================================

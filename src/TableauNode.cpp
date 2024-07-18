@@ -14,10 +14,20 @@ bool isAppendable(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
-void reduceDNFAtAWorldCycle(DNF &dnf, const Literal &literal) {
-  auto [begin, end] = std::ranges::remove_if(
-      dnf, [&](const auto &cube) { return !literal.negated && contains(cube, literal); });
+void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
+  if (transitiveClosureNode == nullptr) {
+    return;
+  }
+  assert(transitiveClosureNode->validate());
+
+  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
+    return std::ranges::any_of(cube, [&](const Literal &cubeLit) {
+      assert(cubeLit.validate());
+      return cubeLit == transitiveClosureNode->getLiteral();
+    });
+  });
   dnf.erase(begin, end);
+  reduceDNFAtAWorldCycle(dnf, transitiveClosureNode->getLastUnrollingParent());
 }
 
 // given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
@@ -83,7 +93,7 @@ bool Node::validate() const {
     std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
-  if (tableau->rootNode.get() != this && parentNode == nullptr) {
+  if (tableau->getRoot() != this && parentNode == nullptr) {
     std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
@@ -139,7 +149,6 @@ void Node::appendBranchInternalUp(DNF &dnf) const {
     if (!isAppendable(dnf)) {
       return;
     }
-    reduceDNFAtAWorldCycle(dnf, node->literal);
     reduceDNF(dnf, node->literal);
   } while ((node = node->parentNode) != nullptr);
 }
@@ -176,7 +185,6 @@ void Node::reduceBranchInternalDown(Cube &cube) {
 void Node::appendBranchInternalDown(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
-  reduceDNFAtAWorldCycle(dnf, literal);
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
@@ -228,6 +236,7 @@ void Node::appendBranchInternalDown(DNF &dnf) {
     auto newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
+      newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
   }
@@ -235,6 +244,7 @@ void Node::appendBranchInternalDown(DNF &dnf) {
 }
 
 void Node::closeBranch() {
+  assert(this != tableau->getRoot());
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
@@ -265,6 +275,7 @@ void Node::appendBranch(const DNF &dnf) {
   }
 
   DNF dnfCopy(dnf);
+  reduceDNFAtAWorldCycle(dnfCopy, transitiveClosureNode);
   appendBranchInternalUp(dnfCopy);
 
   // empy dnf
@@ -274,7 +285,7 @@ void Node::appendBranch(const DNF &dnf) {
     return;
   }
 
-  // conjuncitve
+  // conjunctive
   const bool isConjunctive = dnfCopy.size() == 1;
   if (isConjunctive) {
     auto &cube = dnfCopy.at(0);
@@ -297,8 +308,9 @@ void Node::appendBranch(const DNF &dnf) {
     auto thisChildren = std::move(children);
     children.clear();
     Node *newNode = this;
-    for (const auto &literal : cube) {
+    for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
+      newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
     newNode->children = std::move(thisChildren);
@@ -352,6 +364,9 @@ std::optional<DNF> Node::applyRule(const bool modalRule) {
   if (!result) {
     return std::nullopt;
   }
+
+  // to detect at the world cycles
+  transitiveClosureNode = Rules::lastRuleWasUnrolling ? this : this->lastUnrollingParent;
 
   auto disjunction = *result;
   appendBranch(disjunction);
@@ -499,6 +514,8 @@ void Node::toDotFormat(std::ofstream &output) const {
   output << toString(literal.events()) << "\n";
   output << "normalEvents: \n";
   output << toString(literal.normalEvents()) << "\n";
+  output << "lastUnrollingParent: \n";
+  output << lastUnrollingParent << "\n";
   output << "--- BRANCH --- \n";
   output << "activeEvents: \n";
   output << toString(activeEvents) << "\n";
