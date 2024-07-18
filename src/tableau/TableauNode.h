@@ -7,7 +7,7 @@
 class Tableau;
 
 class Node {
- private:
+private:
   // ================== Intrusive Worklist ==================
   friend class Worklist;
   mutable Node *nextInWorkList = nullptr;
@@ -37,31 +37,34 @@ class Node {
 
   void dnfBuilder(DNF &dnf) const;
 
- public:
+public:
   Node(Tableau *tableau, Literal literal);
   Node(Node *parent, Literal literal);
   explicit Node(const Node *other) = delete;
   ~Node();
 
   // ================== Accessors ==================
-  Tableau *getTableau() const { return tableau; }
-  Node *getParentNode() const { return parentNode; }
-  const Literal &getLiteral() const { return literal; }
-  std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
-  const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
+  [[nodiscard]] Tableau *getTableau() const { return tableau; }
+  [[nodiscard]] Node *getParentNode() const { return parentNode; }
+  [[nodiscard]] const Literal &getLiteral() const { return literal; }
+  [[nodiscard]] std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
+  [[nodiscard]] const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
   void setLastUnrollingParent(const Node *node) { lastUnrollingParent = node; }
 
   [[nodiscard]] bool isClosed() const { return _isClosed; }
   [[nodiscard]] bool isLeaf() const { return children.empty(); }
 
   // ================== Node manipulation ==================
-  void newChild(std::unique_ptr<Node> child);
-  void newChildren(std::vector<std::unique_ptr<Node>> children);
-  std::unique_ptr<Node> removeChild(Node *child);
-  std::vector<std::unique_ptr<Node>> removeAllChildren() { return std::move(children); }
+  void attachChild(std::unique_ptr<Node> child);
+  void attachChildren(std::vector<std::unique_ptr<Node>> newChildren);
+  [[nodiscard]] std::unique_ptr<Node> detachChild(Node *child);
+  [[nodiscard]] std::vector<std::unique_ptr<Node>> detachAllChildren();
+
+  [[nodiscard]] std::unique_ptr<Node> detachFromParent() { return parentNode->detachChild(this); }
+
+  void rename(const Renaming &renaming);
 
   // ================== Tree manipulation ==================
-  void rename(const Renaming &renaming);
   void appendBranch(const DNF &dnf);
   void appendBranch(const Cube &cube) {
     if (!cube.empty()) {
@@ -74,6 +77,7 @@ class Node {
   void inferModalTop();
   void inferModalAtomic();
 
+  // ================== Extraction ==================
   // this method assumes that tableau is already reduced
   [[nodiscard]] DNF extractDNF() const;
   void toDotFormat(std::ofstream &output) const;

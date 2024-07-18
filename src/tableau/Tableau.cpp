@@ -43,15 +43,15 @@ void Tableau::removeNode(Node *node) {
   // so we can get rid of all those branches. We do so by deleting all children from the parent
   // node.
   if (node->isLeaf()) {
-    parentNode->removeAllChildren();
+    void(parentNode->detachAllChildren());
     return;
   }
 
   // No leaf: move all children to parent's children
-  parentNode->newChildren(node->removeAllChildren());
+  parentNode->attachChildren(node->detachAllChildren());
   // Remove node from parent. This will automatically delete the node and remove it from the
   // worklist.
-  parentNode->removeChild(node);
+  void (node->detachFromParent());
 
   assert(parentNode->validate());
   assert(std::ranges::none_of(parentNode->getChildren(),
@@ -214,7 +214,7 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
       originalToCopy.insert({cur, renamedCur});
       renamedCur->setLastUnrollingParent(cur->getLastUnrollingParent());
       if (copiedBranch != nullptr) {
-        renamedCur->newChild(std::move(copiedBranch));
+        renamedCur->attachChild(std::move(copiedBranch));
       } else {
         renamedNodeCopy = renamedCur;
       }
@@ -238,7 +238,7 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
     curCopy = curCopy->getParentNode();
   }
 
-  commonPrefix->newChild(std::move(copiedBranch));
+  commonPrefix->attachChild(std::move(copiedBranch));
   return renamedNodeCopy;
 }
 
@@ -314,8 +314,7 @@ void Tableau::renameBranches(Node *node) {
   renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
                              unrollingParents);
 
-  auto movedChild = lastSharedNode->removeChild(firstUnsharedNode);
-  renamedLastSharedNode->newChild(std::move(movedChild));
+  renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
 }
 
 bool isSubsumed(const Cube &a, const Cube &b) {

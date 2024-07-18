@@ -66,9 +66,9 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : literal(std::move(literal)),
+    : tableau(parent->tableau),
       parentNode(parent),
-      tableau(parent->tableau) {
+      literal(std::move(literal)) {
   assert(parent != nullptr);
   parent->children.emplace_back(this);
   activeEvents = parent->activeEvents;
@@ -80,8 +80,8 @@ Node::Node(Node *parent, Literal literal)
 }
 
 Node::Node(Tableau *tableau, Literal literal)
-  : literal(std::move(literal)),
-  tableau(tableau) {
+  : tableau(tableau),
+  literal(std::move(literal)) {
   assert(tableau != nullptr);
 
   if (!literal.negated) {
@@ -113,26 +113,35 @@ bool Node::validateRecursive() const {
   return true;
 }
 
-void Node::newChild(std::unique_ptr<Node> child) {
+void Node::attachChild(std::unique_ptr<Node> child) {
+  assert(child->parentNode == nullptr && "Trying to attach already attached child.");
   child->parentNode = this;
   child->activeEvents.merge(activeEvents);
   children.push_back(std::move(child));
 }
 
-void Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
-  for (const auto &newChild : newChildren) {
-    newChild->parentNode = this;
-  }
-  children.insert(children.end(), std::make_move_iterator(newChildren.begin()),
-                  std::make_move_iterator(newChildren.end()));
+void Node::attachChildren(std::vector<std::unique_ptr<Node>> newChildren) {
+  std::ranges::for_each(newChildren, [&](auto &child) { attachChild(std::move(child)); });
 }
 
-std::unique_ptr<Node> Node::removeChild(Node *child) {
-  const auto firstUnsharedNodeIt =
-      std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
-  auto removedChild = std::move(*firstUnsharedNodeIt);
-  children.erase(firstUnsharedNodeIt);
-  return removedChild;
+std::unique_ptr<Node> Node::detachChild(Node *child) {
+  assert(child->parentNode == this && "Cannot detach parentless child");
+  const auto childIt = std::ranges::find(children, child, &std::unique_ptr<Node>::get);
+  if (childIt == children.end()) {
+    assert(false && "Invalid child to detach.");
+    return nullptr;
+  }
+
+  auto detachedChild = std::move(*childIt);
+  detachedChild->parentNode = nullptr;
+  children.erase(childIt);
+  return detachedChild;
+}
+std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
+  std::ranges::for_each(children, [](auto &child) { child->parentNode = nullptr; });
+  auto detachedChildren = std::move(children);
+  children.clear();
+  return detachedChildren;
 }
 
 void Node::rename(const Renaming &renaming) {
