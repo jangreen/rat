@@ -63,10 +63,13 @@ CanonicalAnnotation Annotation::min(const CanonicalAnnotation first, const Canon
 bool Annotation::validate() const {
   // Binary or leaf
   bool isValid = ((left == nullptr) == (right == nullptr));
+  assert (isValid && "Unary annotation node");
   // No value => Leaf
   isValid &= value.has_value() || isLeaf();
+  assert (isValid && "Non-leaf annotation without value");
   // No leaf => value is meet of children.
   isValid &= isLeaf() || value.value() == meet(left->value, right->value);
+  assert (isValid && "Non-leaf annotation with incorrect value");
   // left is valid
   isValid &= left == nullptr || left->validate();
   // right is valid

@@ -152,6 +152,9 @@ void Set::completeInitialization() const {
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation, label);
   this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
+  if constexpr (DEBUG) {
+    void(toString()); // To populate the cache for better debugging
+  }
 }
 
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
@@ -169,39 +172,39 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
                          const CanonicalSet right, const CanonicalRelation relation,
                          const std::optional<int> label,
                          const std::optional<std::string> &identifier) {
-#if (DEBUG)
-  // ------------------ Validation ------------------
-  const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
-  const bool hasLabelOrId = (label.has_value() || identifier.has_value());
-  switch (operation) {
-    case SetOperation::baseSet:
-      assert(identifier.has_value() && !label.has_value() && isSimple);
+  if constexpr (DEBUG) {
+    // ------------------ Validation ------------------
+    const bool isSimple = (left == nullptr && right == nullptr && relation == nullptr);
+    const bool hasLabelOrId = (label.has_value() || identifier.has_value());
+    switch (operation) {
+      case SetOperation::baseSet:
+        assert(identifier.has_value() && !label.has_value() && isSimple);
       break;
-    case SetOperation::topEvent:
-      assert(label.has_value() && !identifier.has_value() && isSimple);
+      case SetOperation::topEvent:
+        assert(label.has_value() && !identifier.has_value() && isSimple);
       break;
-    case SetOperation::event:
-      assert(label.has_value() && !identifier.has_value() && isSimple);
+      case SetOperation::event:
+        assert(label.has_value() && !identifier.has_value() && isSimple);
       break;
-    case SetOperation::emptySet:
-    case SetOperation::fullSet:
-      assert(!hasLabelOrId && isSimple);
+      case SetOperation::emptySet:
+      case SetOperation::fullSet:
+        assert(!hasLabelOrId && isSimple);
       break;
-    case SetOperation::setUnion:
-    case SetOperation::setIntersection:
-      assert(!hasLabelOrId);
+      case SetOperation::setUnion:
+      case SetOperation::setIntersection:
+        assert(!hasLabelOrId);
       assert(left != nullptr && right != nullptr && relation == nullptr);
       break;
-    case SetOperation::image:
-    case SetOperation::domain:
-      assert(!hasLabelOrId);
+      case SetOperation::image:
+      case SetOperation::domain:
+        assert(!hasLabelOrId);
       assert(left != nullptr && relation != nullptr && right == nullptr);
       break;
-    default:
-      assert(false);
+      default:
+        assert(false);
       throw std::logic_error("unreachable");
+    }
   }
-#endif
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
   auto [iter, created] =
       canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));

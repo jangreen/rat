@@ -107,7 +107,7 @@ AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalSet 
 
 AnnotatedSet substitute(const AnnotatedSet &annotatedSet, const CanonicalSet search,
                         const CanonicalSet replace, int *n) {
-  assert(*n >= 0);
+  assert(*n >= 0 && "Negative occurrence counter");
   const auto &[set, annotation] = annotatedSet;
   if (*n == 0) {
     return annotatedSet;
@@ -173,7 +173,8 @@ bool validate(const AnnotatedSet &annotatedSet) {
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
-      assert(annotation->isLeaf() && !annotation->getValue().has_value());
+      assert(annotation->isLeaf() && "Non-leaf annotation at leaf set.");
+      assert(!annotation->getValue().has_value() && "Unexpected annotation at set.");
       return annotation->isLeaf() && !annotation->getValue().has_value();
     case SetOperation::image:
     case SetOperation::domain: {
@@ -204,8 +205,8 @@ bool validate(const AnnotatedRelation &annotatedRelation) {
     case RelationOperation::idRelation:
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
-      assert(annotation->isLeaf());
-      assert(!annotation->getValue().has_value());
+      assert(annotation->isLeaf() && "Non-leaf annotation at leaf set.");
+      assert(!annotation->getValue().has_value() && "Unexpected annotation at set.");
       return annotation->isLeaf() && !annotation->getValue().has_value();
     case RelationOperation::relationIntersection:
     case RelationOperation::composition:

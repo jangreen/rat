@@ -31,9 +31,8 @@ class Set {
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
 
-  // Cached values
+  // ================ Cached values ================
   mutable std::optional<std::string> cachedStringRepr;
-
   // properties calculated for canonical sets on initialization
   mutable bool _isNormal;
   mutable EventSet topEvents;
@@ -45,13 +44,14 @@ class Set {
   //  to avoid doing it for non-canonical sets.
   void completeInitialization() const;
 
+  static int maxEvent;  // to create globally unique events
+
  public:
   // WARNING: Never call these constructors: they are only public for technical reasons
   // Due to canonicalization, moving or copying is not allowed
   Set(const Set &other) = default;
   // Set(const Set &&other) = default;
 
-  static int maxEvent;  // to create globally unique events
   static CanonicalSet emptySet() {
     return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
   }
@@ -73,6 +73,12 @@ class Set {
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left,
                                     CanonicalRelation relation) {
     return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
+  }
+  static CanonicalSet freshEvent() {
+    return newEvent(maxEvent++);
+  }
+  static CanonicalSet freshTopEvent() {
+    return newTopEvent(maxEvent++);
   }
 
   bool operator==(const Set &other) const {

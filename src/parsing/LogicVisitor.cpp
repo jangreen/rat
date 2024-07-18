@@ -47,8 +47,8 @@
     // currently only support relations on each side of assertion
     const CanonicalRelation lhs = parseRelation(context->e1->getText());
     const CanonicalRelation rhs = parseRelation(context->e2->getText());
-    const CanonicalSet e1 = Set::newEvent(Set::maxEvent++);
-    const CanonicalSet e2 = Set::newEvent(Set::maxEvent++);
+    const CanonicalSet e1 = Set::freshEvent();
+    const CanonicalSet e2 = Set::freshEvent();
     const CanonicalSet e1LHS = Set::newSet(SetOperation::image, e1, lhs);
     const CanonicalSet e1RHS = Set::newSet(SetOperation::image, e1, rhs);
 
@@ -194,16 +194,10 @@
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetSingleton(
     LogicParser::SetSingletonContext *context) {
   std::string name = context->SETNAME()->getText();
-  int label;
-  if (definedSingletons.contains(name)) {
-    label = definedSingletons.at(name);
-  } else {
-    label = Set::maxEvent++;
-    definedSingletons.insert({name, label});
+  if (!definedSingletons.contains(name)) {
+    definedSingletons.insert({name, Set::freshEvent()});
   }
-  CanonicalSet s = Set::newEvent(label);
-  std::variant<CanonicalSet, CanonicalRelation> result = s;
-  return result;
+  return definedSingletons.at(name);
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationBasic(
     LogicParser::RelationBasicContext *context) {
@@ -420,4 +414,4 @@
 // }
 
 std::unordered_map<std::string, CanonicalRelation> Logic::definedRelations;
-std::unordered_map<std::string, int> Logic::definedSingletons;
+std::unordered_map<std::string, CanonicalSet> Logic::definedSingletons;

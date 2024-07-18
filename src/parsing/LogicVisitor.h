@@ -67,7 +67,7 @@ class Logic : LogicBaseVisitor {
   //    LogicParser::RelationComplementContext *context) override;
 
   static std::unordered_map<std::string, CanonicalRelation> definedRelations;
-  static std::unordered_map<std::string, int> definedSingletons;
+  static std::unordered_map<std::string, CanonicalSet> definedSingletons;
   static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;

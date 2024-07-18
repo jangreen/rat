@@ -32,22 +32,22 @@ class Relation {
   Relation(RelationOperation operation, CanonicalRelation left, CanonicalRelation right,
            std::optional<std::string> identifier);
 
-  inline static CanonicalRelation fullRelation() {
+  static CanonicalRelation fullRelation() {
     return newRelation(RelationOperation::fullRelation, nullptr, nullptr, std::nullopt);
-  };
-  inline static CanonicalRelation emptyRelation() {
+  }
+  static CanonicalRelation emptyRelation() {
     return newRelation(RelationOperation::emptyRelation, nullptr, nullptr, std::nullopt);
-  };
-  inline static CanonicalRelation idRelation() {
+  }
+  static CanonicalRelation idRelation() {
     return newRelation(RelationOperation::idRelation, nullptr, nullptr, std::nullopt);
-  };
-  inline static CanonicalRelation newBaseRelation(std::string identifier) {
+  }
+  static CanonicalRelation newBaseRelation(std::string identifier) {
     return newRelation(RelationOperation::baseRelation, nullptr, nullptr, identifier);
-  };
-  inline static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left) {
+  }
+  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left) {
     return newRelation(operation, left, nullptr, std::nullopt);
-  };
-  inline static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
+  }
+  static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
                                               CanonicalRelation right) {
     return newRelation(operation, left, right, std::nullopt);
   };
@@ -55,7 +55,10 @@ class Relation {
   Relation(const Relation &other) = delete;
   Relation(const Relation &&other) = delete;
 
-  bool operator==(const Relation &other) const;
+  bool operator==(const Relation &other) const {
+    return operation == other.operation && leftOperand == other.leftOperand &&
+           rightOperand == other.rightOperand && identifier == other.identifier;
+  }
 
   const RelationOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
