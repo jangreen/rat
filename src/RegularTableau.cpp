@@ -22,8 +22,8 @@ void addActivePairsFromEdges(const Cube &edges, SetOfSets &activePairs) {
 void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &reach) {
   auto [_, inserted] = reach.insert(node);
   if (inserted) {
-    for (const auto &child : node->children) {
-      const auto edgeLabels = child->parents.at(node);
+    for (const auto &child : node->getChildren()) {
+      const auto edgeLabels = node->getLabelForChild(child);
       findReachableNodes(child, reach);
     }
   }
@@ -92,7 +92,7 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
 
   // get open leafs
   std::erase_if(reachable, [&](const RegularNode *node) {
-    return !node->isOpenLeaf() || !node->epsilonChildren.empty() || node == currentNode;
+    return !node->isOpenLeaf() || !node->getEpsilonChildren().empty() || node == currentNode;
   });
 
   for (auto &unreducedNode : get_const_container(unreducedNodes)) {
@@ -149,8 +149,7 @@ std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
 }
 
 void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) {
-  parent->children.erase(child);
-  child->parents.erase(parent);
+  parent->removeChild(child);
   removeEdgeUpdateReachabilityTree(parent, child);
   assert(validateReachabilityTree());
 }
@@ -161,7 +160,7 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   assert(child != nullptr);
 
   // don't add edges that already exist
-  if (child->parents.contains(parent)) {
+  if (child->getParents().contains(parent)) {
     return;
   }
 
@@ -172,20 +171,18 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   // }
 
   // add edge
-  const auto [_, inserted] = parent->children.insert(child);
+  const auto inserted = parent->newChild(child, label);
   if (!inserted) {
-    assert(child->parents.contains(parent));
     return;
   }
-  child->parents.insert({parent, label});
   newEdgeUpdateReachabilityTree(parent, child);
 
   exportDebug("debug");
   assert(validateReachabilityTree());
 
   // if child has epsilon edge -> add shortcuts
-  for (const auto epsilonChildChild : child->epsilonChildren) {
-    const auto &childRenaming = epsilonChildChild->epsilonParents.at(child);
+  for (const auto epsilonChildChild : child->getEpsilonChildren()) {
+    const auto &childRenaming = epsilonChildChild->getEpsilonParents().at(child);
     newEdge(parent, epsilonChildChild, label.compose(childRenaming));
   }
 }
@@ -195,19 +192,17 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
   assert(parent != nullptr);
   assert(child != nullptr);
 
-  const auto [_, inserted] = parent->epsilonChildren.insert(child);
+  const auto inserted = parent->newEpsilonChild(child, label);
   if (!inserted) {
-    assert(child->epsilonParents.contains(parent));
     return;
   }
-  child->epsilonParents.insert({parent, label});
   exportDebug("debug");
 
   // add shortcuts
-  for (const auto &[grandparentNode, grandparentLabel] : parent->parents) {
+  for (const auto &[grandparentNode, grandparentLabel] : parent->getParents()) {
     newEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
-  for (const auto &[grandparentNode, grandparentLabel] : parent->epsilonParents) {
+  for (const auto &[grandparentNode, grandparentLabel] : parent->getEpsilonParents()) {
     newEpsilonEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
   // add epsilon child of a root nodes to root nodes
@@ -224,7 +219,7 @@ bool RegularTableau::solve() {
     auto currentNode = unreducedNodes.top();
     unreducedNodes.pop();
 
-    if (!currentNode->isOpenLeaf() || !currentNode->epsilonChildren.empty() ||
+    if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
         !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
@@ -386,7 +381,7 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, Regul
     worklist.pop_front();
     visited.insert(node);
 
-    for (const auto curChild : node->children) {
+    for (const auto curChild : node->getChildren()) {
       if (!visited.contains(curChild)) {
         curChild->reachabilityTreeParent = node;
         worklist.push_back(curChild);
@@ -412,7 +407,7 @@ void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularN
       unreducedNodes.push(node);
     }
 
-    for (const auto child : node->children) {
+    for (const auto child : node->getChildren()) {
       if (!isReachableFromRoots(child)) {
         child->reachabilityTreeParent = node;
         worklist.push_back(child);
@@ -433,7 +428,7 @@ void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
     allPaths.push_back(currentPath);
   }
 
-  for (const auto parent : node->parents) {
+  for (const auto parent : node->getParents()) {
     findAllPathsToRoots(parent.first, currentPath, allPaths);
   }
 
@@ -465,7 +460,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
       auto parent = path.at(i);
       const auto child = path.at(i - 1);
 
-      const auto &renaming = child->parents.at(parent);
+      const auto &renaming = parent->getLabelForChild(child);
       if (isInconsistent(parent, child, renaming)) {
         pathInconsistent = true;
         // remove inconsistent edge parent -> child
@@ -522,7 +517,7 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
     // rename to parent
     assert(isReachableFromRoots(cur));
     if (cur->reachabilityTreeParent != nullptr) {
-      const auto renaming = cur->parents.at(cur->reachabilityTreeParent);
+      const auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur);
       for (auto &edge : edges) {
         edge.rename(renaming.inverted());
       }
