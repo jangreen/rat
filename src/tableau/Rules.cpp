@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "utility.h"
+#include "../utility.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
                                                      const AnnotatedSet& annotatedSet,

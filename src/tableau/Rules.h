@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Annotated.h"
-#include "Assumption.h"
-#include "Literal.h"
+#include "../Assumption.h"
+#include "../basic/Annotated.h"
+#include "../basic/Literal.h"
 
 namespace Rules {
 // ---------------------- LITERAL RULES ----------------------

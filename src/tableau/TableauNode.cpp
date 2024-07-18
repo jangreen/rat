@@ -3,9 +3,9 @@
 #include <iostream>
 #include <ranges>
 
+#include "../utility.h"
 #include "Rules.h"
 #include "Tableau.h"
-#include "utility.h"
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
@@ -15,7 +15,7 @@ bool isAppendable(const DNF &dnf) {
 }
 
 void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
-  if (transitiveClosureNode == nullptr) {
+  if (transitiveClosureNode == nullptr || dnf.empty()) {
     return;
   }
   assert(transitiveClosureNode->validate());
@@ -278,7 +278,7 @@ void Node::appendBranch(const DNF &dnf) {
   reduceDNFAtAWorldCycle(dnfCopy, transitiveClosureNode);
   appendBranchInternalUp(dnfCopy);
 
-  // empy dnf
+  // empty dnf
   const bool contradiction = dnfCopy.empty();
   if (contradiction) {
     closeBranch();

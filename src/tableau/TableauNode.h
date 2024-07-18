@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "Literal.h"
+#include "../basic/Literal.h"
 
 class Tableau;
 // Uncomment to use the old worklist implementation (ordered sets).
@@ -57,7 +57,11 @@ class Node {
   [[nodiscard]] bool isLeaf() const;
   void rename(const Renaming &renaming);
   void appendBranch(const DNF &dnf);
-  void appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
+  void appendBranch(const Cube &cube) {
+    if (!cube.empty()) {
+      appendBranch(DNF{cube});
+    }
+  }
   void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
   std::optional<DNF> applyRule(bool modalRule = false);
   void inferModal();

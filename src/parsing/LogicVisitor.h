@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "../basic/Literal.h"
 #include "../cat/Constraint.h"
-#include "../Literal.h"
 #include "LogicVisitor.h"
 
 class Logic : LogicBaseVisitor {

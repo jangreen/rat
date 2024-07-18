@@ -4,9 +4,9 @@
 
 #include <iostream>
 
+#include "../Assumption.h"
+#include "../utility.h"
 #include "Annotation.h"
-#include "Assumption.h"
-#include "utility.h"
 
 Literal::Literal(bool negated)
     : negated(negated),

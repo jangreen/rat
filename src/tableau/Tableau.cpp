@@ -4,9 +4,9 @@
 #include <ranges>
 #include <unordered_set>
 
-#include "Assumption.h"
+#include "../Assumption.h"
+#include "../utility.h"
 #include "Rules.h"
-#include "utility.h"
 
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));

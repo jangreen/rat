@@ -1,10 +1,10 @@
+#include <boost/unordered/unordered_node_set.hpp>
 #include <cassert>
 
+#include "../Assumption.h"
+#include "../utility.h"
 #include "Annotation.h"
-#include "Assumption.h"
 #include "Literal.h"
-#include "utility.h"
-#include <boost/unordered/unordered_node_set.hpp>
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------

@@ -4,9 +4,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Literal.h"
+#include "../basic/Literal.h"
+#include "../tableau/Tableau.h"
 #include "RegularNode.h"
-#include "Tableau.h"
 
 class RegularTableau {
  private:

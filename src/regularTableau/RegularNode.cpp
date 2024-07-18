@@ -3,7 +3,7 @@
 #include <iostream>
 #include <ranges>
 
-#include "utility.h"
+#include "../utility.h"
 
 RegularNode::RegularNode(Cube cube) : cube(std::move(cube)) {}
 

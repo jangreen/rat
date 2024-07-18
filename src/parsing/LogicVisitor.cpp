@@ -3,9 +3,9 @@
 #include <any>
 #include <iostream>
 
-#include "../Annotated.h"
-#include "../RegularTableau.h"
 #include "../Assumption.h"
+#include "../basic/Annotated.h"
+#include "../regularTableau/RegularTableau.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
   DNF assertionCubes;
@@ -38,8 +38,7 @@
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
-  auto _ = parseMemoryModel(ctx->FILEPATH()->getText());
-
+  void(parseMemoryModel(ctx->FILEPATH()->getText()));
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
