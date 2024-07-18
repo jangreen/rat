@@ -1,137 +1,20 @@
 #pragma once
-#include <fstream>
-#include <set>
-#include <string>
-#include <vector>
+#include <unordered_set>
 
 #include "Literal.h"
-#include "Rules.h"
-
-// Uncomment to use the old worklist implementation (ordered sets).
-// #define WORKLIST_ALTERNATIVE
+#include "TableauNode.h"
 
 class Tableau {
-  // ============================================================================
-  // =================================== Node ===================================
-  // ============================================================================
  public:
-  class Worklist;
-  class Node {
-   private:
-#ifndef WORKLIST_ALTERNATIVE
-    // Intrusive worklist design for O(1) insertion and removal.
-    friend class Worklist;
-    Node *nextInWorkList = nullptr;
-    Node *prevInWorkList = nullptr;
-#endif
-    // gather information about the prefix of the branch
-    // only at leaf nodes
-    EventSet activeEvents;
-    SetOfSets activeEventBasePairs;
-
-   public:
-    Node(Node *parent, Literal literal);
-    explicit Node(const Node *other) = delete;
-    ~Node();
-    [[nodiscard]] bool validate() const;
-    [[nodiscard]] bool validateRecursive() const;
-
-    Tableau *tableau;
-    const Literal literal;
-    std::vector<std::unique_ptr<Node>> children;
-    Node *parentNode = nullptr;
-
-    [[nodiscard]] bool isClosed() const;
-    [[nodiscard]] bool isLeaf() const;
-    void appendBranch(const DNF &dnf);
-    inline void appendBranch(const Cube &cube) { appendBranch(DNF{cube}); }
-    inline void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
-    std::optional<DNF> applyRule(bool modalRule = false);
-    void inferModal();
-    void inferModalTop();
-    void inferModalAtomic();
-    void replaceNegatedTopOnBranch(const std::vector<int> &events);
-
-    // this method assumes that tableau is already reduced
-    [[nodiscard]] DNF extractDNF() const;
-    void dnfBuilder(DNF &dnf) const;
-
-    void toDotFormat(std::ofstream &output) const;
-
-   private:
-    void appendBranchInternalUp(DNF &dnf) const;
-    void appendBranchInternalDown(DNF &dnf);
-    void closeBranch();
-  };
-
-  // ============================================================================
-  // ================================= Worklist =================================
-  // ============================================================================
-
-  /*
-   * The worklist manages the nodes that need to get processed.
-   * Importantly, it makes sure the processing order is sound and efficient:
-   *  1. Positive equalities
-   *1.5(?) Set membership (currently not used/supported)
-   *  2. non normal positive literals (i.e., the rest)
-   *  3. non normal negative literals
-   *  4. remaining
-   *
-   *  Order for Rules 1. and 2.  are for soundness.
-   *  2.: we filter non active literals in appendBranch
-   *  Rule 3. is for efficiency in order to close branches as soon as possible.
-   */
-  class Worklist {
-   private:
-#ifndef WORKLIST_ALTERNATIVE
-    // (1)
-    std::unique_ptr<Node> posEqualitiesHeadDummy;
-    std::unique_ptr<Node> posEqualitiesTailDummy;
-    // (3)
-    std::unique_ptr<Node> nonNormalNegatedHeadDummy;
-    std::unique_ptr<Node> nonNormalNegatedTailDummy;
-    // (3)
-    std::unique_ptr<Node> nonNormalPositiveHeadDummy;
-    std::unique_ptr<Node> nonNormalPositiveTailDummy;
-    // (4)
-    std::unique_ptr<Node> remainingHeadDummy;
-    std::unique_ptr<Node> remainingTailDummy;
-
-    static void connect(Node &left, Node &right);
-    static void disconnect(Node &node);
-    static void insertAfter(Node &location, Node &node);
-    static bool isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<Node> &tail);
-#else
-    struct CompareNodes {
-      bool operator()(const Node *left, const Node *right) const;
-    };
-
-    std::set<Node *, CompareNodes> queue;
-#endif
-   public:
-    Worklist();
-    void push(Node *node);
-    Node *pop();
-    void erase(Node *node);
-    bool contains(const Node *node) const;
-
-    [[nodiscard]] bool isEmpty() const;
-    [[nodiscard]] bool validate() const;
-  };
-
-  // ============================================================================
-  // ================================= Tableau ==================================
-  // ============================================================================
-
   explicit Tableau(const Cube &cube);
   [[nodiscard]] bool validate() const;
 
-  std::unique_ptr<Node> rootNode;
   Worklist unreducedNodes;
 
+  const Node *getRoot() const { return rootNode.get(); }
   bool solve(int bound = -1);
   void removeNode(Node *node);
-  void renameBranch(const Node *leaf);
+  void renameBranches(Node *node);
 
   // methods for regular reasoning
   bool applyRuleA();
@@ -141,16 +24,14 @@ class Tableau {
   void exportProof(const std::string &filename) const;
   void exportDebug(const std::string &filename) const;
 
-  // helper
-  static Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
-    int c = 1;
-    Literal copy = literal;
-    Cube newLiterals;
-    while (copy.substitute(search, replace, c)) {
-      newLiterals.push_back(copy);
-      copy = literal;
-      c++;
-    }
-    return newLiterals;
-  }
+ private:
+  std::unique_ptr<Node> rootNode;
+
+  Node *renameBranchesInternalUp(Node *node, int from, int to,
+                                 std::unordered_set<Literal> &allRenamedLiterals,
+                                 std::unordered_map<const Node *, Node *> &originalToCopy);
+  void renameBranchesInternalDown(Node *node, const Renaming &renaming,
+                                  std::unordered_set<Literal> &allRenamedLiterals,
+                                  const std::unordered_map<const Node *, Node *> &originalToCopy,
+                                  std::unordered_set<const Node *> &unrollingParents);
 };

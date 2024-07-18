@@ -1,22 +1,23 @@
 #include "Tableau.h"
 
 #include <iostream>
+#include <ranges>
 #include <unordered_set>
 
 #include "Assumption.h"
+#include "Rules.h"
 #include "utility.h"
 
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
-  auto dummyNode = new Node(nullptr, TOP);
+  const auto dummyNode = new Node(nullptr, TOP);
   rootNode = std::unique_ptr<Node>(dummyNode);
   rootNode->tableau = this;
 
   Node *parentNode = dummyNode;
   for (const auto &literal : cube) {
     auto *newNode = new Node(parentNode, literal);
-    parentNode->children.emplace_back(newNode);
     assert(newNode->validate());
     unreducedNodes.push(newNode);
     parentNode = newNode;
@@ -24,15 +25,17 @@ Tableau::Tableau(const Cube &cube) {
 }
 
 bool Tableau::validate() const {
-  return rootNode->validateRecursive() && unreducedNodes.validate();
+  assert(rootNode->validateRecursive());
+  assert(unreducedNodes.validate());
+  return true;
 }
 
 void Tableau::removeNode(Node *node) {
   assert(validate());
-  assert(node != rootNode.get());       // node is not root node
-  assert(node->parentNode != nullptr);  // there is always a dummy root node
-  assert(node->parentNode->validate());
-  const auto parentNode = node->parentNode;
+  assert(node != rootNode.get());            // node is not root node
+  assert(node->getParentNode() != nullptr);  // there is always a dummy root node
+  assert(node->getParentNode()->validate());
+  auto parentNode = node->getParentNode();
 
   // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
   // that leaf's parent. The reason is as follows:
@@ -41,26 +44,18 @@ void Tableau::removeNode(Node *node) {
   // so we can get rid of all those branches. We do so by deleting all children from the parent
   // node.
   if (node->isLeaf()) {
-    parentNode->children.clear();
+    parentNode->removeAllChildren();
     return;
   }
 
   // No leaf: move all children to parent's children
-  for (const auto &child : node->children) {
-    child->parentNode = parentNode;
-  }
-  parentNode->children.insert(parentNode->children.end(),
-                              std::make_move_iterator(node->children.begin()),
-                              std::make_move_iterator(node->children.end()));
-
+  parentNode->newChildren(node->removeAllChildren());
   // Remove node from parent. This will automatically delete the node and remove it from the
   // worklist.
-  auto [begin, end] = std::ranges::remove_if(parentNode->children,
-                                             [&](auto &element) { return element.get() == node; });
-  parentNode->children.erase(begin, end);
+  parentNode->removeChild(node);
 
   assert(parentNode->validate());
-  assert(std::ranges::none_of(parentNode->children,
+  assert(std::ranges::none_of(parentNode->getChildren(),
                               [](const auto &child) { return !child->validate(); }));
   assert(unreducedNodes.validate());
   assert(validate());
@@ -72,16 +67,23 @@ bool Tableau::solve(int bound) {
       bound--;
     }
 
+    exportDebug("debug");
+
     Node *currentNode = unreducedNodes.pop();
     assert(currentNode->validate());
-    assert(currentNode->parentNode->validate());
+    assert(currentNode->getParentNode()->validate());
     assert(validate());
+    if (currentNode->isClosed()) {
+      continue;
+    }
     exportDebug("debug");
+
+    Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
       assert(unreducedNodes.validate());
-      assert(currentNode->parentNode->validate());
+      assert(currentNode->getParentNode()->validate());
       if (!Rules::lastRuleWasUnrolling) {
         removeNode(currentNode);  // in-place rule application
       }
@@ -89,18 +91,14 @@ bool Tableau::solve(int bound) {
     }
 
     // 2) Renaming rule
-    if (currentNode->literal.isPositiveEqualityPredicate()) {
+    if (currentNode->getLiteral().isPositiveEqualityPredicate()) {
       // we want to process equalities first
-      // currently we assume that there is at most one euqality predicate which is a leaf
-      // we could generalize this
-      assert(currentNode->isLeaf());
-
       // Rule (\equivL), Rule (\equivR)
-      renameBranch(currentNode);
+      renameBranches(currentNode);
       continue;
     }
 
-    assert(currentNode->literal.isNormal());
+    assert(currentNode->getLiteral().isNormal());
 
     // 2) Rules which require context (only to normalized literals)
     // if you need two premises l1, l2 and comes after l1 in the branch then the rule is applied if
@@ -109,19 +107,19 @@ bool Tableau::solve(int bound) {
     // conclusion could be such a predicate again
     // TODO: maybe consider lazy T evalutaion (consider T as event)
 
-    if (currentNode->literal.hasTopEvent()) {
+    if (currentNode->getLiteral().hasTopEvent()) {
       // Rule (~\top_1)
       // here: we replace universal events by concrete positive existential events
-      assert(currentNode->literal.negated);
+      assert(currentNode->getLiteral().negated);
       currentNode->inferModalTop();
     }
 
-    if (currentNode->literal.operation == PredicateOperation::setNonEmptiness) {
+    if (currentNode->getLiteral().operation == PredicateOperation::setNonEmptiness) {
       // Rule (~aL), Rule (~aR)
       currentNode->inferModal();
     }
 
-    if (currentNode->literal.isPositiveEdgePredicate()) {
+    if (currentNode->getLiteral().isPositiveEdgePredicate()) {
       // Rule (~\top_1)
       // e=f, e\in A, (e,f)\in a, e != 0
       // Rule (~aL), Rule (~aR)
@@ -130,14 +128,14 @@ bool Tableau::solve(int bound) {
 
     // 3) Saturation Rules
     if (!Assumption::baseAssumptions.empty()) {
-      auto literal = Rules::saturateBase(currentNode->literal);
+      auto literal = Rules::saturateBase(currentNode->getLiteral());
       if (literal) {
         currentNode->appendBranch(*literal);
       }
     }
 
     if (!Assumption::idAssumptions.empty()) {
-      auto literal = Rules::saturateId(currentNode->literal);
+      auto literal = Rules::saturateId(currentNode->getLiteral());
       if (literal) {
         currentNode->appendBranch(*literal);
       }
@@ -162,7 +160,7 @@ bool Tableau::applyRuleA() {
       continue;
     }
     assert(unreducedNodes.validate());
-    assert(currentNode->parentNode->validate());
+    assert(currentNode->getParentNode()->validate());
     removeNode(currentNode);
 
     // find atomic
@@ -178,6 +176,106 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
+Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
+                                        std::unordered_set<Literal> &allRenamedLiterals,
+                                        std::unordered_map<const Node *, Node *> &originalToCopy) {
+  const Renaming renaming = Renaming::simple(from, to);
+
+  // Determine first node (closest to root) that has to be renamed.
+  // Everything above is unaffected and thus we can share the common prefix for the renamed
+  // branch.
+  const Node *firstToRename = nullptr;
+  const Node *cur = lastSharedNode;
+  while (cur != nullptr) {
+    if (cur->getLiteral().events().contains(from)) {
+      firstToRename = cur;
+    }
+    cur = cur->getParentNode();
+  }
+
+  // Nothing to rename: keep branch as is.
+  if (firstToRename == nullptr) {
+    return lastSharedNode;
+  }
+  const auto commonPrefix = firstToRename->getParentNode();
+
+  // Copy & rename from lastSharedNode to firstToRename.
+  Node *renamedNodeCopy = nullptr;
+  std::unique_ptr<Node> copiedBranch = nullptr;
+  cur = lastSharedNode;
+  while (cur != commonPrefix) {
+    assert(cur->validate());
+    auto litCopy = Literal(cur->getLiteral());
+    litCopy.rename(renaming);
+
+    // Check for duplicates & create renamed node only if new.
+    auto [_, isNew] = allRenamedLiterals.insert(litCopy);
+    if (isNew) {
+      auto renamedCur = new Node(nullptr, litCopy);
+      originalToCopy.insert({cur, renamedCur});
+      renamedCur->tableau = cur->tableau;
+      renamedCur->setLastUnrollingParent(cur->getLastUnrollingParent());
+      if (copiedBranch != nullptr) {
+        renamedCur->newChild(std::move(copiedBranch));
+      } else {
+        renamedNodeCopy = renamedCur;
+      }
+      // if cur is in unreduced nodes push renamedCur
+      if (unreducedNodes.contains(cur)) {
+        unreducedNodes.push(renamedCur);
+      }
+      copiedBranch = std::unique_ptr<Node>(renamedCur);
+    }
+
+    cur = cur->getParentNode();
+  }
+  // update meta data based on originalToCopy
+  Node *curCopy = originalToCopy.at(lastSharedNode);
+  assert(curCopy->isLeaf());
+  while (curCopy != nullptr) {
+    if (originalToCopy.contains(curCopy->getLastUnrollingParent())) {
+      curCopy->setLastUnrollingParent(originalToCopy.at(curCopy->getLastUnrollingParent()));
+    }
+    curCopy = curCopy->getParentNode();
+  }
+
+  commonPrefix->newChild(std::move(copiedBranch));
+  return renamedNodeCopy;
+}
+
+void Tableau::renameBranchesInternalDown(
+    Node *node, const Renaming &renaming, std::unordered_set<Literal> &allRenamedLiterals,
+    const std::unordered_map<const Node *, Node *> &originalToCopy,
+    std::unordered_set<const Node *> &unrollingParents) {
+  node->rename(renaming);
+  // gather all unrollingParents in the subtree to prevent deleting them
+  if (node->getLastUnrollingParent() != nullptr) {
+    unrollingParents.insert(node->getLastUnrollingParent());
+
+    if (originalToCopy.contains(node->getLastUnrollingParent())) {
+      node->setLastUnrollingParent(originalToCopy.at(node->getLastUnrollingParent()));
+    }
+  }
+
+  auto [_, isNew] = allRenamedLiterals.insert(node->getLiteral());
+
+  if (!node->isLeaf()) {
+    // No leaf: descend recursively
+    // Copy allRenamedLiterals for all children but the last one
+    for (const auto &child : std::ranges::drop_view(node->getChildren(), 1)) {
+      auto allRenamedLiteralsCopy(allRenamedLiterals);
+      renameBranchesInternalDown(child.get(), renaming, allRenamedLiteralsCopy, originalToCopy,
+                                 unrollingParents);  // copy for each branching
+    }
+    renameBranchesInternalDown(node->getChildren()[0].get(), renaming, allRenamedLiterals,
+                               originalToCopy, unrollingParents);
+  }
+  if (!isNew && !unrollingParents.contains(node)) {
+    removeNode(node);
+  }
+  assert(unreducedNodes.validate());
+}
+
 /*
  *  Given a leaf node with an equality predicate, renames the branch according to the equality.
  *  The original branch is destroyed and the renamed branch is added to the tableau.
@@ -187,81 +285,37 @@ bool Tableau::applyRuleA() {
  *
  *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
  */
-void Tableau::renameBranch(const Node *leaf) {
+void Tableau::renameBranches(Node *node) {
   assert(validate());
-  assert(leaf->isLeaf());
-  assert(leaf->literal.operation == PredicateOperation::equality);
+  assert(node->getLiteral().operation == PredicateOperation::equality);
 
   // Compute renaming according to equality predicate (from larger label to lower label).
-  const int e1 = leaf->literal.leftEvent->label.value();
-  const int e2 = leaf->literal.rightEvent->label.value();
+  const int e1 = node->getLiteral().leftEvent->label.value();
+  const int e2 = node->getLiteral().rightEvent->label.value();
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
   const auto renaming = Renaming::simple(from, to);
   assert(from != to);
 
-  // Determine first node (closest to root) that has to be renamed.
-  // Everything above is unaffected and thus we can share the common prefix for the renamed branch.
-  const Node *firstToRename = nullptr;
-  const Node *cur = leaf;
-  while ((cur = cur->parentNode) != nullptr) {
-    if (cur->literal.events().contains(from)) {
-      firstToRename = cur;
-    }
+  // Determine first node that belongs to the renamed branches only
+  Node *firstUnsharedNode = node;
+  while (firstUnsharedNode->getParentNode() != rootNode.get() &&
+         firstUnsharedNode->getParentNode()->getChildren().size() <= 1) {
+    firstUnsharedNode = firstUnsharedNode->getParentNode();
   }
+  const auto lastSharedNode = firstUnsharedNode->getParentNode();
 
-  // Nothing to rename: keep branch as is.
-  if (firstToRename == nullptr) {
-    return;
-  }
-  const auto commonPrefix = firstToRename->parentNode;
+  std::unordered_set<Literal> renamedLiterals;  // To remove identical (after renaming) literals
+  std::unordered_map<const Node *, Node *> originalToCopy;
+  std::unordered_set<const Node *> unrollingParents;
 
-  // Copy & rename branch.
-  std::unordered_set<Literal> allRenamedLiterals;  // To remove identical (after renaming) literals
-  bool currentNodeIsShared = false;                // Unshared nodes can be dropped after renaming.
-  std::unique_ptr<Node> copiedBranch = nullptr;
-  cur = leaf;
-  while (cur != commonPrefix) {
-    // Copy & rename literal
-    assert(cur->validate());
-    auto litCopy = Literal(cur->literal);
-    litCopy.rename(renaming);
+  auto renamedLastSharedNode =
+      renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals, originalToCopy);
+  renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
+                             unrollingParents);
 
-    // Check for duplicates & create renamed node only if new.
-    auto [_, isNew] = allRenamedLiterals.insert(litCopy);
-    if (isNew) {
-      auto renamedCur = new Node(nullptr, litCopy);
-      renamedCur->tableau = cur->tableau;
-      if (copiedBranch != nullptr) {
-        copiedBranch->parentNode = renamedCur;
-        renamedCur->children.push_back(std::move(copiedBranch));
-      }
-      // if cur is in unreduced nodes push renamedCur
-      if (cur == leaf || unreducedNodes.contains(cur)) {
-        unreducedNodes.push(renamedCur);
-      }
-      copiedBranch = std::unique_ptr<Node>(renamedCur);
-    }
-
-    // Check if we go from unshared nodes to shared nodes: if so, we can delete all unshared nodes
-    const auto parentNode = cur->parentNode;
-    const auto parentIsShared =
-        currentNodeIsShared || (parentNode == commonPrefix || parentNode->children.size() > 1);
-    if (!currentNodeIsShared && parentIsShared) {
-      // Delete unshared nodes
-      auto curIt = std::ranges::find_if(parentNode->children,
-                                        [&](auto &child) { return child.get() == cur; });
-      parentNode->children.erase(curIt);
-      currentNodeIsShared = true;
-    }
-
-    cur = parentNode;
-  }
-
-  // Append copied branch
-  assert(copiedBranch != nullptr);
-  copiedBranch->parentNode = commonPrefix;
-  commonPrefix->children.push_back(std::move(copiedBranch));
+  auto movedChild = lastSharedNode->removeChild(firstUnsharedNode);
+  renamedLastSharedNode->newChild(std::move(movedChild));
 }
 
 bool isSubsumed(const Cube &a, const Cube &b) {
@@ -274,12 +328,13 @@ bool isSubsumed(const Cube &a, const Cube &b) {
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
   DNF sortedDnf = dnf;
-  std::ranges::sort(sortedDnf, std::less<int>(), &Cube::size);
+  std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
   DNF simplified;
   simplified.reserve(sortedDnf.size());
-  for (const auto & c1 : sortedDnf) {
-    const bool subsumed = std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
+  for (const auto &c1 : sortedDnf) {
+    const bool subsumed =
+        std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
     if (!subsumed) {
       simplified.push_back(c1);
     }
@@ -293,6 +348,7 @@ DNF simplifyDnf(const DNF &dnf) {
 DNF Tableau::dnf() {
   solve();
   auto dnf = simplifyDnf(rootNode->extractDNF());
+  exportDebug("debug");
   assert(validateDNF(dnf));
   return dnf;
 }
@@ -313,6 +369,6 @@ void Tableau::exportProof(const std::string &filename) const {
 
 void Tableau::exportDebug(const std::string &filename) const {
 #if (DEBUG)
-  //exportProof(filename);
+  exportProof(filename);
 #endif
 }

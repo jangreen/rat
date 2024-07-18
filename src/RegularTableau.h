@@ -1,8 +1,6 @@
 #pragma once
 #include <fstream>
-#include <map>
 #include <stack>
-#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -11,10 +9,14 @@
 #include "Tableau.h"
 
 class RegularTableau {
+ private:
+  bool isReachableFromRoots(const RegularNode *node) const;
+
  public:
   RegularTableau(std::initializer_list<Literal> initialLiterals);
   explicit RegularTableau(const Cube &initialLiterals);
   bool validate(const RegularNode *currentNode = nullptr) const;
+  bool validateReachabilityTree() const;
 
   std::unordered_set<RegularNode *> rootNodes;
   std::unordered_set<std::unique_ptr<RegularNode>, RegularNode::Hash, RegularNode::Equal> nodes;
@@ -23,10 +25,16 @@ class RegularTableau {
   bool solve();
   std::pair<RegularNode *, Renaming> newNode(const Cube &cube);
   void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
+  void removeEdge(RegularNode *parent, RegularNode *child);
   void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void expandNode(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
-  static void extractAnnotationexample(const RegularNode *openNode);
+  bool isInconsistentLazy(RegularNode *openLeaf);
+  typedef std::vector<RegularNode *> Path;
+  void findAllPathsToRoots(RegularNode *node, Path &currentPath, std::vector<Path> &allPaths) const;
+  void newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
+  void removeEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
+  void extractCounterexample(const RegularNode *openLeaf) const;
 
   void toDotFormat(std::ofstream &output, bool allNodes = true) const;
   void exportProof(const std::string &filename) const;

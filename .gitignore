@@ -1,3 +1,5 @@
 .DS_Store
 .antlr
+.idea
 build
+cmake-build-relwithdebinfo

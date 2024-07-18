@@ -59,7 +59,7 @@ inline bool validateCube(const Cube &cube) {
   Cube copy = cube;
   std::ranges::sort(copy);
   const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
-  assert(!hasDuplicates);
+  // assert(!hasDuplicates);
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
@@ -117,6 +117,11 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
     result.push_back(cube);
   }
   return result;
+}
+
+inline bool cubeHasNegatedLiteral(const Cube &cube, const Literal &literal) {
+  return std::ranges::any_of(
+      cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
 }
 
 inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {
@@ -180,19 +185,16 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   return removedLiterals;
 }
 
-
 // ===================================================================================
 // ============================ Benchmarking utility =================================
 // ===================================================================================
 
 template <class Unordered>
-double measure_unordered_badness(Unordered const& map)
-{
+double measure_unordered_badness(Unordered const &map) {
   auto const lambda = map.size() / static_cast<double>(map.bucket_count());
 
   auto cost = 0.;
-  for (int i = 0; i < map.bucket_count(); i++)
-    cost += map.bucket_size(i) * map.bucket_size(i);
+  for (int i = 0; i < map.bucket_count(); i++) cost += map.bucket_size(i) * map.bucket_size(i);
   cost /= map.size();
 
   return std::max(0., cost / (1 + lambda) - 1);

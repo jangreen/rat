@@ -73,12 +73,12 @@ AnnotatedRelation makeWithValue(const CanonicalRelation relation, const Annotati
 }
 
 // only subtitutes in set expressions
-AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet search,
+AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalSet search,
                            const CanonicalSet replace) {
   const auto &[set, annotation] = annotatedSet;
 
   if (set == search) {
-    return Annotated::makeWithValue(replace, {0, 0});
+    return makeWithValue(replace, {0, 0});
   }
   switch (set->operation) {
     case SetOperation::topEvent:
@@ -91,21 +91,21 @@ AnnotatedSet substituteAll(const AnnotatedSet annotatedSet, const CanonicalSet s
     case SetOperation::domain: {
       const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
       const auto relation = std::get<AnnotatedRelation>(getRight(annotatedSet));
-      return Annotated::newSet(set->operation, left, relation);
+      return newSet(set->operation, left, relation);
     }
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
       const auto &right =
           substituteAll(std::get<AnnotatedSet>(getRight(annotatedSet)), search, replace);
-      return Annotated::newSet(set->operation, left, right);
+      return newSet(set->operation, left, right);
     }
     default:
       throw std::logic_error("unreachable");
   }
 }
 
-AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet search,
+AnnotatedSet substitute(const AnnotatedSet &annotatedSet, const CanonicalSet search,
                         const CanonicalSet replace, int *n) {
   assert(*n >= 0);
   const auto &[set, annotation] = annotatedSet;
@@ -115,7 +115,7 @@ AnnotatedSet substitute(const AnnotatedSet annotatedSet, const CanonicalSet sear
 
   if (set == search) {
     if (*n == 1) {
-      return Annotated::makeWithValue(replace, {0, 0});
+      return makeWithValue(replace, {0, 0});
     }
     (*n)--;
     return annotatedSet;

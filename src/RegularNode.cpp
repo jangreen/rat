@@ -144,7 +144,11 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   for (const auto child : children) {
     const auto label = child->parents.at(this);
     output << "N" << this << " -> " << "N" << child;
-    output << "[tooltip=\"";
+    output << "[";
+    if (child->reachabilityTreeParent == this) {
+      output << "color=\"red\", ";
+    }
+    output << "tooltip=\"";
     label.toDotFormat(output);
     output << "\"];\n";
   }
@@ -153,11 +157,6 @@ void RegularNode::toDotFormat(std::ofstream &output) {
     output << "N" << this << " -> "
            << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
   }  //*/
-  // root parents
-  // for (const auto parentNode : rootParents) {
-  //   output << "N" << this << " -> " << "N" << parentNode << "[color=\"brown\"];" <<
-  //   std::endl;
-  // }
   printed = true;
 
   // children

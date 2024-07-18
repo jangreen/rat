@@ -5,6 +5,7 @@
 
 #include "../Annotated.h"
 #include "../RegularTableau.h"
+#include "../Assumption.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
   DNF assertionCubes;
@@ -326,7 +327,7 @@
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetBasic(
     LogicParser::SetBasicContext *context) {
   // TODO: lookup let definitions
-  std::string name = context->SETNAME()->getText();
+  const std::string name = context->SETNAME()->getText();
   if (name == "E") {
     std::variant<CanonicalSet, CanonicalRelation> result = Set::fullSet();
     return result;

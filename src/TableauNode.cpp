@@ -1,6 +1,9 @@
+#include "TableauNode.h"
+
 #include <iostream>
 #include <ranges>
 
+#include "Rules.h"
 #include "Tableau.h"
 #include "utility.h"
 
@@ -11,6 +14,22 @@ bool isAppendable(const DNF &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
 }
 
+void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
+  if (transitiveClosureNode == nullptr) {
+    return;
+  }
+  assert(transitiveClosureNode->validate());
+
+  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
+    return std::ranges::any_of(cube, [&](const Literal &cubeLit) {
+      assert(cubeLit.validate());
+      return cubeLit == transitiveClosureNode->getLiteral();
+    });
+  });
+  dnf.erase(begin, end);
+  reduceDNFAtAWorldCycle(dnf, transitiveClosureNode->getLastUnrollingParent());
+}
+
 // given dnf f and literal l it gives smaller dnf f' such that f & l <-> f'
 // it removes cubes with ~l from f
 // it removes l from remaining cubes
@@ -18,10 +37,8 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 
   // remove cubes with literals ~l
-  auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
-    return std::ranges::any_of(
-        cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
-  });
+  auto [begin, end] = std::ranges::remove_if(
+      dnf, [&](const auto &cube) { return cubeHasNegatedLiteral(cube, literal); });
   dnf.erase(begin, end);
 
   // remove l from dnf
@@ -33,13 +50,29 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 }
 
+// TODO: give better name
+Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
+  int c = 1;
+  Literal copy = literal;
+  Cube newLiterals;
+  while (copy.substitute(search, replace, c)) {
+    newLiterals.push_back(copy);
+    copy = literal;
+    c++;
+  }
+  return newLiterals;
+}
+
 }  // namespace
 
-Tableau::Node::Node(Node *parent, Literal literal)
+Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
-      parentNode(parent) {
+      parentNode(parent),
+      _isClosed(false) {
   if (parent != nullptr) {
+    parent->children.emplace_back(this);
+
     activeEvents = parent->activeEvents;
     activeEventBasePairs = parent->activeEventBasePairs;
   }
@@ -50,44 +83,67 @@ Tableau::Node::Node(Node *parent, Literal literal)
   }
 }
 
-Tableau::Node::~Node() {
+Node::~Node() {
   // remove this from unreducedNodes
   tableau->unreducedNodes.erase(this);
 }
 
-bool Tableau::Node::validate() const {
+bool Node::validate() const {
   if (tableau == nullptr) {
     std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
-  if (tableau->rootNode.get() != this && parentNode == nullptr) {
+  if (tableau->getRoot() != this && parentNode == nullptr) {
     std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
   return literal.validate();
 }
 
-bool Tableau::Node::validateRecursive() const {
-  return validate() && std::ranges::all_of(children, [](auto &child) { return child->validate(); });
+bool Node::validateRecursive() const {
+  assert(validate());
+  assert(std::ranges::all_of(children, [](auto &child) { return child->validate(); }));
+  return true;
 }
 
-// TODO: lazy evaluation + save intermediate results (evaluate each node at most once)
-bool Tableau::Node::isClosed() const {
-  if (literal == BOTTOM) {
-    return true;
-  }
-  if (children.empty()) {
-    return false;
-  }
-  return std::ranges::all_of(children, &Node::isClosed);
+void Node::newChild(std::unique_ptr<Node> child) {
+  child->parentNode = this;
+  child->activeEvents.merge(activeEvents);
+  children.push_back(std::move(child));
 }
 
-bool Tableau::Node::isLeaf() const { return children.empty(); }
+void Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
+  for (const auto &newChild : newChildren) {
+    newChild->parentNode = this;
+  }
+  children.insert(children.end(), std::make_move_iterator(newChildren.begin()),
+                  std::make_move_iterator(newChildren.end()));
+}
+
+std::unique_ptr<Node> Node::removeChild(Node *child) {
+  auto firstUnsharedNodeIt =
+      std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
+  auto removedChild = std::move(*firstUnsharedNodeIt);
+  children.erase(firstUnsharedNodeIt);
+  return removedChild;
+}
+
+bool Node::isLeaf() const { return children.empty(); }
+
+void Node::rename(const Renaming &renaming) {
+  literal.rename(renaming);
+
+  EventSet renamedEvents;
+  for (const auto &event : activeEvents) {
+    renamedEvents.insert(renaming.rename(event));
+  }
+  activeEvents = std::move(renamedEvents);
+}
 
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
-void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
-  const Node *node = this;
+void Node::appendBranchInternalUp(DNF &dnf) const {
+  auto node = this;
   do {
     assert(validateDNF(dnf));
     if (!isAppendable(dnf)) {
@@ -97,7 +153,36 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   } while ((node = node->parentNode) != nullptr);
 }
 
-void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
+void Node::reduceBranchInternalDown(Cube &cube) {
+  assert(tableau->unreducedNodes.validate());
+
+  if (isClosed()) {
+    return;
+  }
+
+  if (cubeHasNegatedLiteral(cube, literal)) {
+    closeBranch();
+    return;
+  }
+
+  // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
+  // children, potentially invalidating the iterator.
+  for (int i = children.size() - 1; i >= 0; i--) {
+    if (!children.empty()) {
+      children[i]->reduceBranchInternalDown(cube);
+    }
+  }
+
+  auto litIt = std::ranges::find(cube, literal);
+  const bool cubeContainsLiteral = litIt != cube.end();
+  if (cubeContainsLiteral) {
+    // choose minimal annotation
+    litIt->annotation = Annotation::min(litIt->annotation, literal.annotation);
+    tableau->removeNode(this);
+  }
+}
+
+void Node::appendBranchInternalDown(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
@@ -148,39 +233,100 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
 
   // append: transform dnf into a tableau and append it
   for (const auto &cube : dnf) {
-    Node *newNode = this;
+    auto newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
-      newNode->parentNode->children.emplace_back(newNode);
+      newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
   }
   assert(tableau->unreducedNodes.validate());
 }
 
-void Tableau::Node::closeBranch() {
+void Node::closeBranch() {
+  assert(this != tableau->getRoot());
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
   children.clear();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
-  children.emplace_back(new Node(this, BOTTOM));
+  const auto bottom = new Node(this, BOTTOM);
+  bottom->_isClosed = true;
+
+  // update isClosed cache
+  Node *cur = this;
+  while (cur != nullptr) {
+    if (std::ranges::any_of(cur->children, [](const auto &child) { return !child->isClosed(); })) {
+      break;
+    }
+    cur->_isClosed = true;
+    cur = cur->parentNode;
+  };
 }
 
-void Tableau::Node::appendBranch(const DNF &dnf) {
+void Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
 
+  if (isClosed()) {
+    return;
+  }
+
   DNF dnfCopy(dnf);
+  reduceDNFAtAWorldCycle(dnfCopy, transitiveClosureNode);
   appendBranchInternalUp(dnfCopy);
+
+  // empy dnf
+  const bool contradiction = dnfCopy.empty();
+  if (contradiction) {
+    closeBranch();
+    return;
+  }
+
+  // conjunctive
+  const bool isConjunctive = dnfCopy.size() == 1;
+  if (isConjunctive) {
+    auto &cube = dnfCopy.at(0);
+    // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
+    // down in the tree
+    filterNegatedLiterals(cube, activeEvents);
+
+    // insert cube in-place
+    // 1. reduce branch
+    // IMPORTANT that we do this first to choose the minimal annotation
+    // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
+    // children, potentially invalidating the iterator.
+    for (int i = children.size() - 1; i >= 0; i--) {
+      if (!children.empty()) {
+        children[i]->reduceBranchInternalDown(cube);
+      }
+    }
+
+    // 2. insert cube
+    auto thisChildren = std::move(children);
+    children.clear();
+    Node *newNode = this;
+    for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
+      newNode = new Node(newNode, literal);
+      newNode->lastUnrollingParent = transitiveClosureNode;
+      tableau->unreducedNodes.push(newNode);
+    }
+    newNode->children = std::move(thisChildren);
+    for (const auto &newNodeChild : newNode->children) {
+      newNodeChild->parentNode = newNode;
+    }
+    return;
+  }
+
+  // disjunctive
   appendBranchInternalDown(dnfCopy);
 
   assert(tableau->unreducedNodes.validate());
 }
 
-void Tableau::Node::dnfBuilder(DNF &dnf) const {
+void Node::dnfBuilder(DNF &dnf) const {
   if (isClosed()) {
     return;
   }
@@ -207,17 +353,20 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
   }
 }
 
-DNF Tableau::Node::extractDNF() const {
+DNF Node::extractDNF() const {
   DNF dnf;
   dnfBuilder(dnf);
   return dnf;
 }
 
-std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
+std::optional<DNF> Node::applyRule(const bool modalRule) {
   auto const result = Rules::applyRule(literal, modalRule);
   if (!result) {
     return std::nullopt;
   }
+
+  // to detect at the world cycles
+  transitiveClosureNode = Rules::lastRuleWasUnrolling ? this : this->lastUnrollingParent;
 
   auto disjunction = *result;
   appendBranch(disjunction);
@@ -225,7 +374,7 @@ std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   return disjunction;
 }
 
-void Tableau::Node::inferModal() {
+void Node::inferModal() {
   if (!literal.negated) {
     return;
   }
@@ -253,12 +402,18 @@ void Tableau::Node::inferModal() {
     const CanonicalSet search2 = be2;
     const CanonicalSet replace2 = e1;
 
-    appendBranch(substitute(literal, search1, replace1));
-    appendBranch(substitute(literal, search2, replace2));
+    // Compute substituted literals and append.
+    Cube subResult = substitute(literal, search1, replace1);
+    for (const auto &lit : substitute(literal, search2, replace2)) {
+      if (!contains(subResult, lit)) {
+        subResult.push_back(lit);
+      }
+    }
+    appendBranch(subResult);
   }
 }
 
-void Tableau::Node::inferModalTop() {
+void Node::inferModalTop() {
   if (!literal.negated) {
     return;
   }
@@ -293,7 +448,8 @@ void Tableau::Node::inferModalTop() {
   }
 }
 
-void Tableau::Node::inferModalAtomic() {
+void Node::inferModalAtomic() {
+  // throw std::logic_error("error");
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
   assert(edgeLiteral.validate());
@@ -342,26 +498,7 @@ void Tableau::Node::inferModalAtomic() {
   }
 }
 
-// FIXME: use or remove
-void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
-  const Node *cur = this;
-  while ((cur = cur->parentNode) != nullptr) {
-    const Literal &curLit = cur->literal;
-    if (!curLit.negated || !curLit.isNormal()) {
-      continue;
-    }
-    // replace T -> e
-    const CanonicalSet top = Set::fullSet();
-    for (const auto label : events) {
-      const CanonicalSet e = Set::newEvent(label);
-      for (auto &lit : substitute(curLit, top, e)) {
-        appendBranch(lit);
-      }
-    }
-  }
-}
-
-void Tableau::Node::toDotFormat(std::ofstream &output) const {
+void Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
@@ -377,6 +514,8 @@ void Tableau::Node::toDotFormat(std::ofstream &output) const {
   output << toString(literal.events()) << "\n";
   output << "normalEvents: \n";
   output << toString(literal.normalEvents()) << "\n";
+  output << "lastUnrollingParent: \n";
+  output << lastUnrollingParent << "\n";
   output << "--- BRANCH --- \n";
   output << "activeEvents: \n";
   output << toString(activeEvents) << "\n";

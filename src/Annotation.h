@@ -62,7 +62,7 @@ typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
 class Annotation {
  private:
   Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
-         CanonicalAnnotation right);
+             CanonicalAnnotation right);
   static CanonicalAnnotation newAnnotation(const std::optional<AnnotationType> &value,
                                            CanonicalAnnotation left, CanonicalAnnotation right);
 
@@ -75,7 +75,7 @@ class Annotation {
  public:
   // WARNING: Never call these constructors: they are only public for technical reasons
   Annotation(const Annotation &other) = default;
-  //Annotation(const Annotation &&other) = default;
+  // Annotation(const Annotation &&other) = default;
 
   static CanonicalAnnotation none() {
     static CanonicalAnnotation cached = nullptr;
@@ -94,6 +94,7 @@ class Annotation {
   [[nodiscard]] CanonicalAnnotation getLeft() const { return left == nullptr ? this : left; }
   [[nodiscard]] CanonicalAnnotation getRight() const { return right == nullptr ? this : right; }
   [[nodiscard]] bool isLeaf() const { return left == nullptr && right == nullptr; }
+  static CanonicalAnnotation min(CanonicalAnnotation first, CanonicalAnnotation second);
 
   bool operator==(const Annotation &other) const {
     return value == other.value && left == other.left && right == other.right;

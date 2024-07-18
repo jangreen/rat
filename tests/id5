@@ -1,0 +1,5 @@
+
+let loc = loc-base | id
+let co = co-base & loc
+
+assert co <= co
