@@ -173,8 +173,8 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
-Tableau::Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
-                                                 std::unordered_set<Literal> &allRenamedLiterals) {
+Node *Tableau::renameBranchesInternalUp(Node *node, int from, int to,
+                                        std::unordered_set<Literal> &allRenamedLiterals) {
   const Renaming renaming = Renaming::simple(from, to);
 
   // Determine first node (closest to root) that has to be renamed.

@@ -1,3 +1,5 @@
+#include "TableauNode.h"
+
 #include <iostream>
 #include <ranges>
 
@@ -31,9 +33,22 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 }
 
+// TODO: give better name
+Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
+  int c = 1;
+  Literal copy = literal;
+  Cube newLiterals;
+  while (copy.substitute(search, replace, c)) {
+    newLiterals.push_back(copy);
+    copy = literal;
+    c++;
+  }
+  return newLiterals;
+}
+
 }  // namespace
 
-Tableau::Node::Node(Node *parent, Literal literal)
+Node::Node(Node *parent, Literal literal)
     : tableau(parent != nullptr ? parent->tableau : nullptr),
       literal(std::move(literal)),
       parentNode(parent),
@@ -51,12 +66,12 @@ Tableau::Node::Node(Node *parent, Literal literal)
   }
 }
 
-Tableau::Node::~Node() {
+Node::~Node() {
   // remove this from unreducedNodes
   tableau->unreducedNodes.erase(this);
 }
 
-bool Tableau::Node::validate() const {
+bool Node::validate() const {
   if (tableau == nullptr) {
     std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
     return false;
@@ -68,19 +83,19 @@ bool Tableau::Node::validate() const {
   return literal.validate();
 }
 
-bool Tableau::Node::validateRecursive() const {
+bool Node::validateRecursive() const {
   assert(validate());
   assert(std::ranges::all_of(children, [](auto &child) { return child->validate(); }));
   return true;
 }
 
-void Tableau::Node::newChild(std::unique_ptr<Node> child) {
+void Node::newChild(std::unique_ptr<Node> child) {
   child->parentNode = this;
   child->activeEvents.merge(activeEvents);
   children.push_back(std::move(child));
 }
 
-void Tableau::Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
+void Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
   for (const auto &newChild : newChildren) {
     newChild->parentNode = this;
   }
@@ -88,7 +103,7 @@ void Tableau::Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) 
                   std::make_move_iterator(newChildren.end()));
 }
 
-std::unique_ptr<Tableau::Node> Tableau::Node::removeChild(Tableau::Node *child) {
+std::unique_ptr<Node> Node::removeChild(Node *child) {
   auto firstUnsharedNodeIt =
       std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
   auto removedChild = std::move(*firstUnsharedNodeIt);
@@ -96,9 +111,9 @@ std::unique_ptr<Tableau::Node> Tableau::Node::removeChild(Tableau::Node *child) 
   return removedChild;
 }
 
-bool Tableau::Node::isLeaf() const { return children.empty(); }
+bool Node::isLeaf() const { return children.empty(); }
 
-void Tableau::Node::rename(const Renaming &renaming) {
+void Node::rename(const Renaming &renaming) {
   literal.rename(renaming);
 
   EventSet renamedEvents;
@@ -110,7 +125,7 @@ void Tableau::Node::rename(const Renaming &renaming) {
 
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
-void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
+void Node::appendBranchInternalUp(DNF &dnf) const {
   auto node = this;
   do {
     assert(validateDNF(dnf));
@@ -121,7 +136,7 @@ void Tableau::Node::appendBranchInternalUp(DNF &dnf) const {
   } while ((node = node->parentNode) != nullptr);
 }
 
-void Tableau::Node::reduceBranchInternalDown(Cube &cube) {
+void Node::reduceBranchInternalDown(Cube &cube) {
   assert(tableau->unreducedNodes.validate());
 
   if (isClosed()) {
@@ -150,7 +165,7 @@ void Tableau::Node::reduceBranchInternalDown(Cube &cube) {
   }
 }
 
-void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
+void Node::appendBranchInternalDown(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
@@ -210,7 +225,7 @@ void Tableau::Node::appendBranchInternalDown(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
 }
 
-void Tableau::Node::closeBranch() {
+void Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
@@ -230,7 +245,7 @@ void Tableau::Node::closeBranch() {
   };
 }
 
-void Tableau::Node::appendBranch(const DNF &dnf) {
+void Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
@@ -290,7 +305,7 @@ void Tableau::Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
 }
 
-void Tableau::Node::dnfBuilder(DNF &dnf) const {
+void Node::dnfBuilder(DNF &dnf) const {
   if (isClosed()) {
     return;
   }
@@ -317,13 +332,13 @@ void Tableau::Node::dnfBuilder(DNF &dnf) const {
   }
 }
 
-DNF Tableau::Node::extractDNF() const {
+DNF Node::extractDNF() const {
   DNF dnf;
   dnfBuilder(dnf);
   return dnf;
 }
 
-std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
+std::optional<DNF> Node::applyRule(const bool modalRule) {
   auto const result = Rules::applyRule(literal, modalRule);
   if (!result) {
     return std::nullopt;
@@ -335,7 +350,7 @@ std::optional<DNF> Tableau::Node::applyRule(const bool modalRule) {
   return disjunction;
 }
 
-void Tableau::Node::inferModal() {
+void Node::inferModal() {
   if (!literal.negated) {
     return;
   }
@@ -374,7 +389,7 @@ void Tableau::Node::inferModal() {
   }
 }
 
-void Tableau::Node::inferModalTop() {
+void Node::inferModalTop() {
   if (!literal.negated) {
     return;
   }
@@ -409,7 +424,7 @@ void Tableau::Node::inferModalTop() {
   }
 }
 
-void Tableau::Node::inferModalAtomic() {
+void Node::inferModalAtomic() {
   // throw std::logic_error("error");
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
@@ -460,7 +475,7 @@ void Tableau::Node::inferModalAtomic() {
 }
 
 // FIXME: use or remove
-void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
+void Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     const Literal &curLit = cur->literal;
@@ -478,7 +493,7 @@ void Tableau::Node::replaceNegatedTopOnBranch(const std::vector<int> &events) {
   }
 }
 
-void Tableau::Node::toDotFormat(std::ofstream &output) const {
+void Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
