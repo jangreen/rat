@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "Assumption.h"
 #include "RegularTableau.h"
 #include "parsing/LogicVisitor.h"
 #include "utility.h"

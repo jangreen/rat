@@ -1,7 +1,7 @@
+#pragma once
 #include <unordered_set>
 
 #include "Literal.h"
-#include "Rules.h"
 #include "TableauNode.h"
 
 class Tableau {

@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 #include "Assumption.h"
+#include "Rules.h"
 #include "utility.h"
 
 Tableau::Tableau(const Cube &cube) {

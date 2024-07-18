@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ranges>
 
+#include "Rules.h"
 #include "Tableau.h"
 #include "utility.h"
 

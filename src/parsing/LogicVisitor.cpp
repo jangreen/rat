@@ -5,6 +5,7 @@
 
 #include "../Annotated.h"
 #include "../RegularTableau.h"
+#include "../Assumption.h"
 
 /*DNF*/ std::any Logic::visitProof(LogicParser::ProofContext *context) {
   DNF assertionCubes;
