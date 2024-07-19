@@ -57,10 +57,8 @@ bool RegularTableau::isReachableFromRoots(const RegularNode *node) const {
          rootNodes.contains(const_cast<RegularNode *>(node));
 }
 
-RegularTableau::RegularTableau(const std::initializer_list<Literal> initialLiterals)
-    : RegularTableau(std::vector(initialLiterals)) {}
 RegularTableau::RegularTableau(const Cube &initialLiterals) {
-  Tableau t{initialLiterals};
+  Tableau t(initialLiterals);
   expandNode(nullptr, &t);
 }
 

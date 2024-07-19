@@ -51,7 +51,7 @@ int main(int argc, const char *argv[]) {
       */
     } else {
       std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-      RegularTableau tableau{goal};
+      RegularTableau tableau(goal);
       tableau.solve();
       spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
       tableau.exportProof("regular");
