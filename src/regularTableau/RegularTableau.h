@@ -35,8 +35,10 @@ class RegularTableau {
   void newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
   void removeEdgeUpdateReachabilityTree(const RegularNode *parent, const RegularNode *child) const;
   void extractCounterexample(const RegularNode *openLeaf) const;
+  void extractCounterexamplePath(const RegularNode *openLeaf) const;
 
-  void toDotFormat(std::ofstream &output, bool allNodes = true) const;
+  void toDotFormat(std::ofstream &output) const;
+  void nodeToDotFormat(const RegularNode *node, std::ofstream &output) const;
   void exportProof(const std::string &filename) const;
   void exportDebug(const std::string &filename) const;
 };

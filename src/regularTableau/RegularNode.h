@@ -11,6 +11,7 @@ typedef std::set<RegularNode *> NodeSet;
 
 class RegularNode {
  private:
+  friend class RegularTableau;
   explicit RegularNode(Cube cube);
 
   NodeSet children;
@@ -28,7 +29,9 @@ class RegularNode {
   [[nodiscard]] const NodeSet &getChildren() const { return children; }
   [[nodiscard]] const NodeSet &getEpsilonChildren() const { return epsilonChildren; }
   [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getParents() const { return parents; }
-  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const { return epsilonParents; }
+  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const {
+    return epsilonParents;
+  }
   const EdgeLabel &getLabelForChild(const RegularNode *child) const {
     return child->parents.at(const_cast<RegularNode *>(this));
   }
@@ -57,8 +60,7 @@ class RegularNode {
   RegularNode *reachabilityTreeParent = nullptr;
   [[nodiscard]] bool isOpenLeaf() const { return children.empty() && !closed; }
 
-  bool printed = false;  // prevent cycling in printing // FIXME refactor
-  void toDotFormat(std::ofstream &output);
+  void toDotFormat(std::ofstream &output) const;
 
   bool operator==(const RegularNode &otherNode) const;
 
