@@ -52,9 +52,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
     return true;
   }));
   Renaming renaming = Renaming::minimal(events);
-  for (auto &literal : cube) {
-    literal.rename(renaming);
-  }
+  renameCube(renaming, cube);
 
 #if (DEBUG)
   // validate: all events must be continuous integer interval from 0
@@ -112,64 +110,21 @@ bool RegularNode::Equal::operator()(const std::unique_ptr<RegularNode> &node1,
   return *node1 == *node2;
 }
 
-void RegularNode::toDotFormat(std::ofstream &output) {
-  if (printed) {
-    return;
-  }
-
+void RegularNode::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[tooltip=\"";
-  // debug
   output << this << "\n\n";
   output << "Hash:\n" << std::hash<RegularNode>()(*this);
-  // label/cube
+
+  // label is cube
   output << "\", label=\"";
   for (const auto &lit : cube) {
     output << lit.toString() << "\n";
   }
   output << "\"";
-  // color closed branches
+
+  // color green if closed
   if (closed) {
     output << ", color=green";
   }
-  // TODO: dotted if unreachable
-  // if (reachabilityTreeParent == nullptr) {
-  //   output << ", style=dotted";
-  // }
   output << "];" << std::endl;
-  // edges
-  for (const auto epsilonChild : epsilonChildren) {
-    const auto label = epsilonChild->epsilonParents.at(this);
-    output << "N" << this << " -> "
-           << "N" << epsilonChild;
-    output << "[tooltip=\"";
-    label.toDotFormat(output);
-    output << "\", color=\"grey\"];\n";
-  }
-
-  for (const auto child : children) {
-    const auto label = child->parents.at(this);
-    output << "N" << this << " -> "
-           << "N" << child;
-    output << "[";
-    if (child->reachabilityTreeParent == this) {
-      output << "color=\"red\", ";
-    }
-    output << "tooltip=\"";
-    label.toDotFormat(output);
-    output << "\"];\n";
-  }
-  /*/ parents
-  for (const auto parentNode : parentNodes) {
-    output << "N" << this << " -> "
-           << "N" << parentNode.first << "[color=\"grey\"];" << std::endl;
-  }  //*/
-  printed = true;
-
-  // children
-  for (const auto child : children) {
-    child->toDotFormat(output);
-  }
-  for (const auto child : epsilonChildren) {
-    child->toDotFormat(output);
-  }
 }

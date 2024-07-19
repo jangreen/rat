@@ -249,6 +249,7 @@ bool RegularTableau::solve() {
 
     // 4) open leaf, extract counterexample
     extractCounterexample(currentNode);
+    extractCounterexamplePath(currentNode);
     spdlog::info("[Solver] Answer: False");
     return false;
   }
@@ -497,20 +498,20 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
   assert(openLeaf->getChildren().empty());
   assert(isReachableFromRoots(openLeaf));
 
-  std::ofstream counterexample("./output/counterexample.dot");
-  counterexample << "digraph { node[shape=\"point\"]" << std::endl;
+  std::ofstream counterexamleModel("./output/counterexampleModel.dot");
+  counterexamleModel << "digraph { node[shape=\"point\"]\n";
 
   const RegularNode *cur = openLeaf;
   Cube edges;
   while (cur != nullptr) {
     std::ranges::copy_if(cur->cube, std::back_inserter(edges),
                          [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
-    // rename to parent
     assert(isReachableFromRoots(cur));
     if (cur->reachabilityTreeParent != nullptr) {
-      const auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur);
+      // rename to parent
+      const auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();
       for (auto &edge : edges) {
-        edge.rename(renaming.inverted());
+        edge.rename(renaming);
       }
     }
 
@@ -522,30 +523,125 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
     const int right = edge.rightEvent->label.value();
     auto baseRelation = edge.identifier.value();
 
-    counterexample << "N" << left << " -> "
-                   << "N" << right << "[label = \"" << baseRelation << "\"];" << std::endl;
+    counterexamleModel << "N" << left << " -> N" << right;
+    counterexamleModel << "[label = \"" << baseRelation << "\"];" << std::endl;
   }
 
-  counterexample << "}" << std::endl;
-  counterexample.close();
+  counterexamleModel << "}" << std::endl;
+  counterexamleModel.close();
 }
 
-void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) const {
-  for (const auto &node : nodes) {  // reset printed property
-    node->printed = false;
+void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) const {
+  assert(!openLeaf->closed);
+  assert(openLeaf->getChildren().empty());
+  assert(isReachableFromRoots(openLeaf));
+
+  std::ofstream counterexamplePath("./output/counterexamplePath.dot");
+  counterexamplePath << "digraph {\nnode[shape=\"box\"]\n";
+  std::vector<RegularNode *> openBranch;
+
+  const RegularNode *cur = openLeaf;
+  Cube edges;
+  while (cur != nullptr) {
+    std::ranges::copy_if(cur->cube, std::back_inserter(edges),
+                         [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+
+    assert(isReachableFromRoots(cur));
+    if (cur->reachabilityTreeParent != nullptr) {
+      // determine renaming to root node for cur
+      auto rootRenaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();
+      auto renCur = cur->reachabilityTreeParent;
+      while (renCur->reachabilityTreeParent != nullptr) {
+        auto curRenaming = renCur->reachabilityTreeParent->getLabelForChild(renCur).inverted();
+        rootRenaming = rootRenaming.totalCompose(curRenaming);
+        renCur = renCur->reachabilityTreeParent;
+      }
+      Cube cube = cur->cube;
+      renameCube(rootRenaming, cube);
+      auto newNode = new RegularNode(std::move(cube));
+      if (!openBranch.empty()) {
+        newNode->newChild(openBranch.back(), Renaming::minimal({}));
+        openBranch.back()->reachabilityTreeParent = newNode;
+      }
+      openBranch.push_back(newNode);
+    }
+
+    cur = cur->reachabilityTreeParent;
   }
-  output << "digraph {" << std::endl << "node[shape=\"box\"]" << std::endl;
-  const std::unordered_set s(rootNodes.begin(), rootNodes.end());
-  assert(s.size() == rootNodes.size());
+
+  // generate path
+  counterexamplePath << "root -> N" << openBranch.back() << "[color=\"red\"];\n";
+  openBranch.back()->reachabilityTreeParent =
+      openBranch.back();  // hack because there are no root Nodes
+  for (const auto node : openBranch) {
+    nodeToDotFormat(node, counterexamplePath);
+  }
+
+  counterexamplePath << "}" << std::endl;
+  counterexamplePath.close();
+}
+
+void RegularTableau::toDotFormat(std::ofstream &output) const {
+  std::unordered_set<RegularNode *> printed;
+
+  output << "digraph {\nnode[shape=\"box\"]\n";
+
+  std::deque<RegularNode *> worklist;
   for (const auto rootNode : rootNodes) {
-    rootNode->toDotFormat(output);
-    output << "root -> "
-           << "N" << rootNode << "[color=\"red\"];" << std::endl;
+    worklist.push_back(rootNode);
+    output << "root -> N" << rootNode << "[color=\"red\"];\n";
   }
-  // for (const auto &node : nodes) {
-  //   node->toDotFormat(output);
-  // }
+  while (!worklist.empty()) {
+    const auto node = worklist.front();
+    worklist.pop_front();
+    if (printed.contains(node)) {
+      continue;
+    }
+    printed.insert(node);
+
+    nodeToDotFormat(node, output);
+
+    for (const auto epsilonChild : node->getEpsilonChildren()) {
+      worklist.push_back(epsilonChild);
+    }
+    for (const auto child : node->getChildren()) {
+      worklist.push_back(child);
+    }
+  }
+
   output << "}" << std::endl;
+}
+
+void RegularTableau::nodeToDotFormat(const RegularNode *node, std::ofstream &output) const {
+  node->toDotFormat(output);
+
+  // non reachable nodes are dotted
+  if (!isReachableFromRoots(node)) {
+    output << "N" << node << " [style=dotted, fontcolor=\"grey\"]";
+  }
+
+  // edges
+  for (const auto epsilonChild : node->getEpsilonChildren()) {
+    const auto label = epsilonChild->getEpsilonParents().at(const_cast<RegularNode *>(node));
+    output << "N" << node << " -> N" << epsilonChild;
+    output << "[tooltip=\"";
+    label.toDotFormat(output);
+    output << "\", color=\"grey\"];\n";
+  }
+  for (const auto child : node->getChildren()) {
+    const auto label = node->getLabelForChild(child);
+    output << "N" << node << " ->  N" << child;
+    output << "[";
+    if (child->reachabilityTreeParent == node) {
+      output << "color=\"red\", ";
+    }
+    if (!isReachableFromRoots(node)) {
+      output << "style=dotted, color=\"grey\", ";  // edges in unreachable proof are dotted
+    }
+    output << "tooltip=\"";
+    label.toDotFormat(output);
+    output << "\"];\n";
+  }
 }
 
 void RegularTableau::exportProof(const std::string &filename) const {

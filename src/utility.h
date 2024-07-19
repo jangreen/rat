@@ -63,6 +63,12 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
+inline void renameCube(Renaming &renaming, Cube &cube) {
+  for (auto &literal : cube) {
+    literal.rename(renaming);
+  }
+}
+
 inline bool validatePartialCube(const PartialCube &cube) {
   return std::ranges::all_of(cube, [](const PartialLiteral &literal) {
     if (std::holds_alternative<Literal>(literal)) {
