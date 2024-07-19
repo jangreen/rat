@@ -260,14 +260,16 @@ void Tableau::renameBranchesInternalDown(
   if (!node->isLeaf()) {
     // No leaf: descend recursively
     // Copy allRenamedLiterals for all children but the last one
-    for (const auto &child : std::ranges::drop_view(node->getChildren(), 1)) {
-      auto allRenamedLiteralsCopy(allRenamedLiterals);
-      renameBranchesInternalDown(child.get(), renaming, allRenamedLiteralsCopy, originalToCopy,
+    for (auto childIt = node->beginSafe(); childIt != node->endSafe(); ++childIt) {
+      std::unordered_set<Literal> allRenamedLiteralsCopy;
+      if (childIt.isLast()) {
+        allRenamedLiteralsCopy = std::move(allRenamedLiterals);
+      } else {
+        allRenamedLiteralsCopy = allRenamedLiterals;
+      }
+      renameBranchesInternalDown(*childIt, renaming, allRenamedLiteralsCopy, originalToCopy,
                                  unrollingParents);  // copy for each branching
     }
-    // FIXME: bug dont delete while iterating
-    renameBranchesInternalDown(node->getChildren()[0].get(), renaming, allRenamedLiterals,
-                               originalToCopy, unrollingParents);
   }
   if (!isNew && !unrollingParents.contains(node)) {
     removeNode(node);
