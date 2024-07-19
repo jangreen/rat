@@ -135,13 +135,13 @@ std::unique_ptr<Node> Node::detachChild(Node *child) {
   auto detachedChild = std::move(*childIt);
   detachedChild->parentNode = nullptr;
   children.erase(childIt);
-  return detachedChild;
+  return std::move(detachedChild);
 }
 std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
   std::ranges::for_each(children, [](auto &child) { child->parentNode = nullptr; });
   auto detachedChildren = std::move(children);
   children.clear();
-  return detachedChildren;
+  return std::move(detachedChildren);
 }
 
 void Node::rename(const Renaming &renaming) {
@@ -314,14 +314,14 @@ void Node::appendBranch(const DNF &dnf) {
     }
 
     // 2. insert cube
-    const auto thisChildren = detachAllChildren();
+    auto thisChildren = detachAllChildren();
     auto newNode = this;
     for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
       newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
-    newNode->attachChildren(thisChildren);
+    newNode->attachChildren(std::move(thisChildren));
     return;
   }
 

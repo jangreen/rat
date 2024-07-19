@@ -114,6 +114,8 @@ public:
     bool operator==(const EndSentinel sentinel) const {
       return childIndex < 0 || node->children.empty();
     }
+
+    [[nodiscard]] bool isLast() const { return childIndex == 0; }
   };
 
   ChildIterator beginSafe() { return ChildIterator(this); }
