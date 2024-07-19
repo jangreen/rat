@@ -223,6 +223,7 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
       // if (unreducedNodes.contains(cur)) {
       //   unreducedNodes.push(renamedCur);
       // }
+      unreducedNodes.push(renamedCur);
       copiedBranch = std::unique_ptr<Node>(renamedCur);
     }
 
