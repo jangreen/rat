@@ -205,7 +205,7 @@ void Node::reduceBranchInternalDown(Cube &cube) {
   }
 }
 
-void Node::appendBranchInternalDown(DNF &dnf) {
+void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
@@ -227,9 +227,9 @@ void Node::appendBranchInternalDown(DNF &dnf) {
     // TODO: Safe iterate?
     for (const auto &child : std::ranges::drop_view(children, 1)) {
       DNF branchCopy(dnf);
-      child->appendBranchInternalDown(branchCopy);  // copy for each branching
+      child->appendBranchInternalDownDisjunctive(branchCopy);  // copy for each branching
     }
-    children[0]->appendBranchInternalDown(dnf);
+    children[0]->appendBranchInternalDownDisjunctive(dnf);
     assert(tableau->unreducedNodes.validate());
     return;
   }
@@ -284,6 +284,35 @@ void Node::closeBranch() {
   } while (cur->isClosed() && (cur = cur->parentNode) != nullptr);
 }
 
+void Node::appendBranchInternalDownConjunctive(DNF &dnf) {
+  auto &cube = dnf.at(0);
+  // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
+  // down in the tree
+  // filterNegatedLiterals(cube, activeEvents);
+  // do not need to filter here?
+
+  // insert cube in-place
+  // 1. reduce branch
+  // IMPORTANT that we do this first to choose the minimal annotation
+  // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
+  // children, potentially invalidating the iterator.
+  // IMPORTANT: This loop may delete iterated children,
+  // so we need to perform a safer kind of iteration
+  for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+    childIt->reduceBranchInternalDown(cube);
+  }
+
+  // 2. insert cube
+  auto thisChildren = detachAllChildren();
+  auto newNode = this;
+  for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
+    newNode = new Node(newNode, literal);
+    newNode->lastUnrollingParent = transitiveClosureNode;
+    tableau->unreducedNodes.push(newNode);
+  }
+  newNode->attachChildren(std::move(thisChildren));
+}
+
 void Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
@@ -308,38 +337,10 @@ void Node::appendBranch(const DNF &dnf) {
   // conjunctive
   const bool isConjunctive = dnfCopy.size() == 1;
   if (isConjunctive) {
-    auto &cube = dnfCopy.at(0);
-    // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
-    // down in the tree
-    // filterNegatedLiterals(cube, activeEvents);
-    // do not need to filter here?
-
-    // insert cube in-place
-    // 1. reduce branch
-    // IMPORTANT that we do this first to choose the minimal annotation
-    // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
-    // children, potentially invalidating the iterator.
-    // IMPORTANT: This loop may delete iterated children,
-    // so we need to perform a safer kind of iteration
-    for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
-      childIt->reduceBranchInternalDown(cube);
-    }
-
-    // 2. insert cube
-    auto thisChildren = detachAllChildren();
-    auto newNode = this;
-    for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
-      newNode = new Node(newNode, literal);
-      newNode->lastUnrollingParent = transitiveClosureNode;
-      tableau->unreducedNodes.push(newNode);
-    }
-    newNode->attachChildren(std::move(thisChildren));
-    return;
+    appendBranchInternalDownConjunctive(dnfCopy);
+  } else {
+    appendBranchInternalDownDisjunctive(dnfCopy);
   }
-
-  // disjunctive
-  appendBranchInternalDown(dnfCopy);
-
   assert(tableau->unreducedNodes.validate());
 }
 

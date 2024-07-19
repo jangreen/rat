@@ -48,23 +48,21 @@ void Tableau::deleteNode(Node *node) {
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
   assert(node->getParentNode()->validate());
   const auto parentNode = node->getParentNode();
-
-  // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
-  // that leaf's parent. The reason is as follows:
-  // Consider the branch "root ->* parent -> leaf" which just becomes "root ->* parent" after
-  // deletion. This new branch subsumes/dominates all branches of the form "root ->* parent ->+ ..."
-  // so we can get rid of all those branches. We do so by deleting all children from the parent
-  // node.
   if (node->isLeaf()) {
+    // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
+    // that leaf's parent. The reason is as follows:
+    // Consider the branch "root ->* parent -> leaf" which just becomes "root ->* parent" after
+    // deletion. This new branch subsumes/dominates all branches of the form "root ->* parent ->+ ..."
+    // so we can get rid of all those branches. We do so by deleting all children from the parent
+    // node.
     std::ignore = parentNode->detachAllChildren();
-    return;
+  } else {
+    // No leaf: move all children to parent's children
+    parentNode->attachChildren(node->detachAllChildren());
+    // Remove node from parent. This will automatically delete the node and remove it from the
+    // worklist.
+    std::ignore = node->detachFromParent();
   }
-
-  // No leaf: move all children to parent's children
-  parentNode->attachChildren(node->detachAllChildren());
-  // Remove node from parent. This will automatically delete the node and remove it from the
-  // worklist.
-  std::ignore = node->detachFromParent();
 
   assert(parentNode->validateRecursive());
   assert(unreducedNodes.validate());

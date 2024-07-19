@@ -30,7 +30,8 @@ class Node {
   mutable bool _isClosed = false;
 
   void appendBranchInternalUp(DNF &dnf) const;
-  void appendBranchInternalDown(DNF &dnf);
+  void appendBranchInternalDownDisjunctive(DNF &dnf);
+  void appendBranchInternalDownConjunctive(DNF &dnf);
   void reduceBranchInternalDown(Cube &cube);
   void closeBranch();
 
