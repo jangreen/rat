@@ -43,6 +43,8 @@ test test9 True
 test id5 True
 test id6 True
 test id7 True
+test t True
+test t2 True
 
 # with assumptions
 test test0 True
