@@ -52,9 +52,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
     return true;
   }));
   Renaming renaming = Renaming::minimal(events);
-  for (auto &literal : cube) {
-    literal.rename(renaming);
-  }
+  renameCube(renaming, cube);
 
 #if (DEBUG)
   // validate: all events must be continuous integer interval from 0
