@@ -11,7 +11,7 @@ namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
 bool isAppendable(const DNF &dnf) {
-  return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
+  return std::ranges::none_of(dnf, &Cube::empty);
 }
 
 void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
@@ -109,7 +109,7 @@ bool Node::validate() const {
 
 bool Node::validateRecursive() const {
   assert(validate());
-  assert(std::ranges::all_of(children, [](auto &child) { return child->validate(); }));
+  assert(std::ranges::all_of(children, &Node::validate));
   return true;
 }
 
@@ -179,12 +179,10 @@ void Node::reduceBranchInternalDown(Cube &cube) {
     return;
   }
 
-  // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
-  // children, potentially invalidating the iterator.
-  for (int i = children.size() - 1; i >= 0; i--) {
-    if (!children.empty()) {
-      children[i]->reduceBranchInternalDown(cube);
-    }
+  // IMPORTANT: This loop may delete iterated children,
+  // so we need to perform a safer kind of iteration
+  for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+    childIt->reduceBranchInternalDown(cube);
   }
 
   const auto litIt = std::ranges::find(cube, literal);
@@ -215,6 +213,7 @@ void Node::appendBranchInternalDown(DNF &dnf) {
   if (!isLeaf()) {
     // No leaf: descend recursively
     // Copy DNF for all children but the last one (for the last one we can reuse the DNF).
+    // TODO: Safe iterate?
     for (const auto &child : std::ranges::drop_view(children, 1)) {
       DNF branchCopy(dnf);
       child->appendBranchInternalDown(branchCopy);  // copy for each branching
@@ -262,20 +261,16 @@ void Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
-  children.clear();
+  void(detachAllChildren());
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
   const auto bottom = new Node(this, BOTTOM);
   bottom->_isClosed = true;
 
   // update isClosed cache
   auto cur = this;
-  while (cur != nullptr) {
-    if (std::ranges::any_of(cur->children, [](const auto &child) { return !child->isClosed(); })) {
-      break;
-    }
-    cur->_isClosed = true;
-    cur = cur->parentNode;
-  }
+  do {
+    cur->_isClosed = std::ranges::all_of(cur->children, &Node::isClosed);
+  } while (cur->isClosed() && (cur = cur->parentNode) != nullptr);
 }
 
 void Node::appendBranch(const DNF &dnf) {
@@ -312,25 +307,21 @@ void Node::appendBranch(const DNF &dnf) {
     // IMPORTANT that we do this first to choose the minimal annotation
     // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
     // children, potentially invalidating the iterator.
-    for (int i = children.size() - 1; i >= 0; i--) {
-      if (!children.empty()) {
-        children[i]->reduceBranchInternalDown(cube);
-      }
+    // IMPORTANT: This loop may delete iterated children,
+    // so we need to perform a safer kind of iteration
+    for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+      childIt->reduceBranchInternalDown(cube);
     }
 
     // 2. insert cube
-    auto thisChildren = std::move(children);
-    children.clear();
+    const auto thisChildren = detachAllChildren();
     auto newNode = this;
     for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
       newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
-    newNode->children = std::move(thisChildren);
-    for (const auto &newNodeChild : newNode->children) {
-      newNodeChild->parentNode = newNode;
-    }
+    newNode->attachChildren(thisChildren);
     return;
   }
 

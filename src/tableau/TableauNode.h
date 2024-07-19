@@ -87,6 +87,38 @@ public:
   [[nodiscard]] bool validateRecursive() const;
 
   static const Node *transitiveClosureNode;
+
+  // ================== Safe iteration ==================
+
+  /*
+   * This iterator tries to minimize problems when deleting children while iterating.
+   */
+  struct ChildIterator {
+  private :
+    Node *node;
+    int childIndex;
+
+  public:
+    using iterator_category = std::input_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = Node*;
+    using pointer = value_type*;
+    using reference = value_type&;
+    struct EndSentinel {};
+
+    explicit ChildIterator(Node* node) : node(node), childIndex(static_cast<int>(node->children.size() - 1)) {}
+
+    value_type operator*() const { return node->children.at(childIndex).get(); }
+    value_type operator->() const { return node->children.at(childIndex).get(); }
+    ChildIterator& operator++() {--childIndex; return *this;}
+    bool operator==(const EndSentinel sentinel) const {
+      return childIndex < 0 || node->children.empty();
+    }
+  };
+
+  ChildIterator beginSafe() { return ChildIterator(this); }
+  ChildIterator::EndSentinel endSafe() { return {};}
+
 };
 
 inline const Node *Node::transitiveClosureNode = nullptr;
