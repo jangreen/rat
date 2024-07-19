@@ -153,7 +153,8 @@ void Set::completeInitialization() const {
   this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
   if constexpr (DEBUG) {
-    void(toString()); // To populate the cache for better debugging
+    // To populate the cache for better debugging
+    std::ignore = toString();
   }
 }
 
@@ -179,30 +180,30 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
     switch (operation) {
       case SetOperation::baseSet:
         assert(identifier.has_value() && !label.has_value() && isSimple);
-      break;
+        break;
       case SetOperation::topEvent:
         assert(label.has_value() && !identifier.has_value() && isSimple);
-      break;
+        break;
       case SetOperation::event:
         assert(label.has_value() && !identifier.has_value() && isSimple);
-      break;
+        break;
       case SetOperation::emptySet:
       case SetOperation::fullSet:
         assert(!hasLabelOrId && isSimple);
-      break;
+        break;
       case SetOperation::setUnion:
       case SetOperation::setIntersection:
         assert(!hasLabelOrId);
-      assert(left != nullptr && right != nullptr && relation == nullptr);
-      break;
+        assert(left != nullptr && right != nullptr && relation == nullptr);
+        break;
       case SetOperation::image:
       case SetOperation::domain:
         assert(!hasLabelOrId);
-      assert(left != nullptr && relation != nullptr && right == nullptr);
-      break;
+        assert(left != nullptr && relation != nullptr && right == nullptr);
+        break;
       default:
         assert(false);
-      throw std::logic_error("unreachable");
+        throw std::logic_error("unreachable");
     }
   }
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;

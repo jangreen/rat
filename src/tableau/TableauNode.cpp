@@ -129,13 +129,13 @@ std::unique_ptr<Node> Node::detachChild(Node *child) {
   auto detachedChild = std::move(*childIt);
   detachedChild->parentNode = nullptr;
   children.erase(childIt);
-  return detachedChild;
+  return std::move(detachedChild);
 }
 std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
   std::ranges::for_each(children, [](auto &child) { child->parentNode = nullptr; });
   auto detachedChildren = std::move(children);
   children.clear();
-  return detachedChildren;
+  return std::move(detachedChildren);
 }
 
 void Node::rename(const Renaming &renaming) {
@@ -255,7 +255,7 @@ void Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
-  void(detachAllChildren());
+  std::ignore = detachAllChildren();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
   const auto bottom = new Node(this, BOTTOM);
   bottom->_isClosed = true;

@@ -38,7 +38,7 @@
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
-  void(parseMemoryModel(ctx->FILEPATH()->getText()));
+  std::ignore = parseMemoryModel(ctx->FILEPATH()->getText());
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {

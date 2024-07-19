@@ -43,7 +43,7 @@ void Tableau::removeNode(Node *node) const {
   // so we can get rid of all those branches. We do so by deleting all children from the parent
   // node.
   if (node->isLeaf()) {
-    void(parentNode->detachAllChildren());
+    std::ignore = parentNode->detachAllChildren();
     return;
   }
 
@@ -51,7 +51,7 @@ void Tableau::removeNode(Node *node) const {
   parentNode->attachChildren(node->detachAllChildren());
   // Remove node from parent. This will automatically delete the node and remove it from the
   // worklist.
-  void (node->detachFromParent());
+  std::ignore = node->detachFromParent();
 
   assert(parentNode->validate());
   assert(std::ranges::none_of(parentNode->getChildren(),
