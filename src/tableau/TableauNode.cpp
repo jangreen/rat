@@ -10,9 +10,7 @@
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
-bool isAppendable(const DNF &dnf) {
-  return std::ranges::none_of(dnf, &Cube::empty);
-}
+bool isAppendable(const DNF &dnf) { return std::ranges::none_of(dnf, &Cube::empty); }
 
 void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
   if (transitiveClosureNode == nullptr || dnf.empty()) {
@@ -66,9 +64,7 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : tableau(parent->tableau),
-      parentNode(parent),
-      literal(std::move(literal)) {
+    : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
   parent->children.emplace_back(this);
   activeEvents = parent->activeEvents;
@@ -79,9 +75,7 @@ Node::Node(Node *parent, Literal literal)
   }
 }
 
-Node::Node(Tableau *tableau, Literal literal)
-  : tableau(tableau),
-  literal(std::move(literal)) {
+Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
   assert(tableau != nullptr);
 
   if (!literal.negated) {
@@ -315,14 +309,14 @@ void Node::appendBranch(const DNF &dnf) {
     }
 
     // 2. insert cube
-    const auto thisChildren = detachAllChildren();
+    auto thisChildren = detachAllChildren();
     auto newNode = this;
     for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
       newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
-    newNode->attachChildren(thisChildren);
+    newNode->attachChildren(std::move(thisChildren));
     return;
   }
 
