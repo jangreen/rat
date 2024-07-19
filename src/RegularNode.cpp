@@ -131,11 +131,16 @@ void RegularNode::toDotFormat(std::ofstream &output) {
   if (closed) {
     output << ", color=green";
   }
+  // TODO: dotted if unreachable
+  // if (reachabilityTreeParent == nullptr) {
+  //   output << ", style=dotted";
+  // }
   output << "];" << std::endl;
   // edges
   for (const auto epsilonChild : epsilonChildren) {
     const auto label = epsilonChild->epsilonParents.at(this);
-    output << "N" << this << " -> " << "N" << epsilonChild;
+    output << "N" << this << " -> "
+           << "N" << epsilonChild;
     output << "[tooltip=\"";
     label.toDotFormat(output);
     output << "\", color=\"grey\"];\n";
@@ -143,7 +148,8 @@ void RegularNode::toDotFormat(std::ofstream &output) {
 
   for (const auto child : children) {
     const auto label = child->parents.at(this);
-    output << "N" << this << " -> " << "N" << child;
+    output << "N" << this << " -> "
+           << "N" << child;
     output << "[";
     if (child->reachabilityTreeParent == this) {
       output << "color=\"red\", ";

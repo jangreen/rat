@@ -30,7 +30,7 @@ bool Tableau::validate() const {
   return true;
 }
 
-void Tableau::removeNode(Node *node) {
+void Tableau::removeNode(Node *node) const {
   assert(validate());
   assert(node != rootNode.get());            // node is not root node
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
@@ -128,15 +128,13 @@ bool Tableau::solve(int bound) {
 
     // 3) Saturation Rules
     if (!Assumption::baseAssumptions.empty()) {
-      auto literal = Rules::saturateBase(currentNode->getLiteral());
-      if (literal) {
+      if (auto literal = Rules::saturateBase(currentNode->getLiteral())) {
         currentNode->appendBranch(*literal);
       }
     }
 
     if (!Assumption::idAssumptions.empty()) {
-      auto literal = Rules::saturateId(currentNode->getLiteral());
-      if (literal) {
+      if (auto literal = Rules::saturateId(currentNode->getLiteral())) {
         currentNode->appendBranch(*literal);
       }
     }

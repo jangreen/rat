@@ -138,7 +138,7 @@ std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   return {iter->get(), renaming};
 }
 
-void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) {
+void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) const {
   parent->removeChild(child);
   removeEdgeUpdateReachabilityTree(parent, child);
   assert(validateReachabilityTree());
@@ -245,7 +245,7 @@ bool RegularTableau::solve() {
     // 3) Check inconsistencies lazy
     if (isInconsistentLazy(currentNode)) {
       continue;
-    };
+    }
 
     // 4) open leaf, extract counterexample
     extractCounterexample(currentNode);
@@ -330,8 +330,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   }
   assert(validateNormalizedCube(renamedChild));
 
-  const auto fixedCube = getInconsistentLiterals(parent, renamedChild);
-  if (fixedCube.has_value()) {
+  if (const auto fixedCube = getInconsistentLiterals(parent, renamedChild)) {
     exportDebug("debug");
     Tableau t(fixedCube.value());
     const DNF dnf = t.dnf();
@@ -349,7 +348,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   return false;
 }
 
-void RegularTableau::removeEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
+void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
+                                                      const RegularNode *child) const {
   if (child->reachabilityTreeParent != parent) {
     return;
   }
@@ -389,6 +389,7 @@ void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularN
   std::deque<RegularNode *> worklist;
   worklist.push_back(child);
 
+  // push reachable open leafs to unreduced nodes
   while (!worklist.empty()) {
     const auto node = worklist.front();
     worklist.pop_front();
@@ -397,10 +398,10 @@ void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularN
       unreducedNodes.push(node);
     }
 
-    for (const auto child : node->getChildren()) {
-      if (!isReachableFromRoots(child)) {
-        child->reachabilityTreeParent = node;
-        worklist.push_back(child);
+    for (const auto nodeChild : node->getChildren()) {
+      if (!isReachableFromRoots(nodeChild)) {
+        nodeChild->reachabilityTreeParent = node;
+        worklist.push_back(nodeChild);
       }
     }
   }
@@ -521,8 +522,8 @@ void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
     const int right = edge.rightEvent->label.value();
     auto baseRelation = edge.identifier.value();
 
-    counterexample << "N" << left << " -> " << "N" << right << "[label = \"" << baseRelation
-                   << "\"];" << std::endl;
+    counterexample << "N" << left << " -> "
+                   << "N" << right << "[label = \"" << baseRelation << "\"];" << std::endl;
   }
 
   counterexample << "}" << std::endl;
@@ -538,7 +539,8 @@ void RegularTableau::toDotFormat(std::ofstream &output, const bool allNodes) con
   assert(s.size() == rootNodes.size());
   for (const auto rootNode : rootNodes) {
     rootNode->toDotFormat(output);
-    output << "root -> " << "N" << rootNode << "[color=\"red\"];" << std::endl;
+    output << "root -> "
+           << "N" << rootNode << "[color=\"red\"];" << std::endl;
   }
   // for (const auto &node : nodes) {
   //   node->toDotFormat(output);

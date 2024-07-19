@@ -49,7 +49,8 @@ CanonicalAnnotation Annotation::newAnnotation(const CanonicalAnnotation left,
   return newAnnotation(annotationValue.value(), left, right);
 }
 
-CanonicalAnnotation Annotation::min(const CanonicalAnnotation first, const CanonicalAnnotation second) {
+CanonicalAnnotation Annotation::min(const CanonicalAnnotation first,
+                                    const CanonicalAnnotation second) {
   if (first->isLeaf() && first->getValue() <= second->getValue()) {
     return first;
   }
@@ -62,7 +63,7 @@ CanonicalAnnotation Annotation::min(const CanonicalAnnotation first, const Canon
 
 bool Annotation::validate() const {
   // Binary or leaf
-  bool isValid = ((left == nullptr) == (right == nullptr));
+  bool isValid = (left == nullptr) == (right == nullptr);
   // No value => Leaf
   isValid &= value.has_value() || isLeaf();
   // No leaf => value is meet of children.

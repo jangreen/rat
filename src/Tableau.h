@@ -13,7 +13,7 @@ class Tableau {
 
   [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
   bool solve(int bound = -1);
-  void removeNode(Node *node);
+  void removeNode(Node *node) const;
   void renameBranches(Node *node);
 
   // methods for regular reasoning

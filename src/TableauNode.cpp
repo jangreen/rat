@@ -291,7 +291,8 @@ void Node::appendBranch(const DNF &dnf) {
     auto &cube = dnfCopy.at(0);
     // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
     // down in the tree
-    filterNegatedLiterals(cube, activeEvents);
+    // filterNegatedLiterals(cube, activeEvents);
+    // do not need to filter here?
 
     // insert cube in-place
     // 1. reduce branch
@@ -356,6 +357,9 @@ void Node::dnfBuilder(DNF &dnf) const {
 DNF Node::extractDNF() const {
   DNF dnf;
   dnfBuilder(dnf);
+  for (auto &cube : dnf) {
+    filterNegatedLiterals(cube);
+  }
   return dnf;
 }
 
@@ -432,16 +436,13 @@ void Node::inferModalTop() {
     existentialReplaceEvents.insert(newEvents.begin(), newEvents.end());
   }
 
-  const auto &univeralSearchEvents = literal.topEvents();
-
-  for (const auto search : univeralSearchEvents) {
+  for (const auto search : literal.topEvents()) {
     for (const auto replace : existentialReplaceEvents) {
       // [search] -> {replace}
       // replace all occurrences of the same search at once
       const CanonicalSet searchSet = Set::newTopEvent(search);
       const CanonicalSet replaceSet = Set::newEvent(replace);
-      const auto substituted = literal.substituteAll(searchSet, replaceSet);
-      if (substituted.has_value()) {
+      if (const auto substituted = literal.substituteAll(searchSet, replaceSet)) {
         appendBranch(substituted.value());
       }
     }
@@ -480,17 +481,14 @@ void Node::inferModalAtomic() {
       appendBranch(lit);
     }
     // cases for [f] -> {e}
-    const auto &univeralSearchEvents = curLit.topEvents();
-    for (const auto search : univeralSearchEvents) {
+    for (const auto search : curLit.topEvents()) {
       const CanonicalSet searchSet = Set::newTopEvent(search);
 
-      const auto substituted1 = curLit.substituteAll(searchSet, replace1);
-      if (substituted1.has_value()) {
+      if (const auto substituted1 = curLit.substituteAll(searchSet, replace1)) {
         appendBranch(substituted1.value());
       }
 
-      const auto substituted2 = curLit.substituteAll(searchSet, replace2);
-      if (substituted2.has_value()) {
+      if (const auto substituted2 = curLit.substituteAll(searchSet, replace2)) {
         appendBranch(substituted2.value());
       }
     }
@@ -534,6 +532,7 @@ void Node::toDotFormat(std::ofstream &output) const {
   // children
   for (const auto &child : children) {
     child->toDotFormat(output);
-    output << "N" << this << " -- " << "N" << child << ";" << std::endl;
+    output << "N" << this << " -- "
+           << "N" << child << ";" << std::endl;
   }
 }

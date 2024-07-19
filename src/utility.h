@@ -58,7 +58,7 @@ const typename ADAPTER::container_type &get_const_container(ADAPTER &a) {
 inline bool validateCube(const Cube &cube) {
   Cube copy = cube;
   std::ranges::sort(copy);
-  const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
+  // const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
   // assert(!hasDuplicates);
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
