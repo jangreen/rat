@@ -24,7 +24,7 @@ std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cub
   if (parent == nullptr) {
     return std::nullopt;
   }
-  const Cube &parentCube = parent->cube;
+  const Cube &parentCube = parent->getCube();
   Cube inconsistenLiterals = newLiterals;
   assert(validateNormalizedCube(parentCube));
   assert(validateNormalizedCube(newLiterals));
@@ -142,8 +142,7 @@ void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) const {
   assert(validateReachabilityTree());
 }
 
-// parent == nullptr -> rootNode
-void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
+void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
   assert(parent != nullptr);
   assert(child != nullptr);
 
@@ -159,11 +158,11 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   // }
 
   // add edge
-  const auto inserted = parent->newChild(child, label);
+  const auto inserted = parent->addChild(child, label);
   if (!inserted) {
     return;
   }
-  newEdgeUpdateReachabilityTree(parent, child);
+  addEdgeUpdateReachabilityTree(parent, child);
 
   exportDebug("debug");
   assert(validateReachabilityTree());
@@ -171,16 +170,16 @@ void RegularTableau::newEdge(RegularNode *parent, RegularNode *child, const Edge
   // if child has epsilon edge -> add shortcuts
   for (const auto epsilonChildChild : child->getEpsilonChildren()) {
     const auto &childRenaming = epsilonChildChild->getEpsilonParents().at(child);
-    newEdge(parent, epsilonChildChild, label.compose(childRenaming));
+    addEdge(parent, epsilonChildChild, label.compose(childRenaming));
   }
 }
 
-void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
+void RegularTableau::addEpsilonEdge(RegularNode *parent, RegularNode *child,
                                     const EdgeLabel &label) {
   assert(parent != nullptr);
   assert(child != nullptr);
 
-  const auto inserted = parent->newEpsilonChild(child, label);
+  const auto inserted = parent->addEpsilonChild(child, label);
   if (!inserted) {
     return;
   }
@@ -188,10 +187,10 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
 
   // add shortcuts
   for (const auto &[grandparentNode, grandparentLabel] : parent->getParents()) {
-    newEdge(grandparentNode, child, grandparentLabel.compose(label));
+    addEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
   for (const auto &[grandparentNode, grandparentLabel] : parent->getEpsilonParents()) {
-    newEpsilonEdge(grandparentNode, child, grandparentLabel.compose(label));
+    addEpsilonEdge(grandparentNode, child, grandparentLabel.compose(label));
   }
   // add epsilon child of a root nodes to root nodes
   if (rootNodes.contains(parent)) {
@@ -223,7 +222,7 @@ bool RegularTableau::solve() {
       filterNegatedLiterals(newCube);
 
       const auto &[childNode, edgeLabel] = newNode(newCube);
-      newEdge(currentNode, childNode, edgeLabel);
+      addEdge(currentNode, childNode, edgeLabel);
       continue;
     }
 
@@ -285,7 +284,7 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
     if (isRootNode) {
       rootNodes.insert(childNode);
     } else {
-      newEdge(node, childNode, edgeLabel);
+      addEdge(node, childNode, edgeLabel);
     }
   }
   assert(validate());
@@ -339,7 +338,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
     // create new fixed Node
     for (const auto &cube : dnf) {
       const auto [fixedNode, renaming] = newNode(cube);
-      newEpsilonEdge(parent, fixedNode, renaming);
+      addEpsilonEdge(parent, fixedNode, renaming);
     }
     return true;
   }
@@ -379,7 +378,7 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
   }
 }
 
-void RegularTableau::newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
+void RegularTableau::addEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child) {
   if (isReachableFromRoots(child) || !isReachableFromRoots(parent)) {
     return;
   }
@@ -558,7 +557,7 @@ void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) cons
       renameCube(rootRenaming, cube);
       auto newNode = new RegularNode(std::move(cube));
       if (!openBranch.empty()) {
-        newNode->newChild(openBranch.back(), Renaming::minimal({}));
+        newNode->addChild(openBranch.back(), Renaming::minimal({}));
         openBranch.back()->reachabilityTreeParent = newNode;
       }
       openBranch.push_back(newNode);

@@ -19,10 +19,10 @@ class RegularTableau {
   // ================== Node management ==================
   std::pair<RegularNode *, Renaming> newNode(const Cube &cube);
 
-  void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
-  void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
+  void addEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
+  void addEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void removeEdge(RegularNode *parent, RegularNode *child) const;
-  void newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
+  void addEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);
   void removeEdgeUpdateReachabilityTree(const RegularNode *parent, const RegularNode *child) const;
 
   // ================== Solving ==================
@@ -50,13 +50,4 @@ class RegularTableau {
   bool solve();
 
   void exportProof(const std::string &filename) const;
-};
-
-// helper
-// TODO: move into general vector class
-template <typename T>
-bool isSubset(std::vector<T> smallerSet, std::vector<T> largerSet) {
-  std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
-                            std::make_move_iterator(largerSet.end()));
-  return std::ranges::all_of(smallerSet, [&](T &element) { return set.contains(element); });
 };
