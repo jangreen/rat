@@ -13,10 +13,10 @@ class Node {
   mutable Node *nextInWorkList = nullptr;
   mutable Node *prevInWorkList = nullptr;
   // To generate dummy sentinel nodes
-  Node() : literal(BOTTOM) {}
+  Node() : tableau(nullptr), literal(BOTTOM) {}
 
   // ================== Core members ==================
-  Tableau *tableau = nullptr;
+  Tableau * const tableau;
   Node *parentNode = nullptr;
   std::vector<std::unique_ptr<Node>> children;
   Literal literal;
@@ -76,9 +76,7 @@ class Node {
   void inferModalTop();
   void inferModalAtomic();
 
-  // ================== Extraction ==================
-  // this method assumes that tableau is already reduced
-  [[nodiscard]] DNF extractDNF() const;
+  // ================== Printing ==================
   void toDotFormat(std::ofstream &output) const;
 
   // ================== Debugging ==================

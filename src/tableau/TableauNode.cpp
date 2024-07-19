@@ -63,6 +63,10 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 
 }  // namespace
 
+// ===========================================================================================
+// ====================================== Construction =======================================
+// ===========================================================================================
+
 Node::Node(Node *parent, Literal literal)
     : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
@@ -89,6 +93,10 @@ Node::~Node() {
   tableau->unreducedNodes.erase(this);
 }
 
+// ===========================================================================================
+// ======================================= Validation ========================================
+// ===========================================================================================
+
 bool Node::validate() const {
   if (tableau == nullptr) {
     std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
@@ -106,6 +114,10 @@ bool Node::validateRecursive() const {
   assert(std::ranges::all_of(children, &Node::validate));
   return true;
 }
+
+// ===========================================================================================
+// ==================================== Node manipulation ====================================
+// ===========================================================================================
 
 void Node::attachChild(std::unique_ptr<Node> child) {
   assert(child->parentNode == nullptr && "Trying to attach already attached child.");
@@ -131,6 +143,7 @@ std::unique_ptr<Node> Node::detachChild(Node *child) {
   children.erase(childIt);
   return std::move(detachedChild);
 }
+
 std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
   std::ranges::for_each(children, [](auto &child) { child->parentNode = nullptr; });
   auto detachedChildren = std::move(children);
@@ -146,6 +159,10 @@ void Node::rename(const Renaming &renaming) {
     renamedEvents.insert(renaming.rename(event));
   }
   activeEvents = std::move(renamedEvents);
+
+  // ===========================================================================================
+  // ==================================== Tree manipulation ====================================
+  // ===========================================================================================
 }
 
 // deletes literals in dnf that are already in prefix
@@ -184,7 +201,7 @@ void Node::reduceBranchInternalDown(Cube &cube) {
   if (cubeContainsLiteral) {
     // choose minimal annotation
     litIt->annotation = Annotation::min(litIt->annotation, literal.annotation);
-    tableau->removeNode(this);
+    tableau->deleteNode(this);
   }
 }
 
@@ -326,42 +343,6 @@ void Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
 }
 
-void Node::dnfBuilder(DNF &dnf) const {
-  if (isClosed()) {
-    return;
-  }
-
-  for (const auto &child : children) {
-    DNF childDNF;
-    child->dnfBuilder(childDNF);
-    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
-               std::make_move_iterator(childDNF.end()));
-  }
-
-  if (isLeaf()) {
-    dnf.push_back(literal.isNormal() ? Cube{literal} : Cube{});
-    return;
-  }
-
-  if (!literal.isNormal()) {
-    // Ignore non-normal literals.
-    return;
-  }
-
-  for (auto &cube : dnf) {
-    cube.push_back(literal);
-  }
-}
-
-DNF Node::extractDNF() const {
-  DNF dnf;
-  dnfBuilder(dnf);
-  for (auto &cube : dnf) {
-    filterNegatedLiterals(cube);
-  }
-  return dnf;
-}
-
 std::optional<DNF> Node::applyRule(const bool modalRule) {
   auto const result = Rules::applyRule(literal, modalRule);
   if (!result) {
@@ -493,6 +474,10 @@ void Node::inferModalAtomic() {
     }
   }
 }
+
+// ===========================================================================================
+// ========================================= Printing ========================================
+// ===========================================================================================
 
 void Node::toDotFormat(std::ofstream &output) const {
   // tooltip

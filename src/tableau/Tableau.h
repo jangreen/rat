@@ -8,26 +8,35 @@
 class Tableau {
  public:
   explicit Tableau(const Cube &cube);
-  [[nodiscard]] bool validate() const;
 
-  [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
-  bool solve(int bound = -1);
-  void removeNode(Node *node) const;
-  void renameBranches(Node *node);
-
+  // ================== Core algorithm ==================
+  DNF computeDnf();
   // methods for regular reasoning
-  bool applyRuleA();
-  DNF dnf();
+  bool tryApplyModalRuleOnce();
 
+  // ================== Printing ==================
   void toDotFormat(std::ofstream &output) const;
   void exportProof(const std::string &filename) const;
-  void exportDebug(const std::string &filename) const;
+
+  // ================== Debugging ==================
+  [[nodiscard]] bool validate() const;
+  void exportDebug(const std::string &filename) const {
+    if constexpr (DEBUG) {
+      exportProof(filename);
+    }
+  }
 
  private:
   friend class Node;
   Worklist unreducedNodes;
   std::unique_ptr<Node> rootNode;
 
+  [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
+
+  void normalize();
+  void deleteNode(Node *node);
+
+  void renameBranches(Node *node);
   Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
                                  std::unordered_set<Literal> &allRenamedLiterals,
                                  std::unordered_map<const Node *, Node *> &originalToCopy);

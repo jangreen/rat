@@ -8,6 +8,11 @@
 #include "../utility.h"
 #include "Rules.h"
 
+
+// ===========================================================================================
+// ====================================== Construction =======================================
+// ===========================================================================================
+
 Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // avoids the need for multiple root nodes
@@ -23,13 +28,21 @@ Tableau::Tableau(const Cube &cube) {
   }
 }
 
+// ===========================================================================================
+// ======================================= Validation ========================================
+// ===========================================================================================
+
 bool Tableau::validate() const {
   assert(rootNode->validateRecursive());
   assert(unreducedNodes.validate());
   return true;
 }
 
-void Tableau::removeNode(Node *node) const {
+// ===========================================================================================
+// ================================== Tableau computation ====================================
+// ===========================================================================================
+
+void Tableau::deleteNode(Node *node) {
   assert(validate());
   assert(node != rootNode.get());            // node is not root node
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
@@ -53,19 +66,13 @@ void Tableau::removeNode(Node *node) const {
   // worklist.
   std::ignore = node->detachFromParent();
 
-  assert(parentNode->validate());
-  assert(std::ranges::none_of(parentNode->getChildren(),
-                              [](const auto &child) { return !child->validate(); }));
+  assert(parentNode->validateRecursive());
   assert(unreducedNodes.validate());
   assert(validate());
 }
 
-bool Tableau::solve(int bound) {
-  while (!unreducedNodes.isEmpty() && (bound > 0 || bound == -1)) {
-    if (bound > 0) {
-      bound--;
-    }
-
+void Tableau::normalize() {
+  while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
     Node *currentNode = unreducedNodes.pop();
@@ -84,7 +91,7 @@ bool Tableau::solve(int bound) {
       assert(unreducedNodes.validate());
       assert(currentNode->getParentNode()->validate());
       if (!Rules::lastRuleWasUnrolling) {
-        removeNode(currentNode);  // in-place rule application
+        deleteNode(currentNode);  // in-place rule application
       }
       continue;
     }
@@ -138,16 +145,9 @@ bool Tableau::solve(int bound) {
       }
     }
   }
-
-  // warning if bound is reached
-  if (bound == 0 && !unreducedNodes.isEmpty()) {
-    std::cout << "[Warning] Configured bound is reached. Answer is imprecise." << std::endl;
-  }
-
-  return rootNode->isClosed();
 }
 
-bool Tableau::applyRuleA() {
+bool Tableau::tryApplyModalRuleOnce() {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
 
@@ -158,7 +158,7 @@ bool Tableau::applyRuleA() {
     }
     assert(unreducedNodes.validate());
     assert(currentNode->getParentNode()->validate());
-    removeNode(currentNode);
+    deleteNode(currentNode);
 
     // find atomic
     for (const auto &cube : *result) {
@@ -172,6 +172,10 @@ bool Tableau::applyRuleA() {
 
   return false;
 }
+
+// ===========================================================================================
+// ======================================= Renaming ==========================================
+// ===========================================================================================
 
 Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, const int to,
                                         std::unordered_set<Literal> &allRenamedLiterals,
@@ -272,7 +276,7 @@ void Tableau::renameBranchesInternalDown(
     }
   }
   if (!isNew && !unrollingParents.contains(node)) {
-    removeNode(node);
+    deleteNode(node);
   }
   assert(unreducedNodes.validate());
 }
@@ -318,11 +322,52 @@ void Tableau::renameBranches(Node *node) {
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
 }
 
+// ===========================================================================================
+// ==================================== DNF computation ======================================
+// ===========================================================================================
+
 bool isSubsumed(const Cube &a, const Cube &b) {
   if (a.size() < b.size()) {
     return false;
   }
   return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
+}
+
+void dnfBuilder(const Node * node, DNF &dnf) {
+  if (node->isClosed()) {
+    return;
+  }
+
+  for (const auto &child : node->getChildren()) {
+    DNF childDNF;
+    dnfBuilder(child.get(), childDNF);
+    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
+               std::make_move_iterator(childDNF.end()));
+  }
+
+  const auto &literal = node->getLiteral();
+  if (node->isLeaf()) {
+    dnf.push_back(literal.isNormal() ? Cube{literal} : Cube{});
+    return;
+  }
+
+  if (!literal.isNormal()) {
+    // Ignore non-normal literals.
+    return;
+  }
+
+  for (auto &cube : dnf) {
+    cube.push_back(literal);
+  }
+}
+
+DNF extractDNF(const Node* root) {
+  DNF dnf;
+  dnfBuilder(root, dnf);
+  for (auto &cube : dnf) {
+    filterNegatedLiterals(cube);
+  }
+  return dnf;
 }
 
 DNF simplifyDnf(const DNF &dnf) {
@@ -345,13 +390,17 @@ DNF simplifyDnf(const DNF &dnf) {
   return simplified;
 }
 
-DNF Tableau::dnf() {
-  solve();
-  auto dnf = simplifyDnf(rootNode->extractDNF());
+DNF Tableau::computeDnf() {
+  normalize();
+  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   exportDebug("debug");
   assert(validateDNF(dnf));
   return dnf;
 }
+
+// ===========================================================================================
+// ======================================== Printing =========================================
+// ===========================================================================================
 
 void Tableau::toDotFormat(std::ofstream &output) const {
   output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
@@ -365,10 +414,4 @@ void Tableau::exportProof(const std::string &filename) const {
   std::ofstream file("./output/" + filename + ".dot");
   toDotFormat(file);
   file.close();
-}
-
-void Tableau::exportDebug(const std::string &filename) const {
-#if (DEBUG)
-  exportProof(filename);
-#endif
 }

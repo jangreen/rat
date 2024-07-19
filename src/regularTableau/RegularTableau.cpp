@@ -230,7 +230,7 @@ bool RegularTableau::solve() {
     }
 
     Tableau tableau{currentNode->cube};
-    if (tableau.applyRuleA()) {
+    if (tableau.tryApplyModalRuleOnce()) {
       expandNode(currentNode, &tableau);
       continue;
     }
@@ -265,7 +265,7 @@ void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
   assert(validate(node));
   // node is expandable
   // calculate dnf
-  const auto dnf = tableau->dnf();
+  const auto dnf = tableau->computeDnf();
 
   if (dnf.empty() && node != nullptr) {
     node->closed = true;
@@ -333,7 +333,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   if (const auto fixedCube = getInconsistentLiterals(parent, renamedChild)) {
     exportDebug("debug");
     Tableau t(fixedCube.value());
-    const DNF dnf = t.dnf();
+    const DNF dnf = t.computeDnf();
     if (dnf.empty()) {
       return true;
     }

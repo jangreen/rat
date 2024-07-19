@@ -44,9 +44,11 @@ int main(int argc, const char *argv[]) {
     spdlog::info("[Status] Goal: ");
     print(goal);
     if (programArguments.size() > 1 && programArguments[1] == "infinite") {
+      /*
       Tableau tableau{goal};
-      tableau.solve(200);
+      tableau.normalize(200);
       tableau.exportProof("infinite");
+      */
     } else {
       std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
       RegularTableau tableau{goal};
