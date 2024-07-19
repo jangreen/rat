@@ -35,7 +35,7 @@ void Tableau::removeNode(Node *node) {
   assert(node != rootNode.get());            // node is not root node
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
   assert(node->getParentNode()->validate());
-  auto parentNode = node->getParentNode();
+  const auto parentNode = node->getParentNode();
 
   // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
   // that leaf's parent. The reason is as follows:
@@ -176,7 +176,7 @@ bool Tableau::applyRuleA() {
   return false;
 }
 
-Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
+Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, const int to,
                                         std::unordered_set<Literal> &allRenamedLiterals,
                                         std::unordered_map<const Node *, Node *> &originalToCopy) {
   const Renaming renaming = Renaming::simple(from, to);
@@ -311,7 +311,7 @@ void Tableau::renameBranches(Node *node) {
   std::unordered_map<const Node *, Node *> originalToCopy;
   std::unordered_set<const Node *> unrollingParents;
 
-  auto renamedLastSharedNode =
+  const auto renamedLastSharedNode =
       renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals, originalToCopy);
   renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
                              unrollingParents);

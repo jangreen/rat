@@ -51,7 +51,7 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
 }
 
 // TODO: give better name
-Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replace) {
+Cube substitute(const Literal &literal, const CanonicalSet search, const CanonicalSet replace) {
   int c = 1;
   Literal copy = literal;
   Cube newLiterals;
@@ -66,10 +66,10 @@ Cube substitute(const Literal &literal, CanonicalSet search, CanonicalSet replac
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : tableau(parent != nullptr ? parent->tableau : nullptr),
+    : _isClosed(false),
       literal(std::move(literal)),
       parentNode(parent),
-      _isClosed(false) {
+      tableau(parent != nullptr ? parent->tableau : nullptr) {
   if (parent != nullptr) {
     parent->children.emplace_back(this);
 
@@ -121,7 +121,7 @@ void Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
 }
 
 std::unique_ptr<Node> Node::removeChild(Node *child) {
-  auto firstUnsharedNodeIt =
+  const auto firstUnsharedNodeIt =
       std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
   auto removedChild = std::move(*firstUnsharedNodeIt);
   children.erase(firstUnsharedNodeIt);
@@ -173,7 +173,7 @@ void Node::reduceBranchInternalDown(Cube &cube) {
     }
   }
 
-  auto litIt = std::ranges::find(cube, literal);
+  const auto litIt = std::ranges::find(cube, literal);
   const bool cubeContainsLiteral = litIt != cube.end();
   if (cubeContainsLiteral) {
     // choose minimal annotation
@@ -254,14 +254,14 @@ void Node::closeBranch() {
   bottom->_isClosed = true;
 
   // update isClosed cache
-  Node *cur = this;
+  auto cur = this;
   while (cur != nullptr) {
     if (std::ranges::any_of(cur->children, [](const auto &child) { return !child->isClosed(); })) {
       break;
     }
     cur->_isClosed = true;
     cur = cur->parentNode;
-  };
+  }
 }
 
 void Node::appendBranch(const DNF &dnf) {
@@ -307,7 +307,7 @@ void Node::appendBranch(const DNF &dnf) {
     // 2. insert cube
     auto thisChildren = std::move(children);
     children.clear();
-    Node *newNode = this;
+    auto newNode = this;
     for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
       newNode->lastUnrollingParent = transitiveClosureNode;

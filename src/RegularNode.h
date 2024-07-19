@@ -25,10 +25,10 @@ class RegularNode {
 
   const Cube cube;  // must be ordered, should not be modified
   bool closed = false;
-  const NodeSet &getChildren() const { return children; }
-  const NodeSet &getEpsilonChildren() const { return epsilonChildren; }
-  const std::map<RegularNode *, EdgeLabel> &getParents() const { return parents; }
-  const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const { return epsilonParents; }
+  [[nodiscard]] const NodeSet &getChildren() const { return children; }
+  [[nodiscard]] const NodeSet &getEpsilonChildren() const { return epsilonChildren; }
+  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getParents() const { return parents; }
+  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const { return epsilonParents; }
   const EdgeLabel &getLabelForChild(const RegularNode *child) const {
     return child->parents.at(const_cast<RegularNode *>(this));
   }
@@ -55,7 +55,7 @@ class RegularNode {
 
   // for dynamic multi source reachability
   RegularNode *reachabilityTreeParent = nullptr;
-  bool isOpenLeaf() const { return children.empty() && !closed; }
+  [[nodiscard]] bool isOpenLeaf() const { return children.empty() && !closed; }
 
   bool printed = false;  // prevent cycling in printing // FIXME refactor
   void toDotFormat(std::ofstream &output);
