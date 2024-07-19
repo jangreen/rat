@@ -449,7 +449,6 @@ void Node::inferModalTop() {
 }
 
 void Node::inferModalAtomic() {
-  // throw std::logic_error("error");
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
   assert(edgeLiteral.validate());
