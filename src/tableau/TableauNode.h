@@ -7,7 +7,7 @@
 class Tableau;
 
 class Node {
-private:
+ private:
   // ================== Intrusive Worklist ==================
   friend class Worklist;
   mutable Node *nextInWorkList = nullptr;
@@ -29,7 +29,6 @@ private:
   mutable SetOfSets activeEventBasePairs;
   mutable bool _isClosed = false;
 
-
   void appendBranchInternalUp(DNF &dnf) const;
   void appendBranchInternalDown(DNF &dnf);
   void reduceBranchInternalDown(Cube &cube);
@@ -37,7 +36,7 @@ private:
 
   void dnfBuilder(DNF &dnf) const;
 
-public:
+ public:
   Node(Tableau *tableau, Literal literal);
   Node(Node *parent, Literal literal);
   explicit Node(const Node *other) = delete;
@@ -94,23 +93,27 @@ public:
    * This iterator tries to minimize problems when deleting children while iterating.
    */
   struct ChildIterator {
-  private :
+   private:
     Node *node;
     int childIndex;
 
-  public:
+   public:
     using iterator_category = std::input_iterator_tag;
     using difference_type = std::ptrdiff_t;
-    using value_type = Node*;
-    using pointer = value_type*;
-    using reference = value_type&;
+    using value_type = Node *;
+    using pointer = value_type *;
+    using reference = value_type &;
     struct EndSentinel {};
 
-    explicit ChildIterator(Node* node) : node(node), childIndex(static_cast<int>(node->children.size() - 1)) {}
+    explicit ChildIterator(Node *node)
+        : node(node), childIndex(static_cast<int>(node->children.size()) - 1) {}
 
     value_type operator*() const { return node->children.at(childIndex).get(); }
     value_type operator->() const { return node->children.at(childIndex).get(); }
-    ChildIterator& operator++() {--childIndex; return *this;}
+    ChildIterator &operator++() {
+      --childIndex;
+      return *this;
+    }
     bool operator==(const EndSentinel sentinel) const {
       return childIndex < 0 || node->children.empty();
     }
@@ -119,8 +122,7 @@ public:
   };
 
   ChildIterator beginSafe() { return ChildIterator(this); }
-  ChildIterator::EndSentinel endSafe() { return {};}
-
+  ChildIterator::EndSentinel endSafe() { return {}; }
 };
 
 inline const Node *Node::transitiveClosureNode = nullptr;

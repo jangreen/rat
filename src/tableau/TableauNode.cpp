@@ -10,9 +10,7 @@
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
-bool isAppendable(const DNF &dnf) {
-  return std::ranges::none_of(dnf, &Cube::empty);
-}
+bool isAppendable(const DNF &dnf) { return std::ranges::none_of(dnf, &Cube::empty); }
 
 void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
   if (transitiveClosureNode == nullptr || dnf.empty()) {
@@ -66,9 +64,7 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : tableau(parent->tableau),
-      parentNode(parent),
-      literal(std::move(literal)) {
+    : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
   parent->children.emplace_back(this);
   activeEvents = parent->activeEvents;
@@ -79,9 +75,7 @@ Node::Node(Node *parent, Literal literal)
   }
 }
 
-Node::Node(Tableau *tableau, Literal literal)
-  : tableau(tableau),
-  literal(std::move(literal)) {
+Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
   assert(tableau != nullptr);
 
   if (!literal.negated) {
@@ -261,7 +255,7 @@ void Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
-  void(detachAllChildren());
+  std::ignore = detachAllChildren();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
   const auto bottom = new Node(this, BOTTOM);
   bottom->_isClosed = true;
@@ -539,6 +533,7 @@ void Node::toDotFormat(std::ofstream &output) const {
   // children
   for (const auto &child : children) {
     child->toDotFormat(output);
-    output << "N" << this << " -- " << "N" << child << ";" << std::endl;
+    output << "N" << this << " -- "
+           << "N" << child << ";" << std::endl;
   }
 }
