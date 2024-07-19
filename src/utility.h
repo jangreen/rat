@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "Literal.h"
+#include "basic/Literal.h"
 
 inline void print(const DNF &dnf) {
   std::cout << "Cubes:";

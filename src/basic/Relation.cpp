@@ -62,11 +62,6 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
   return &(*iter);
 }
 
-bool Relation::operator==(const Relation &other) const {
-  return operation == other.operation && leftOperand == other.leftOperand &&
-         rightOperand == other.rightOperand && identifier == other.identifier;
-}
-
 std::string Relation::toString() const {
   std::string output;
   switch (operation) {

@@ -3,19 +3,19 @@
 #include <iostream>
 #include <ranges>
 
+#include "../utility.h"
 #include "Rules.h"
 #include "Tableau.h"
-#include "utility.h"
 
 namespace {
 // ---------------------- Anonymous helper functions ----------------------
 
 bool isAppendable(const DNF &dnf) {
-  return std::ranges::all_of(dnf, [](const auto &cube) { return !cube.empty(); });
+  return std::ranges::none_of(dnf, &Cube::empty);
 }
 
 void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
-  if (transitiveClosureNode == nullptr) {
+  if (transitiveClosureNode == nullptr || dnf.empty()) {
     return;
   }
   assert(transitiveClosureNode->validate());
@@ -66,16 +66,23 @@ Cube substitute(const Literal &literal, const CanonicalSet search, const Canonic
 }  // namespace
 
 Node::Node(Node *parent, Literal literal)
-    : _isClosed(false),
-      literal(std::move(literal)),
+    : tableau(parent->tableau),
       parentNode(parent),
-      tableau(parent != nullptr ? parent->tableau : nullptr) {
-  if (parent != nullptr) {
-    parent->children.emplace_back(this);
-
-    activeEvents = parent->activeEvents;
-    activeEventBasePairs = parent->activeEventBasePairs;
+      literal(std::move(literal)) {
+  assert(parent != nullptr);
+  parent->children.emplace_back(this);
+  activeEvents = parent->activeEvents;
+  activeEventBasePairs = parent->activeEventBasePairs;
+  if (!literal.negated) {
+    activeEvents.merge(literal.events());
+    activeEventBasePairs.merge(literal.labelBaseCombinations());
   }
+}
+
+Node::Node(Tableau *tableau, Literal literal)
+  : tableau(tableau),
+  literal(std::move(literal)) {
+  assert(tableau != nullptr);
 
   if (!literal.negated) {
     activeEvents.merge(literal.events());
@@ -102,33 +109,40 @@ bool Node::validate() const {
 
 bool Node::validateRecursive() const {
   assert(validate());
-  assert(std::ranges::all_of(children, [](auto &child) { return child->validate(); }));
+  assert(std::ranges::all_of(children, &Node::validate));
   return true;
 }
 
-void Node::newChild(std::unique_ptr<Node> child) {
+void Node::attachChild(std::unique_ptr<Node> child) {
+  assert(child->parentNode == nullptr && "Trying to attach already attached child.");
   child->parentNode = this;
   child->activeEvents.merge(activeEvents);
   children.push_back(std::move(child));
 }
 
-void Node::newChildren(std::vector<std::unique_ptr<Node>> newChildren) {
-  for (const auto &newChild : newChildren) {
-    newChild->parentNode = this;
+void Node::attachChildren(std::vector<std::unique_ptr<Node>> newChildren) {
+  std::ranges::for_each(newChildren, [&](auto &child) { attachChild(std::move(child)); });
+}
+
+std::unique_ptr<Node> Node::detachChild(Node *child) {
+  assert(child->parentNode == this && "Cannot detach parentless child");
+  const auto childIt = std::ranges::find(children, child, &std::unique_ptr<Node>::get);
+  if (childIt == children.end()) {
+    assert(false && "Invalid child to detach.");
+    return nullptr;
   }
-  children.insert(children.end(), std::make_move_iterator(newChildren.begin()),
-                  std::make_move_iterator(newChildren.end()));
-}
 
-std::unique_ptr<Node> Node::removeChild(Node *child) {
-  const auto firstUnsharedNodeIt =
-      std::ranges::find_if(children, [&](const auto &curChild) { return curChild.get() == child; });
-  auto removedChild = std::move(*firstUnsharedNodeIt);
-  children.erase(firstUnsharedNodeIt);
-  return removedChild;
+  auto detachedChild = std::move(*childIt);
+  detachedChild->parentNode = nullptr;
+  children.erase(childIt);
+  return detachedChild;
 }
-
-bool Node::isLeaf() const { return children.empty(); }
+std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
+  std::ranges::for_each(children, [](auto &child) { child->parentNode = nullptr; });
+  auto detachedChildren = std::move(children);
+  children.clear();
+  return detachedChildren;
+}
 
 void Node::rename(const Renaming &renaming) {
   literal.rename(renaming);
@@ -165,12 +179,10 @@ void Node::reduceBranchInternalDown(Cube &cube) {
     return;
   }
 
-  // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
-  // children, potentially invalidating the iterator.
-  for (int i = children.size() - 1; i >= 0; i--) {
-    if (!children.empty()) {
-      children[i]->reduceBranchInternalDown(cube);
-    }
+  // IMPORTANT: This loop may delete iterated children,
+  // so we need to perform a safer kind of iteration
+  for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+    childIt->reduceBranchInternalDown(cube);
   }
 
   const auto litIt = std::ranges::find(cube, literal);
@@ -201,6 +213,7 @@ void Node::appendBranchInternalDown(DNF &dnf) {
   if (!isLeaf()) {
     // No leaf: descend recursively
     // Copy DNF for all children but the last one (for the last one we can reuse the DNF).
+    // TODO: Safe iterate?
     for (const auto &child : std::ranges::drop_view(children, 1)) {
       DNF branchCopy(dnf);
       child->appendBranchInternalDown(branchCopy);  // copy for each branching
@@ -248,20 +261,16 @@ void Node::closeBranch() {
   assert(tableau->unreducedNodes.validate());
   // It is safe to clear the children: the Node destructor
   // will make sure to remove them from worklist
-  children.clear();
+  void(detachAllChildren());
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
   const auto bottom = new Node(this, BOTTOM);
   bottom->_isClosed = true;
 
   // update isClosed cache
   auto cur = this;
-  while (cur != nullptr) {
-    if (std::ranges::any_of(cur->children, [](const auto &child) { return !child->isClosed(); })) {
-      break;
-    }
-    cur->_isClosed = true;
-    cur = cur->parentNode;
-  }
+  do {
+    cur->_isClosed = std::ranges::all_of(cur->children, &Node::isClosed);
+  } while (cur->isClosed() && (cur = cur->parentNode) != nullptr);
 }
 
 void Node::appendBranch(const DNF &dnf) {
@@ -278,7 +287,7 @@ void Node::appendBranch(const DNF &dnf) {
   reduceDNFAtAWorldCycle(dnfCopy, transitiveClosureNode);
   appendBranchInternalUp(dnfCopy);
 
-  // empy dnf
+  // empty dnf
   const bool contradiction = dnfCopy.empty();
   if (contradiction) {
     closeBranch();
@@ -299,25 +308,21 @@ void Node::appendBranch(const DNF &dnf) {
     // IMPORTANT that we do this first to choose the minimal annotation
     // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
     // children, potentially invalidating the iterator.
-    for (int i = children.size() - 1; i >= 0; i--) {
-      if (!children.empty()) {
-        children[i]->reduceBranchInternalDown(cube);
-      }
+    // IMPORTANT: This loop may delete iterated children,
+    // so we need to perform a safer kind of iteration
+    for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+      childIt->reduceBranchInternalDown(cube);
     }
 
     // 2. insert cube
-    auto thisChildren = std::move(children);
-    children.clear();
+    const auto thisChildren = detachAllChildren();
     auto newNode = this;
     for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
       newNode = new Node(newNode, literal);
       newNode->lastUnrollingParent = transitiveClosureNode;
       tableau->unreducedNodes.push(newNode);
     }
-    newNode->children = std::move(thisChildren);
-    for (const auto &newNodeChild : newNode->children) {
-      newNodeChild->parentNode = newNode;
-    }
+    newNode->attachChildren(thisChildren);
     return;
   }
 

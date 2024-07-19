@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Relation.h"
+#include "basic/Relation.h"
 class Assumption {
  public:
   explicit Assumption(CanonicalRelation relation,

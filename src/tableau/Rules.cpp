@@ -2,7 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "utility.h"
+#include "../utility.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
                                                      const AnnotatedSet& annotatedSet,
@@ -35,7 +35,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       // -> Rule (aL)
       // RightRule: [b.e] -> { [f], (f,e) \in b }
       // -> Rule (aR)
-      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
+      const CanonicalSet f = Set::freshEvent();
       const auto& b = *relation->identifier;
       const CanonicalSet first = operation == SetOperation::image ? event : f;
       const CanonicalSet second = operation == SetOperation::image ? f : event;
@@ -609,11 +609,11 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
     case SetOperation::fullSet: {
       if (context.negated) {
         // Rule (\neg\top_1): use universal events optimization
-        const CanonicalSet f = Set::newTopEvent(Set::maxEvent++);
+        const CanonicalSet f = Set::freshTopEvent();
         return PartialDNF{{AnnotatedSet(f, Annotation::none())}};
       }
       // Rule (\top_1): [T] -> { [f] } , only if positive
-      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
+      const CanonicalSet f = Set::freshEvent();
       return PartialDNF{{AnnotatedSet(f, nullptr)}};
     }
     case SetOperation::setUnion: {
@@ -668,7 +668,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
         return std::nullopt;
       }
       // Rule (A): [B] -> { [f], f \in B }
-      const CanonicalSet f = Set::newEvent(Set::maxEvent++);
+      const CanonicalSet f = Set::freshEvent();
       return PartialDNF{{AnnotatedSet(f, nullptr), Literal(false, f, *set->identifier)}};
     }
     case SetOperation::image:

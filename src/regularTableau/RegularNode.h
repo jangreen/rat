@@ -3,7 +3,7 @@
 #include <set>
 #include <vector>
 
-#include "Literal.h"
+#include "../basic/Literal.h"
 
 class RegularNode;
 typedef Renaming EdgeLabel;

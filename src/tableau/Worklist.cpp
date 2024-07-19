@@ -1,13 +1,14 @@
 #include "Tableau.h"
 
-#ifndef WORKLIST_ALTERNATIVE
+//------------------------------------------------------------------------------------------------
+// Private methods
 
 void Worklist::connect(Node &left, Node &right) {
   left.nextInWorkList = &right;
   right.prevInWorkList = &left;
 }
 
-void Worklist::disconnect(Node &node) {
+void Worklist::disconnect(const Node &node) {
   assert(node.nextInWorkList != nullptr);
   assert(node.prevInWorkList != nullptr);
   connect(*node.prevInWorkList, *node.nextInWorkList);
@@ -26,22 +27,25 @@ bool Worklist::isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<
   return head->nextInWorkList == tail.get();
 }
 
+//------------------------------------------------------------------------------------------------
+// Public methods
+
 Worklist::Worklist() {
   // Setup dummy sentinel nodes for the doubly linked lists
-  posEqualitiesHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  posEqualitiesTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  posEqualitiesHeadDummy = std::unique_ptr<Node>(new Node());
+  posEqualitiesTailDummy = std::unique_ptr<Node>(new Node());
   connect(*posEqualitiesHeadDummy, *posEqualitiesTailDummy);
 
-  nonNormalNegatedHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  nonNormalNegatedTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalNegatedHeadDummy = std::unique_ptr<Node>(new Node());
+  nonNormalNegatedTailDummy = std::unique_ptr<Node>(new Node());
   connect(*nonNormalNegatedHeadDummy, *nonNormalNegatedTailDummy);
 
-  nonNormalPositiveHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  nonNormalPositiveTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  nonNormalPositiveHeadDummy = std::unique_ptr<Node>(new Node());
+  nonNormalPositiveTailDummy = std::unique_ptr<Node>(new Node());
   connect(*nonNormalPositiveHeadDummy, *nonNormalPositiveTailDummy);
 
-  remainingHeadDummy = std::make_unique<Node>(nullptr, BOTTOM);
-  remainingTailDummy = std::make_unique<Node>(nullptr, BOTTOM);
+  remainingHeadDummy = std::unique_ptr<Node>(new Node());
+  remainingTailDummy = std::unique_ptr<Node>(new Node());
   connect(*remainingHeadDummy, *remainingTailDummy);
 }
 
@@ -76,11 +80,9 @@ void Worklist::push(Node *node) {
   insertAfter(*insertionPoint, *node);
 }
 
-void Worklist::erase(Node *node) {
+void Worklist::erase(const Node *node) {
   if (node->prevInWorkList == nullptr || node->nextInWorkList == nullptr) {
     // The node is a dummy that cannot be erased.
-    // TODO: Double check edge case: Worklist gets destroyed, causing dummies to get deleted,
-    //  triggering the Node destructor which calls erase here.
     return;
   }
   disconnect(*node);
@@ -137,41 +139,3 @@ bool Worklist::validate() const {
 
   return true;
 }
-
-#else
-// --------------------------------------------------------------
-// Alternative worklist implementation
-
-bool Worklist::CompareNodes::operator()(const Node *left, const Node *right) const {
-  if ((left->literal.operation == PredicateOperation::equality ||
-       right->literal.operation == PredicateOperation::equality) &&
-      left->literal.operation != right->literal.operation) {
-    return left->literal.operation == PredicateOperation::equality;
-  }
-
-  // Compare nodes by literals.
-  const auto litCmp = left->literal <=> right->literal;
-  if (litCmp == 0) {
-    // ensure that multiple nodes with same literal are totally ordered (but non-deterministic)
-    return left < right;
-  }
-  return litCmp < 0;
-}
-
-Worklist::Worklist() = default;
-
-void Worklist::push(Node *node) { queue.insert(node); }
-
-void Worklist::erase(Node *node) { queue.erase(node); }
-
-bool Worklist::contains(Node *node) const {
-  return std::ranges::any_of(queue, [&](const auto &n) { return n == node; });
-}
-
-Tableau::Node *Worklist::pop() { return queue.extract(queue.begin()).value(); }
-
-bool Worklist::isEmpty() const { return queue.empty(); }
-
-bool Worklist::validate() const { return std::ranges::all_of(queue, &Node::validate); }
-
-#endif
