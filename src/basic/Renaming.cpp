@@ -1,13 +1,13 @@
 #include "Renaming.h"
 
-#include <unordered_set>
 #include <boost/container/flat_set.hpp>
+#include <unordered_set>
 
 const auto projFirst = &std::pair<int, int>::first;
 const auto projSecond = &std::pair<int, int>::second;
 
 // Private constructor
-Renaming::Renaming(Mapping &&map) : mapping(std::move(map))  {
+Renaming::Renaming(Mapping&& map) : mapping(std::move(map)) {
   assert(std::ranges::is_sorted(mapping, std::less(), projFirst) && "domain is unsorted");
   assert(std::ranges::adjacent_find(mapping, std::equal_to(), projFirst) == mapping.end() &&
          "duplicates in domain");
@@ -16,7 +16,8 @@ Renaming::Renaming(Mapping &&map) : mapping(std::move(map))  {
            rangeSet.reserve(mapping.size());
            std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
            rangeSet.size() == mapping.size();
-         }) && "duplicates in range");
+         }) &&
+         "duplicates in range");
 }
 
 Renaming Renaming::minimal(const std::vector<int>& from) {
@@ -29,9 +30,7 @@ Renaming Renaming::minimal(const std::vector<int>& from) {
   return Renaming(std::move(mapping));
 }
 
-Renaming Renaming::simple(int from, int to) {
-  return Renaming({{from, to}});
-}
+Renaming Renaming::simple(int from, int to) { return Renaming({{from, to}}); }
 
 Renaming Renaming::inverted() const {
   Mapping inverted;
@@ -54,3 +53,11 @@ Renaming Renaming::compose(const Renaming& other) const {
   return Renaming(std::move(composed));
 }
 
+Renaming Renaming::totalCompose(const Renaming& other) const {
+  Mapping composed;
+  composed.reserve(mapping.size());
+  for (auto [a, b] : mapping) {
+    composed.emplace_back(a, other.rename(b));
+  }
+  return Renaming(std::move(composed));
+}
