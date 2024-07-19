@@ -16,14 +16,14 @@ result() {
 test() {
     name=$1
     result=$2
-    output=$(./build/CatInfer "./tests/${name}")
+    output=$(./cmake-build-relwithdebinfo/CatInfer "./tests/${name}")
     result "$output"
 }
 
 proof() {
     name=$1
     result=$2
-    output=$(./build/CatInfer "./proofs/${name}")
+    output=$(./cmake-build-relwithdebinfo/CatInfer "./proofs/${name}")
     result "$output"  
 }
 
