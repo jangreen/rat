@@ -214,16 +214,17 @@ bool RegularTableau::solve() {
       // skip already closed nodes and nodes that cannot be reached by a root node
       continue;
     }
+    // current node is open leaf
+    assert(currentNode->isOpenLeaf());
 
     // 1) weaken positive edge predicates
-    if (std::ranges::any_of(currentNode->cube, [](const Literal &literal) {
-          return literal.isPositiveEdgePredicate();
-        })) {
+    if (cubeHasPositiveEdgePredicate(currentNode->cube)) {
+      // weakening
       Cube newCube = currentNode->cube;
-      std::erase_if(newCube,
-                    [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+      std::erase_if(newCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
       filterNegatedLiterals(newCube);
 
+      // add new node and edge
       const auto &[childNode, edgeLabel] = newNode(newCube);
       newEdge(currentNode, childNode, edgeLabel);
       continue;
