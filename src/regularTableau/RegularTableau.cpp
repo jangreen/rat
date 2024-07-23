@@ -216,21 +216,15 @@ bool RegularTableau::solve() {
     }
     // current node is open leaf
     assert(currentNode->isOpenLeaf());
+    Cube currentCube = currentNode->cube;
 
     // 1) weaken positive edge predicates
-    if (cubeHasPositiveEdgePredicate(currentNode->cube)) {
-      // weakening
-      Cube newCube = currentNode->cube;
-      std::erase_if(newCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
-      filterNegatedLiterals(newCube);
-
-      // add new node and edge
-      const auto &[childNode, edgeLabel] = newNode(newCube);
-      newEdge(currentNode, childNode, edgeLabel);
-      continue;
+    if (cubeHasPositiveEdgePredicate(currentCube)) {
+      std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
+      filterNegatedLiterals(currentCube);
     }
 
-    Tableau tableau{currentNode->cube};
+    Tableau tableau{currentCube};
     if (tableau.tryApplyModalRuleOnce()) {
       expandNode(currentNode, &tableau);
       continue;
