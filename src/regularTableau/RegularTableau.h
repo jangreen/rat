@@ -28,7 +28,6 @@ class RegularTableau {
   void expandNode(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   bool isInconsistentLazy(RegularNode *openLeaf);
-
   Cube getModel(const RegularNode *openLeaf) const;
   Renaming getRootRenaming(const RegularNode *node) const;
   bool isReachableFromRoots(const RegularNode *node) const;
@@ -50,6 +49,5 @@ class RegularTableau {
   explicit RegularTableau(const Cube &initialLiterals);
 
   bool solve();
-
   void exportProof(const std::string &filename) const;
 };
