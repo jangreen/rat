@@ -8,8 +8,8 @@
 
 class Set;
 typedef const Set *CanonicalSet;
-typedef boost ::container::flat_set<int> EventSet;
-typedef boost ::container::flat_set<CanonicalSet> SetOfSets;
+typedef boost::container::flat_set<int> EventSet;
+typedef boost::container::flat_set<CanonicalSet> SetOfSets;
 
 enum class SetOperation {
   baseSet,          // nullary function (constant): base Set
@@ -64,27 +64,23 @@ class Set {
   static CanonicalSet newEvent(int label) {
     return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
   }
-   static CanonicalSet newTopEvent(int label) {
+  static CanonicalSet newTopEvent(int label) {
     return newSet(SetOperation::topEvent, nullptr, nullptr, nullptr, label, std::nullopt);
   }
-   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
     return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
   }
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left,
-                                    CanonicalRelation relation) {
+                             CanonicalRelation relation) {
     return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
   }
-  static CanonicalSet freshEvent() {
-    return newEvent(maxEvent++);
-  }
-  static CanonicalSet freshTopEvent() {
-    return newTopEvent(maxEvent++);
-  }
+  static CanonicalSet freshEvent() { return newEvent(maxEvent++); }
+  static CanonicalSet freshTopEvent() { return newTopEvent(maxEvent++); }
 
   bool operator==(const Set &other) const {
     return operation == other.operation && leftOperand == other.leftOperand &&
-           rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
-           identifier == other.identifier;
+           rightOperand == other.rightOperand && relation == other.relation &&
+           label == other.label && identifier == other.identifier;
   }
 
   bool isEvent() const {
