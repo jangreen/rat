@@ -124,6 +124,5 @@ struct std::hash<Set> {
     boost::hash_combine(seed, set.identifier);
     boost::hash_combine(seed, set.label);
     return seed;
-
   }
 };
