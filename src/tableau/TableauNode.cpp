@@ -49,7 +49,8 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
 }
 
 // TODO: give better name
-Cube substitute(const Literal &literal, const CanonicalSet search, const CanonicalSet replace) {
+Cube substituteAllOnce(const Literal &literal, const CanonicalSet search,
+                       const CanonicalSet replace) {
   int c = 1;
   Literal copy = literal;
   Cube newLiterals;
@@ -306,7 +307,7 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
 
   // filter non-active negated literals
   for (auto &cube : dnf) {
-    filterNegatedLiterals(cube, activeEvents);
+    // filterNegatedLiterals(cube, activeEvents);
     // TODO: labelBase optimization
     // filterNegatedLiterals(cube, activeEventBasePairs);
   }
@@ -429,12 +430,7 @@ std::optional<DNF> Node::applyRule(const bool modalRule) {
   return disjunction;
 }
 
-void Node::inferModal() {
-  if (!literal.negated) {
-    return;
-  }
-
-  // Traverse bottom-up
+void Node::inferModalUp() {
   const Node *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     if (!cur->literal.isNormal() || !cur->literal.isPositiveEdgePredicate()) {
@@ -451,21 +447,62 @@ void Node::inferModal() {
     const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
     const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
     const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
-
     const CanonicalSet search1 = e1b;
     const CanonicalSet replace1 = e2;
     const CanonicalSet search2 = be2;
     const CanonicalSet replace2 = e1;
 
     // Compute substituted literals and append.
-    Cube subResult = substitute(literal, search1, replace1);
-    for (const auto &lit : substitute(literal, search2, replace2)) {
+    Cube subResult = substituteAllOnce(literal, search1, replace1);
+    for (const auto &lit : substituteAllOnce(literal, search2, replace2)) {
       if (!contains(subResult, lit)) {
         subResult.push_back(lit);
       }
     }
     appendBranch(subResult);
   }
+}
+
+void Node::inferModalDown(const Literal &negatedLiteral) {
+  if (isClosed()) {
+    return;
+  }
+
+  for (const auto &child : children) {
+    child->inferModalDown(negatedLiteral);
+  }
+
+  if (!literal.isPositiveEdgePredicate()) {
+    return;
+  }
+
+  const CanonicalSet e1 = literal.leftEvent;
+  const CanonicalSet e2 = literal.rightEvent;
+  const CanonicalRelation b = Relation::newBaseRelation(literal.identifier.value());
+  const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+  const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
+  const CanonicalSet search1 = e1b;
+  const CanonicalSet replace1 = e2;
+  const CanonicalSet search2 = be2;
+  const CanonicalSet replace2 = e1;
+
+  // Compute substituted literals and append.
+  Cube subResult = substituteAllOnce(negatedLiteral, search1, replace1);
+  for (const auto &lit : substituteAllOnce(negatedLiteral, search2, replace2)) {
+    if (!contains(subResult, lit)) {
+      subResult.push_back(lit);
+    }
+  }
+  appendBranch(subResult);
+}
+
+void Node::inferModal() {
+  if (!literal.negated) {
+    return;
+  }
+
+  inferModalUp();
+  inferModalDown(literal);
 }
 
 void Node::inferModalTop() {
@@ -500,6 +537,63 @@ void Node::inferModalTop() {
   }
 }
 
+Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet replace1,
+                                const CanonicalSet search2, const CanonicalSet replace2) {
+  if (!literal.negated || !literal.isNormal()) {
+    return {};
+  }
+  Cube newLiterals;
+
+  // Negated and normal lit
+  // negated modal rule
+  auto sub1 = substituteAllOnce(literal, search1, replace1);
+  auto sub2 = substituteAllOnce(literal, search2, replace2);
+  newLiterals.insert(newLiterals.end(), std::make_move_iterator(sub1.begin()),
+                     std::make_move_iterator(sub1.end()));
+  newLiterals.insert(newLiterals.end(), std::make_move_iterator(sub2.begin()),
+                     std::make_move_iterator(sub2.end()));
+
+  // negated top rule: [f] -> {e}
+  for (const auto search : literal.topEvents()) {
+    const CanonicalSet searchSet = Set::newTopEvent(search);
+
+    if (const auto substituted1 = literal.substituteAll(searchSet, replace1)) {
+      newLiterals.push_back(substituted1.value());
+    }
+
+    if (const auto substituted2 = literal.substituteAll(searchSet, replace2)) {
+      newLiterals.push_back(substituted2.value());
+    }
+  }
+  return newLiterals;
+}
+
+void Node::inferModalAtomicUp(const CanonicalSet search1, const CanonicalSet replace1,
+                              const CanonicalSet search2, const CanonicalSet replace2) {
+  Cube newLiterals;
+  auto *cur = this;
+  while ((cur = cur->parentNode) != nullptr) {
+    auto newLiteralsNode = cur->inferModalAtomicNode(search1, replace1, search2, replace2);
+    newLiterals.insert(newLiterals.end(), std::make_move_iterator(newLiteralsNode.begin()),
+                       std::make_move_iterator(newLiteralsNode.end()));
+  }
+  appendBranch(newLiterals);
+}
+
+void Node::inferModalAtomicDown(const CanonicalSet search1, const CanonicalSet replace1,
+                                const CanonicalSet search2, const CanonicalSet replace2) {
+  if (isClosed()) {
+    return;
+  }
+
+  for (const auto &child : children) {
+    child->inferModalAtomicDown(search1, replace1, search2, replace2);
+  }
+
+  const auto newLiteralsNode = inferModalAtomicNode(search1, replace1, search2, replace2);
+  appendBranch(newLiteralsNode);
+}
+
 void Node::inferModalAtomic() {
   const Literal &edgeLiteral = literal;
   // (e1, e2) \in b
@@ -509,41 +603,13 @@ void Node::inferModalAtomic() {
   const CanonicalRelation b = Relation::newBaseRelation(*edgeLiteral.identifier);
   const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
   const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
-
   const CanonicalSet search1 = e1b;
   const CanonicalSet replace1 = e2;
   const CanonicalSet search2 = be2;
   const CanonicalSet replace2 = e1;
 
-  const Node *cur = this;
-  while ((cur = cur->parentNode) != nullptr) {
-    tableau->exportDebug("debug");
-    const Literal &curLit = cur->literal;
-    if (!curLit.negated || !curLit.isNormal()) {
-      continue;
-    }
-
-    // Negated and normal lit
-    // check if inside literal can be something inferred
-    for (auto &lit : substitute(curLit, search1, replace1)) {
-      appendBranch(lit);
-    }
-    for (auto &lit : substitute(curLit, search2, replace2)) {
-      appendBranch(lit);
-    }
-    // cases for [f] -> {e}
-    for (const auto search : curLit.topEvents()) {
-      const CanonicalSet searchSet = Set::newTopEvent(search);
-
-      if (const auto substituted1 = curLit.substituteAll(searchSet, replace1)) {
-        appendBranch(substituted1.value());
-      }
-
-      if (const auto substituted2 = curLit.substituteAll(searchSet, replace2)) {
-        appendBranch(substituted2.value());
-      }
-    }
-  }
+  inferModalAtomicUp(search1, replace1, search2, replace2);
+  inferModalAtomicDown(search1, replace1, search2, replace2);
 }
 
 // ===========================================================================================

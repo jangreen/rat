@@ -34,6 +34,14 @@ class Node {
   void appendBranchInternalDownDisjunctive(DNF &dnf);
   void appendBranchInternalDownConjunctive(DNF &dnf);
   void reduceBranchInternalDown(NodeCube &nodeCube);
+  void inferModalAtomicUp(const CanonicalSet search1, const CanonicalSet replace1,
+                          const CanonicalSet search2, const CanonicalSet replace2);
+  void inferModalAtomicDown(const CanonicalSet search1, const CanonicalSet replace1,
+                            const CanonicalSet search2, const CanonicalSet replace2);
+  Cube inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet replace1,
+                            const CanonicalSet search2, const CanonicalSet replace2);
+  void inferModalUp();
+  void inferModalDown(const Literal &negatedLiteral);
   void reduceBranchInternalDown(Cube &cube);
   void closeBranch();
 
