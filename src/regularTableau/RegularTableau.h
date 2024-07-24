@@ -30,6 +30,7 @@ class RegularTableau {
   bool isInconsistentLazy(RegularNode *openLeaf);
   Cube getModel(const RegularNode *openLeaf) const;
   Renaming getRootRenaming(const RegularNode *node) const;
+  bool isSpurious(const RegularNode *openLeaf) const;
   bool isReachableFromRoots(const RegularNode *node) const;
   typedef std::vector<RegularNode *> Path;
   void findAllPathsToRoots(RegularNode *node, Path &currentPath, std::vector<Path> &allPaths) const;

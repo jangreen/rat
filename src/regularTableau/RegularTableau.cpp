@@ -245,7 +245,8 @@ bool RegularTableau::solve() {
 
     // 2) Test whether counterexample is spurious
     // 3) Check inconsistencies lazy
-    if (isInconsistentLazy(currentNode)) {
+    if (isSpurious(currentNode) && isInconsistentLazy(currentNode)) {
+      assert(validate());
       continue;
     }
 
