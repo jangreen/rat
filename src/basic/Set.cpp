@@ -15,7 +15,6 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
   switch (operation) {
     case SetOperation::topEvent:
     case SetOperation::event:
-      return true;
     case SetOperation::setUnion:
     case SetOperation::emptySet:
     case SetOperation::fullSet:

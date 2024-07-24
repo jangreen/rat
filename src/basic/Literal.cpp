@@ -151,10 +151,6 @@ bool Literal::isNegatedOf(const Literal &other) const {
 bool Literal::isNormal() const {
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
-      if (set->operation == SetOperation::setIntersection &&
-          (set->leftOperand->isEvent() || set->rightOperand->isEvent())) {
-        return false;
-      }
       return set->isNormal();
     }
     case PredicateOperation::constant:
