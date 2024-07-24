@@ -373,16 +373,6 @@ void Node::appendBranchInternalDownConjunctive(DNF &dnf) {
   for (auto childIt = newNode->beginSafe(); childIt != newNode->endSafe(); ++childIt) {
     childIt->reduceBranchInternalDown(newNodes);
   }
-
-  // 2. insert cube
-  auto thisChildren = detachAllChildren();
-  auto newNode = this;
-  for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
-    newNode = new Node(newNode, literal);
-    newNode->lastUnrollingParent = transitiveClosureNode;
-    tableau->unreducedNodes.push(newNode);
-  }
-  newNode->attachChildren(std::move(thisChildren));
 }
 
 void Node::appendBranch(const DNF &dnf) {
