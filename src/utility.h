@@ -1,11 +1,15 @@
 #pragma once
 
 #include <iostream>
+#include <ranges>
 #include <unordered_set>
 
 #include "basic/Literal.h"
 
-// helper
+template <class RangeType, class RangeValueType>
+concept range_of = std::ranges::range<RangeType> &&
+                   std::same_as<RangeValueType, std::ranges::range_value_t<RangeType>>;
+
 template <typename T>
 bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
   std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
@@ -72,7 +76,7 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
-inline void renameCube(Renaming &renaming, Cube &cube) {
+inline void renameCube(const Renaming &renaming, Cube &cube) {
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
@@ -134,12 +138,18 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
   return result;
 }
 
-inline bool cubeHasNegatedLiteral(const Cube &cube, const Literal &literal) {
+bool cubeHasNegatedLiteral(const range_of<Literal> auto &cube, const Literal &literal) {
   return std::ranges::any_of(
       cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
 }
 
+inline bool cubeHasPositiveEdgePredicate(const Cube &cube) {
+  return std::ranges::any_of(
+      cube, [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+}
+
 inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {
+  // IMPORTANT includes requires the sets to be sorted
   return std::ranges::includes(activeEvents, literal.normalEvents());
 }
 
