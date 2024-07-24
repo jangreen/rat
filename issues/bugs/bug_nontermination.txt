@@ -10,4 +10,4 @@ assert (co | id)+ <= 0
 
 // (3) Non-terminating variant of above (same behaviour but slower growth rate).
 
-assert (co & (loc | id))+ <= 0
+assert (co & (loc |id))+ <= 0

@@ -522,7 +522,6 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
 }
 
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
-  return true;
   const auto model = getModel(openLeaf);
 
   auto rootNode = openLeaf;
