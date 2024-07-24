@@ -5,6 +5,8 @@
 #include "../basic/Literal.h"
 
 class Tableau;
+class Node;
+typedef std::vector<Node *> NodeCube;
 
 class Node {
  private:
@@ -16,12 +18,11 @@ class Node {
   Node() : tableau(nullptr), literal(BOTTOM) {}
 
   // ================== Core members ==================
-  Tableau * const tableau;
+  Tableau *const tableau;
   Node *parentNode = nullptr;
-  std::vector<std::unique_ptr<Node>> children;
   Literal literal;
-
   const Node *lastUnrollingParent = nullptr;  // to detect at the world cycles
+  std::vector<std::unique_ptr<Node>> children;
 
   // ================== Cached ==================
   // gather information about the prefix of the branch
@@ -32,6 +33,7 @@ class Node {
   void appendBranchInternalUp(DNF &dnf) const;
   void appendBranchInternalDownDisjunctive(DNF &dnf);
   void appendBranchInternalDownConjunctive(DNF &dnf);
+  void reduceBranchInternalDown(NodeCube &nodeCube);
   void reduceBranchInternalDown(Cube &cube);
   void closeBranch();
 
@@ -49,8 +51,7 @@ class Node {
   [[nodiscard]] const Literal &getLiteral() const { return literal; }
   [[nodiscard]] std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
   [[nodiscard]] const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
-  void setLastUnrollingParent(const Node *node) { lastUnrollingParent = node; }
-
+  void setLastUnrollingParent(const Node *node);
   [[nodiscard]] bool isClosed() const { return _isClosed; }
   [[nodiscard]] bool isLeaf() const { return children.empty(); }
 

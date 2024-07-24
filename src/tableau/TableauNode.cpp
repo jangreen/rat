@@ -89,8 +89,18 @@ Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::m
 }
 
 Node::~Node() {
-  // remove this from unreducedNodes
-  tableau->unreducedNodes.erase(this);
+  // sentinel dummy nodes in worklist have no tableau
+  if (tableau != nullptr) {
+    // remove this from lastUnrollingParent in xrefMap and this from xrefMap
+    tableau->crossReferenceMap.erase(this);
+    if (lastUnrollingParent != nullptr &&
+        tableau->crossReferenceMap.contains(lastUnrollingParent)) {
+      tableau->crossReferenceMap.at(lastUnrollingParent).erase(this);
+    }
+
+    // remove this from unreducedNodes
+    tableau->unreducedNodes.erase(this);
+  }
 }
 
 // ===========================================================================================
@@ -106,6 +116,14 @@ bool Node::validate() const {
     std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
+  assert(lastUnrollingParent == nullptr || lastUnrollingParent->validate());
+  assert(lastUnrollingParent == nullptr ||
+         tableau->crossReferenceMap.at(lastUnrollingParent).contains(const_cast<Node *>(this)));
+  assert(!tableau->crossReferenceMap.contains(this) ||
+         std::ranges::all_of(tableau->crossReferenceMap.at(this), [&](const Node *node) {
+           assert(node->lastUnrollingParent == this);
+           return node->lastUnrollingParent == this;
+         }));
   return literal.validate();
 }
 
@@ -118,6 +136,34 @@ bool Node::validateRecursive() const {
 // ===========================================================================================
 // ==================================== Node manipulation ====================================
 // ===========================================================================================
+
+void Node::setLastUnrollingParent(const Node *node) {
+  if (node == nullptr) {
+    lastUnrollingParent = nullptr;
+    return;
+  }
+
+  if (node != lastUnrollingParent) {
+    auto &xrefMap = tableau->crossReferenceMap;
+    // remove old reference
+    if (lastUnrollingParent != nullptr) {
+      assert(xrefMap.contains(lastUnrollingParent));
+      auto &lastSet = xrefMap.at(lastUnrollingParent);
+      assert(lastSet.contains(this));
+      const auto erased = lastSet.erase(this);
+      assert(erased > 0);
+      assert(!lastSet.contains(this));
+    }
+    // insert new reference
+    xrefMap[node].insert(this);
+
+    assert(lastUnrollingParent == nullptr ||
+           !tableau->crossReferenceMap.at(lastUnrollingParent).contains(this));
+  }
+
+  // set value
+  lastUnrollingParent = node;
+}
 
 void Node::attachChild(std::unique_ptr<Node> child) {
   assert(child->parentNode == nullptr && "Trying to attach already attached child.");
@@ -178,8 +224,9 @@ void Node::appendBranchInternalUp(DNF &dnf) const {
   } while ((node = node->parentNode) != nullptr);
 }
 
-void Node::reduceBranchInternalDown(Cube &cube) {
+void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
   assert(tableau->unreducedNodes.validate());
+  const auto cube = nodeCube | std::views::transform(&Node::literal);
 
   if (isClosed()) {
     return;
@@ -193,14 +240,27 @@ void Node::reduceBranchInternalDown(Cube &cube) {
   // IMPORTANT: This loop may delete iterated children,
   // so we need to perform a safer kind of iteration
   for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
-    childIt->reduceBranchInternalDown(cube);
+    childIt->reduceBranchInternalDown(nodeCube);
   }
 
-  const auto litIt = std::ranges::find(cube, literal);
-  const bool cubeContainsLiteral = litIt != cube.end();
+  const auto nodeIt = std::ranges::find(nodeCube, literal, &Node::literal);
+  const bool cubeContainsLiteral = nodeIt != nodeCube.end();
   if (cubeContainsLiteral) {
+    const auto node = *nodeIt;
+
     // choose minimal annotation
-    litIt->annotation = Annotation::min(litIt->annotation, literal.annotation);
+    node->literal.annotation = Annotation::min(node->literal.annotation, literal.annotation);
+
+    // if this has cross references(aka is a lastUnrollingParent), then use node as alternative
+    if (tableau->crossReferenceMap.contains(this)) {
+      // IMPORTANT copy to avoid iterating over set while manipulating
+      const auto xRefs = tableau->crossReferenceMap.at(this);
+      for (const auto nodeWithReference : xRefs) {
+        nodeWithReference->setLastUnrollingParent(node);
+        assert(!tableau->crossReferenceMap.at(this).contains(nodeWithReference));
+      }
+    }
+
     tableau->deleteNode(this);
   }
 }
@@ -260,7 +320,7 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
     auto newNode = this;
     for (const auto &literal : cube) {
       newNode = new Node(newNode, literal);
-      newNode->lastUnrollingParent = transitiveClosureNode;
+      newNode->setLastUnrollingParent(transitiveClosureNode);
       tableau->unreducedNodes.push(newNode);
     }
   }
@@ -291,15 +351,25 @@ void Node::appendBranchInternalDownConjunctive(DNF &dnf) {
   // filterNegatedLiterals(cube, activeEvents);
   // do not need to filter here?
 
-  // insert cube in-place
-  // 1. reduce branch
-  // IMPORTANT that we do this first to choose the minimal annotation
-  // IMPORTANT 2: This loop mitigates against the fact that recursive calls can delete
+  // 1. insert cube in-place
+  auto thisChildren = detachAllChildren();
+  auto newNode = this;
+  NodeCube newNodes;
+  for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
+    newNode = new Node(newNode, literal);
+    newNode->setLastUnrollingParent(transitiveClosureNode);
+    tableau->unreducedNodes.push(newNode);
+    newNodes.push_back(newNode);
+  }
+  newNode->attachChildren(std::move(thisChildren));
+
+  // 2. reduce branch
+  // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
   // children, potentially invalidating the iterator.
   // IMPORTANT: This loop may delete iterated children,
   // so we need to perform a safer kind of iteration
-  for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
-    childIt->reduceBranchInternalDown(cube);
+  for (auto childIt = newNode->beginSafe(); childIt != newNode->endSafe(); ++childIt) {
+    childIt->reduceBranchInternalDown(newNodes);
   }
 
   // 2. insert cube

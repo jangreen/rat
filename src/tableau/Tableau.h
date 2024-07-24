@@ -29,6 +29,7 @@ class Tableau {
  private:
   friend class Node;
   Worklist unreducedNodes;
+  std::unordered_map<const Node *, std::unordered_set<Node *>> crossReferenceMap;
   std::unique_ptr<Node> rootNode;
 
   [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
