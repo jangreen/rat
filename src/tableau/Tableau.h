@@ -12,7 +12,7 @@ class Tableau {
   // ================== Core algorithm ==================
   DNF computeDnf();
   // methods for regular reasoning
-  bool tryApplyModalRuleOnce();
+  bool tryApplyModalRuleOnce(int applyToEvent);
 
   // ================== Printing ==================
   void toDotFormat(std::ofstream &output) const;

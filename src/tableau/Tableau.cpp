@@ -142,27 +142,23 @@ void Tableau::normalize() {
   }
 }
 
-bool Tableau::tryApplyModalRuleOnce() {
+bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
 
-    exportDebug("debug");
-    auto result = currentNode->applyRule(true);
-    if (!result) {
-      continue;
-    }
-    assert(unreducedNodes.validate());
-    assert(currentNode->getParentNode()->validate());
-    deleteNode(currentNode);
+    if (const auto result =
+            Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
+      assert(unreducedNodes.validate());
+      assert(currentNode->getParentNode()->validate());
 
-    // find atomic
-    for (const auto &cube : *result) {
-      // should be only one cube
-      if (std::ranges::any_of(cube, &Literal::isPositiveEdgePredicate)) {
-        return true;
-      }
+      // to detect at the world cycles
+      // set it before appendBranch call
+      currentNode->transitiveClosureNode = currentNode->getLastUnrollingParent();
+      currentNode->appendBranch(result.value());
+
+      deleteNode(currentNode);
+      return true;
     }
-    // TODO: clear worklist and add only result of modal rule to it
   }
 
   return false;

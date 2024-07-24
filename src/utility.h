@@ -175,6 +175,56 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
   return activeEvents;
 }
 
+inline void countActiveEvents(const CanonicalSet set,
+                              std::vector<std::pair<int, int>> &activeEventCounters) {
+  switch (set->operation) {
+    case SetOperation::event: {
+      auto e = set->label.value();
+      auto it = std::ranges::find(activeEventCounters, e, &std::pair<int, int>::first);
+      if (it != activeEventCounters.end()) {
+        it->second++;
+      } else {
+        activeEventCounters.push_back({e, 1});
+      }
+      return;
+    }
+    case SetOperation::image:
+    case SetOperation::domain:
+      countActiveEvents(set->leftOperand, activeEventCounters);
+      return;
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion:
+      countActiveEvents(set->leftOperand, activeEventCounters);
+      countActiveEvents(set->rightOperand, activeEventCounters);
+      return;
+    case SetOperation::topEvent:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return;
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+// activeEvent = event occurs in positive literal
+inline std::optional<int> gatherMinimalOccurringActiveEvent(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  std::vector<std::pair<int, int>> activeEventCounters;
+  for (const auto &literal : cube) {
+    if (literal.negated || literal.operation != PredicateOperation::setNonEmptiness) {
+      continue;
+    }
+
+    countActiveEvents(literal.set, activeEventCounters);
+  }
+  std::ranges::sort(activeEventCounters, std::less<int>{}, &std::pair<int, int>::second);
+  return activeEventCounters.size() > 0 ? std::optional(activeEventCounters.front().first)
+                                        : std::nullopt;
+}
+
 // removes all negated literals in cube with events that do not occur in events
 // returns removed literals
 inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {

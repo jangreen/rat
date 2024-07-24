@@ -237,7 +237,12 @@ bool RegularTableau::solve() {
     }
 
     Tableau tableau{currentCube};
-    if (tableau.tryApplyModalRuleOnce()) {
+    // IMPORTANT: currently we rely on this property to be correct.
+    // intuition: using always an event that occurrs prefers events that occcur once to events that
+    // occurr multiple times. This ensures that we keep the number of events used in a cube minimal
+    auto minimalOccurringActiveEvent = gatherMinimalOccurringActiveEvent(currentCube);
+    if (minimalOccurringActiveEvent &&
+        tableau.tryApplyModalRuleOnce(minimalOccurringActiveEvent.value())) {
       expandNode(currentNode, &tableau);
       assert(validate());
       continue;

@@ -406,8 +406,8 @@ void Node::appendBranch(const DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
 }
 
-std::optional<DNF> Node::applyRule(const bool modalRule) {
-  auto const result = Rules::applyRule(literal, modalRule);
+std::optional<DNF> Node::applyRule() {
+  auto const result = Rules::applyRule(literal);
   if (!result) {
     return std::nullopt;
   }

@@ -5,8 +5,7 @@
 #include "../utility.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
-                                                     const AnnotatedSet& annotatedSet,
-                                                     const bool modalRules
+                                                     const AnnotatedSet& annotatedSet
 
 ) {
   // e.r
@@ -22,25 +21,13 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
 
   switch (relation->operation) {
     case RelationOperation::baseRelation: {
-      // only use if want to
-      if (!modalRules) {
-        return std::nullopt;
-      }
       if (context.negated) {
         // Rule (~aL), Rule (~aR): requires context (handled later)
         return std::nullopt;
       }
 
-      // LeftRule: [e.b] -> { [f], (e,f) \in b }
-      // -> Rule (aL)
-      // RightRule: [b.e] -> { [f], (f,e) \in b }
-      // -> Rule (aR)
-      const CanonicalSet f = Set::freshEvent();
-      const auto& b = *relation->identifier;
-      const CanonicalSet first = operation == SetOperation::image ? event : f;
-      const CanonicalSet second = operation == SetOperation::image ? f : event;
-
-      return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(first, second, b)}};
+      // positive modal rule are handled in other method
+      return std::nullopt;
     }
     case RelationOperation::cartesianProduct:
       // TODO: implement
@@ -296,8 +283,7 @@ std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) 
   }
 }
 
-std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
-                                                      const bool modalRules) {
+std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
   assert(literal.set->leftOperand->isEvent() || literal.set->rightOperand->isEvent());
   // e & s
   const bool leftRule = literal.set->leftOperand->isEvent();
@@ -422,7 +408,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
       // -> r is not base
       // -> apply some rule to fr    or      rf
 
-      const auto sResult = applyRule(literal, annotatedS, modalRules);
+      const auto sResult = applyRule(literal, annotatedS);
       if (!sResult) {
         // no rule applicable (possible since we omit rules where true is derivable)
         return std::nullopt;
@@ -461,7 +447,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal,
   }
 }
 
-std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRules) {
+std::optional<DNF> Rules::applyRule(const Literal& literal) {
   lastRuleWasUnrolling = false;
   switch (literal.operation) {
     case PredicateOperation::edge:
@@ -487,11 +473,32 @@ std::optional<DNF> Rules::applyRule(const Literal& literal, const bool modalRule
       if (literal.set->operation == SetOperation::setIntersection) {
         // s1 & s2 != 0
         if (literal.set->leftOperand->isEvent() || literal.set->rightOperand->isEvent()) {
-          return handleIntersectionWithEvent(literal, modalRules);
+          return handleIntersectionWithEvent(literal);
         }
       }
       // apply non-root rules
-      if (const auto result = applyRule(literal, literal.annotatedSet(), modalRules)) {
+      if (const auto result = applyRule(literal, literal.annotatedSet())) {
+        return toDNF(literal, *result);
+      }
+      return std::nullopt;
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+std::optional<DNF> Rules::applyPositiveModalRule(const Literal& literal, int minimalEvent) {
+  if (literal.negated) {
+    return std::nullopt;
+  }
+
+  switch (literal.operation) {
+    case PredicateOperation::edge:
+    case PredicateOperation::constant:
+    case PredicateOperation::set:
+    case PredicateOperation::equality:
+      return std::nullopt;  // no rule applicable
+    case PredicateOperation::setNonEmptiness:
+      if (const auto result = applyPositiveModalRule(literal.annotatedSet(), minimalEvent)) {
         return toDNF(literal, *result);
       }
       return std::nullopt;
@@ -595,8 +602,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
   }
 }
 
-std::optional<PartialDNF> Rules::applyRule(const Literal& context, const AnnotatedSet& annotatedSet,
-                                           const bool modalRules) {
+std::optional<PartialDNF> Rules::applyRule(const Literal& context,
+                                           const AnnotatedSet& annotatedSet) {
   const auto& [set, setAnnotation] = annotatedSet;
   switch (set->operation) {
     case SetOperation::topEvent:
@@ -629,14 +636,13 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
     case SetOperation::setIntersection: {
       if (!set->leftOperand->isEvent() && !set->rightOperand->isEvent()) {
         // [S1 & S2]: apply rules recursively
-        if (const auto leftResult =
-                applyRule(context, Annotated::getLeft(annotatedSet), modalRules)) {
+        if (const auto leftResult = applyRule(context, Annotated::getLeft(annotatedSet))) {
           const auto& dnf = *leftResult;
           return substituteIntersectionOperand(
               false, dnf, std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)));
         }
-        if (const auto rightResult = applyRule(
-                context, std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)), modalRules)) {
+        if (const auto rightResult =
+                applyRule(context, std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)))) {
           const auto& dnf = *rightResult;
           return substituteIntersectionOperand(true, dnf, Annotated::getLeft(annotatedSet));
         }
@@ -674,10 +680,87 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context, const Annotat
     case SetOperation::image:
     case SetOperation::domain: {
       if (set->leftOperand->isEvent()) {
-        return applyRelationalRule(context, annotatedSet, modalRules);
+        return applyRelationalRule(context, annotatedSet);
       }
 
-      const auto setResult = applyRule(context, Annotated::getLeft(annotatedSet), modalRules);
+      const auto setResult = applyRule(context, Annotated::getLeft(annotatedSet));
+      if (!setResult) {
+        return std::nullopt;
+      }
+
+      std::vector<std::vector<PartialLiteral>> result;
+      result.reserve(setResult->size());
+      for (const auto& cube : *setResult) {
+        std::vector<PartialLiteral> newCube;
+        newCube.reserve(cube.size());
+        for (const auto& partialPredicate : cube) {
+          if (std::holds_alternative<Literal>(partialPredicate)) {
+            newCube.push_back(partialPredicate);
+          } else {
+            const auto& s = std::get<AnnotatedSet>(partialPredicate);
+            // TODO: there should only be one [] inside each {}
+            // otherwise we have to intersect (&) all  []'s after before replacing
+            // currently we just assume this is the case without further checking
+            const auto annotatedRelation =
+                std::get<AnnotatedRelation>(Annotated::getRight(annotatedSet));
+            const auto newSet = Annotated::newSet(set->operation, s, annotatedRelation);
+            newCube.emplace_back(newSet);
+          }
+        }
+        result.push_back(newCube);
+      }
+      return result;
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+std::optional<PartialDNF> Rules::applyPositiveModalRule(const AnnotatedSet& annotatedSet,
+                                                        int minimalEvent) {
+  const auto& [set, setAnnotation] = annotatedSet;
+  switch (set->operation) {
+    case SetOperation::topEvent:
+    case SetOperation::event:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::setUnion:
+    case SetOperation::baseSet:
+      return std::nullopt;  // no rule applicable
+    case SetOperation::setIntersection: {
+      // [S1 & S2]: apply rules recursively
+      if (const auto leftResult =
+              applyPositiveModalRule(Annotated::getLeft(annotatedSet), minimalEvent)) {
+        return substituteIntersectionOperand(
+            false, leftResult.value(), std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)));
+      }
+      if (const auto rightResult = applyPositiveModalRule(
+              std::get<AnnotatedSet>(Annotated::getRight(annotatedSet)), minimalEvent)) {
+        return substituteIntersectionOperand(true, rightResult.value(),
+                                             Annotated::getLeft(annotatedSet));
+      }
+      return std::nullopt;
+    }
+    case SetOperation::image:
+    case SetOperation::domain: {
+      if (set->leftOperand->isEvent() && set->leftOperand->label.value() == minimalEvent) {
+        if (set->relation->operation != RelationOperation::baseRelation) {
+          return std::nullopt;
+        }
+        // LeftRule: [e.b] -> { [f], (e,f) \in b }
+        // -> Rule (aL)
+        // RightRule: [b.e] -> { [f], (f,e) \in b }
+        // -> Rule (aR)
+        const CanonicalSet e = set->leftOperand;
+        const CanonicalSet f = Set::freshEvent();
+        const auto& b = *set->relation->identifier;
+        const CanonicalSet first = set->operation == SetOperation::image ? e : f;
+        const CanonicalSet second = set->operation == SetOperation::image ? f : e;
+
+        return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(first, second, b)}};
+      }
+
+      const auto setResult = applyPositiveModalRule(Annotated::getLeft(annotatedSet), minimalEvent);
       if (!setResult) {
         return std::nullopt;
       }

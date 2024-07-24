@@ -81,7 +81,7 @@ class Node {
     }
   }
   void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
-  std::optional<DNF> applyRule(bool modalRule = false);
+  std::optional<DNF> applyRule();
   void inferModal();
   void inferModalTop();
   void inferModalAtomic();
