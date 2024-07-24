@@ -1,8 +1,17 @@
 #pragma once
 
 #include <iostream>
+#include <unordered_set>
 
 #include "basic/Literal.h"
+
+// helper
+template <typename T>
+bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
+  std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
+                            std::make_move_iterator(largerSet.end()));
+  return std::ranges::all_of(smallerSet, [&](auto &element) { return set.contains(element); });
+}
 
 inline void print(const DNF &dnf) {
   std::cout << "Cubes:";

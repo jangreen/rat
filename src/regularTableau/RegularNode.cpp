@@ -82,8 +82,7 @@ bool RegularNode::validate() const {
   // cube is valid and has no duplicates
   assert(validateCube(cube));
   // literals must be normal
-  const bool literalsAreNormal =
-      std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
+  const bool literalsAreNormal = std::ranges::all_of(cube, &Literal::isNormal);
   assert(literalsAreNormal);
   assert(std::ranges::all_of(epsilonChildren, [&](const RegularNode *epsilonChild) {
     return epsilonChild->epsilonParents.contains(const_cast<RegularNode *>(this));
@@ -93,21 +92,6 @@ bool RegularNode::validate() const {
 
 size_t RegularNode::Hash::operator()(const std::unique_ptr<RegularNode> &node) const {
   return std::hash<RegularNode>()(*node);
-}
-
-// FIXME calculate cached lazy property
-// hashing and comparison is insensitive to label renaming
-bool RegularNode::operator==(const RegularNode &otherNode) const {
-  // shortcuts
-  if (cube.size() != otherNode.cube.size()) {
-    return false;
-  }
-  return cube == otherNode.cube;
-}
-
-bool RegularNode::Equal::operator()(const std::unique_ptr<RegularNode> &node1,
-                                    const std::unique_ptr<RegularNode> &node2) const {
-  return *node1 == *node2;
 }
 
 void RegularNode::toDotFormat(std::ofstream &output) const {
