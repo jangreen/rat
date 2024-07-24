@@ -10,11 +10,10 @@
 
 class RegularTableau {
  private:
-  std::unordered_set<RegularNode *> rootNodes;
   std::unordered_set<std::unique_ptr<RegularNode>, RegularNode::Hash, RegularNode::Equal> nodes;
+  std::unordered_set<RegularNode *> rootNodes;
   std::stack<RegularNode *> unreducedNodes;
-
-  bool isReachableFromRoots(const RegularNode *node) const;
+  RegularNode *currentNode = nullptr;
 
   // ================== Node management ==================
   std::pair<RegularNode *, Renaming> newNode(const Cube &cube);
@@ -30,6 +29,7 @@ class RegularTableau {
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   bool isInconsistentLazy(RegularNode *openLeaf);
 
+  bool isReachableFromRoots(const RegularNode *node) const;
   typedef std::vector<RegularNode *> Path;
   void findAllPathsToRoots(RegularNode *node, Path &currentPath, std::vector<Path> &allPaths) const;
 
@@ -41,8 +41,8 @@ class RegularTableau {
   void exportDebug(const std::string &filename) const;
 
   // ================== Validation ==================
-  bool validate(const RegularNode *currentNode = nullptr) const;
-  [[nodiscard]] bool validateReachabilityTree() const;
+  bool validate() const;
+  bool validateReachabilityTree() const;
 
  public:
   explicit RegularTableau(const Cube &initialLiterals);

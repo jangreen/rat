@@ -130,7 +130,7 @@ bool Node::validate() const {
 
 bool Node::validateRecursive() const {
   assert(validate());
-  assert(std::ranges::all_of(children, &Node::validate));
+  assert(std::ranges::all_of(children, &Node::validateRecursive));
   return true;
 }
 
@@ -347,6 +347,7 @@ void Node::closeBranch() {
 
 void Node::appendBranchInternalDownConjunctive(DNF &dnf) {
   auto &cube = dnf.at(0);
+  // TODO:
   // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
   // down in the tree
   // filterNegatedLiterals(cube, activeEvents);

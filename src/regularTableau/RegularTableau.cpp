@@ -62,7 +62,7 @@ RegularTableau::RegularTableau(const Cube &initialLiterals) {
   expandNode(nullptr, &t);
 }
 
-bool RegularTableau::validate(const RegularNode *currentNode) const {
+bool RegularTableau::validate() const {
   std::unordered_set<RegularNode *> reachable;
   for (auto &root : rootNodes) {
     findReachableNodes(root, reachable);
@@ -79,24 +79,26 @@ bool RegularTableau::validate(const RegularNode *currentNode) const {
   });
 
   // get open leafs
-  std::erase_if(reachable, [&](const RegularNode *node) {
+  auto openLeafs = reachable;
+  std::erase_if(openLeafs, [&](const RegularNode *node) {
     return !node->isOpenLeaf() || !node->getEpsilonChildren().empty() || node == currentNode;
   });
 
-  for (auto &unreducedNode : get_const_container(unreducedNodes)) {
-    reachable.erase(unreducedNode);
-  }
+  // open leafs are in unreduced nodes
+  const auto openLeafsAreUnreduced = std::ranges::all_of(openLeafs, [&](const auto &openLeaf) {
+    const auto container = get_const_container(unreducedNodes);
+    const auto leafValid = std::ranges::find(container, openLeaf) != container.end();
+    if (!leafValid) {
+      std::cout << " Leaked node: " << openLeaf << std::endl;
+      print(openLeaf->cube);
+    }
+    assert(leafValid);
+    return leafValid;
+  });
 
-  for (auto &leakedNode : reachable) {
-    std::cout << " Leaked node: " << leakedNode
-              << ", hash: " << std::hash<RegularNode>()(*leakedNode) << std::endl;
-    print(leakedNode->cube);
-  }
-
-  const auto unreducedNodesValid = reachable.empty();
-  assert(unreducedNodesValid);
+  assert(openLeafsAreUnreduced);
   assert(allNodesValid);
-  return unreducedNodesValid && allNodesValid;
+  return openLeafsAreUnreduced && allNodesValid;
 }
 
 bool RegularTableau::validateReachabilityTree() const {
@@ -127,12 +129,17 @@ bool RegularTableau::validateReachabilityTree() const {
 // cube is in normal form
 // checks if renaming exists when adding and returns already existing node if possible
 std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
+  assert(validateNormalizedCube(cube));  // cube is in normal form
+  assert(validate());
+
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   const auto &[newNode, renaming] = RegularNode::newNode(cube);
-  assert(newNode->validate());
   auto newNodePtr = std::unique_ptr<RegularNode>(newNode);
   auto [iter, added] = nodes.insert(std::move(newNodePtr));
   unreducedNodes.push(iter->get());
+
+  assert(iter->get()->validate());
+  assert(validate());
   return {iter->get(), renaming};
 }
 
@@ -142,9 +149,11 @@ void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) const {
   assert(validateReachabilityTree());
 }
 
+// parent == nullptr -> rootNode
 void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
-  assert(parent != nullptr);
-  assert(child != nullptr);
+  assert(parent != nullptr && parent->validate());
+  assert(child != nullptr && child->validate());
+  assert(validate());
 
   // don't add edges that already exist
   if (child->getParents().contains(parent)) {
@@ -172,12 +181,14 @@ void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const Edge
     const auto &childRenaming = epsilonChildChild->getEpsilonParents().at(child);
     addEdge(parent, epsilonChildChild, label.compose(childRenaming));
   }
+  assert(validate());
 }
 
 void RegularTableau::addEpsilonEdge(RegularNode *parent, RegularNode *child,
                                     const EdgeLabel &label) {
-  assert(parent != nullptr);
-  assert(child != nullptr);
+  assert(parent != nullptr && parent->validate());
+  assert(child != nullptr && child->validate());
+  assert(validate());
 
   const auto inserted = parent->addEpsilonChild(child, label);
   if (!inserted) {
@@ -196,6 +207,8 @@ void RegularTableau::addEpsilonEdge(RegularNode *parent, RegularNode *child,
   if (rootNodes.contains(parent)) {
     rootNodes.insert(child);
   }
+
+  assert(validate());
 }
 
 bool RegularTableau::solve() {
@@ -203,12 +216,14 @@ bool RegularTableau::solve() {
     exportDebug("debug");
     assert(validate());
 
-    const auto currentNode = unreducedNodes.top();
+    currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    assert(validate());
 
     if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
         !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
+      assert(validate());
       continue;
     }
     // current node is open leaf
@@ -224,16 +239,11 @@ bool RegularTableau::solve() {
     Tableau tableau{currentCube};
     if (tableau.tryApplyModalRuleOnce()) {
       expandNode(currentNode, &tableau);
+      assert(validate());
       continue;
     }
 
-    // current node is open leaf
-    assert(!currentNode->closed);
-    assert(currentNode->getChildren().empty());
-
     // 2) Test whether counterexample is spurious
-    // TODO:
-
     // 3) Check inconsistencies lazy
     if (isInconsistentLazy(currentNode)) {
       continue;
@@ -255,26 +265,18 @@ bool RegularTableau::solve() {
 void RegularTableau::expandNode(RegularNode *node, Tableau *tableau) {
   assert(node == nullptr || node->validate());
   assert(tableau->validate());
-  assert(validate(node));
-  // node is expandable
+  assert(validate());
+
   // calculate dnf
   const auto dnf = tableau->computeDnf();
-
   if (dnf.empty() && node != nullptr) {
     node->closed = true;
     return;
   }
 
-  // for each cube: calculate potential child
+  // add node and edge for each cube
   for (auto &cube : dnf) {
-    assert(validateCube(cube));
-    assert(validate(node));
-
-    // add node and edge
-    assert(validateCube(cube));
     const auto &[childNode, edgeLabel] = newNode(cube);
-    assert(validateCube(cube));
-    assert(childNode->validate());
     const bool isRootNode = node == nullptr;
     if (isRootNode) {
       rootNodes.insert(childNode);
@@ -300,15 +302,12 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   // }
   // parent->inconsistentChildrenChecked.insert({child, label});
 
-  // return false;  // uncomment for no inverses optimizations, then also labelBase opitmization is
-  // possible
-
   if (child->cube.empty()) {
     // empty child not inconsistent
     return false;
   }
 
-  // use parent naming: label has already parent naming, rename child cube
+  // use parent naming: rename child cube
   Cube renamedChild = child->cube;
   const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
@@ -533,11 +532,7 @@ void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) cons
   std::vector<RegularNode *> openBranch;
 
   const RegularNode *cur = openLeaf;
-  Cube edges;
   while (cur != nullptr) {
-    std::ranges::copy_if(cur->cube, std::back_inserter(edges),
-                         [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
-
     assert(isReachableFromRoots(cur));
     if (cur->reachabilityTreeParent != nullptr) {
       // determine renaming to root node for cur
@@ -550,6 +545,7 @@ void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) cons
       }
       Cube cube = cur->cube;
       renameCube(rootRenaming, cube);
+      std::ranges::sort(cube);
       auto newNode = new RegularNode(std::move(cube));
       if (!openBranch.empty()) {
         newNode->addChild(openBranch.back(), Renaming::minimal({}));
@@ -562,11 +558,15 @@ void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) cons
   }
 
   // generate path
-  counterexamplePath << "root -> N" << openBranch.back() << "[color=\"red\"];\n";
-  openBranch.back()->reachabilityTreeParent =
-      openBranch.back();  // hack because there are no root Nodes
-  for (const auto node : openBranch) {
-    nodeToDotFormat(node, counterexamplePath);
+  if (openBranch.empty()) {
+    // TODO: extend to this case
+  } else {
+    counterexamplePath << "root -> N" << openBranch.back() << "[color=\"red\"];\n";
+    openBranch.back()->reachabilityTreeParent =
+        openBranch.back();  // hack because there are no root Nodes
+    for (const auto node : openBranch) {
+      nodeToDotFormat(node, counterexamplePath);
+    }
   }
 
   counterexamplePath << "}" << std::endl;

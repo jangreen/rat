@@ -8,7 +8,6 @@
 #include "../utility.h"
 #include "Rules.h"
 
-
 // ===========================================================================================
 // ====================================== Construction =======================================
 // ===========================================================================================
@@ -54,9 +53,9 @@ void Tableau::deleteNode(Node *node) {
     // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from
     // that leaf's parent. The reason is as follows:
     // Consider the branch "root ->* parent -> leaf" which just becomes "root ->* parent" after
-    // deletion. This new branch subsumes/dominates all branches of the form "root ->* parent ->+ ..."
-    // so we can get rid of all those branches. We do so by deleting all children from the parent
-    // node.
+    // deletion. This new branch subsumes/dominates all branches of the form "root ->* parent ->+
+    // ..." so we can get rid of all those branches. We do so by deleting all children from the
+    // parent node.
     std::ignore = parentNode->detachAllChildren();
   } else {
     // No leaf: move all children to parent's children
@@ -107,11 +106,7 @@ void Tableau::normalize() {
     assert(currentNode->getLiteral().isNormal());
 
     // 2) Rules which require context (only to normalized literals)
-    // if you need two premises l1, l2 and comes after l1 in the branch then the rule is applied if
-    // we consider l2
-    // we cannot consider edge predicates first and check for premise literals upwards because the
-    // conclusion could be such a predicate again
-    // TODO: maybe consider lazy T evalutaion (consider T as event)
+    // IMPORTANT: it is not sufficient to look upwards
 
     if (currentNode->getLiteral().hasTopEvent()) {
       // Rule (~\top_1)
@@ -333,7 +328,7 @@ bool isSubsumed(const Cube &a, const Cube &b) {
   return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
 }
 
-void dnfBuilder(const Node * node, DNF &dnf) {
+void dnfBuilder(const Node *node, DNF &dnf) {
   if (node->isClosed()) {
     return;
   }
@@ -361,7 +356,7 @@ void dnfBuilder(const Node * node, DNF &dnf) {
   }
 }
 
-DNF extractDNF(const Node* root) {
+DNF extractDNF(const Node *root) {
   DNF dnf;
   dnfBuilder(root, dnf);
   for (auto &cube : dnf) {
@@ -391,10 +386,13 @@ DNF simplifyDnf(const DNF &dnf) {
 }
 
 DNF Tableau::computeDnf() {
+  assert(validate());
   normalize();
   auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   exportDebug("debug");
   assert(validateDNF(dnf));
+  assert(validate());
+  assert(unreducedNodes.isEmpty());
   return dnf;
 }
 
