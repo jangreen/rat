@@ -16,6 +16,7 @@ class Renaming {
  public:
   static Renaming minimal(const std::vector<int> &from);
   static Renaming simple(int from, int to);
+  static Renaming identity(const boost::container::flat_set<int> &domain);
 
   [[nodiscard]] Renaming inverted() const;
   [[nodiscard]] Renaming compose(const Renaming &other) const;

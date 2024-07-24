@@ -31,6 +31,15 @@ Renaming Renaming::minimal(const std::vector<int>& from) {
 }
 
 Renaming Renaming::simple(int from, int to) { return Renaming({{from, to}}); }
+Renaming Renaming::identity(const boost::container::flat_set<int>& domain) {
+  Mapping mapping;
+  mapping.reserve(domain.size());
+  for (auto i : domain) {
+    mapping.emplace_back(i, i);
+  }
+  std::ranges::sort(mapping, std::less<int>{}, projFirst);
+  return Renaming(std::move(mapping));
+}
 
 Renaming Renaming::inverted() const {
   Mapping inverted;
