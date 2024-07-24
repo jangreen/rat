@@ -20,34 +20,36 @@ void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &re
 }
 
 // returns fixed node as set, otherwise nullopt if consistent
-std::optional<Cube> getInconsistentLiterals(const RegularNode *parent, const Cube &newLiterals) {
+std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiterals) {
   if (parent == nullptr) {
     return std::nullopt;
   }
-  const Cube &parentCube = parent->getCube();
-  Cube inconsistenLiterals = newLiterals;
-  assert(validateNormalizedCube(parentCube));
-  assert(validateNormalizedCube(newLiterals));
+  Cube mergedCube = parent->getCube();
+  std::ranges::copy_if(newLiterals, std::back_inserter(mergedCube),
+                       [&](const auto &literal) { return !contains(mergedCube, literal); });
+  assert(validateNormalizedCube(mergedCube));
 
-  const auto parentActiveEvents = gatherActiveEvents(parentCube);
+  Tableau tableau(mergedCube);
+  DNF dnf = tableau.computeDnf();
 
-  // 2) filter newLiterals for parent
-  std::erase_if(inconsistenLiterals, [&](auto &literal) { return !literal.negated; });
-  filterNegatedLiterals(inconsistenLiterals, parentActiveEvents);
+  // 2) filter literal relevant for parent
+  const auto parentActiveEvents = gatherActiveEvents(parent->getCube());
+  for (auto &cube : dnf) {
+    std::erase_if(cube, [&](const Literal &literal) {
+      return !isLiteralActive(literal, parentActiveEvents);
+    });
+  }
 
   // 3) If no new literals, nothing to do
-  if (isSubset(inconsistenLiterals, parentCube)) {
+  if (std::ranges::any_of(dnf,
+                          [&](const auto &cube) { return isSubset(cube, parent->getCube()); })) {
+    if (dnf.size() > 1) {
+      throw std::logic_error("This is no error but unexpected to happen.");
+    }
     return std::nullopt;
   }
 
-  // 4) We have new literals: add all literals from parent node to complete new node
-  for (const auto &literal : parentCube) {
-    if (!contains(inconsistenLiterals, literal)) {
-      inconsistenLiterals.push_back(literal);  // TODO: make cube flat_set?
-    }
-  }
-  // alternative child
-  return inconsistenLiterals;
+  return dnf;
 }
 
 }  // namespace
@@ -125,8 +127,6 @@ bool RegularTableau::validateReachabilityTree() const {
   return true;
 }
 
-// assumptions:
-// cube is in normal form
 // checks if renaming exists when adding and returns already existing node if possible
 std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   assert(validateNormalizedCube(cube));  // cube is in normal form
@@ -312,25 +312,18 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    return !inverted.isStrictlyRenameable(literal.events()) &&
-           !inverted.isStrictlyRenameable(literal.topEvents());
-    /*return !std::ranges::includes(label.from, literal.events()) ||
-           !std::ranges::includes(label.from, literal.topEvents());*/
+    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) &&
+                             inverted.isStrictlyRenameable(literal.topEvents());
+    const bool isPositiveEdgeOrNegated = literal.isPositiveEdgePredicate() || literal.negated;
+    const bool keep = isRenamable && isPositiveEdgeOrNegated;
+    return !keep;
   });
-  for (auto &literal : renamedChild) {
-    literal.rename(inverted);
-  }
+  renameCube(inverted, renamedChild);
   assert(validateNormalizedCube(renamedChild));
 
-  if (const auto fixedCube = getInconsistentLiterals(parent, renamedChild)) {
-    exportDebug("debug");
-    Tableau t(fixedCube.value());
-    const DNF dnf = t.computeDnf();
-    if (dnf.empty()) {
-      return true;
-    }
+  if (const auto fixedDNF = getFixedDnf(parent, renamedChild)) {
     // create new fixed Node
-    for (const auto &cube : dnf) {
+    for (const auto &cube : fixedDNF.value()) {
       const auto [fixedNode, renaming] = newNode(cube);
       addEpsilonEdge(parent, fixedNode, renaming);
     }
@@ -448,6 +441,10 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
         pathInconsistent = true;
         // remove inconsistent edge parent -> child
         removeEdge(parent, child);
+        if (parent->children.empty() && parent->epsilonChildren.empty()) {
+          // is leaf // TODO: use function
+          parent->closed = true;
+        }
 
         // remove all paths that contain parent -> child
         const auto &[begin, end] = std::ranges::remove_if(allPaths, [&](const Path &path) {
@@ -482,6 +479,55 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
   // }
 
   // return isInconsistent(node->firstParentNode, node, node->parents.at(node->firstParentNode));
+}
+Cube RegularTableau::getModel(const RegularNode *openLeaf) const {
+  const RegularNode *cur = openLeaf;
+  Cube edges;
+  while (cur != nullptr) {
+    std::ranges::copy_if(cur->cube, std::back_inserter(edges), &Literal::isPositiveEdgePredicate);
+
+    if (cur->reachabilityTreeParent != nullptr) {
+      auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();
+      renameCube(renaming, edges);
+    }
+
+    cur = cur->reachabilityTreeParent;
+  }
+  return edges;
+}
+
+Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
+  assert(node != nullptr);
+  assert(isReachableFromRoots(node));
+
+  if (rootNodes.contains(const_cast<RegularNode *>(node))) {
+    return Renaming::identity(gatherActiveEvents(node->cube));
+  }
+
+  auto rootRenaming = node->reachabilityTreeParent->getLabelForChild(node).inverted();
+  auto renCur = node->reachabilityTreeParent;
+  while (renCur->reachabilityTreeParent != nullptr) {
+    auto curRenaming = renCur->reachabilityTreeParent->getLabelForChild(renCur).inverted();
+    rootRenaming = rootRenaming.totalCompose(curRenaming);
+    renCur = renCur->reachabilityTreeParent;
+  }
+
+  return rootRenaming;
+}
+
+bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
+  return true;
+  const auto model = getModel(openLeaf);
+
+  auto rootNode = openLeaf;
+  while (rootNode->reachabilityTreeParent != nullptr) {
+    rootNode = rootNode->reachabilityTreeParent;
+  }
+
+  Cube checkedCube = model;
+  std::ranges::copy_if(rootNode->cube, std::back_inserter(checkedCube), &Literal::negated);
+  Tableau finiteTableau(checkedCube);
+  return finiteTableau.computeDnf().empty();
 }
 
 void RegularTableau::extractCounterexample(const RegularNode *openLeaf) const {
@@ -536,13 +582,8 @@ void RegularTableau::extractCounterexamplePath(const RegularNode *openLeaf) cons
     assert(isReachableFromRoots(cur));
     if (cur->reachabilityTreeParent != nullptr) {
       // determine renaming to root node for cur
-      auto rootRenaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();
-      auto renCur = cur->reachabilityTreeParent;
-      while (renCur->reachabilityTreeParent != nullptr) {
-        auto curRenaming = renCur->reachabilityTreeParent->getLabelForChild(renCur).inverted();
-        rootRenaming = rootRenaming.totalCompose(curRenaming);
-        renCur = renCur->reachabilityTreeParent;
-      }
+      auto rootRenaming = getRootRenaming(cur);
+
       Cube cube = cur->cube;
       renameCube(rootRenaming, cube);
       std::ranges::sort(cube);
