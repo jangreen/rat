@@ -45,6 +45,8 @@ test id6 True
 test id7 True
 test t True
 test t2 True
+test t3 True
+test t4 True
 
 # with assumptions
 test test0 True
