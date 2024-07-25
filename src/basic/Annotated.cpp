@@ -23,7 +23,7 @@ std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annot
 
 AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType &value) {
   switch (set->operation) {
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -81,7 +81,7 @@ AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalSet 
     return makeWithValue(replace, {0, 0});
   }
   switch (set->operation) {
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
@@ -168,7 +168,7 @@ bool validate(const AnnotatedSet &annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
 
   switch (set->operation) {
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:

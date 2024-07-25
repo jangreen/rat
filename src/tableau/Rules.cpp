@@ -302,7 +302,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
       // LeftRule: e & A != 0  ->  e \in A
       // RightRule: A & e != 0  ->  e \in A
       return DNF{{Literal(literal.negated, e, *s->identifier)}};
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
       // LeftRule: e & f != 0  ->  e == f
       // RightRule: f & e != 0  ->  e == f (in both cases use same here)
@@ -460,13 +460,14 @@ std::optional<DNF> Rules::applyRule(const Literal& literal) {
       if (literal.leftEvent == literal.rightEvent) {
         return literal.negated ? DNF{{BOTTOM}} : DNF{{TOP}};
       }
-      // (\neg=): ~([e] = f) -> FALSE
-      // (\neg=): ~(e = [f]) -> FALSE
-      // (\neg=): ~([e] = [f]) -> FALSE
-      if (literal.negated && (literal.leftEvent->operation == SetOperation::topEvent ||
-                              literal.rightEvent->operation == SetOperation::topEvent)) {
-        return DNF{{BOTTOM}};
-      }
+      // TODO (topEvent optimization):
+      // // (\neg=): ~([e] = f) -> FALSE
+      // // (\neg=): ~(e = [f]) -> FALSE
+      // // (\neg=): ~([e] = [f]) -> FALSE
+      // if (literal.negated && (literal.leftEvent->operation == SetOperation::topEvent ||
+      //                         literal.rightEvent->operation == SetOperation::topEvent)) {
+      //   return DNF{{BOTTOM}};
+      // }
       return std::nullopt;  // no rule applicable in case e1 = e2
     }
     case PredicateOperation::setNonEmptiness:
@@ -606,7 +607,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
                                            const AnnotatedSet& annotatedSet) {
   const auto& [set, setAnnotation] = annotatedSet;
   switch (set->operation) {
-    case SetOperation::topEvent:
+    // case SetOperation::topEvent:
     case SetOperation::event:
       // no rule applicable to single event constant
       return std::nullopt;
@@ -615,9 +616,11 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
       return PartialDNF{{BOTTOM}};
     case SetOperation::fullSet: {
       if (context.negated) {
-        // Rule (\neg\top_1): use universal events optimization
-        const CanonicalSet f = Set::freshTopEvent();
-        return PartialDNF{{AnnotatedSet(f, Annotation::none())}};
+        return std::nullopt;
+        // TODO (topEvent optimization):
+        // // Rule (\neg\top_1): use universal events optimization
+        // const CanonicalSet f = Set::freshTopEvent();
+        // return PartialDNF{{AnnotatedSet(f, Annotation::none())}};
       }
       // Rule (\top_1): [T] -> { [f] } , only if positive
       const CanonicalSet f = Set::freshEvent();
@@ -720,7 +723,7 @@ std::optional<PartialDNF> Rules::applyPositiveModalRule(const AnnotatedSet& anno
                                                         int minimalEvent) {
   const auto& [set, setAnnotation] = annotatedSet;
   switch (set->operation) {
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
