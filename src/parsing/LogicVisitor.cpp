@@ -129,16 +129,18 @@
   return Constraint(type, relation, name);
 }
 /*void*/ std::any Logic::visitLetDefinition(LogicParser::LetDefinitionContext *context) {
+  const auto expr =
+      std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
   if (context->RELNAME()) {
     const std::string name = context->RELNAME()->getText();
-    const auto derivedRelationVariant =
-        std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
-    const auto derivedRelation = std::get<CanonicalRelation>(derivedRelationVariant);
+    const auto derivedRelation = std::get<CanonicalRelation>(expr);
     // overwrite existing definition
-    definedRelations.insert_or_assign(name, derivedRelation);
+    derivedRelations.insert_or_assign(name, derivedRelation);
   } else if (context->SETNAME()) {
     const std::string name = context->SETNAME()->getText();
-    // TODO: implement
+    const auto derivedSet = std::get<CanonicalSet>(expr);
+    // overwrite existing definition
+    derivedSets.insert_or_assign(name, derivedSet);
   }
   return 0;
 }
@@ -178,8 +180,8 @@
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {
   const auto relationName = context->n->getText();
-  if (definedRelations.contains(relationName)) {
-    const auto r = definedRelations.at(relationName);
+  if (derivedRelations.contains(relationName)) {
+    const auto r = derivedRelations.at(relationName);
     const CanonicalRelation po = Relation::newBaseRelation("po");
     const CanonicalRelation po_r = Relation::newRelation(RelationOperation::composition, po, r);
     const CanonicalRelation po_r_po =
@@ -209,12 +211,11 @@
     std::variant<CanonicalSet, CanonicalRelation> result = Relation::emptyRelation();
     return result;
   }
-  if (definedRelations.contains(name)) {
-    std::variant<CanonicalSet, CanonicalRelation> result = definedRelations.at(name);
+  if (derivedRelations.contains(name)) {
+    std::variant<CanonicalSet, CanonicalRelation> result = derivedRelations.at(name);
     return result;
   }
-  CanonicalRelation r = Relation::newBaseRelation(name);
-  std::variant<CanonicalSet, CanonicalRelation> result = r;
+  std::variant<CanonicalSet, CanonicalRelation> result = Relation::newBaseRelation(name);
   return result;
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationMinus(
@@ -296,12 +297,10 @@
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitRelationIdentity(
     LogicParser::RelationIdentityContext *context) {
   if (context->TOID() == nullptr) {
-    const std::string set = context->e->getText();
-    const CanonicalRelation r = Relation::newBaseRelation(set + "*" + set);
-    const CanonicalRelation id = Relation::idRelation();
-    const CanonicalRelation r_and_id =
-        Relation::newRelation(RelationOperation::relationIntersection, r, id);
-    std::variant<CanonicalSet, CanonicalRelation> result = r_and_id;
+    const auto setExpression =
+        std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(context->e->accept(this));
+    const auto set = std::get<CanonicalSet>(setExpression);
+    std::variant<CanonicalSet, CanonicalRelation> result = Relation::setIdentity(set);
     return result;
   }
 
@@ -319,7 +318,6 @@
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitSetBasic(
     LogicParser::SetBasicContext *context) {
-  // TODO: lookup let definitions
   const std::string name = context->SETNAME()->getText();
   if (name == "E") {
     std::variant<CanonicalSet, CanonicalRelation> result = Set::fullSet();
@@ -329,8 +327,11 @@
     std::variant<CanonicalSet, CanonicalRelation> result = Set::emptySet();
     return result;
   }
-  CanonicalSet s = Set::newBaseSet(name);
-  std::variant<CanonicalSet, CanonicalRelation> result = s;
+  if (derivedSets.contains(name)) {
+    std::variant<CanonicalSet, CanonicalRelation> result = derivedSets.at(name);
+    return result;
+  }
+  std::variant<CanonicalSet, CanonicalRelation> result = Set::newBaseSet(name);
   return result;
 }
 /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any Logic::visitTransitiveReflexiveClosure(
@@ -412,5 +413,6 @@
 //   exit(0);
 // }
 
-std::unordered_map<std::string, CanonicalRelation> Logic::definedRelations;
+std::unordered_map<std::string, CanonicalRelation> Logic::derivedRelations;
+std::unordered_map<std::string, CanonicalSet> Logic::derivedSets;
 std::unordered_map<std::string, CanonicalSet> Logic::definedSingletons;

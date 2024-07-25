@@ -7,6 +7,7 @@
 
 typedef std::pair<CanonicalSet, CanonicalAnnotation> AnnotatedSet;
 typedef std::pair<CanonicalRelation, CanonicalAnnotation> AnnotatedRelation;
+typedef std::variant<AnnotatedSet, AnnotatedRelation> AnnotatedExpr;
 
 namespace Annotated {
 
@@ -14,28 +15,101 @@ inline AnnotatedSet getLeft(const AnnotatedSet &annotatedSet) {
   const auto [set, annotation] = annotatedSet;
   assert(set->leftOperand != nullptr);
   return {set->leftOperand, annotation->getLeft()};
-};
-std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet);
+}
+
+template <typename AnnotatedType>
+AnnotatedType getRight(const AnnotatedSet &annotatedSet);
+
+template <>
+inline AnnotatedRelation getRight(const AnnotatedSet &annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+  switch (set->operation) {
+    case SetOperation::domain:
+    case SetOperation::image:
+      return AnnotatedRelation(set->relation, annotation->getRight());
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+template <>
+inline AnnotatedSet getRight(const AnnotatedSet &annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+  switch (set->operation) {
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
+      return AnnotatedSet(set->rightOperand, annotation->getRight());
+    case SetOperation::domain:
+    case SetOperation::image:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+template <typename AnnotatedType>
+AnnotatedType getLeft(const AnnotatedRelation &annotatedRelation);
+
+template <>
 inline AnnotatedRelation getLeft(const AnnotatedRelation &annotatedRelation) {
   const auto [relation, annotation] = annotatedRelation;
-  CanonicalAnnotation nextAnnotation;
   switch (relation->operation) {
     case RelationOperation::converse:
     case RelationOperation::transitiveClosure:
       // On unary operators we simulate the left move by doing nothing!
-      nextAnnotation = annotation;
-      break;
+      return AnnotatedRelation{relation->leftOperand, annotation};
+    case RelationOperation::relationIntersection:
+    case RelationOperation::composition:
+    case RelationOperation::relationUnion:
+      return AnnotatedRelation{relation->leftOperand, annotation->getLeft()};
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
+    case RelationOperation::setIdentity:
+    case RelationOperation::baseRelation:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
     default:
-      nextAnnotation = annotation->getLeft();
+      throw std::logic_error("unreachable");
   }
-  assert(relation->leftOperand != nullptr);
-  return {relation->leftOperand, nextAnnotation};
-};
+}
+
+template <>
+inline AnnotatedSet getLeft(const AnnotatedRelation &annotatedRelation) {
+  const auto [relation, annotation] = annotatedRelation;
+  switch (relation->operation) {
+    case RelationOperation::setIdentity:
+      return AnnotatedSet{relation->set, annotation};
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure:
+    case RelationOperation::relationIntersection:
+    case RelationOperation::composition:
+    case RelationOperation::relationUnion:
+    case RelationOperation::baseRelation:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 inline AnnotatedRelation getRight(const AnnotatedRelation &annotatedRelation) {
   const auto [relation, annotation] = annotatedRelation;
   assert(relation->rightOperand != nullptr);
   return {relation->rightOperand, annotation->getRight()};
-};
+}
 
 AnnotatedSet makeWithValue(CanonicalSet set, const AnnotationType &value);
 AnnotatedRelation makeWithValue(CanonicalRelation relation, const AnnotationType &value);
@@ -58,11 +132,14 @@ inline AnnotatedSet newBaseSet(const std::string &identifier) {
 
 AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, CanonicalSet search,
                            CanonicalSet replace);
-AnnotatedSet substitute(const AnnotatedSet &annotatedSet, CanonicalSet search, CanonicalSet replace, int *n);
+AnnotatedSet substitute(const AnnotatedSet &annotatedSet, CanonicalSet search, CanonicalSet replace,
+                        int *n);
 
 [[nodiscard]] bool validate(const AnnotatedSet &annotatedSet);
 [[nodiscard]] bool validate(const AnnotatedRelation &annotatedRelation);
 
+template <bool first>
+[[nodiscard]] std::string annotationToString(AnnotatedSet annotatedSet);
 template <bool first>
 [[nodiscard]] std::string annotationToString(const AnnotatedRelation annotatedRelation) {
   assert(validate(annotatedRelation));
@@ -70,18 +147,18 @@ template <bool first>
 
   switch (relation->operation) {
     case RelationOperation::relationIntersection:
-      return "(" + annotationToString<first>(getLeft(annotatedRelation)) + " & " +
-             annotationToString<first>(getRight(annotatedRelation)) + ")";
+      return "(" + annotationToString<first>(getLeft<AnnotatedRelation>(annotatedRelation)) +
+             " & " + annotationToString<first>(getRight(annotatedRelation)) + ")";
     case RelationOperation::composition:
-      return "(" + annotationToString<first>(getLeft(annotatedRelation)) + ";" +
+      return "(" + annotationToString<first>(getLeft<AnnotatedRelation>(annotatedRelation)) + ";" +
              annotationToString<first>(getRight(annotatedRelation)) + ")";
     case RelationOperation::relationUnion:
-      return "(" + annotationToString<first>(getLeft(annotatedRelation)) + " | " +
-             annotationToString<first>(getRight(annotatedRelation)) + ")";
+      return "(" + annotationToString<first>(getLeft<AnnotatedRelation>(annotatedRelation)) +
+             " | " + annotationToString<first>(getRight(annotatedRelation)) + ")";
     case RelationOperation::converse:
-      return annotationToString<first>(getLeft(annotatedRelation)) + "^-1";
+      return annotationToString<first>(getLeft<AnnotatedRelation>(annotatedRelation)) + "^-1";
     case RelationOperation::transitiveClosure:
-      return annotationToString<first>(getLeft(annotatedRelation)) + "^*";
+      return annotationToString<first>(getLeft<AnnotatedRelation>(annotatedRelation)) + "^*";
     case RelationOperation::baseRelation:
       return first ? std::to_string(annotation->getValue().value().first)
                    : std::to_string(annotation->getValue().value().second);
@@ -89,6 +166,8 @@ template <bool first>
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
       return relation->toString();
+    case RelationOperation::setIdentity:
+      return annotationToString<first>(getLeft<AnnotatedSet>(annotatedRelation));
     case RelationOperation::cartesianProduct:
       throw std::logic_error("not implemented");
     default:
@@ -104,16 +183,16 @@ template <bool first>
   switch (set->operation) {
     case SetOperation::image:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + ";" +
-             annotationToString<first>(std::get<AnnotatedRelation>(getRight(annotatedSet))) + ")";
+             annotationToString<first>(getRight<AnnotatedRelation>(annotatedSet)) + ")";
     case SetOperation::domain:
-      return "(" + annotationToString<first>(std::get<AnnotatedRelation>(getRight(annotatedSet))) +
-             ";" + annotationToString<first>(getLeft(annotatedSet)) + ")";
+      return "(" + annotationToString<first>(getRight<AnnotatedRelation>(annotatedSet)) + ";" +
+             annotationToString<first>(getLeft(annotatedSet)) + ")";
     case SetOperation::setIntersection:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + " & " +
-             annotationToString<first>(std::get<AnnotatedSet>(getRight(annotatedSet))) + ")";
+             annotationToString<first>(getRight<AnnotatedSet>(annotatedSet)) + ")";
     case SetOperation::setUnion:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + " | " +
-             annotationToString<first>(std::get<AnnotatedSet>(getRight(annotatedSet))) + ")";
+             annotationToString<first>(getRight<AnnotatedSet>(annotatedSet)) + ")";
     case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:

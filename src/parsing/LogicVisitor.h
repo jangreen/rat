@@ -66,7 +66,8 @@ class Logic : LogicBaseVisitor {
   // /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationComplement(
   //    LogicParser::RelationComplementContext *context) override;
 
-  static std::unordered_map<std::string, CanonicalRelation> definedRelations;
+  static std::unordered_map<std::string, CanonicalRelation> derivedRelations;
+  static std::unordered_map<std::string, CanonicalSet> derivedSets;
   static std::unordered_map<std::string, CanonicalSet> definedSingletons;
   static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));

@@ -94,9 +94,6 @@ bool Literal::validate() const {
              leftEvent->isEvent() && rightEvent->isEvent() && !identifier.has_value() &&
              annotation == Annotation::none();
     case PredicateOperation::set:
-      // check annotations for negated literals
-      assert(!negated || Annotated::validate(annotatedSet()));
-
       return set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
              leftEvent->isEvent() && identifier.has_value() && annotation == Annotation::none();
     case PredicateOperation::setNonEmptiness:
