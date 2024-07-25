@@ -175,6 +175,23 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
   return activeEvents;
 }
 
+inline SetOfSets gatherActivePairs(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  SetOfSets activePairs;
+  for (const auto &literal : cube) {
+    if (literal.negated) {
+      continue;
+    }
+
+    const auto &literalLabels = literal.labelBaseCombinations();
+    activePairs.insert(literalLabels.begin(), literalLabels.end());
+  }
+
+  return activePairs;
+}
+
 inline void countActiveEvents(const CanonicalSet set,
                               std::vector<std::pair<int, int>> &activeEventCounters) {
   switch (set->operation) {
@@ -242,12 +259,6 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   return removedLiterals;
 }
 
-// TODO: Return value unused
-inline Cube filterNegatedLiterals(Cube &cube) {
-  const auto &activeEvents = gatherActiveEvents(cube);
-  return filterNegatedLiterals(cube, activeEvents);
-}
-
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
@@ -258,6 +269,15 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
     return false;
   });
   return removedLiterals;
+}
+
+// TODO: Return value unused
+inline void filterNegatedLiterals(Cube &cube) {
+  const auto &activeEvents = gatherActiveEvents(cube);
+  filterNegatedLiterals(cube, activeEvents);
+
+  // const auto &activeEventBasePairs = gatherActivePairs(cube);
+  // filterNegatedLiterals(cube, activeEventBasePairs);
 }
 
 // ===================================================================================
