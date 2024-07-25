@@ -108,7 +108,7 @@ void Tableau::normalize() {
     // 2) Rules which require context (only to normalized literals)
     // IMPORTANT: it is not sufficient to look upwards
 
-    if (currentNode->getLiteral().hasTopEvent()) {
+    if (currentNode->getLiteral().hasFullSet() /* TODO (topEvent optimization): hasTopEvent()*/) {
       // Rule (~\top_1)
       // here: we replace universal events by concrete positive existential events
       assert(currentNode->getLiteral().negated);

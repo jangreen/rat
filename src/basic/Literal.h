@@ -55,12 +55,16 @@ class Literal {
   std::optional<CanonicalString> identifier;  // edge, set
 
   [[nodiscard]] bool isNormal() const;
-  [[nodiscard]] bool hasTopEvent() const { return !topEvents().empty(); };
+  // TODO (topEvent optimization): [[nodiscard]] bool hasTopEvent() const { return
+  // !topEvents().empty(); };
+  [[nodiscard]] bool hasFullSet() const {
+    return operation == PredicateOperation::setNonEmptiness && set->hasFullSet();
+  }
   [[nodiscard]] bool isPositiveEdgePredicate() const;
   [[nodiscard]] bool isPositiveEqualityPredicate() const;
   [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] EventSet events() const;
-  [[nodiscard]] EventSet topEvents() const;
+  // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
   [[nodiscard]] SetOfSets labelBaseCombinations() const;
 
   std::optional<Literal> substituteAll(CanonicalSet search, CanonicalSet replace) const;

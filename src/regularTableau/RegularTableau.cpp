@@ -318,8 +318,9 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) &&
-                             inverted.isStrictlyRenameable(literal.topEvents());
+    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) /* TODO (topEvent
+                             optimization): && inverted.isStrictlyRenameable(literal.topEvents())*/
+        ;
     const bool isPositiveEdgeOrNegated = literal.isPositiveEdgePredicate() || literal.negated;
     const bool keep = isRenamable && isPositiveEdgeOrNegated;
     return !keep;

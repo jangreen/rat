@@ -13,11 +13,12 @@ namespace {
 bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
                   const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
+    case SetOperation::fullSet:
+      return true;
     case SetOperation::event:
     case SetOperation::setUnion:
     case SetOperation::emptySet:
-    case SetOperation::fullSet:
     case SetOperation::baseSet:
       return false;
     case SetOperation::setIntersection:
@@ -47,7 +48,7 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
       return leftOperand->getEvents();
     case SetOperation::event:
       return {label.value()};
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -76,7 +77,7 @@ EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftO
       }
       return leftOperand->getNormalEvents();
     case SetOperation::event:
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -86,26 +87,47 @@ EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftO
   }
 }
 
-EventSet calcTopEvents(const SetOperation operation, const CanonicalSet leftOperand,
-                       const CanonicalSet rightOperand, const std::optional<int> label) {
+// TODO (topEvent optimization):
+// EventSet calcTopEvents(const SetOperation operation, const CanonicalSet leftOperand,
+//                        const CanonicalSet rightOperand, const std::optional<int> label) {
+//   switch (operation) {
+//     case SetOperation::setIntersection:
+//     case SetOperation::setUnion: {
+//       auto leftEvents = leftOperand->getTopEvents();
+//       auto rightEvents = rightOperand->getTopEvents();
+//       leftEvents.insert(rightEvents.begin(), rightEvents.end());
+//       return leftEvents;
+//     }
+//     case SetOperation::domain:
+//     case SetOperation::image:
+//       return leftOperand->getTopEvents();
+//     case SetOperation::topEvent:
+//       return {*label};
+//     case SetOperation::event:
+//     case SetOperation::baseSet:
+//     case SetOperation::emptySet:
+//     case SetOperation::fullSet:
+//       return {};
+//     default:
+//       throw std::logic_error("unreachable");
+//   }
+// }
+
+bool calcHasFullSet(const SetOperation operation, const CanonicalSet leftOperand,
+                    const CanonicalSet rightOperand) {
   switch (operation) {
     case SetOperation::setIntersection:
-    case SetOperation::setUnion: {
-      auto leftEvents = leftOperand->getTopEvents();
-      auto rightEvents = rightOperand->getTopEvents();
-      leftEvents.insert(rightEvents.begin(), rightEvents.end());
-      return leftEvents;
-    }
+    case SetOperation::setUnion:
+      return leftOperand->hasFullSet() || rightOperand->hasFullSet();
     case SetOperation::domain:
     case SetOperation::image:
-      return leftOperand->getTopEvents();
-    case SetOperation::topEvent:
-      return {*label};
+      return leftOperand->hasFullSet();
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
+      return false;
     case SetOperation::fullSet:
-      return {};
+      return true;
     default:
       throw std::logic_error("unreachable");
   }
@@ -132,7 +154,7 @@ SetOfSets calcLabelBaseCombinations(const SetOperation operation, const Canonica
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
       return {};
     default:
@@ -146,7 +168,9 @@ int Set::maxEvent = 0;
 
 void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
-  this->topEvents = calcTopEvents(operation, leftOperand, rightOperand, label);
+  // TODO (topEvent optimization): this->topEvents = calcTopEvents(operation, leftOperand,
+  // rightOperand, label);
+  this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation, label);
   this->eventRelationCombinations =
@@ -180,9 +204,10 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
       case SetOperation::baseSet:
         assert(identifier.has_value() && !label.has_value() && isSimple);
         break;
-      case SetOperation::topEvent:
-        assert(label.has_value() && !identifier.has_value() && isSimple);
-        break;
+      // TODO (topEvent optimization):
+      // case SetOperation::topEvent:
+      //   assert(label.has_value() && !identifier.has_value() && isSimple);
+      //   break;
       case SetOperation::event:
         assert(label.has_value() && !identifier.has_value() && isSimple);
         break;
@@ -233,10 +258,11 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
-    case SetOperation::topEvent: {
-      const int renamed = renaming.rename(label.value());
-      return label.value() == renamed ? this : newTopEvent(renaming.rename(label.value()));
-    }
+    // TODO (topEvent optimization):
+    // case SetOperation::topEvent: {
+    //   const int renamed = renaming.rename(label.value());
+    //   return label.value() == renamed ? this : newTopEvent(renaming.rename(label.value()));
+    // }
     case SetOperation::event: {
       const int renamed = renaming.rename(label.value());
       return label.value() == renamed ? this : newEvent(renaming.rename(label.value()));
@@ -268,9 +294,10 @@ std::string Set::toString() const {
   }
   std::string output;
   switch (operation) {
-    case SetOperation::topEvent:
-      output += "[" + std::to_string(*label) + "]";
-      break;
+    // TODO (topEvent optimization):
+    // case SetOperation::topEvent:
+    //   output += "[" + std::to_string(*label) + "]";
+    //   break;
     case SetOperation::event:
       output += std::to_string(*label);
       break;
