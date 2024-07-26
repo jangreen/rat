@@ -244,7 +244,7 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
 }
 
 // TODO: Return value unused
-inline Cube filterNegatedLiterals(Cube &cube) {
+inline Cube removeUselessLiterals(Cube &cube) {
   const auto &activeEvents = gatherActiveEvents(cube);
   return filterNegatedLiterals(cube, activeEvents);
 }

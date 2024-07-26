@@ -108,12 +108,14 @@ void Tableau::normalize() {
     // 2) Rules which require context (only to normalized literals)
     // IMPORTANT: it is not sufficient to look upwards
 
-    if (currentNode->getLiteral().hasFullSet() /* TODO (topEvent optimization): hasTopEvent()*/) {
-      // Rule (~\top_1)
-      // here: we replace universal events by concrete positive existential events
-      assert(currentNode->getLiteral().negated);
-      currentNode->inferModalTop();
-    }
+    // wo do not need this becuase we check after each modal rule bidirectional
+    // if (currentNode->getLiteral().hasFullSet() /* TODO (topEvent optimization): hasTopEvent()*/)
+    // {
+    //   // Rule (~\top_1)
+    //   // here: we replace universal events by concrete positive existential events
+    //   assert(currentNode->getLiteral().negated);
+    //   currentNode->inferModalTop();
+    // }
 
     if (currentNode->getLiteral().operation == PredicateOperation::setNonEmptiness) {
       // Rule (~aL), Rule (~aR)
@@ -356,7 +358,7 @@ DNF extractDNF(const Node *root) {
   DNF dnf;
   dnfBuilder(root, dnf);
   for (auto &cube : dnf) {
-    filterNegatedLiterals(cube);
+    removeUselessLiterals(cube);
   }
   return dnf;
 }
@@ -389,6 +391,9 @@ DNF Tableau::computeDnf() {
   assert(validateDNF(dnf));
   assert(validate());
   assert(unreducedNodes.isEmpty());
+  for (auto &cube : dnf) {
+    removeUselessLiterals(cube);
+  }
   return dnf;
 }
 
