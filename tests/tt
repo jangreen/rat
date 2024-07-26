@@ -1,0 +1,7 @@
+let rf = rf-base & loc
+let fr = rf^-1;co
+
+assume co+ <= co
+assume loc+ <= loc
+
+assert fr;co;co <= fr

@@ -57,6 +57,8 @@ test id True
 test id2 True
 test id3 True
 test id4 True
+test tt True
+test tt2 True
 test eco1f False
 test eco2f False
 test eco3f False
