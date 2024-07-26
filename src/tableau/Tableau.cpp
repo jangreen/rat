@@ -81,7 +81,6 @@ void Tableau::normalize() {
     if (currentNode->isClosed()) {
       continue;
     }
-    exportDebug("debug");
 
     Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
@@ -386,8 +385,8 @@ DNF simplifyDnf(const DNF &dnf) {
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
-  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   exportDebug("debug");
+  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   assert(validateDNF(dnf));
   assert(validate());
   assert(unreducedNodes.isEmpty());
