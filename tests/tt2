@@ -1,0 +1,4 @@
+assume c+ <= c
+assume b <= b
+
+assert (a & b);c;c;c <= b;c
