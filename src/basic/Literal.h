@@ -60,8 +60,15 @@ class Literal {
   [[nodiscard]] bool hasFullSet() const {
     return operation == PredicateOperation::setNonEmptiness && set->hasFullSet();
   }
-  [[nodiscard]] bool isPositiveEdgePredicate() const;
-  [[nodiscard]] bool isPositiveEqualityPredicate() const;
+  [[nodiscard]] bool isPositiveEdgePredicate() const {
+    return !negated && operation == PredicateOperation::edge;
+  }
+  [[nodiscard]] bool isPositiveAtomic() const {
+    return !negated && operation != PredicateOperation::setNonEmptiness;
+  }
+  [[nodiscard]] bool isPositiveEqualityPredicate() const {
+    return !negated && operation == PredicateOperation::equality;
+  }
   [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] EventSet events() const;
   // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;

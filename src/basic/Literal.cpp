@@ -162,14 +162,6 @@ bool Literal::isNormal() const {
   }
 }
 
-bool Literal::isPositiveEdgePredicate() const {
-  return !negated && operation == PredicateOperation::edge;
-}
-
-bool Literal::isPositiveEqualityPredicate() const {
-  return !negated && operation == PredicateOperation::equality;
-}
-
 EventSet Literal::normalEvents() const {
   switch (operation) {
     case PredicateOperation::constant:
