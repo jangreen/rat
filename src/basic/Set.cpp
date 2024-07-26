@@ -59,8 +59,7 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
 }
 
 EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftOperand,
-                          const CanonicalSet rightOperand, const CanonicalRelation relation,
-                          const std::optional<int> label) {
+                          const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
@@ -172,7 +171,7 @@ void Set::completeInitialization() const {
   // rightOperand, label);
   this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
-  this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation, label);
+  this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);
   this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
   if constexpr (DEBUG) {
@@ -185,6 +184,7 @@ Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalS
          const CanonicalRelation relation, const std::optional<int> label,
          std::optional<std::string> identifier)
     : _isNormal(false),
+      _hasFullSet(false),
       operation(operation),
       identifier(std::move(identifier)),
       label(label),

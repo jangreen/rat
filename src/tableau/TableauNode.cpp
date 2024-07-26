@@ -180,10 +180,7 @@ void Node::attachChildren(std::vector<std::unique_ptr<Node>> newChildren) {
 std::unique_ptr<Node> Node::detachChild(Node *child) {
   assert(child->parentNode == this && "Cannot detach parentless child");
   const auto childIt = std::ranges::find(children, child, &std::unique_ptr<Node>::get);
-  if (childIt == children.end()) {
-    assert(false && "Invalid child to detach.");
-    return nullptr;
-  }
+  assert(childIt != children.end() && "Invalid child to detach.");
 
   auto detachedChild = std::move(*childIt);
   detachedChild->parentNode = nullptr;
@@ -305,12 +302,6 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(isLeaf() && !isClosed());
   assert(isAppendable(dnf));
 
-  // filter non-active negated literals
-  for (auto &cube : dnf) {
-    // filterNegatedLiterals(cube, activeEvents);
-    // TODO: labelBase optimization
-    // filterNegatedLiterals(cube, activeEventBasePairs);
-  }
   if (!isAppendable(dnf)) {
     return;
   }
@@ -345,13 +336,8 @@ void Node::closeBranch() {
   } while (cur->isClosed() && (cur = cur->parentNode) != nullptr);
 }
 
-void Node::appendBranchInternalDownConjunctive(DNF &dnf) {
-  auto &cube = dnf.at(0);
-  // TODO:
-  // IMPORTANT: we assert that we can filter here instead of filtering for each branch further
-  // down in the tree
-  // filterNegatedLiterals(cube, activeEvents);
-  // do not need to filter here?
+void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
+  const auto &cube = dnf.at(0);
 
   // 1. insert cube in-place
   auto thisChildren = detachAllChildren();

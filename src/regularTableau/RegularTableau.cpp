@@ -407,7 +407,7 @@ void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
 
   currentPath.push_back(node);
 
-  if (rootNodes.contains(const_cast<RegularNode *>(node))) {
+  if (rootNodes.contains(node)) {
     allPaths.push_back(currentPath);
   }
 
