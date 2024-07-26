@@ -635,7 +635,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
     // case SetOperation::topEvent:
     case SetOperation::event:
       // no rule applicable to single event constant
-      return std::nullopt;
+      return context.negated ? PartialDNF{{BOTTOM}} : PartialDNF{{TOP}};
     case SetOperation::emptySet:
       // Rule (\bot_1):
       return PartialDNF{{BOTTOM}};

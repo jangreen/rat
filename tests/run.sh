@@ -1,16 +1,19 @@
 time=0
-layout="%s%s%s       %s   %s   %s\n"
+layout="%s%s%s"
 
 result() {
     output=$1 
     passed=$(echo $output | grep $result | wc -l)
     durations=$(echo $output | grep -Eo 'Duration: *[0-9\.]+' | grep -o '[0-9\.]*')
     space='                  '
-    printf "$layout" $name "${space:${#name}}" $passed $durations
+    printf "$layout" $name "${space:${#name}}" $passed
 
     while IFS= read -r line; do
-    time=$(echo $time + $line | bc)
+      printf "  %s" $line
+      time=$(echo $time + $line | bc)
     done <<< "$durations"
+
+    printf "\n"
 }
 
 test() {
@@ -27,6 +30,8 @@ proof() {
     result "$output"  
 }
 
+# sets
+test set-algebra-laws True
 
 # no assumptions
 test hard True

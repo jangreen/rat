@@ -555,7 +555,7 @@ void Node::inferModalBaseSetDown(const Literal &negatedLiteral) {
   }
 
   for (const auto &child : children) {
-    child->inferModalDown(negatedLiteral);
+    child->inferModalBaseSetDown(negatedLiteral);
   }
 
   if (!literal.isPositiveSetPredicate()) {

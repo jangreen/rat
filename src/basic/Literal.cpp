@@ -299,18 +299,25 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
 }
 
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
-  if (operation != PredicateOperation::setNonEmptiness) {
-    // only substitute in set expressions
-    return false;
+  switch (operation) {
+    case PredicateOperation::constant:
+    case PredicateOperation::edge:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return false;
+    case PredicateOperation::setNonEmptiness: {
+      const auto [subSet, subAnnotation] =
+          Annotated::substitute(annotatedSet(), search, replace, &n);
+      if (subSet != set) {
+        set = subSet;
+        annotation = subAnnotation;
+        return true;
+      }
+      return false;
+    }
+    default:
+      throw std::logic_error("unreachable");
   }
-
-  const auto [subSet, subAnnotation] = Annotated::substitute(annotatedSet(), search, replace, &n);
-  if (subSet != set) {
-    set = subSet;
-    annotation = subAnnotation;
-    return true;
-  }
-  return false;
 }
 
 Literal Literal::substituteSet(const AnnotatedSet &set) const {
