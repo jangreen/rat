@@ -189,13 +189,17 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet
     case SetOperation::setIntersection: {
       const auto leftOperand = Annotated::getLeft(annotatedSet);
       const auto rightOperand = std::get<AnnotatedSet>(Annotated::getRight(annotatedSet));
-      if (const auto leftSaturated = saturateBase(leftOperand)) {
-        return Annotated::newSet(set->operation, *leftSaturated, rightOperand);
+
+      const auto leftSaturated = saturateBase(leftOperand);
+      const auto rightSaturated = saturateBase(rightOperand);
+
+      if (!leftSaturated && !rightSaturated) {
+        return std::nullopt;
       }
-      if (const auto rightSaturated = saturateBase(rightOperand)) {
-        return Annotated::newSet(set->operation, leftOperand, *rightSaturated);
-      }
-      return std::nullopt;
+
+      const auto& newLeft = leftSaturated ? leftSaturated.value() : leftOperand;
+      const auto& newRight = rightSaturated ? rightSaturated.value() : rightOperand;
+      return Annotated::newSet(set->operation, newLeft, newRight);
     }
     case SetOperation::image:
     case SetOperation::domain: {
@@ -539,9 +543,8 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
       return Literal(Annotated::makeWithValue(e1R_and_e2, {idAnn, baseAnn + 1}));
     }
     case PredicateOperation::setNonEmptiness: {
-      const auto saturatedLiteral = saturateBase(literal.annotatedSet());
-      if (saturatedLiteral.has_value()) {
-        return Literal(*saturatedLiteral);
+      if (const auto saturatedLiteral = saturateBase(literal.annotatedSet())) {
+        return Literal(saturatedLiteral.value());
       }
       return std::nullopt;
     }
