@@ -12,9 +12,9 @@ typedef boost::container::flat_set<int> EventSet;
 typedef boost::container::flat_set<CanonicalSet> SetOfSets;
 
 enum class SetOperation {
-  baseSet,          // nullary function (constant): base Set
-  event,            // nullary function (constant): single Set
-  topEvent,         // special event for lazy top evaluation
+  baseSet,  // nullary function (constant): base Set
+  event,    // nullary function (constant): single Set
+  // TODO (topEvent optimization): topEvent,         // special event for lazy top evaluation
   emptySet,         // nullary function (constant): empty Set
   fullSet,          // nullary function (constant): full Set
   setUnion,         // binary function
@@ -35,7 +35,8 @@ class Set {
   mutable std::optional<std::string> cachedStringRepr;
   // properties calculated for canonical sets on initialization
   mutable bool _isNormal;
-  mutable EventSet topEvents;
+  // TODO (topEvent optimization): mutable EventSet topEvents;
+  mutable bool _hasFullSet;
   mutable EventSet events;
   mutable EventSet normalEvents;
   mutable SetOfSets eventRelationCombinations;
@@ -64,9 +65,10 @@ class Set {
   static CanonicalSet newEvent(int label) {
     return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
   }
-  static CanonicalSet newTopEvent(int label) {
-    return newSet(SetOperation::topEvent, nullptr, nullptr, nullptr, label, std::nullopt);
-  }
+  // TODO (topEvent optimization):
+  // static CanonicalSet newTopEvent(int label) {
+  //   return newSet(SetOperation::topEvent, nullptr, nullptr, nullptr, label, std::nullopt);
+  // }
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
     return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
   }
@@ -75,7 +77,8 @@ class Set {
     return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
   }
   static CanonicalSet freshEvent() { return newEvent(maxEvent++); }
-  static CanonicalSet freshTopEvent() { return newTopEvent(maxEvent++); }
+  // TODO (topEvent optimization):
+  // static CanonicalSet freshTopEvent() { return newTopEvent(maxEvent++); }
 
   bool operator==(const Set &other) const {
     return operation == other.operation && leftOperand == other.leftOperand &&
@@ -84,11 +87,13 @@ class Set {
   }
 
   bool isEvent() const {
-    return operation == SetOperation::event || operation == SetOperation::topEvent;
+    return operation == SetOperation::event;  // TODO (topEvent optimization): || operation ==
+                                              // SetOperation::topEvent;
   }
   const bool &isNormal() const { return _isNormal; }
-  bool hasTopEvent() const { return !topEvents.empty(); }
-  const EventSet &getTopEvents() const { return topEvents; }
+  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
+  bool hasFullSet() const { return _hasFullSet; }
+  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
   const EventSet &getNormalEvents() const { return normalEvents; }
   const SetOfSets &getLabelBaseCombinations() const { return eventRelationCombinations; }

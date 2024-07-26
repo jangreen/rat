@@ -233,7 +233,7 @@ bool RegularTableau::solve() {
     // 1) weaken positive edge predicates
     if (cubeHasPositiveEdgePredicate(currentCube)) {
       std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
-      filterNegatedLiterals(currentCube);
+      removeUselessLiterals(currentCube);
     }
 
     Tableau tableau{currentCube};
@@ -318,8 +318,9 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) &&
-                             inverted.isStrictlyRenameable(literal.topEvents());
+    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) /* TODO (topEvent
+                             optimization): && inverted.isStrictlyRenameable(literal.topEvents())*/
+        ;
     const bool isPositiveEdgeOrNegated = literal.isPositiveEdgePredicate() || literal.negated;
     const bool keep = isRenamable && isPositiveEdgeOrNegated;
     return !keep;

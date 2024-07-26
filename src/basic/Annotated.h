@@ -7,7 +7,6 @@
 
 typedef std::pair<CanonicalSet, CanonicalAnnotation> AnnotatedSet;
 typedef std::pair<CanonicalRelation, CanonicalAnnotation> AnnotatedRelation;
-typedef std::variant<AnnotatedSet, AnnotatedRelation> AnnotatedExpr;
 
 namespace Annotated {
 
@@ -193,7 +192,7 @@ template <bool first>
     case SetOperation::setUnion:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + " | " +
              annotationToString<first>(getRight<AnnotatedSet>(annotatedSet)) + ")";
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:

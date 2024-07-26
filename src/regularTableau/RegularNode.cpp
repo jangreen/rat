@@ -21,7 +21,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   assert(validateNormalizedCube(cube));
   Cube sortedCube;
   std::ranges::copy_if(cube, std::back_inserter(sortedCube),
-                       [](auto &literal) { return !literal.negated || literal.hasTopEvent(); });
+                       [](auto &literal) { return !literal.negated /*|| literal.hasTopEvent()*/; });
   std::ranges::sort(sortedCube, [](const Literal &first, const Literal &second) {
     if (first.negated != second.negated) {
       return first.negated < second.negated;
@@ -39,11 +39,12 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
         events.push_back(l);
       }
     }
-    for (const auto &l : literal.topEvents()) {
-      if (std::ranges::find(events, l) == events.end()) {
-        events.push_back(l);
-      }
-    }
+    // TODO (topEvent optimization):
+    // for (const auto &l : literal.topEvents()) {
+    //   if (std::ranges::find(events, l) == events.end()) {
+    //     events.push_back(l);
+    //   }
+    // }
   }
   assert(validateNormalizedCube(cube));
   assert(std::ranges::all_of(cube, [&](const auto &literal) {
@@ -59,9 +60,9 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   EventSet allEvents;
   for (const auto &literal : cube) {
     const auto &events = literal.events();
-    const auto &topEvents = literal.topEvents();
+    // TODO (topEvent optimization): const auto &topEvents = literal.topEvents();
     allEvents.insert(events.begin(), events.end());
-    allEvents.insert(topEvents.begin(), topEvents.end());
+    // TODO (topEvent optimization): allEvents.insert(topEvents.begin(), topEvents.end());
   }
   if (!allEvents.empty()) {
     const auto maxEvent = std::ranges::max(allEvents);

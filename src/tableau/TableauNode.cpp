@@ -21,7 +21,7 @@ void reduceDNFAtAWorldCycle(DNF &dnf, const Node *transitiveClosureNode) {
   auto [begin, end] = std::ranges::remove_if(dnf, [&](const auto &cube) {
     return std::ranges::any_of(cube, [&](const Literal &cubeLit) {
       assert(cubeLit.validate());
-      return cubeLit == transitiveClosureNode->getLiteral();
+      return !cubeLit.negated && cubeLit == transitiveClosureNode->getLiteral();
     });
   });
   dnf.erase(begin, end);
@@ -496,6 +496,8 @@ void Node::inferModal() {
   inferModalDown(literal);
 }
 
+// replace fullSet by concrete positive existential events
+// TODO: do this only for active
 void Node::inferModalTop() {
   if (!literal.negated) {
     return;
@@ -515,17 +517,26 @@ void Node::inferModalTop() {
     existentialReplaceEvents.insert(newEvents.begin(), newEvents.end());
   }
 
-  for (const auto search : literal.topEvents()) {
-    for (const auto replace : existentialReplaceEvents) {
-      // [search] -> {replace}
-      // replace all occurrences of the same search at once
-      const CanonicalSet searchSet = Set::newTopEvent(search);
-      const CanonicalSet replaceSet = Set::newEvent(replace);
-      if (const auto substituted = literal.substituteAll(searchSet, replaceSet)) {
-        appendBranch(substituted.value());
-      }
-    }
+  const auto search = Set::fullSet();
+  for (const auto replace : existentialReplaceEvents) {
+    // [T] -> {replace}
+    const CanonicalSet replaceSet = Set::newEvent(replace);
+    const auto substituted = substituteAllOnce(literal, search, replaceSet);
+    appendBranch(substituted);
   }
+
+  // TODO (topEvent optimization):
+  // for (const auto search : literal.topEvents()) {
+  //   for (const auto replace : existentialReplaceEvents) {
+  //     // [search] -> {replace}
+  //     // replace all occurrences of the same search at once
+  //     const CanonicalSet searchSet = Set::newTopEvent(search);
+  //     const CanonicalSet replaceSet = Set::newEvent(replace);
+  //     if (const auto substituted = literal.substituteAll(searchSet, replaceSet)) {
+  //       appendBranch(substituted.value());
+  //     }
+  //   }
+  // }
 }
 
 Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet replace1,
@@ -545,17 +556,26 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
                      std::make_move_iterator(sub2.end()));
 
   // negated top rule: [f] -> {e}
-  for (const auto search : literal.topEvents()) {
-    const CanonicalSet searchSet = Set::newTopEvent(search);
+  const auto search = Set::fullSet();
+  const auto substituted1 = substituteAllOnce(literal, search, replace1);
+  const auto substituted2 = substituteAllOnce(literal, search, replace2);
+  newLiterals.insert(newLiterals.end(), std::make_move_iterator(substituted1.begin()),
+                     std::make_move_iterator(substituted1.end()));
+  newLiterals.insert(newLiterals.end(), std::make_move_iterator(substituted2.begin()),
+                     std::make_move_iterator(substituted2.end()));
 
-    if (const auto substituted1 = literal.substituteAll(searchSet, replace1)) {
-      newLiterals.push_back(substituted1.value());
-    }
-
-    if (const auto substituted2 = literal.substituteAll(searchSet, replace2)) {
-      newLiterals.push_back(substituted2.value());
-    }
-  }
+  // TODO (topEvent optimization):
+  // for (const auto search : literal.topEvents()) {
+  //   const CanonicalSet searchSet = Set::newTopEvent(search);
+  //
+  //   if (const auto substituted1 = literal.substituteAll(searchSet, replace1)) {
+  //     newLiterals.push_back(substituted1.value());
+  //   }
+  //
+  //   if (const auto substituted2 = literal.substituteAll(searchSet, replace2)) {
+  //     newLiterals.push_back(substituted2.value());
+  //   }
+  // }
   return newLiterals;
 }
 

@@ -154,6 +154,7 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
 }
 
 inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
+  // IMPORTANT includes requires the sets to be sorted
   return std::ranges::includes(activePairs, literal.labelBaseCombinations());
 }
 
@@ -197,7 +198,7 @@ inline void countActiveEvents(const CanonicalSet set,
       countActiveEvents(set->leftOperand, activeEventCounters);
       countActiveEvents(set->rightOperand, activeEventCounters);
       return;
-    case SetOperation::topEvent:
+    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -243,7 +244,7 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
 }
 
 // TODO: Return value unused
-inline Cube filterNegatedLiterals(Cube &cube) {
+inline Cube removeUselessLiterals(Cube &cube) {
   const auto &activeEvents = gatherActiveEvents(cube);
   return filterNegatedLiterals(cube, activeEvents);
 }
