@@ -35,11 +35,11 @@ class Set {
   mutable std::optional<std::string> cachedStringRepr;
   // properties calculated for canonical sets on initialization
   mutable bool _isNormal;
-  // TODO (topEvent optimization): mutable EventSet topEvents;
   mutable bool _hasFullSet;
   mutable EventSet events;
   mutable EventSet normalEvents;
-  mutable SetOfSets eventRelationCombinations;
+  mutable SetOfSets eventBasePairs;
+  // TODO (topEvent optimization): mutable EventSet topEvents;
 
   // Calculates the above properties: we do not do this inside the constructor
   //  to avoid doing it for non-canonical sets.
@@ -91,12 +91,12 @@ class Set {
                                               // SetOperation::topEvent;
   }
   const bool &isNormal() const { return _isNormal; }
-  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
   bool hasFullSet() const { return _hasFullSet; }
-  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
+  const SetOfSets &getEventBasePairs() const { return eventBasePairs; }
   const EventSet &getNormalEvents() const { return normalEvents; }
-  const SetOfSets &getLabelBaseCombinations() const { return eventRelationCombinations; }
+  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
+  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
 
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base

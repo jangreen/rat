@@ -154,7 +154,7 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
 }
 
 inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
-  return std::ranges::includes(activePairs, literal.labelBaseCombinations());
+  return std::ranges::includes(activePairs, literal.eventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal
@@ -181,14 +181,11 @@ inline SetOfSets gatherActivePairs(const Cube &cube) {
 
   SetOfSets activePairs;
   for (const auto &literal : cube) {
-    if (literal.negated) {
-      continue;
+    if (!literal.negated) {
+      const auto &literalLabels = literal.eventBasePairs();
+      activePairs.insert(literalLabels.begin(), literalLabels.end());
     }
-
-    const auto &literalLabels = literal.labelBaseCombinations();
-    activePairs.insert(literalLabels.begin(), literalLabels.end());
   }
-
   return activePairs;
 }
 
@@ -242,23 +239,8 @@ inline std::optional<int> gatherMinimalOccurringActiveEvent(const Cube &cube) {
                                         : std::nullopt;
 }
 
-// removes all negated literals in cube with events that do not occur in events
+// removes all negated literals in cube with eventBasePairs that do not occur in activePairs
 // returns removed literals
-inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
-  Cube removedLiterals;
-  std::erase_if(cube, [&](auto &literal) {
-    if (!literal.negated) {
-      return false;
-    }
-    if (!isLiteralActive(literal, activeEvents)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-  return removedLiterals;
-}
-
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
@@ -272,12 +254,12 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
 }
 
 // TODO: Return value unused
-inline void filterNegatedLiterals(Cube &cube) {
-  const auto &activeEvents = gatherActiveEvents(cube);
-  filterNegatedLiterals(cube, activeEvents);
-
-  // const auto &activeEventBasePairs = gatherActivePairs(cube);
-  // filterNegatedLiterals(cube, activeEventBasePairs);
+inline void removeUselessLiterals(Cube &cube) {
+  const auto &activeEventBasePairs = gatherActivePairs(cube);
+  filterNegatedLiterals(cube, activeEventBasePairs);
+  std::erase_if(cube, [&](const Literal &literal) {
+    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+  });
 }
 
 // ===================================================================================

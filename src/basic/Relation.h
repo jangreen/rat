@@ -48,7 +48,7 @@ class Relation {
     return newRelation(operation, left, nullptr, std::nullopt);
   }
   static CanonicalRelation newRelation(RelationOperation operation, CanonicalRelation left,
-                                              CanonicalRelation right) {
+                                       CanonicalRelation right) {
     return newRelation(operation, left, right, std::nullopt);
   };
 

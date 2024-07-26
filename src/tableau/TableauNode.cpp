@@ -72,21 +72,10 @@ Node::Node(Node *parent, Literal literal)
     : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
   parent->children.emplace_back(this);
-  activeEvents = parent->activeEvents;
-  activeEventBasePairs = parent->activeEventBasePairs;
-  if (!literal.negated) {
-    activeEvents.merge(literal.events());
-    activeEventBasePairs.merge(literal.labelBaseCombinations());
-  }
 }
 
 Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
   assert(tableau != nullptr);
-
-  if (!literal.negated) {
-    activeEvents.merge(literal.events());
-    activeEventBasePairs.merge(literal.labelBaseCombinations());
-  }
 }
 
 Node::~Node() {
@@ -169,7 +158,6 @@ void Node::setLastUnrollingParent(const Node *node) {
 void Node::attachChild(std::unique_ptr<Node> child) {
   assert(child->parentNode == nullptr && "Trying to attach already attached child.");
   child->parentNode = this;
-  child->activeEvents.merge(activeEvents);
   children.push_back(std::move(child));
 }
 
@@ -198,19 +186,11 @@ std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
   return std::move(detachedChildren);
 }
 
-void Node::rename(const Renaming &renaming) {
-  literal.rename(renaming);
+void Node::rename(const Renaming &renaming) { literal.rename(renaming); }
 
-  EventSet renamedEvents;
-  for (const auto &event : activeEvents) {
-    renamedEvents.insert(renaming.rename(event));
-  }
-  activeEvents = std::move(renamedEvents);
-
-  // ===========================================================================================
-  // ==================================== Tree manipulation ====================================
-  // ===========================================================================================
-}
+// ===========================================================================================
+// ==================================== Tree manipulation ====================================
+// ===========================================================================================
 
 // deletes literals in dnf that are already in prefix
 // if negated literal occurs we omit the whole cube
@@ -269,6 +249,13 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
 void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
+
+  if (isClosed()) {
+    // Closed leaf: nothing to do
+    assert(tableau->unreducedNodes.validate());
+    return;
+  }
+
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
@@ -295,25 +282,8 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
     return;
   }
 
-  if (isClosed()) {
-    // Closed leaf: nothing to do
-    assert(tableau->unreducedNodes.validate());
-    return;
-  }
-
   // Open leaf
   assert(isLeaf() && !isClosed());
-  assert(isAppendable(dnf));
-
-  // filter non-active negated literals
-  for (auto &cube : dnf) {
-    // filterNegatedLiterals(cube, activeEvents);
-    // TODO: labelBase optimization
-    // filterNegatedLiterals(cube, activeEventBasePairs);
-  }
-  if (!isAppendable(dnf)) {
-    return;
-  }
   assert(isAppendable(dnf));
 
   // append: transform dnf into a tableau and append it
@@ -641,16 +611,8 @@ void Node::toDotFormat(std::ofstream &output) const {
   }
   output << "events: \n";
   output << toString(literal.events()) << "\n";
-  output << "normalEvents: \n";
-  output << toString(literal.normalEvents()) << "\n";
   output << "lastUnrollingParent: \n";
   output << lastUnrollingParent << "\n";
-  output << "--- BRANCH --- \n";
-  output << "activeEvents: \n";
-  output << toString(activeEvents) << "\n";
-  output << "\n";
-  output << "activeEventBasePairs: \n";
-  output << toString(activeEventBasePairs);
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";

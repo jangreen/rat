@@ -233,7 +233,7 @@ bool RegularTableau::solve() {
     // 1) weaken positive edge predicates
     if (cubeHasPositiveEdgePredicate(currentCube)) {
       std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
-      filterNegatedLiterals(currentCube);
+      removeUselessLiterals(currentCube);
     }
 
     Tableau tableau{currentCube};

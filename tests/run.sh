@@ -47,6 +47,7 @@ test t True
 test t2 True
 test t3 True
 test t4 True
+test topevent False
 
 # with assumptions
 test test0 True
