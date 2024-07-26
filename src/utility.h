@@ -154,7 +154,8 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
 }
 
 inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
-  return std::ranges::includes(activePairs, literal.labelBaseCombinations());
+  // IMPORTANT includes requires the sets to be sorted
+  return std::ranges::includes(activePairs, literal.eventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal
