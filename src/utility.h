@@ -242,6 +242,27 @@ inline std::optional<int> gatherMinimalOccurringActiveEvent(const Cube &cube) {
 
 // removes all negated literals in cube with eventBasePairs that do not occur in activePairs
 // returns removed literals
+inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (!literal.negated) {
+      return false;
+    }
+    if (!isLiteralActive(literal, activeEvents)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
+}
+
+// TODO: Return value unused
+inline Cube removeUselessLiterals(Cube &cube) {
+  const auto &activeEvents = gatherActiveEvents(cube);
+  return filterNegatedLiterals(cube, activeEvents);
+}
+
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
