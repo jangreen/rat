@@ -57,6 +57,9 @@ test id True
 test id2 True
 test id3 True
 test id4 True
+test setid True
+test setid2 False
+test setDist True
 test topEvent False
 test tt True
 test tt2 True

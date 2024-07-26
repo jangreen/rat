@@ -488,12 +488,10 @@ void Node::inferModalDown(const Literal &negatedLiteral) {
 }
 
 void Node::inferModal() {
-  if (!literal.negated) {
-    return;
+  if (literal.negated) {
+    inferModalUp();
+    inferModalDown(literal);
   }
-
-  inferModalUp();
-  inferModalDown(literal);
 }
 
 // replace fullSet by concrete positive existential events
@@ -537,6 +535,46 @@ void Node::inferModalTop() {
   //     }
   //   }
   // }
+}
+
+void Node::inferModalBaseSetUp() {
+  const Node *cur = this;
+  while ((cur = cur->parentNode) != nullptr) {
+    if (cur->literal.isPositiveSetPredicate()) {
+      // e \in A
+      const auto e = cur->literal.leftEvent;
+      const auto A = Set::newBaseSet(cur->literal.identifier.value());
+      appendBranch(substituteAllOnce(literal, A, e));
+    }
+  }
+}
+
+void Node::inferModalBaseSetDown(const Literal &negatedLiteral) {
+  if (isClosed()) {
+    return;
+  }
+
+  for (const auto &child : children) {
+    child->inferModalDown(negatedLiteral);
+  }
+
+  if (!literal.isPositiveSetPredicate()) {
+    return;
+  }
+
+  // e \in A
+  const auto e = literal.leftEvent;
+  const auto A = Set::newBaseSet(literal.identifier.value());
+  appendBranch(substituteAllOnce(negatedLiteral, A, e));
+}
+
+// assumption: since all positive literals are normalized before we consider negated
+// we know that all possible set memberships are known
+void Node::inferModalBaseSet() {
+  if (literal.negated) {
+    inferModalBaseSetUp();
+    inferModalBaseSetDown(literal);
+  }
 }
 
 Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet replace1,

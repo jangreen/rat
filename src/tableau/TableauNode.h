@@ -42,6 +42,8 @@ class Node {
                             const CanonicalSet search2, const CanonicalSet replace2);
   void inferModalUp();
   void inferModalDown(const Literal &negatedLiteral);
+  void inferModalBaseSetUp();
+  void inferModalBaseSetDown(const Literal &negatedLiteral);
   void reduceBranchInternalDown(Cube &cube);
   void closeBranch();
 
@@ -84,6 +86,7 @@ class Node {
   std::optional<DNF> applyRule();
   void inferModal();
   void inferModalTop();
+  void inferModalBaseSet();
   void inferModalAtomic();
 
   // ================== Printing ==================

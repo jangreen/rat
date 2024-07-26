@@ -60,8 +60,14 @@ class Literal {
   [[nodiscard]] bool hasFullSet() const {
     return operation == PredicateOperation::setNonEmptiness && set->hasFullSet();
   }
+  [[nodiscard]] bool hasBaseSet() const {
+    return operation == PredicateOperation::setNonEmptiness && set->hasBaseSet();
+  }
   [[nodiscard]] bool isPositiveEdgePredicate() const {
     return !negated && operation == PredicateOperation::edge;
+  }
+  [[nodiscard]] bool isPositiveSetPredicate() const {
+    return !negated && operation == PredicateOperation::set;
   }
   [[nodiscard]] bool isPositiveAtomic() const {
     return !negated && operation != PredicateOperation::setNonEmptiness;

@@ -703,7 +703,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
       }
       // Rule (A): [B] -> { [f], f \in B }
       const CanonicalSet f = Set::freshEvent();
-      return PartialDNF{{AnnotatedSet(f, nullptr), Literal(false, f, *set->identifier)}};
+      return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(false, f, *set->identifier)}};
     }
     case SetOperation::image:
     case SetOperation::domain: {

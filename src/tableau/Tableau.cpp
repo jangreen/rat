@@ -102,6 +102,13 @@ void Tableau::normalize() {
       continue;
     }
 
+    if (currentNode->getLiteral().hasBaseSet()) {
+      // Rule ~(A)
+      currentNode->inferModalBaseSet();
+      deleteNode(currentNode);
+      continue;
+    }
+
     assert(currentNode->getLiteral().isNormal());
 
     // 2) Rules which require context (only to normalized literals)
