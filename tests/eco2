@@ -5,4 +5,4 @@ assume a;b <= id
 assume b^+ <= b
 assume a;a <= 0
 
-assert id <= r2
+assert r1 <= r2
