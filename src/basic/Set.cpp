@@ -39,7 +39,7 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       auto leftLabels = leftOperand->getEvents();
-      auto rightLabels = rightOperand->getEvents();
+      const auto &rightLabels = rightOperand->getEvents();
       leftLabels.insert(rightLabels.begin(), rightLabels.end());
       return leftLabels;
     }
@@ -58,13 +58,43 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
   }
 }
 
+EventSequence calcSeq(const SetOperation operation, const CanonicalSet leftOperand,
+                      const CanonicalSet rightOperand, const std::optional<int> label) {
+  switch (operation) {
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion: {
+      auto leftLabels = leftOperand->getEventSeq();
+      const auto &leftSet = leftOperand->getEvents();
+      const auto &rightLabels = rightOperand->getEventSeq();
+      for (const auto event : rightLabels) {
+        if (!leftSet.contains(event)) {
+          leftLabels.push_back(event);
+        }
+      }
+      return leftLabels;
+    }
+    case SetOperation::domain:
+    case SetOperation::image:
+      return leftOperand->getEventSeq();
+    case SetOperation::event:
+      return {label.value()};
+    // TODO (topEvent optimization): case SetOperation::topEvent:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return {};
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftOperand,
                           const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       auto leftLabels = leftOperand->getNormalEvents();
-      auto rightLabels = rightOperand->getNormalEvents();
+      const auto &rightLabels = rightOperand->getNormalEvents();
       leftLabels.insert(rightLabels.begin(), rightLabels.end());
       return leftLabels;
     }
@@ -139,7 +169,7 @@ SetOfSets calcLabelBaseCombinations(const SetOperation operation, const Canonica
     case SetOperation::setUnion:
     case SetOperation::setIntersection: {
       auto left = leftOperand->getLabelBaseCombinations();
-      auto right = rightOperand->getLabelBaseCombinations();
+      const auto &right = rightOperand->getLabelBaseCombinations();
       left.insert(right.begin(), right.end());
       return left;
     }
@@ -171,6 +201,7 @@ void Set::completeInitialization() const {
   // rightOperand, label);
   this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
+  this->eventSeq = calcSeq(operation, leftOperand, rightOperand, label);
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);
   this->eventRelationCombinations =
       calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);

@@ -64,6 +64,7 @@ class Literal {
   [[nodiscard]] bool isPositiveEqualityPredicate() const;
   [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] EventSet events() const;
+  [[nodiscard]] EventSequence eventsSeq() const;
   // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
   [[nodiscard]] SetOfSets labelBaseCombinations() const;
 

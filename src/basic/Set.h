@@ -9,6 +9,7 @@
 class Set;
 typedef const Set *CanonicalSet;
 typedef boost::container::flat_set<int> EventSet;
+typedef std::vector<int> EventSequence;
 typedef boost::container::flat_set<CanonicalSet> SetOfSets;
 
 enum class SetOperation {
@@ -38,6 +39,7 @@ class Set {
   // TODO (topEvent optimization): mutable EventSet topEvents;
   mutable bool _hasFullSet;
   mutable EventSet events;
+  mutable EventSequence eventSeq;
   mutable EventSet normalEvents;
   mutable SetOfSets eventRelationCombinations;
 
@@ -95,6 +97,7 @@ class Set {
   bool hasFullSet() const { return _hasFullSet; }
   // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
+  const EventSequence &getEventSeq() const { return eventSeq; }
   const EventSet &getNormalEvents() const { return normalEvents; }
   const SetOfSets &getLabelBaseCombinations() const { return eventRelationCombinations; }
 

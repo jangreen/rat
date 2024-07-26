@@ -25,9 +25,6 @@ class Node {
   std::vector<std::unique_ptr<Node>> children;
 
   // ================== Cached ==================
-  // gather information about the prefix of the branch
-  mutable EventSet activeEvents;
-  mutable SetOfSets activeEventBasePairs;
   mutable bool _isClosed = false;
 
   void appendBranchInternalUp(DNF &dnf) const;

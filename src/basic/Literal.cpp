@@ -208,12 +208,36 @@ EventSet Literal::events() const {
     case PredicateOperation::edge:
     case PredicateOperation::equality: {
       auto events = leftEvent->getEvents();
-      auto rightEvents = rightEvent->getEvents();
+      const auto &rightEvents = rightEvent->getEvents();
       events.insert(rightEvents.begin(), rightEvents.end());
       return events;
     }
     case PredicateOperation::set: {
       return leftEvent->getEvents();
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+EventSequence Literal::eventsSeq() const {
+  switch (operation) {
+    case PredicateOperation::constant:
+      return {};
+    case PredicateOperation::setNonEmptiness: {
+      return set->getEventSeq();
+    }
+    case PredicateOperation::edge:
+    case PredicateOperation::equality: {
+      auto events = leftEvent->getEventSeq();
+      const auto &rightEvents = rightEvent->getEventSeq();
+      for (const auto &event : rightEvents) {
+        events.push_back(event);
+      }
+      return events;
+    }
+    case PredicateOperation::set: {
+      return leftEvent->getEventSeq();
     }
     default:
       throw std::logic_error("unreachable");

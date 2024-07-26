@@ -32,9 +32,9 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
     // TODO: make smart toString comparision
     return first.toString() < second.toString();
   });
-  std::vector<int> events{};
+  EventSequence events{};
   for (const auto &literal : sortedCube) {
-    for (const auto &l : literal.events()) {
+    for (const auto &l : literal.eventsSeq()) {
       if (std::ranges::find(events, l) == events.end()) {
         events.push_back(l);
       }
