@@ -184,7 +184,7 @@ inline void countActiveEvents(const CanonicalSet set,
       if (it != activeEventCounters.end()) {
         it->second++;
       } else {
-        activeEventCounters.push_back({e, 1});
+        activeEventCounters.emplace_back(e, 1);
       }
       return;
     }
@@ -221,8 +221,8 @@ inline std::optional<int> gatherMinimalOccurringActiveEvent(const Cube &cube) {
     countActiveEvents(literal.set, activeEventCounters);
   }
   std::ranges::sort(activeEventCounters, std::less<int>{}, &std::pair<int, int>::second);
-  return activeEventCounters.size() > 0 ? std::optional(activeEventCounters.front().first)
-                                        : std::nullopt;
+  return activeEventCounters.empty() ? std::nullopt
+                                     : std::optional(activeEventCounters.front().first);
 }
 
 // removes all negated literals in cube with events that do not occur in events
