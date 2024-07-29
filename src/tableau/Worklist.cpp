@@ -40,9 +40,9 @@ Worklist::Worklist() {
   nonNormalNegatedTailDummy = std::unique_ptr<Node>(new Node());
   connect(*nonNormalNegatedHeadDummy, *nonNormalNegatedTailDummy);
 
-  nonNormalPositiveHeadDummy = std::unique_ptr<Node>(new Node());
-  nonNormalPositiveTailDummy = std::unique_ptr<Node>(new Node());
-  connect(*nonNormalPositiveHeadDummy, *nonNormalPositiveTailDummy);
+  positiveHeadDummy = std::unique_ptr<Node>(new Node());
+  positiveTailDummy = std::unique_ptr<Node>(new Node());
+  connect(*positiveHeadDummy, *positiveTailDummy);
 
   remainingHeadDummy = std::unique_ptr<Node>(new Node());
   remainingTailDummy = std::unique_ptr<Node>(new Node());
@@ -64,7 +64,7 @@ void Worklist::push(Node *node) {
 
   Node *insertionPoint;
   if (!negated) {
-    insertionPoint = nonNormalPositiveHeadDummy.get();
+    insertionPoint = positiveHeadDummy.get();
   } else if (!isNormal) {
     insertionPoint = nonNormalNegatedHeadDummy.get();
   } else if (op == PredicateOperation::equality) {
@@ -99,8 +99,8 @@ Node *Worklist::pop() {
   Node *next;
   if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
     next = posEqualitiesHeadDummy->nextInWorkList;
-  } else if (!isEmpty(nonNormalPositiveHeadDummy, nonNormalPositiveTailDummy)) {
-    next = nonNormalPositiveHeadDummy->nextInWorkList;
+  } else if (!isEmpty(positiveHeadDummy, positiveTailDummy)) {
+    next = positiveHeadDummy->nextInWorkList;
   } else if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
     next = nonNormalNegatedHeadDummy->nextInWorkList;
   } else if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
@@ -116,7 +116,7 @@ Node *Worklist::pop() {
 bool Worklist::isEmpty() const {
   return isEmpty(remainingHeadDummy, remainingTailDummy) &&
          isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy) &&
-         isEmpty(nonNormalPositiveHeadDummy, nonNormalPositiveTailDummy) &&
+         isEmpty(positiveHeadDummy, positiveTailDummy) &&
          isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy);
 }
 
@@ -130,8 +130,8 @@ bool Worklist::validate() const {
        cur != nonNormalNegatedTailDummy.get(); cur = cur->nextInWorkList) {
     if (!cur->validate()) return false;
   }
-  for (const Node *cur = nonNormalPositiveHeadDummy->nextInWorkList;
-       cur != nonNormalPositiveTailDummy.get(); cur = cur->nextInWorkList) {
+  for (const Node *cur = positiveHeadDummy->nextInWorkList; cur != positiveTailDummy.get();
+       cur = cur->nextInWorkList) {
     if (!cur->validate()) return false;
   }
   for (const Node *cur = remainingHeadDummy->nextInWorkList; cur != remainingTailDummy.get();
