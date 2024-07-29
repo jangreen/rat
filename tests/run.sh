@@ -32,6 +32,8 @@ proof() {
 
 # sets
 test set-algebra-laws True
+test set-emptiness True
+test set-base True
 
 # no assumptions
 test hard True

@@ -194,10 +194,12 @@ template <bool first>
              annotationToString<first>(getRight<AnnotatedSet>(annotatedSet)) + ")";
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
-    case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
       return set->toString();
+    case SetOperation::baseSet:
+      return first ? std::to_string(annotation->getValue().value().first)
+                   : std::to_string(annotation->getValue().value().second);
     default:
       throw std::logic_error("unreachable");
   }

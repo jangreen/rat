@@ -147,6 +147,12 @@ void Tableau::normalize() {
         currentNode->appendBranch(*literal);
       }
     }
+
+    if (!Assumption::baseSetAssumptions.empty()) {
+      if (auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
+        currentNode->appendBranch(*literal);
+      }
+    }
   }
 }
 

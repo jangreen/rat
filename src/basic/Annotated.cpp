@@ -8,8 +8,9 @@ AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType &value) 
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
-    case SetOperation::baseSet:
       return {set, Annotation::none()};
+    case SetOperation::baseSet:
+      return {set, Annotation::newLeaf(value)};
     case SetOperation::setUnion:
     case SetOperation::setIntersection: {
       const auto [_1, left] = makeWithValue(set->leftOperand, value);
@@ -32,8 +33,11 @@ AnnotatedRelation makeWithValue(const CanonicalRelation relation, const Annotati
     case RelationOperation::idRelation:
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
-    case RelationOperation::setIdentity:
       return {relation, Annotation::none()};
+    case RelationOperation::setIdentity: {
+      const auto [_, left] = makeWithValue(relation->set, value);
+      return {relation, left};
+    }
     case RelationOperation::relationIntersection:
     case RelationOperation::composition:
     case RelationOperation::relationUnion: {
@@ -147,9 +151,12 @@ bool validate(const AnnotatedSet &annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
 
   switch (set->operation) {
+    case SetOperation::baseSet:
+      assert(annotation->isLeaf());
+      assert(annotation->getValue().has_value());
+      return annotation->isLeaf() && annotation->getValue().has_value();
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
-    case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
       assert(annotation->isLeaf() && "Non-leaf annotation at leaf set.");

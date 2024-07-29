@@ -273,6 +273,59 @@ std::optional<AnnotatedSet> Rules::saturateBase(const AnnotatedSet& annotatedSet
   }
 }
 
+std::optional<AnnotatedSet> Rules::saturateBaseSet(const AnnotatedSet& annotatedSet) {
+  const auto& [set, annotation] = annotatedSet;
+  if (!annotation->getValue().has_value() ||
+      annotation->getValue().value().second >= saturationBound) {
+    // We reached the saturation bound everywhere, or there is nothing to saturate
+    return std::nullopt;
+  }
+
+  switch (set->operation) {
+    case SetOperation::baseSet: {
+      const auto& setName = set->identifier.value();
+      if (Assumption::baseSetAssumptions.contains(setName)) {
+        const auto& assumption = Assumption::baseSetAssumptions.at(setName);
+        const auto [idAnn, baseAnn] = annotation->getValue().value();
+        return Annotated::makeWithValue(assumption.set, {idAnn, baseAnn + 1});
+      }
+      return std::nullopt;
+    }
+    case SetOperation::event:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::setUnion:
+      return std::nullopt;  // saturate only inside intersection/domain/image
+    case SetOperation::setIntersection: {
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto rightOperand = Annotated::getRight<AnnotatedSet>(annotatedSet);
+
+      const auto leftSaturated = saturateBaseSet(leftOperand);
+      const auto rightSaturated = saturateBaseSet(rightOperand);
+
+      if (!leftSaturated && !rightSaturated) {
+        return std::nullopt;
+      }
+
+      const auto& newLeft = leftSaturated ? leftSaturated.value() : leftOperand;
+      const auto& newRight = rightSaturated ? rightSaturated.value() : rightOperand;
+      return Annotated::newSet(set->operation, newLeft, newRight);
+    }
+    case SetOperation::image:
+    case SetOperation::domain: {
+      const auto leftOperand = Annotated::getLeft(annotatedSet);
+      const auto relation = Annotated::getRight<AnnotatedRelation>(annotatedSet);
+
+      if (const auto leftSaturated = saturateBaseSet(leftOperand)) {
+        return Annotated::newSet(set->operation, *leftSaturated, relation);
+      }
+      return std::nullopt;
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 std::optional<AnnotatedSet> Rules::saturateId(const AnnotatedSet& annotatedSet) {
   const auto& [set, annotation] = annotatedSet;
   if (!annotation->getValue().has_value() ||
@@ -348,7 +401,11 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
     case SetOperation::baseSet:
       // LeftRule: e & A != 0  ->  e \in A
       // RightRule: A & e != 0  ->  e \in A
-      return DNF{{Literal(literal.negated, e, *s->identifier)}};
+      if (!literal.negated) {
+        return DNF{{Literal(e, *s->identifier)}};
+      }
+
+      return DNF{{Literal(e, *s->identifier, sAnnotation->getValue().value())}};
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
       // LeftRule: e & f != 0  ->  e == f
@@ -571,6 +628,50 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
       }
       return std::nullopt;
     }
+    case PredicateOperation::set:
+      return std::nullopt;  // handled in saturateBaseSet
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+// TODO: merge with saturateBase?
+std::optional<Literal> Rules::saturateBaseSet(const Literal& literal) {
+  if (!literal.negated) {
+    return std::nullopt;  // no rule applicable
+  }
+
+  if (!literal.annotation->getValue().has_value() ||
+      literal.annotation->getValue().value().second >= saturationBound) {
+    // We reached the saturation bound everywhere, or there is nothing to saturate
+    return std::nullopt;
+  }
+
+  switch (literal.operation) {
+    case PredicateOperation::set: {
+      assert(literal.annotation->isLeaf());
+      // e \in B, s <= B -> e & s
+      const auto e = literal.leftEvent;
+      const auto B = literal.identifier.value();
+
+      if (!Assumption::baseSetAssumptions.contains(B)) {
+        return std::nullopt;
+      }
+
+      const auto assumption = Assumption::baseSetAssumptions.at(B);
+      const auto e_and_s = Set::newSet(SetOperation::setIntersection, e, assumption.set);
+      assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
+      const auto [idAnn, baseAnn] = literal.annotation->getValue().value();
+      return Literal(Annotated::makeWithValue(e_and_s, {idAnn, baseAnn + 1}));
+    }
+    case PredicateOperation::setNonEmptiness: {
+      if (const auto saturatedLiteral = saturateBaseSet(literal.annotatedSet())) {
+        return Literal(saturatedLiteral.value());
+      }
+      return std::nullopt;
+    }
+    case PredicateOperation::edge:
+      return std::nullopt;  // handled in saturateBase
     default:
       throw std::logic_error("unreachable");
   }
@@ -703,7 +804,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
       }
       // Rule (A): [B] -> { [f], f \in B }
       const CanonicalSet f = Set::freshEvent();
-      return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(false, f, *set->identifier)}};
+      return PartialDNF{{AnnotatedSet(f, Annotation::none()), Literal(f, *set->identifier)}};
     }
     case SetOperation::image:
     case SetOperation::domain: {

@@ -30,14 +30,16 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  explicit Literal(bool negated);                                     // constant
-  explicit Literal(CanonicalSet set);                                 // positive setNonEmptiness
-  explicit Literal(const AnnotatedSet &annotatedSet);                 // negative setNonEmptiness
-  Literal(bool negated, CanonicalSet event, std::string identifier);  // set
-  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,            //
-          std::string identifier);                                    // positive edge
+  explicit Literal(bool negated);                           // constant
+  explicit Literal(CanonicalSet set);                       // positive setNonEmptiness
+  explicit Literal(const AnnotatedSet &annotatedSet);       // negated setNonEmptiness
+  Literal(CanonicalSet event, std::string identifier);      // positive set
+  Literal(CanonicalSet event, std::string identifier,       //
+          const AnnotationType &annotation);                // negated set
+  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,  //
+          std::string identifier);                          // positive edge
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
-          const AnnotationType &annotation);                                        // negative edge
+          const AnnotationType &annotation);                                        // negated edge
   Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent);           // equality
   [[nodiscard]] bool validate() const;
 
