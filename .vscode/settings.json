@@ -120,14 +120,15 @@
         "name": "(lldb) Starten",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/build/CatInfer",
+        "program": "${workspaceFolder}/build/rat",
         "args": [
             "${file}"
         ],
         "stopAtEntry": false,
-        "cwd": "${workspaceFolder}", //"${fileDirname}",
+        "cwd": "${workspaceFolder}",
+        //"${fileDirname}",
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb"
-    },
+    }
 }
