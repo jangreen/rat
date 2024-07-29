@@ -3,8 +3,8 @@
 let coe = co & ext
 let fre = fr & ext
 let coi = co & int
-let rfi = [W]rfi-typed[R]
-let rfe = [W]rfe-typed[R]
+let rfi = [W];rfi-typed;[R]
+let rfe = [W];rfe-typed;[R]
 let rf = rfi | rfe
 
 "ARMv8 AArch64"

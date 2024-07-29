@@ -36,6 +36,7 @@ class Set {
   // properties calculated for canonical sets on initialization
   mutable bool _isNormal;
   mutable bool _hasFullSet;
+  mutable bool _hasBaseSet;
   mutable EventSet events;
   mutable EventSet normalEvents;
   mutable SetOfSets eventBasePairs;
@@ -92,6 +93,9 @@ class Set {
   }
   const bool &isNormal() const { return _isNormal; }
   bool hasFullSet() const { return _hasFullSet; }
+  bool hasBaseSet() const { return _hasBaseSet; }
+  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
+  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
   const SetOfSets &getEventBasePairs() const { return eventBasePairs; }
   const EventSet &getNormalEvents() const { return normalEvents; }

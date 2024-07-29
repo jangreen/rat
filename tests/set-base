@@ -1,0 +1,3 @@
+assume A <= B
+
+assert A <= A & B

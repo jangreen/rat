@@ -15,11 +15,11 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
   switch (operation) {
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::fullSet:
+    case SetOperation::baseSet:
       return true;
     case SetOperation::event:
     case SetOperation::setUnion:
     case SetOperation::emptySet:
-    case SetOperation::baseSet:
       return false;
     case SetOperation::setIntersection:
       assert(rightOperand != nullptr);
@@ -59,8 +59,7 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
 }
 
 EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftOperand,
-                          const CanonicalSet rightOperand, const CanonicalRelation relation,
-                          const std::optional<int> label) {
+                          const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
     case SetOperation::setIntersection: {
       auto leftLabels = leftOperand->getNormalEvents();
@@ -133,6 +132,26 @@ bool calcHasFullSet(const SetOperation operation, const CanonicalSet leftOperand
   }
 }
 
+bool calcHasBaseSet(const SetOperation operation, const CanonicalSet leftOperand,
+                    const CanonicalSet rightOperand) {
+  switch (operation) {
+    case SetOperation::event:
+    case SetOperation::fullSet:
+    case SetOperation::emptySet:
+      return false;
+    case SetOperation::baseSet:
+      return true;
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion:
+      return leftOperand->hasBaseSet() || rightOperand->hasBaseSet();
+    case SetOperation::domain:
+    case SetOperation::image:
+      return leftOperand->hasBaseSet();
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 SetOfSets calcEventBasePairs(const SetOperation operation, const CanonicalSet leftOperand,
                              const CanonicalSet rightOperand, const CanonicalRelation relation,
                              const CanonicalSet thisRef) {
@@ -171,8 +190,9 @@ void Set::completeInitialization() const {
   // TODO (topEvent optimization): this->topEvents = calcTopEvents(operation, leftOperand,
   // rightOperand, label);
   this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
+  this->_hasBaseSet = calcHasBaseSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
-  this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation, label);
+  this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);
   this->eventBasePairs = calcEventBasePairs(operation, leftOperand, rightOperand, relation, this);
   if constexpr (DEBUG) {
     // To populate the cache for better debugging
@@ -184,6 +204,7 @@ Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalS
          const CanonicalRelation relation, const std::optional<int> label,
          std::optional<std::string> identifier)
     : _isNormal(false),
+      _hasFullSet(false),
       operation(operation),
       identifier(std::move(identifier)),
       label(label),

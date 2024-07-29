@@ -30,8 +30,8 @@ private:
   std::unique_ptr<Node> nonNormalNegatedHeadDummy;
   std::unique_ptr<Node> nonNormalNegatedTailDummy;
   // (3)
-  std::unique_ptr<Node> nonNormalPositiveHeadDummy;
-  std::unique_ptr<Node> nonNormalPositiveTailDummy;
+  std::unique_ptr<Node> positiveHeadDummy;
+  std::unique_ptr<Node> positiveTailDummy;
   // (4)
   std::unique_ptr<Node> remainingHeadDummy;
   std::unique_ptr<Node> remainingTailDummy;

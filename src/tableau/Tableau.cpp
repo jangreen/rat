@@ -81,7 +81,6 @@ void Tableau::normalize() {
     if (currentNode->isClosed()) {
       continue;
     }
-    exportDebug("debug");
 
     Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
@@ -100,6 +99,12 @@ void Tableau::normalize() {
       // we want to process equalities first
       // Rule (\equivL), Rule (\equivR)
       renameBranches(currentNode);
+      continue;
+    }
+
+    if (currentNode->getLiteral().hasBaseSet()) {
+      // Rule ~(A)
+      currentNode->inferModalBaseSet();
       continue;
     }
 
@@ -141,12 +146,22 @@ void Tableau::normalize() {
         currentNode->appendBranch(*literal);
       }
     }
+
+    if (!Assumption::baseSetAssumptions.empty()) {
+      if (auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
+        currentNode->appendBranch(*literal);
+      }
+    }
   }
 }
 
+// IMPORTANT: correctnes of this funtcion relies on the fact that the worklist pops positive
+// literals first. (because we reuse the tableau for nomalization and do not readd any nodes to
+// unreduced nodes)
 bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
+    exportDebug("debug");
 
     if (const auto result =
             Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
@@ -155,7 +170,7 @@ bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
 
       // to detect at the world cycles
       // set it before appendBranch call
-      currentNode->transitiveClosureNode = currentNode->getLastUnrollingParent();
+      Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
       currentNode->appendBranch(result.value());
 
       deleteNode(currentNode);
@@ -386,14 +401,11 @@ DNF simplifyDnf(const DNF &dnf) {
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
-  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   exportDebug("debug");
+  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   assert(validateDNF(dnf));
   assert(validate());
   assert(unreducedNodes.isEmpty());
-  for (auto &cube : dnf) {
-    removeUselessLiterals(cube);
-  }
   return dnf;
 }
 

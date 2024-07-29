@@ -1,25 +1,6 @@
-
 #include "Annotated.h"
 
 namespace Annotated {
-
-std::variant<AnnotatedSet, AnnotatedRelation> getRight(const AnnotatedSet &annotatedSet) {
-  const auto &[set, annotation] = annotatedSet;
-  switch (set->operation) {
-    case SetOperation::setUnion:
-    case SetOperation::setIntersection:
-      return AnnotatedSet(set->rightOperand, annotation->getRight());
-    case SetOperation::domain:
-    case SetOperation::image:
-      return AnnotatedRelation(set->relation, annotation->getRight());
-    case SetOperation::baseSet:
-    case SetOperation::emptySet:
-    case SetOperation::fullSet:
-    case SetOperation::event:
-    default:
-      throw std::logic_error("unreachable");
-  }
-}
 
 AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType &value) {
   switch (set->operation) {
@@ -27,8 +8,9 @@ AnnotatedSet makeWithValue(const CanonicalSet set, const AnnotationType &value) 
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
-    case SetOperation::baseSet:
       return {set, Annotation::none()};
+    case SetOperation::baseSet:
+      return {set, Annotation::newLeaf(value)};
     case SetOperation::setUnion:
     case SetOperation::setIntersection: {
       const auto [_1, left] = makeWithValue(set->leftOperand, value);
@@ -52,6 +34,10 @@ AnnotatedRelation makeWithValue(const CanonicalRelation relation, const Annotati
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
       return {relation, Annotation::none()};
+    case RelationOperation::setIdentity: {
+      const auto [_, left] = makeWithValue(relation->set, value);
+      return {relation, left};
+    }
     case RelationOperation::relationIntersection:
     case RelationOperation::composition:
     case RelationOperation::relationUnion: {
@@ -90,14 +76,13 @@ AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalSet 
     case SetOperation::image:
     case SetOperation::domain: {
       const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
-      const auto relation = std::get<AnnotatedRelation>(getRight(annotatedSet));
+      const auto relation = getRight<AnnotatedRelation>(annotatedSet);
       return newSet(set->operation, left, relation);
     }
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
-      const auto &right =
-          substituteAll(std::get<AnnotatedSet>(getRight(annotatedSet)), search, replace);
+      const auto &right = substituteAll(getRight<AnnotatedSet>(annotatedSet), search, replace);
       return newSet(set->operation, left, right);
     }
     default:
@@ -126,11 +111,10 @@ AnnotatedSet substitute(const AnnotatedSet &annotatedSet, const CanonicalSet sea
       switch (set->operation) {
         case SetOperation::setUnion:
         case SetOperation::setIntersection:
-          return newSet(set->operation, leftSub, std::get<AnnotatedSet>(getRight(annotatedSet)));
+          return newSet(set->operation, leftSub, getRight<AnnotatedSet>(annotatedSet));
         case SetOperation::domain:
         case SetOperation::image:
-          return newSet(set->operation, leftSub,
-                        std::get<AnnotatedRelation>(getRight(annotatedSet)));
+          return newSet(set->operation, leftSub, getRight<AnnotatedRelation>(annotatedSet));
         case SetOperation::event:
         case SetOperation::emptySet:
         case SetOperation::fullSet:
@@ -142,8 +126,7 @@ AnnotatedSet substitute(const AnnotatedSet &annotatedSet, const CanonicalSet sea
     }
   }
   if (set->rightOperand != nullptr) {
-    const auto rightSub =
-        substitute(std::get<AnnotatedSet>(getRight(annotatedSet)), search, replace, n);
+    const auto rightSub = substitute(getRight<AnnotatedSet>(annotatedSet), search, replace, n);
     if (rightSub.first != set->rightOperand) {
       switch (set->operation) {
         case SetOperation::setUnion:
@@ -168,9 +151,12 @@ bool validate(const AnnotatedSet &annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
 
   switch (set->operation) {
+    case SetOperation::baseSet:
+      assert(annotation->isLeaf());
+      assert(annotation->getValue().has_value());
+      return annotation->isLeaf() && annotation->getValue().has_value();
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
-    case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
       assert(annotation->isLeaf() && "Non-leaf annotation at leaf set.");
@@ -179,8 +165,7 @@ bool validate(const AnnotatedSet &annotatedSet) {
     case SetOperation::image:
     case SetOperation::domain: {
       const auto &leftSet = getLeft(annotatedSet);
-      const auto &right = getRight(annotatedSet);
-      const auto &rightRelation = std::get<AnnotatedRelation>(right);
+      const auto &rightRelation = getRight<AnnotatedRelation>(annotatedSet);
       bool validated = validate(leftSet);
       validated &= validate(rightRelation);
       return validated;
@@ -188,8 +173,7 @@ bool validate(const AnnotatedSet &annotatedSet) {
     case SetOperation::setIntersection:
     case SetOperation::setUnion: {
       const auto &leftSet = getLeft(annotatedSet);
-      const auto &right = getRight(annotatedSet);
-      const auto &rightSet = std::get<AnnotatedSet>(right);
+      const auto &rightSet = getRight<AnnotatedSet>(annotatedSet);
       bool validated = validate(leftSet);
       validated &= validate(rightSet);
       return validated;
@@ -211,7 +195,7 @@ bool validate(const AnnotatedRelation &annotatedRelation) {
     case RelationOperation::relationIntersection:
     case RelationOperation::composition:
     case RelationOperation::relationUnion: {
-      const auto &left = getLeft(annotatedRelation);
+      const auto &left = getLeft<AnnotatedRelation>(annotatedRelation);
       const auto &right = getRight(annotatedRelation);
       bool validated = validate(left);
       validated &= validate(right);
@@ -219,13 +203,15 @@ bool validate(const AnnotatedRelation &annotatedRelation) {
     }
     case RelationOperation::converse:
     case RelationOperation::transitiveClosure: {
-      const auto &left = getLeft(annotatedRelation);
+      const auto &left = getLeft<AnnotatedRelation>(annotatedRelation);
       return validate(left);
     }
     case RelationOperation::baseRelation:
       assert(annotation->isLeaf());
       assert(annotation->getValue().has_value());
       return annotation->isLeaf() && annotation->getValue().has_value();
+    case RelationOperation::setIdentity:
+      return validate(getLeft<AnnotatedSet>(annotatedRelation));
     case RelationOperation::cartesianProduct:
       throw std::logic_error("not implemented");
     default:

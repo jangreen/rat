@@ -37,8 +37,8 @@ Literal::Literal(const AnnotatedSet &annotatedSet)
   assert(Annotated::validate(annotatedSet));
 }
 
-Literal::Literal(bool negated, CanonicalSet event, std::string identifier)
-    : negated(negated),
+Literal::Literal(const CanonicalSet event, std::string identifier)
+    : negated(false),
       operation(PredicateOperation::set),
       set(nullptr),
       annotation(Annotation::none()),
@@ -46,7 +46,16 @@ Literal::Literal(bool negated, CanonicalSet event, std::string identifier)
       rightEvent(nullptr),
       identifier(identifier) {}
 
-Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier)
+Literal::Literal(const CanonicalSet event, std::string identifier, const AnnotationType &annotation)
+    : negated(true),
+      operation(PredicateOperation::set),
+      set(nullptr),
+      annotation(Annotation::newLeaf(annotation)),
+      leftEvent(event),
+      rightEvent(nullptr),
+      identifier(identifier) {}
+
+Literal::Literal(const CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier)
     : negated(false),
       operation(PredicateOperation::edge),
       set(nullptr),
@@ -82,26 +91,40 @@ Literal::Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent)
 
 bool Literal::validate() const {
   switch (operation) {
-    case PredicateOperation::constant:
-      return set == nullptr && leftEvent == nullptr && rightEvent == nullptr &&
-             !identifier.has_value() && annotation == Annotation::none();
-    case PredicateOperation::edge:
-      return set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
-             leftEvent->isEvent() && rightEvent->isEvent() && identifier.has_value() &&
-             (!negated || annotation != Annotation::none());
-    case PredicateOperation::equality:
-      return set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
-             leftEvent->isEvent() && rightEvent->isEvent() && !identifier.has_value() &&
-             annotation == Annotation::none();
-    case PredicateOperation::set:
-      // check annotations for negated literals
-      assert(!negated || Annotated::validate(annotatedSet()));
-
-      return set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
-             leftEvent->isEvent() && identifier.has_value() && annotation == Annotation::none();
-    case PredicateOperation::setNonEmptiness:
-      return set != nullptr && leftEvent == nullptr && rightEvent == nullptr &&
-             !identifier.has_value() /*&& (!negated || annotation != Annotation::none()) */;
+    case PredicateOperation::constant: {
+      const auto isValid = set == nullptr && leftEvent == nullptr && rightEvent == nullptr &&
+                           !identifier.has_value() && annotation == Annotation::none();
+      assert(isValid);
+      return isValid;
+    }
+    case PredicateOperation::edge: {
+      const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
+                           leftEvent->isEvent() && rightEvent->isEvent() &&
+                           identifier.has_value() && (!negated || annotation != Annotation::none());
+      assert(isValid);
+      return isValid;
+    }
+    case PredicateOperation::equality: {
+      const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
+                           leftEvent->isEvent() && rightEvent->isEvent() &&
+                           !identifier.has_value() && annotation == Annotation::none();
+      assert(isValid);
+      return isValid;
+    }
+    case PredicateOperation::set: {
+      const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
+                           leftEvent->isEvent() && identifier.has_value() &&
+                           (!negated || annotation != Annotation::none());
+      assert(isValid);
+      return isValid;
+    }
+    case PredicateOperation::setNonEmptiness: {
+      const auto isValid =
+          set != nullptr && leftEvent == nullptr && rightEvent == nullptr &&
+          !identifier.has_value() /*&& (!negated || annotation != Annotation::none()) */;
+      assert(isValid);
+      return isValid;
+    }
     default:
       return false;
   }
@@ -163,14 +186,6 @@ bool Literal::isNormal() const {
     default:
       throw std::logic_error("unreachable");
   }
-}
-
-bool Literal::isPositiveEdgePredicate() const {
-  return !negated && operation == PredicateOperation::edge;
-}
-
-bool Literal::isPositiveEqualityPredicate() const {
-  return !negated && operation == PredicateOperation::equality;
 }
 
 EventSet Literal::normalEvents() const {
@@ -300,7 +315,8 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       const auto left = leftEvent == search ? replace : leftEvent;
 
       if (left != leftEvent) {
-        return Literal(negated, left, identifier.value());
+        return negated ? Literal(left, identifier.value(), annotation->getValue().value())
+                       : Literal(left, identifier.value());
       }
       return std::nullopt;
     }
@@ -310,18 +326,25 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
 }
 
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
-  if (operation != PredicateOperation::setNonEmptiness) {
-    // only substitute in set expressions
-    return false;
+  switch (operation) {
+    case PredicateOperation::constant:
+    case PredicateOperation::edge:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return false;
+    case PredicateOperation::setNonEmptiness: {
+      const auto [subSet, subAnnotation] =
+          Annotated::substitute(annotatedSet(), search, replace, &n);
+      if (subSet != set) {
+        set = subSet;
+        annotation = subAnnotation;
+        return true;
+      }
+      return false;
+    }
+    default:
+      throw std::logic_error("unreachable");
   }
-
-  const auto [subSet, subAnnotation] = Annotated::substitute(annotatedSet(), search, replace, &n);
-  if (subSet != set) {
-    set = subSet;
-    annotation = subAnnotation;
-    return true;
-  }
-  return false;
 }
 
 Literal Literal::substituteSet(const AnnotatedSet &set) const {

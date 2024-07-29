@@ -1,0 +1,9 @@
+// Runtime: 70 seconds
+// Counterexample size: 3 events
+
+let loc = loc-base | id         // Down to 4.5 secs if "id" is removed
+let co = [W];co-base;[W] & loc  // Instant if either of the [W] is removed
+
+assume co-base+ <= co-base      // 2.6 secs if using "co-base;co-base <= co-base"
+
+assert a;co <= a;co;co          // Instant if "a" is removed

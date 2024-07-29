@@ -59,9 +59,9 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   // validate: all events must be continuous integer interval from 0
   EventSet allEvents;
   for (const auto &literal : cube) {
-    const auto &events = literal.events();
+    const auto &literalEvents = literal.events();
     // TODO (topEvent optimization): const auto &topEvents = literal.topEvents();
-    allEvents.insert(events.begin(), events.end());
+    allEvents.insert(literalEvents.begin(), literalEvents.end());
     // TODO (topEvent optimization): allEvents.insert(topEvents.begin(), topEvents.end());
   }
   if (!allEvents.empty()) {
