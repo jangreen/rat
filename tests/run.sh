@@ -34,6 +34,8 @@ proof() {
 test set-algebra-laws True
 test set-emptiness True
 test set-base True
+test set True
+test set2 True
 
 # no assumptions
 test hard True

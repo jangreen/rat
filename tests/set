@@ -1,0 +1,3 @@
+assume A & B <= 0
+
+assert [A] & [B] <= 0

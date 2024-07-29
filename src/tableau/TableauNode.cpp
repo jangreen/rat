@@ -655,20 +655,17 @@ void Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
-  output << "--- LITERAL --- \n";
+  output << "unreduced: " << tableau->unreducedNodes.contains(this) << "\n";
   if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
-    output << "annotation: \n";
+    output << "Id annotation: \n";
     output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
-    output << "\n\n";
+    output << "base annotation: \n";
     output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
     output << "\n";
   }
-  output << "events: \n";
-  output << toString(literal.events()) << "\n";
-  output << "normalEvents: \n";
-  output << toString(literal.normalEvents()) << "\n";
-  output << "lastUnrollingParent: \n";
-  output << lastUnrollingParent << "\n";
+  output << "events: " << toString(literal.events()) << "\n";
+  output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
+  output << "lastUnrollingParent: " << lastUnrollingParent << "\n";
   output << "--- BRANCH --- \n";
   output << "activeEvents: \n";
   output << toString(activeEvents) << "\n";

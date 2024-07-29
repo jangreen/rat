@@ -63,8 +63,10 @@ void Worklist::push(Node *node) {
   }
 
   Node *insertionPoint;
-  if (!isNormal) {
-    insertionPoint = negated ? nonNormalNegatedHeadDummy.get() : nonNormalPositiveHeadDummy.get();
+  if (!negated) {
+    insertionPoint = nonNormalPositiveHeadDummy.get();
+  } else if (!isNormal) {
+    insertionPoint = nonNormalNegatedHeadDummy.get();
   } else if (op == PredicateOperation::equality) {
     insertionPoint = posEqualitiesHeadDummy.get();
   } else {

@@ -66,7 +66,7 @@ class Relation {
 
   bool operator==(const Relation &other) const {
     return operation == other.operation && leftOperand == other.leftOperand &&
-           rightOperand == other.rightOperand && identifier == other.identifier;
+           rightOperand == other.rightOperand && identifier == other.identifier && set == other.set;
   }
 
   const RelationOperation operation;

@@ -219,7 +219,6 @@ bool RegularTableau::solve() {
     currentNode = unreducedNodes.top();
     unreducedNodes.pop();
     assert(validate());
-    // print(currentNode->cube);
 
     if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
         !isReachableFromRoots(currentNode)) {

@@ -15,11 +15,11 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
   switch (operation) {
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::fullSet:
+    case SetOperation::baseSet:
       return true;
     case SetOperation::event:
     case SetOperation::setUnion:
     case SetOperation::emptySet:
-    case SetOperation::baseSet:
       return false;
     case SetOperation::setIntersection:
       assert(rightOperand != nullptr);
