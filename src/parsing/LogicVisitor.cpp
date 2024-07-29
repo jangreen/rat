@@ -24,7 +24,7 @@
     }
   }
 
-  // process assumptions
+  // process emptiness assumptions
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
   for (auto &cube : assertionCubes) {
     for (const auto &assumption : Assumption::emptinessAssumptions) {
@@ -32,6 +32,12 @@
       const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
       const CanonicalSet TrT = Set::newSet(SetOperation::setIntersection, fullSet, rT);
       cube.emplace_back(Annotated::makeWithValue(TrT, {0, 0}));  // T & r.T
+    }
+  }
+  // s = 0 |- r1 <= r2 |- r1 <= r2 or s != 0
+  for (auto &cube : assertionCubes) {
+    for (const auto &assumption : Assumption::setEmptinessAssumptions) {
+      cube.emplace_back(Annotated::makeWithValue(assumption.set, {0, 0}));
     }
   }
 
@@ -79,27 +85,55 @@
 }
 
 /*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
-  const CanonicalRelation lhs = parseRelation(ctx->lhs->getText());
-  const CanonicalRelation rhs = parseRelation(ctx->rhs->getText());
-  switch (rhs->operation) {
+  const auto lhs = parseExpression(ctx->lhs->getText());
+  const auto rhs = parseExpression(ctx->rhs->getText());
+
+  if (std::holds_alternative<CanonicalSet>(lhs)) {
+    // hack: emptyset is parsed as relation
+    const auto isEmptinessAssumption =
+        std::holds_alternative<CanonicalRelation>(rhs) &&
+        std::get<CanonicalRelation>(rhs)->operation == RelationOperation::emptyRelation;
+    const auto rhsSet = isEmptinessAssumption ? Set::emptySet() : std::get<CanonicalSet>(rhs);
+    const auto lhSet = std::get<CanonicalSet>(lhs);
+
+    switch (rhsSet->operation) {
+      case SetOperation::baseSet: {
+        Assumption assumption(lhSet, rhsSet->identifier.value());
+        Assumption::baseSetAssumptions.emplace(assumption.baseIdentifier.value(), assumption);
+        return 0;
+      }
+      case SetOperation::emptySet: {
+        Assumption::setEmptinessAssumptions.emplace_back(lhSet);
+        return 0;
+      }
+      default:
+        std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
+                  << " <= " << ctx->rhs->getText() << std::endl;
+        throw std::runtime_error("");
+    }
+  }
+
+  const auto lhRelation = std::get<CanonicalRelation>(lhs);
+  const auto rhRelation = std::get<CanonicalRelation>(rhs);
+
+  switch (rhRelation->operation) {
     case RelationOperation::baseRelation: {
-      Assumption assumption(lhs, *rhs->identifier);
-      Assumption::baseAssumptions.emplace(*assumption.baseRelation, assumption);
+      Assumption assumption(lhRelation, rhRelation->identifier.value());
+      Assumption::baseAssumptions.emplace(assumption.baseIdentifier.value(), assumption);
       return 0;
     }
     case RelationOperation::emptyRelation: {
-      Assumption::emptinessAssumptions.emplace_back(lhs);
+      Assumption::emptinessAssumptions.emplace_back(lhRelation);
       return 0;
     }
     case RelationOperation::idRelation: {
-      Assumption::idAssumptions.emplace_back(lhs);
+      Assumption::idAssumptions.emplace_back(lhRelation);
       return 0;
     }
     default:
       std::cout << "[Parser] Unsupported hypothesis:" << ctx->lhs->getText()
                 << " <= " << ctx->rhs->getText() << std::endl;
       throw std::runtime_error("");
-      // throw std::format_error(""); Unsupported in some compilers
   }
 }
 

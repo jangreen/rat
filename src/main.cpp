@@ -39,7 +39,9 @@ int main(int argc, const char *argv[]) {
   assert(validateDNF(goals));
   spdlog::info(fmt::format("[Parser] Done: {} goal(s), {} assumption(s)", goals.size(),
                            Assumption::baseAssumptions.size() + Assumption::idAssumptions.size() +
-                               Assumption::emptinessAssumptions.size()));
+                               Assumption::emptinessAssumptions.size() +
+                               Assumption::setEmptinessAssumptions.size() +
+                               Assumption::baseSetAssumptions.size()));
   for (auto &goal : goals) {
     spdlog::info("[Status] Goal: ");
     print(goal);
