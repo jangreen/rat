@@ -38,7 +38,7 @@ int main(int argc, const char *argv[]) {
   const auto &goals = Logic::parse(path);
   assert(validateDNF(goals));
   spdlog::info(fmt::format(
-      "[Parser] Done: {} goal(s), {} relation assumption(s), , {} set assumption(s)", goals.size(),
+      "[Parser] Done: {} goal(s), {} relation assumption(s), {} set assumption(s)", goals.size(),
       Assumption::baseAssumptions.size() + Assumption::idAssumptions.size() +
           Assumption::emptinessAssumptions.size(),
       Assumption::setEmptinessAssumptions.size() + Assumption::baseSetAssumptions.size()));
