@@ -5,13 +5,17 @@
 #include <vector>
 
 #include "basic/Relation.h"
+#include "basic/Set.h"
+
 class Assumption {
  public:
   explicit Assumption(CanonicalRelation relation,
                       std::optional<std::string> baseRelation = std::nullopt);
+  explicit Assumption(CanonicalSet set, std::optional<std::string> baseRelation = std::nullopt);
 
-  const CanonicalRelation relation;               // regular, empty, identity
-  const std::optional<std::string> baseRelation;  // regular
+  const CanonicalRelation relation;                 // regular, empty, identity
+  const CanonicalSet set;                           // regular, empty
+  const std::optional<std::string> baseIdentifier;  // regular
 
   static CanonicalRelation masterIdRelation() {
     // construct master identity CanonicalRelation
@@ -28,4 +32,6 @@ class Assumption {
   static std::vector<Assumption> emptinessAssumptions;
   static std::vector<Assumption> idAssumptions;
   static std::unordered_map<std::string, Assumption> baseAssumptions;
+  static std::vector<Assumption> setEmptinessAssumptions;
+  static std::unordered_map<std::string, Assumption> baseSetAssumptions;
 };

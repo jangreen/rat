@@ -15,11 +15,11 @@ bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
   switch (operation) {
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::fullSet:
+    case SetOperation::baseSet:
       return true;
     case SetOperation::event:
     case SetOperation::setUnion:
     case SetOperation::emptySet:
-    case SetOperation::baseSet:
       return false;
     case SetOperation::setIntersection:
       assert(rightOperand != nullptr);
@@ -162,6 +162,26 @@ bool calcHasFullSet(const SetOperation operation, const CanonicalSet leftOperand
   }
 }
 
+bool calcHasBaseSet(const SetOperation operation, const CanonicalSet leftOperand,
+                    const CanonicalSet rightOperand) {
+  switch (operation) {
+    case SetOperation::event:
+    case SetOperation::fullSet:
+    case SetOperation::emptySet:
+      return false;
+    case SetOperation::baseSet:
+      return true;
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion:
+      return leftOperand->hasBaseSet() || rightOperand->hasBaseSet();
+    case SetOperation::domain:
+    case SetOperation::image:
+      return leftOperand->hasBaseSet();
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 SetOfSets calcLabelBaseCombinations(const SetOperation operation, const CanonicalSet leftOperand,
                                     const CanonicalSet rightOperand,
                                     const CanonicalRelation relation, const CanonicalSet thisRef) {
@@ -200,6 +220,7 @@ void Set::completeInitialization() const {
   // TODO (topEvent optimization): this->topEvents = calcTopEvents(operation, leftOperand,
   // rightOperand, label);
   this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
+  this->_hasBaseSet = calcHasBaseSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
   this->eventSeq = calcSeq(operation, leftOperand, rightOperand, label);
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);

@@ -1,0 +1,5 @@
+let rf = [W];rf-typed;[R]
+
+assume [W] & [R] <= 0
+
+assert rf <= 0

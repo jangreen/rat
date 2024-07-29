@@ -230,9 +230,9 @@ bool RegularTableau::solve() {
     assert(currentNode->isOpenLeaf());
     Cube currentCube = currentNode->cube;
 
-    // 1) weaken positive edge predicates
-    if (cubeHasPositiveEdgePredicate(currentCube)) {
-      std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveEdgePredicate));
+    // 1) weaken positive edge predicates and positive setMembership
+    if (cubeHasPositiveAtomic(currentCube)) {
+      std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveAtomic));
       removeUselessLiterals(currentCube);
     }
 

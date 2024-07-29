@@ -454,12 +454,10 @@ void Node::inferModalDown(const Literal &negatedLiteral) {
 }
 
 void Node::inferModal() {
-  if (!literal.negated) {
-    return;
+  if (literal.negated) {
+    inferModalUp();
+    inferModalDown(literal);
   }
-
-  inferModalUp();
-  inferModalDown(literal);
 }
 
 // replace fullSet by concrete positive existential events
@@ -503,6 +501,46 @@ void Node::inferModalTop() {
   //     }
   //   }
   // }
+}
+
+void Node::inferModalBaseSetUp() {
+  const Node *cur = this;
+  while ((cur = cur->parentNode) != nullptr) {
+    if (cur->literal.isPositiveSetPredicate()) {
+      // e \in A
+      const auto e = cur->literal.leftEvent;
+      const auto A = Set::newBaseSet(cur->literal.identifier.value());
+      appendBranch(substituteAllOnce(literal, A, e));
+    }
+  }
+}
+
+void Node::inferModalBaseSetDown(const Literal &negatedLiteral) {
+  if (isClosed()) {
+    return;
+  }
+
+  for (const auto &child : children) {
+    child->inferModalBaseSetDown(negatedLiteral);
+  }
+
+  if (!literal.isPositiveSetPredicate()) {
+    return;
+  }
+
+  // e \in A
+  const auto e = literal.leftEvent;
+  const auto A = Set::newBaseSet(literal.identifier.value());
+  appendBranch(substituteAllOnce(negatedLiteral, A, e));
+}
+
+// assumption: since all positive literals are normalized before we consider negated
+// we know that all possible set memberships are known
+void Node::inferModalBaseSet() {
+  if (literal.negated) {
+    inferModalBaseSetUp();
+    inferModalBaseSetDown(literal);
+  }
 }
 
 Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet replace1,
@@ -597,20 +635,17 @@ void Node::toDotFormat(std::ofstream &output) const {
   // tooltip
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
-  output << "--- LITERAL --- \n";
+  output << "unreduced: " << tableau->unreducedNodes.contains(this) << "\n";
   if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
-    output << "annotation: \n";
+    output << "Id annotation: \n";
     output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
-    output << "\n\n";
+    output << "base annotation: \n";
     output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
     output << "\n";
   }
-  output << "events: \n";
-  output << toString(literal.events()) << "\n";
-  output << "normalEvents: \n";
-  output << toString(literal.normalEvents()) << "\n";
-  output << "lastUnrollingParent: \n";
-  output << lastUnrollingParent << "\n";
+  output << "events: " << toString(literal.events()) << "\n";
+  output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
+  output << "lastUnrollingParent: " << lastUnrollingParent << "\n";
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";

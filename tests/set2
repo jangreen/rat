@@ -1,0 +1,3 @@
+assume A <= 0
+
+assert a;[A];a <= 0

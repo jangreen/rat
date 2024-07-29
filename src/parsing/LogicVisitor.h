@@ -12,6 +12,8 @@
 #include "../cat/Constraint.h"
 #include "LogicVisitor.h"
 
+typedef std::variant<CanonicalSet, CanonicalRelation> CanonicalExpression;
+
 class Logic : LogicBaseVisitor {
  public:
   /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;
@@ -27,46 +29,44 @@ class Logic : LogicBaseVisitor {
   /*void*/ std::any visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) override;
   /*void*/ std::any visitLetRecAndDefinition(
       LogicParser::LetRecAndDefinitionContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitParentheses(
+  /*CanonicalExpression*/ std::any visitParentheses(
       LogicParser::ParenthesesContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitTransitiveClosure(
+  /*CanonicalExpression*/ std::any visitTransitiveClosure(
       LogicParser::TransitiveClosureContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationFencerel(
+  /*CanonicalExpression*/ std::any visitRelationFencerel(
       LogicParser::RelationFencerelContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitSetSingleton(
+  /*CanonicalExpression*/ std::any visitSetSingleton(
       LogicParser::SetSingletonContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationBasic(
+  /*CanonicalExpression*/ std::any visitRelationBasic(
       LogicParser::RelationBasicContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationMinus(
+  /*CanonicalExpression*/ std::any visitRelationMinus(
       LogicParser::RelationMinusContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationDomainIdentity(
+  /*CanonicalExpression*/ std::any visitRelationDomainIdentity(
       LogicParser::RelationDomainIdentityContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationRangeIdentity(
+  /*CanonicalExpression*/ std::any visitRelationRangeIdentity(
       LogicParser::RelationRangeIdentityContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitUnion(
-      LogicParser::UnionContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitEmptyset(
-      LogicParser::EmptysetContext *ctx) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationInverse(
+  /*CanonicalExpression*/ std::any visitUnion(LogicParser::UnionContext *context) override;
+  /*CanonicalExpression*/ std::any visitEmptyset(LogicParser::EmptysetContext *ctx) override;
+  /*CanonicalExpression*/ std::any visitRelationInverse(
       LogicParser::RelationInverseContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationOptional(
+  /*CanonicalExpression*/ std::any visitRelationOptional(
       LogicParser::RelationOptionalContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationIdentity(
+  /*CanonicalExpression*/ std::any visitRelationIdentity(
       LogicParser::RelationIdentityContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitCartesianProduct(
+  /*CanonicalExpression*/ std::any visitCartesianProduct(
       LogicParser::CartesianProductContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitSetBasic(
-      LogicParser::SetBasicContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitTransitiveReflexiveClosure(
+  /*CanonicalExpression*/ std::any visitSetBasic(LogicParser::SetBasicContext *context) override;
+  /*CanonicalExpression*/ std::any visitTransitiveReflexiveClosure(
       LogicParser::TransitiveReflexiveClosureContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitComposition(
+  /*CanonicalExpression*/ std::any visitComposition(
       LogicParser::CompositionContext *context) override;
-  /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitIntersection(
+  /*CanonicalExpression*/ std::any visitIntersection(
       LogicParser::IntersectionContext *context) override;
-  // /*std::variant<CanonicalSet, CanonicalRelation>*/ std::any visitRelationComplement(
+  // /*CanonicalExpression*/ std::any visitRelationComplement(
   //    LogicParser::RelationComplementContext *context) override;
 
-  static std::unordered_map<std::string, CanonicalRelation> definedRelations;
+  static std::unordered_map<std::string, CanonicalRelation> derivedRelations;
+  static std::unordered_map<std::string, CanonicalSet> derivedSets;
   static std::unordered_map<std::string, CanonicalSet> definedSingletons;
   static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
@@ -105,9 +105,19 @@ class Logic : LogicBaseVisitor {
 
     LogicParser::ExpressionContext *context = parser.expression();  // expect expression
     Logic visitor;
-    auto parsedRelation =
-        std::any_cast<std::variant<CanonicalSet, CanonicalRelation>>(visitor.visit(context));
+    auto parsedRelation = std::any_cast<CanonicalExpression>(visitor.visit(context));
     return std::get<CanonicalRelation>(parsedRelation);
     // FIXME: clang-tidy claims address of <parsedRelation> can escape... why?
+  }
+
+  static CanonicalExpression parseExpression(const std::string &exprString) {
+    antlr4::ANTLRInputStream input(exprString);
+    LogicLexer lexer(&input);
+    antlr4::CommonTokenStream tokens(&lexer);
+    LogicParser parser(&tokens);
+
+    LogicParser::ExpressionContext *context = parser.expression();  // expect expression
+    Logic visitor;
+    return std::any_cast<CanonicalExpression>(visitor.visit(context));
   }
 };

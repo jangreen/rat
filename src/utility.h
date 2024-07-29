@@ -143,9 +143,8 @@ bool cubeHasNegatedLiteral(const range_of<Literal> auto &cube, const Literal &li
       cube, [&](const auto &cubeLiteral) { return literal.isNegatedOf(cubeLiteral); });
 }
 
-inline bool cubeHasPositiveEdgePredicate(const Cube &cube) {
-  return std::ranges::any_of(
-      cube, [](const Literal &literal) { return literal.isPositiveEdgePredicate(); });
+inline bool cubeHasPositiveAtomic(const Cube &cube) {
+  return std::ranges::any_of(cube, &Literal::isPositiveAtomic);
 }
 
 inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {

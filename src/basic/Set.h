@@ -38,6 +38,7 @@ class Set {
   mutable bool _isNormal;
   // TODO (topEvent optimization): mutable EventSet topEvents;
   mutable bool _hasFullSet;
+  mutable bool _hasBaseSet;
   mutable EventSet events;
   mutable EventSequence eventSeq;
   mutable EventSet normalEvents;
@@ -93,8 +94,9 @@ class Set {
                                               // SetOperation::topEvent;
   }
   const bool &isNormal() const { return _isNormal; }
-  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
   bool hasFullSet() const { return _hasFullSet; }
+  bool hasBaseSet() const { return _hasBaseSet; }
+  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
   // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
   const EventSequence &getEventSeq() const { return eventSeq; }

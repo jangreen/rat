@@ -102,6 +102,12 @@ void Tableau::normalize() {
       continue;
     }
 
+    if (currentNode->getLiteral().hasBaseSet()) {
+      // Rule ~(A)
+      currentNode->inferModalBaseSet();
+      continue;
+    }
+
     assert(currentNode->getLiteral().isNormal());
 
     // 2) Rules which require context (only to normalized literals)
@@ -140,12 +146,22 @@ void Tableau::normalize() {
         currentNode->appendBranch(*literal);
       }
     }
+
+    if (!Assumption::baseSetAssumptions.empty()) {
+      if (auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
+        currentNode->appendBranch(*literal);
+      }
+    }
   }
 }
 
+// IMPORTANT: correctnes of this funtcion relies on the fact that the worklist pops positive
+// literals first. (because we reuse the tableau for nomalization and do not readd any nodes to
+// unreduced nodes)
 bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
+    exportDebug("debug");
 
     if (const auto result =
             Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
@@ -154,7 +170,7 @@ bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
 
       // to detect at the world cycles
       // set it before appendBranch call
-      currentNode->transitiveClosureNode = currentNode->getLastUnrollingParent();
+      Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
       currentNode->appendBranch(result.value());
 
       deleteNode(currentNode);
@@ -390,9 +406,6 @@ DNF Tableau::computeDnf() {
   assert(validateDNF(dnf));
   assert(validate());
   assert(unreducedNodes.isEmpty());
-  for (auto &cube : dnf) {
-    removeUselessLiterals(cube);
-  }
   return dnf;
 }
 
