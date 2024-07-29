@@ -79,7 +79,6 @@ class Literal {
   }
   [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] EventSet events() const;
-  [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] SetOfSets eventBasePairs() const;
   // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
 

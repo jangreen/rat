@@ -256,12 +256,6 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   return removedLiterals;
 }
 
-// TODO: Return value unused
-inline Cube removeUselessLiterals(Cube &cube) {
-  const auto &activeEvents = gatherActiveEvents(cube);
-  return filterNegatedLiterals(cube, activeEvents);
-}
-
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
@@ -273,6 +267,12 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   });
   return removedLiterals;
 }
+
+// // TODO: Return value unused
+// inline Cube removeUselessLiterals(Cube &cube) {
+//   const auto &activeEvents = gatherActiveEvents(cube);
+//   return filterNegatedLiterals(cube, activeEvents);
+// }
 
 // TODO: Return value unused
 inline void removeUselessLiterals(Cube &cube) {
