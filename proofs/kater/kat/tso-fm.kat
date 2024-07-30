@@ -1,0 +1,3 @@
+let hb = ([R|W|F]; po; [R|W|F] | rf)+
+
+let tso = mo | [F|W]; hb; [F|W] | ([UW|F] | rfe); po; fr
