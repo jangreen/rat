@@ -3,26 +3,48 @@
 RAT is a tool to automaitcally compare weak memory models formalized in CAT.
 
 ## Requirements
+
 - [Antlr](https://www.antlr.org)
+- [Java](https://www.java.com/de/download/manual.jsp)
 - [Graphviz](https://graphviz.org/)
+- [Cmake](https://cmake.org/download/)
+- [Boost](https://www.boost.org/users/download/)
+- [Spdlog](https://github.com/gabime/spdlog)
 
 ## Installation
-Antlr tool must be placed at /usr/local/lib/antlr-4.10.1-complete.jar
-(Antlr runtime will be installed and linked by cmake)
+
+### Docker
+
+The docker image has all dependencies pre-installed to run the tool.
+Build and run the container:
+
+```
+docker build . -t rat
+docker run -w /home/rat -it rat /bin/bash
+```
+
+### From Sources
+
+1. Install dependencies above.
+
+   The Antlr tool must be placed at /usr/local/lib/antlr-4.10.1-complete.jar and can be installed by:
 
 ```
 cd /usr/local/lib
 curl -O https://www.antlr.org/download/antlr-4.10.1-complete.jar
 ```
 
-Install Graphviz
+2. Build and the tool
 
-`$ brew install graphviz`
-
-Install brew, spdl with homebrew
+```
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build
+cmake --build ./build --target rat -j 10
+```
 
 ## Usage
 
-/opt/homebrew/bin/cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ -S/Users/jangruenke/cat-infer -B/Users/jangruenke/cat-infer/build -G "Unix Makefiles"
+Run the tool
 
-/opt/homebrew/bin/cmake --build /Users/jangruenke/cat-infer/build --config RelWithDebInfo --target all -j 14 --
+```
+./build/rat
+```
