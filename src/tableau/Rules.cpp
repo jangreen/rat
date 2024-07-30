@@ -724,6 +724,9 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       }
       return std::nullopt;
     }
+    case PredicateOperation::set: {
+      return std::nullopt;
+    }
     default:
       throw std::logic_error("unreachable");
   }
