@@ -1,5 +1,8 @@
-include "../kat/tso.kat"
-include "../kat/tso-fm.kat"
+include ./proofs/kater/kat/tso-fm.kat
+let tso-fm = tso
+let hb-fm = hb
+include ./proofs/kater/kat/tso.kat
+
 
 // WTP: tso == fm-tso
 // From Lemma 2.1, STP that
@@ -7,5 +10,5 @@ include "../kat/tso-fm.kat"
 
 let eco = (mo | rf | fr)+
 
-assert (tso-fm::tso+ | tso-fm::hb;fr?) <=&id rot (tso::tso+ | po;eco)
-// assert [R|W|F];(tso::tso+ | po;eco);[R|W|F] <=&id rot (tso-fm::tso+ | tso-fm::hb;fr?)
+assert (tso-fm+ | hb-fm;fr?) <=&id rot (tso+ | po;eco)
+// assert [R|W|F];(tso+ | po;eco);[R|W|F] <=&id rot (tso-fm+ | hb-fm;fr?)
