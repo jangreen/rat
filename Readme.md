@@ -58,7 +58,7 @@ Relation identifiers must begin with a lowercase letter and set identifiers must
 A proof file consist of statements fo the following form.
 
 ```
-<inlude>        ::= 'include' <filepath>
+<include>        ::= 'include' <filepath>
 <definition>    ::= 'let' <identifier> '=' <expression>
 <assumption>    ::= 'assume' <expression> '<=' <expression>
 <assertion>     ::= 'assert' <expression> '<=' <expression>
