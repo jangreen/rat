@@ -8,7 +8,7 @@
 #include "../utility.h"
 #include "Annotation.h"
 
-Literal::Literal(bool negated)
+Literal::Literal(const bool negated)
     : negated(negated),
       operation(PredicateOperation::constant),
       set(nullptr),
@@ -55,7 +55,8 @@ Literal::Literal(const CanonicalSet event, std::string identifier, const Annotat
       rightEvent(nullptr),
       identifier(identifier) {}
 
-Literal::Literal(const CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier)
+Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
+                 std::string identifier)
     : negated(false),
       operation(PredicateOperation::edge),
       set(nullptr),
@@ -67,8 +68,8 @@ Literal::Literal(const CanonicalSet leftEvent, CanonicalSet rightEvent, std::str
   assert(rightEvent->isEvent());
 }
 
-Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,
-                 const AnnotationType &annotation)
+Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
+                 std::string identifier, const AnnotationType &annotation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
@@ -80,7 +81,7 @@ Literal::Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string id
   assert(rightEvent->isEvent());
 }
 
-Literal::Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent)
+Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),

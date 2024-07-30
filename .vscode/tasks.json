@@ -6,7 +6,7 @@
         {
             "label": "|= Proof",
             "type": "shell",
-            "command": "${workspaceFolder}/build/CatInfer ${file}",
+            "command": "${workspaceFolder}/build/rat ${file}",
             "options": {
                 "cwd": "${workspaceFolder}"
             }
@@ -14,7 +14,7 @@
         {
             "label": "|= Profiler",
             "type": "shell",
-            "command": "rm -rf ./build/record.trace; xctrace record --output ./build/record.trace --template 'Time Profiler' --launch ${workspaceFolder}/build/CatInfer ${file}; open ./build/record.trace",
+            "command": "rm -rf ./build/record.trace; xctrace record --output ./build/record.trace --template 'Time Profiler' --launch ${workspaceFolder}/build/rat ${file}; open ./build/record.trace",
             "options": {
                 "cwd": "${workspaceFolder}"
             }

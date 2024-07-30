@@ -19,14 +19,14 @@ result() {
 test() {
     name=$1
     result=$2
-    output=$(./cmake-build-relwithdebinfo/CatInfer "./tests/${name}")
+    output=$(./cmake-build-relwithdebinfo/rat "./tests/${name}")
     result "$output"
 }
 
 proof() {
     name=$1
     result=$2
-    output=$(./cmake-build-relwithdebinfo/CatInfer "./proofs/${name}")
+    output=$(./cmake-build-relwithdebinfo/rat "./proofs/${name}")
     result "$output"  
 }
 
@@ -71,6 +71,7 @@ test setid True
 test setid2 False
 test setDist True
 test topEvent False
+test multiple True
 test tt True
 test tt2 True
 test eco1f False

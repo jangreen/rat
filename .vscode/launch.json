@@ -8,7 +8,7 @@
             "name": "(lldb) Starten",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/CatInfer",
+            "program": "${workspaceFolder}/build/rat",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}", //"${fileDirname}",

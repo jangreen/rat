@@ -1,6 +1,9 @@
 #pragma once
+#include <algorithm>
 #include <boost/container/flat_set.hpp>
 #include <fstream>
+#include <optional>
+#include <ranges>
 #include <vector>
 
 /*

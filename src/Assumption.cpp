@@ -1,10 +1,10 @@
 #include "Assumption.h"
 
 Assumption::Assumption(const CanonicalRelation relation, std::optional<std::string> baseRelation)
-    : relation(relation), baseIdentifier(std::move(baseRelation)), set(nullptr) {}
+    : relation(relation), set(nullptr), baseIdentifier(std::move(baseRelation)) {}
 
 Assumption::Assumption(const CanonicalSet set, std::optional<std::string> baseRelation)
-    : relation(nullptr), baseIdentifier(std::move(baseRelation)), set(set) {}
+    : relation(nullptr), set(set), baseIdentifier(std::move(baseRelation)) {}
 
 std::vector<Assumption> Assumption::emptinessAssumptions;
 std::vector<Assumption> Assumption::idAssumptions;

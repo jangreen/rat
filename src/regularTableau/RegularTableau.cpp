@@ -411,7 +411,7 @@ void RegularTableau::findAllPathsToRoots(RegularNode *node, Path &currentPath,
     allPaths.push_back(currentPath);
   }
 
-  for (const auto &[parent, _] : node->getParents()) {
+  for (const auto &parent : node->getParents() | std::views::keys) {
     findAllPathsToRoots(parent, currentPath, allPaths);
   }
 

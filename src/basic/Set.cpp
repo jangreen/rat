@@ -205,6 +205,7 @@ Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalS
          std::optional<std::string> identifier)
     : _isNormal(false),
       _hasFullSet(false),
+      _hasBaseSet(false),
       operation(operation),
       identifier(std::move(identifier)),
       label(label),

@@ -44,7 +44,7 @@
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
-  std::ignore = parseMemoryModel(ctx->FILEPATH()->getText());
+  std::ignore = parse(ctx->FILEPATH()->getText());
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
@@ -118,8 +118,17 @@
 
   switch (rhRelation->operation) {
     case RelationOperation::baseRelation: {
-      Assumption assumption(lhRelation, rhRelation->identifier.value());
-      Assumption::baseAssumptions.emplace(assumption.baseIdentifier.value(), assumption);
+      const auto identifier = rhRelation->identifier.value();
+      if (Assumption::baseAssumptions.contains(identifier)) {
+        auto curAssumption = Assumption::baseAssumptions.at(identifier);
+        auto newRelation = Relation::newRelation(RelationOperation::relationUnion,
+                                                 curAssumption.relation, lhRelation);
+        auto newAssumption = Assumption(newRelation, identifier);
+        Assumption::baseAssumptions.erase(identifier);
+        Assumption::baseAssumptions.emplace(identifier, newAssumption);
+      } else {
+        Assumption::baseAssumptions.emplace(identifier, Assumption(lhRelation, identifier));
+      }
       return 0;
     }
     case RelationOperation::emptyRelation: {

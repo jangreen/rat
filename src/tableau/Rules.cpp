@@ -570,7 +570,7 @@ std::optional<DNF> Rules::applyRule(const Literal& literal) {
   }
 }
 
-std::optional<DNF> Rules::applyPositiveModalRule(const Literal& literal, int minimalEvent) {
+std::optional<DNF> Rules::applyPositiveModalRule(const Literal& literal, const int minimalEvent) {
   if (literal.negated) {
     return std::nullopt;
   }
@@ -724,6 +724,9 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       }
       return std::nullopt;
     }
+    case PredicateOperation::set: {
+      return std::nullopt;
+    }
     default:
       throw std::logic_error("unreachable");
   }
@@ -845,7 +848,7 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
 }
 
 std::optional<PartialDNF> Rules::applyPositiveModalRule(const AnnotatedSet& annotatedSet,
-                                                        int minimalEvent) {
+                                                        const int minimalEvent) {
   const auto& [set, setAnnotation] = annotatedSet;
   switch (set->operation) {
     // TODO (topEvent optimization): case SetOperation::topEvent:
