@@ -93,8 +93,8 @@ RANGE: 'range';
 
 FLAG: 'flag';
 
-RELNAME: [a-z0-9\-_.]+;
-SETNAME: [A-Z] [a-zA-Z0-9\-_.]*;
+RELNAME: [a-z] [a-zA-Z0-9\-_.']*;
+SETNAME: [A-Z] [a-zA-Z0-9\-_.']*;
 
 LINE_COMMENT: '//' ~[\n]* -> skip;
 
