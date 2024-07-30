@@ -43,8 +43,54 @@ cmake --build ./build --target rat -j 10
 
 ## Usage
 
-Run the tool
+RAT supports proof files written in relational algebra as in CAT.
+Proof files support the following expressions to describe sets and relations.
+Relation identifiers must begin with a lowercase letter and set identifiers must begin with an upper case letter.
 
 ```
-./build/rat
+<set>       ::= <base_set> | <set_identifier> | '0' | <set> '&' <set> | <set> '|' <set> 
+    
+<relation>  ::= <base_relation> | <relation_identifier> | '0' | 'id'
+            | <relation> '&' <relation> | <relation> '|' <relation> | <relation> '^-1'
+            | <relation> ';' <relation> | <relation> '^*' | <relation> '^+' | <relation> '?'	
 ```
+
+Then a proof file consist of statements fo the following form.
+
+```
+<inlude>        ::= 'include' <filepath>
+<definition>    ::= 'let' <identifier> '=' <expression>
+<assumption>    ::= 'assume' <expression> '<=' <expression>
+<assertion>     ::= 'assert' <expression> '<=' <expression>
+```
+
+There are only five supported types of assumptions:
+
+```
+'assert' <relation> '<=' '0'
+'assert' <relation> '<=' <base_relation>
+'assert' <relation> '<=' 'id'
+'assert' <set> '<=' '0'
+'assert' <set> '<=' <base_set>
+```
+
+An example proof file could be:
+
+```
+assume a;a <= 0
+assert (a;b;a) & id <= 0
+```
+
+To run the tool execute:
+
+```
+./build/rat <path to proof file>
+```
+
+There are two possible results for each assertion in a proof file:
+
+- True: the assertion holds
+- False: the assertion does not hold
+
+The tool generates either a proof or a counterexample.
+Both are exported as .dot file in the output folder.
