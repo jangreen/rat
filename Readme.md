@@ -1,6 +1,6 @@
 # RAT: Relational Algebra (with) Tableaus
 
-RAT is a tool to automaitcally compare weak memory models formalized in CAT.
+RAT is a tool that automatically compares weak memory models formalised in CAT.
 
 ## Requirements
 
@@ -34,7 +34,7 @@ cd /usr/local/lib
 curl -O https://www.antlr.org/download/antlr-4.10.1-complete.jar
 ```
 
-2. Build and the tool
+2. Build the tool
 
 ```
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build
@@ -55,7 +55,7 @@ Relation identifiers must begin with a lowercase letter and set identifiers must
             | <relation> ';' <relation> | <relation> '^*' | <relation> '^+' | <relation> '?'	
 ```
 
-Then a proof file consist of statements fo the following form.
+A proof file consist of statements fo the following form.
 
 ```
 <inlude>        ::= 'include' <filepath>
