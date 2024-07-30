@@ -1,0 +1,6 @@
+let rf = [W];rf-base;[R]
+let co = [W];co-base;[W]
+
+assume R & W <= 0
+
+assert rf;co <= 0
