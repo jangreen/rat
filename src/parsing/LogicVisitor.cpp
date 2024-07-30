@@ -8,11 +8,12 @@
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
-void parsingError(antlr4::ParserRuleContext *context, std::string message) {
+antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *context,
+                                                std::string message) {
   spdlog::error(fmt::format("[Parser] {} | line {}, position {}: {} ", message,
                             context->start->getLine(), context->start->getCharPositionInLine(),
                             context->getText()));
-  exit(0);
+  return {};
 }
 }  // namespace
 
@@ -58,7 +59,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
   if (!context->INEQUAL()) {
-    parsingError(context, "Unsupported assertion format.");
+    throw parsingError(context, "Unsupported assertion format.");
   }
 
   const auto lhs = parseExpression(context->e1->getText());
@@ -66,7 +67,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
   const bool sameType =
       std::holds_alternative<CanonicalSet>(lhs) == std::holds_alternative<CanonicalSet>(rhs);
   if (!sameType) {
-    parsingError(context, "Type mismatch in assertion.");
+    throw parsingError(context, "Type mismatch in assertion.");
   }
 
   const bool isSetAssertion = std::holds_alternative<CanonicalSet>(lhs);
@@ -114,7 +115,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
         return 0;
       }
       default:
-        parsingError(ctx, "Unsupported hypothesis.");
+        throw parsingError(ctx, "Unsupported hypothesis.");
     }
   }
 
@@ -145,7 +146,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
       return 0;
     }
     default:
-      parsingError(ctx, "Unsupported hypothesis.");
+      throw parsingError(ctx, "Unsupported hypothesis.");
   }
 }
 
@@ -156,7 +157,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     if (definitionContext->letDefinition()) {
       visitLetDefinition(definitionContext->letDefinition());
     } else if (definitionContext->letRecDefinition()) {
-      parsingError(context, "Recursive definitions are not supported.");
+      throw parsingError(context, "Recursive definitions are not supported.");
     } else if (definitionContext->axiomDefinition()) {
       auto untypedAxiom = visitAxiomDefinition(definitionContext->axiomDefinition());
       auto axiom = std::any_cast<Constraint>(untypedAxiom);
@@ -193,7 +194,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
   if (context->RELNAME()) {
     const std::string name = context->RELNAME()->getText();
     if (!std::holds_alternative<CanonicalRelation>(expr)) {
-      parsingError(context, "Set identifier must start with a uppercase letter.");
+      throw parsingError(context, "Set identifier must start with a uppercase letter.");
     }
     const auto derivedRelation = std::get<CanonicalRelation>(expr);
     // overwrite existing definition
@@ -201,7 +202,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
   } else if (context->SETNAME()) {
     const std::string name = context->SETNAME()->getText();
     if (!std::holds_alternative<CanonicalSet>(expr)) {
-      parsingError(context, "Relation identifier must start with a lowercase letter.");
+      throw parsingError(context, "Relation identifier must start with a lowercase letter.");
     }
     const auto derivedSet = std::get<CanonicalSet>(expr);
     // overwrite existing definition
@@ -210,11 +211,11 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
   return 0;
 }
 /*void*/ std::any Logic::visitLetRecDefinition(LogicParser::LetRecDefinitionContext *context) {
-  parsingError(context, "Recursive definitions are currently not supported.");
+  throw parsingError(context, "Recursive definitions are currently not supported.");
 }
 /*void*/ std::any Logic::visitLetRecAndDefinition(
     LogicParser::LetRecAndDefinitionContext *context) {
-  parsingError(context, "Recursive definitions are currently not supported.");
+  throw parsingError(context, "Recursive definitions are currently not supported.");
 }
 /*CanonicalExpression*/ std::any Logic::visitParentheses(LogicParser::ParenthesesContext *context) {
   // process: (e)
@@ -233,7 +234,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = rrStar;
     return result;
   }
-  parsingError(context, "Type mismatch of the operand of the relation transitive closure.");
+  throw parsingError(context, "Type mismatch of the operand of the relation transitive closure.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {
@@ -247,7 +248,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = po_r_po;
     return result;
   }
-  parsingError(context, "fencerel() of unknown relation.");
+  throw parsingError(context, "fencerel() of unknown relation.");
 }
 /*CanonicalExpression*/ std::any Logic::visitSetSingleton(
     LogicParser::SetSingletonContext *context) {
@@ -277,15 +278,15 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationMinus(
     LogicParser::RelationMinusContext *context) {
-  parsingError(context, "Setminus operation is not supported.");
+  throw parsingError(context, "Setminus operation is not supported.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationDomainIdentity(
     LogicParser::RelationDomainIdentityContext *context) {
-  parsingError(context, "Domain identity expressions are not supported.");
+  throw parsingError(context, "Domain identity expressions are not supported.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationRangeIdentity(
     LogicParser::RelationRangeIdentityContext *context) {
-  parsingError(context, "Range identity expressions are not supported.");
+  throw parsingError(context, "Range identity expressions are not supported.");
 }
 /*CanonicalExpression*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
   const auto e1 = std::any_cast<CanonicalExpression>(context->e1->accept(this));
@@ -307,7 +308,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = s1_or_s2;
     return result;
   }
-  parsingError(context, "Type mismatch of two operands of the union operator.");
+  throw parsingError(context, "Type mismatch of two operands of the union operator.");
 }
 
 /*CanonicalExpression*/ std::any Logic::visitEmptyset(LogicParser::EmptysetContext *ctx) {
@@ -325,7 +326,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = rInv;
     return result;
   }
-  parsingError(context, "Type mismatch of the operand of the relation inverse.");
+  throw parsingError(context, "Type mismatch of the operand of the relation inverse.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationOptional(
     LogicParser::RelationOptionalContext *context) {
@@ -337,7 +338,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = r_or_id;
     return result;
   }
-  parsingError(context, "Type mismatch of the operand of the relation optional.");
+  throw parsingError(context, "Type mismatch of the operand of the relation optional.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationIdentity(
     LogicParser::RelationIdentityContext *context) {
@@ -347,7 +348,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = Relation::setIdentity(set);
     return result;
   }
-  parsingError(context, "'visitExprIdentity TOID' expressions are not supported.");
+  throw parsingError(context, "'visitExprIdentity TOID' expressions are not supported.");
 }
 /*CanonicalExpression*/ std::any Logic::visitCartesianProduct(
     LogicParser::CartesianProductContext *context) {
@@ -384,7 +385,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = r;
     return result;
   }
-  parsingError(context, "Type mismatch of operand of the Kleene operator.");
+  throw parsingError(context, "Type mismatch of operand of the Kleene operator.");
 }
 /*CanonicalExpression*/ std::any Logic::visitComposition(LogicParser::CompositionContext *context) {
   const auto e1 = std::any_cast<CanonicalExpression>(context->e1->accept(this));
@@ -412,7 +413,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = rs;
     return result;
   }
-  parsingError(context, "Type mismatch of two operands of the composition operator.");
+  throw parsingError(context, "Type mismatch of two operands of the composition operator.");
 }
 /*CanonicalExpression*/ std::any Logic::visitIntersection(
     LogicParser::IntersectionContext *context) {
@@ -434,7 +435,7 @@ void parsingError(antlr4::ParserRuleContext *context, std::string message) {
     CanonicalExpression result = s1_and_s2;
     return result;
   }
-  parsingError(context, "Type mismatch of two operands of the intersection operator.");
+  throw parsingError(context, "Type mismatch of two operands of the intersection operator.");
 }
 // /*CanonicalExpression*/ std::any
 // Logic::visitCanonicalRelationComplement(
