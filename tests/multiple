@@ -1,4 +1,4 @@
 assume a <= b
 assume c <= b
 
-assert a <= b
+assert c <= b
