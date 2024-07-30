@@ -70,6 +70,7 @@ test setid True
 test setid2 False
 test setDist True
 test topEvent False
+test multiple True
 test tt True
 test tt2 True
 test eco1f False
