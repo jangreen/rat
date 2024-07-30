@@ -1,7 +1,6 @@
 #include "Tableau.h"
 
 #include <iostream>
-#include <ranges>
 #include <unordered_set>
 
 #include "../Assumption.h"
@@ -158,7 +157,7 @@ void Tableau::normalize() {
 // IMPORTANT: correctnes of this funtcion relies on the fact that the worklist pops positive
 // literals first. (because we reuse the tableau for nomalization and do not readd any nodes to
 // unreduced nodes)
-bool Tableau::tryApplyModalRuleOnce(int applyToEvent) {
+bool Tableau::tryApplyModalRuleOnce(const int applyToEvent) {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
     exportDebug("debug");

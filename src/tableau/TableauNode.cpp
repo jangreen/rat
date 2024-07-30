@@ -151,9 +151,7 @@ void Node::setLastUnrollingParent(const Node *node) {
       assert(xrefMap.contains(lastUnrollingParent));
       auto &lastSet = xrefMap.at(lastUnrollingParent);
       assert(lastSet.contains(this));
-      const auto erased = lastSet.erase(this);
-      assert(erased > 0);
-      assert(!lastSet.contains(this));
+      lastSet.erase(this);
     }
     // insert new reference
     xrefMap[node].insert(this);
