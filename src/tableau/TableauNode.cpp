@@ -212,7 +212,6 @@ void Node::rename(const Renaming &renaming) {
 void Node::appendBranchInternalUp(DNF &dnf) const {
   auto node = this;
   do {
-    assert(validateDNF(dnf));
     if (!isAppendable(dnf)) {
       return;
     }
@@ -221,7 +220,6 @@ void Node::appendBranchInternalUp(DNF &dnf) const {
 }
 
 void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
-  assert(tableau->unreducedNodes.validate());
   const auto cube = nodeCube | std::views::transform(&Node::literal);
 
   if (isClosed()) {
@@ -262,18 +260,15 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
 }
 
 void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
-  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   reduceDNF(dnf, literal);
 
   const bool contradiction = dnf.empty();
   if (contradiction) {
     closeBranch();
-    assert(tableau->unreducedNodes.validate());
     return;
   }
   if (!isAppendable(dnf)) {
-    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -286,13 +281,11 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
       child->appendBranchInternalDownDisjunctive(branchCopy);  // copy for each branching
     }
     children[0]->appendBranchInternalDownDisjunctive(dnf);
-    assert(tableau->unreducedNodes.validate());
     return;
   }
 
   if (isClosed()) {
     // Closed leaf: nothing to do
-    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -314,7 +307,6 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
       tableau->unreducedNodes.push(newNode);
     }
   }
-  assert(tableau->unreducedNodes.validate());
 }
 
 void Node::closeBranch() {
@@ -360,7 +352,6 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
 }
 
 void Node::appendBranch(const DNF &dnf) {
-  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
@@ -387,7 +378,6 @@ void Node::appendBranch(const DNF &dnf) {
   } else {
     appendBranchInternalDownDisjunctive(dnfCopy);
   }
-  assert(tableau->unreducedNodes.validate());
 }
 
 std::optional<DNF> Node::applyRule() {
