@@ -326,7 +326,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     CanonicalExpression result = rInv;
     return result;
   }
-  throw parsingError(context, "Type mismatch of the operand of the relation inverse.");
+  throw parsingError(context, "Expected a relation expression.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationOptional(
     LogicParser::RelationOptionalContext *context) {
@@ -338,12 +338,15 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     CanonicalExpression result = r_or_id;
     return result;
   }
-  throw parsingError(context, "Type mismatch of the operand of the relation optional.");
+  throw parsingError(context, "Expected a relation expression.");
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationIdentity(
     LogicParser::RelationIdentityContext *context) {
   if (context->TOID() == nullptr) {
     const auto setExpression = std::any_cast<CanonicalExpression>(context->e->accept(this));
+    if (!std::holds_alternative<CanonicalSet>(setExpression)) {
+      throw parsingError(context, "Expected a set expression.");
+    }
     const auto set = std::get<CanonicalSet>(setExpression);
     CanonicalExpression result = Relation::setIdentity(set);
     return result;
