@@ -35,15 +35,19 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 
   // remove cubes with literals ~l
+  Stats::diff("reduceDNF - removed cubes").first(dnf.size());
   auto [begin, end] = std::ranges::remove_if(
       dnf, [&](const auto &cube) { return cubeHasNegatedLiteral(cube, literal); });
   dnf.erase(begin, end);
+  Stats::diff("reduceDNF - removed cubes").second(dnf.size());
 
   // remove l from dnf
+  Stats::diff("reduceDNF - removed literals").first(flatten(dnf).size());
   for (auto &cube : dnf) {
     auto [begin, end] = std::ranges::remove(cube, literal);
     cube.erase(begin, end);
   }
+  Stats::diff("reduceDNF - removed literals").second(flatten(dnf).size());
 
   assert(validateDNF(dnf));
 }

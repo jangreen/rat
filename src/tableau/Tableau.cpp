@@ -66,9 +66,12 @@ void Tableau::deleteNode(Node *node) {
 }
 
 void Tableau::normalize() {
+  Stats::counter("#iterations - normalize").reset();
+
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
+    Stats::counter("#iterations - normalize").operator++();
     Node *currentNode = unreducedNodes.pop();
     assert(currentNode->validate());
     assert(currentNode->getParentNode()->validate());
@@ -364,14 +367,13 @@ void dnfBuilder(const Node *node, DNF &dnf) {
 DNF extractDNF(const Node *root) {
   DNF dnf;
   dnfBuilder(root, dnf);
-  for (auto &cube : dnf) {
-    removeUselessLiterals(cube);
-  }
+  removeUselessLiterals(dnf);
   return dnf;
 }
 
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
+  Stats::diff("simplifyDnf").first(flatten(dnf).size());
   DNF sortedDnf = dnf;
   std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
@@ -387,6 +389,7 @@ DNF simplifyDnf(const DNF &dnf) {
   /*if (simplified.size() < dnf.size()) {
     std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
   }*/
+  Stats::diff("simplifyDnf").second(flatten(simplified).size());
   return simplified;
 }
 

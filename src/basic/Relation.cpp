@@ -3,6 +3,7 @@
 #include <cassert>
 #include <unordered_set>
 
+#include "../Stats.h"
 #include "Set.h"
 
 Relation::Relation(const RelationOperation operation, const CanonicalRelation left,
@@ -58,6 +59,7 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
 
   static std::unordered_set<Relation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier, set);
+  Stats::boolean("#relations").count(created);
   return &(*iter);
 }
 

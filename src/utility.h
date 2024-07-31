@@ -4,6 +4,7 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "Stats.h"
 #include "basic/Literal.h"
 
 template <class RangeType, class RangeValueType>
@@ -15,6 +16,13 @@ bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
   std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
                             std::make_move_iterator(largerSet.end()));
   return std::ranges::all_of(smallerSet, [&](auto &element) { return set.contains(element); });
+}
+
+template <typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>> &orig) {
+  std::vector<T> ret;
+  for (const auto &v : orig) ret.insert(ret.end(), v.begin(), v.end());
+  return ret;
 }
 
 inline void print(const DNF &dnf) {
@@ -243,9 +251,20 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
 }
 
 // TODO: Return value unused
-inline Cube removeUselessLiterals(Cube &cube) {
+inline void removeUselessLiterals(Cube &cube) {
   const auto &activeEvents = gatherActiveEvents(cube);
-  return filterNegatedLiterals(cube, activeEvents);
+  filterNegatedLiterals(cube, activeEvents);
+  std::erase_if(cube, [&](const Literal &literal) {
+    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+  });
+}
+
+inline void removeUselessLiterals(DNF &dnf) {
+  Stats::diff("removeUselessLiterals").first(flatten(dnf).size());
+  for (auto &cube : dnf) {
+    removeUselessLiterals(cube);
+  }
+  Stats::diff("removeUselessLiterals").second(flatten(dnf).size());
 }
 
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
