@@ -223,8 +223,7 @@ bool RegularTableau::solve() {
     Stats::counter("#iterations")++;
     assert(validate());
 
-    if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
-        !isReachableFromRoots(currentNode)) {
+    if (!currentNode->isOpenLeaf() || !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       assert(validate());
       continue;
