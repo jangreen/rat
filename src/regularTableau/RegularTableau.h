@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <queue>
 #include <stack>
 #include <unordered_set>
 #include <vector>
@@ -12,7 +13,13 @@ class RegularTableau {
  private:
   std::unordered_set<std::unique_ptr<RegularNode>, RegularNode::Hash, RegularNode::Equal> nodes;
   std::unordered_set<RegularNode *> rootNodes;
-  std::stack<RegularNode *> unreducedNodes;
+
+  struct Compare {
+    bool operator()(const RegularNode *first, const RegularNode *second) const {
+      return first->getCube().size() > second->getCube().size();
+    }
+  };
+  std::priority_queue<RegularNode *, std::vector<RegularNode *>, Compare> unreducedNodes;
   RegularNode *currentNode = nullptr;
 
   // ================== Node management ==================
