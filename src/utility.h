@@ -264,10 +264,22 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   return removedLiterals;
 }
 
+inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (literal.negated && !isLiteralActive(literal, activePairs)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
+}
+
 // TODO: Return value unused
 inline void removeUselessLiterals(Cube &cube) {
-  const auto &activeEvents = gatherActiveEvents(cube);
-  filterNegatedLiterals(cube, activeEvents);
+  const auto &activePairs = gatherActivePairs(cube);
+  filterNegatedLiterals(cube, activePairs);
   std::erase_if(cube, [&](const Literal &literal) {
     return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
   });
@@ -279,18 +291,6 @@ inline void removeUselessLiterals(DNF &dnf) {
     removeUselessLiterals(cube);
   }
   Stats::diff("removeUselessLiterals").second(flatten(dnf).size());
-}
-
-inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
-  Cube removedLiterals;
-  std::erase_if(cube, [&](auto &literal) {
-    if (literal.negated && !isLiteralActive(literal, activePairs)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-  return removedLiterals;
 }
 
 // ===================================================================================
