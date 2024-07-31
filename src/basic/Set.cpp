@@ -254,6 +254,7 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
   auto [iter, created] =
       canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
+  Stats::boolean("#sets").count(created);
   if (created) {
     iter->completeInitialization();
   }

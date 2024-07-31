@@ -41,10 +41,8 @@ bool Tableau::validate() const {
 // ===========================================================================================
 
 void Tableau::deleteNode(Node *node) {
-  assert(validate());
   assert(node != rootNode.get());            // node is not root node
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
-  assert(node->getParentNode()->validateRecursive());
   assert(!crossReferenceMap.contains(node) || crossReferenceMap.at(node).empty());  // has no xrefs
 
   const auto parentNode = node->getParentNode();
@@ -65,18 +63,18 @@ void Tableau::deleteNode(Node *node) {
   }
 
   assert(parentNode->validateRecursive());
-  assert(unreducedNodes.validate());
-  assert(validate());
 }
 
 void Tableau::normalize() {
+  Stats::counter("#iterations - normalize").reset();
+
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
+    Stats::counter("#iterations - normalize").operator++();
     Node *currentNode = unreducedNodes.pop();
     assert(currentNode->validate());
     assert(currentNode->getParentNode()->validate());
-    assert(validate());
     if (currentNode->isClosed()) {
       continue;
     }
@@ -85,8 +83,6 @@ void Tableau::normalize() {
 
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
-      assert(unreducedNodes.validate());
-      assert(currentNode->getParentNode()->validate());
       if (!Rules::lastRuleWasUnrolling) {
         deleteNode(currentNode);  // in-place rule application
       }
@@ -371,14 +367,13 @@ void dnfBuilder(const Node *node, DNF &dnf) {
 DNF extractDNF(const Node *root) {
   DNF dnf;
   dnfBuilder(root, dnf);
-  for (auto &cube : dnf) {
-    removeUselessLiterals(cube);
-  }
+  removeUselessLiterals(dnf);
   return dnf;
 }
 
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
+  Stats::diff("simplifyDnf").first(flatten(dnf).size());
   DNF sortedDnf = dnf;
   std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
@@ -394,6 +389,7 @@ DNF simplifyDnf(const DNF &dnf) {
   /*if (simplified.size() < dnf.size()) {
     std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
   }*/
+  Stats::diff("simplifyDnf").second(flatten(simplified).size());
   return simplified;
 }
 

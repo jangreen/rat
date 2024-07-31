@@ -35,15 +35,19 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 
   // remove cubes with literals ~l
+  Stats::diff("reduceDNF - removed cubes").first(dnf.size());
   auto [begin, end] = std::ranges::remove_if(
       dnf, [&](const auto &cube) { return cubeHasNegatedLiteral(cube, literal); });
   dnf.erase(begin, end);
+  Stats::diff("reduceDNF - removed cubes").second(dnf.size());
 
   // remove l from dnf
+  Stats::diff("reduceDNF - removed literals").first(flatten(dnf).size());
   for (auto &cube : dnf) {
     auto [begin, end] = std::ranges::remove(cube, literal);
     cube.erase(begin, end);
   }
+  Stats::diff("reduceDNF - removed literals").second(flatten(dnf).size());
 
   assert(validateDNF(dnf));
 }
@@ -192,7 +196,6 @@ void Node::rename(const Renaming &renaming) { literal.rename(renaming); }
 void Node::appendBranchInternalUp(DNF &dnf) const {
   auto node = this;
   do {
-    assert(validateDNF(dnf));
     if (!isAppendable(dnf)) {
       return;
     }
@@ -201,7 +204,6 @@ void Node::appendBranchInternalUp(DNF &dnf) const {
 }
 
 void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
-  assert(tableau->unreducedNodes.validate());
   const auto cube = nodeCube | std::views::transform(&Node::literal);
 
   if (isClosed()) {
@@ -242,7 +244,6 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
 }
 
 void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
-  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
 
   if (isClosed()) {
@@ -256,11 +257,9 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   const bool contradiction = dnf.empty();
   if (contradiction) {
     closeBranch();
-    assert(tableau->unreducedNodes.validate());
     return;
   }
   if (!isAppendable(dnf)) {
-    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -273,7 +272,6 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
       child->appendBranchInternalDownDisjunctive(branchCopy);  // copy for each branching
     }
     children[0]->appendBranchInternalDownDisjunctive(dnf);
-    assert(tableau->unreducedNodes.validate());
     return;
   }
 
@@ -290,7 +288,6 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
       tableau->unreducedNodes.push(newNode);
     }
   }
-  assert(tableau->unreducedNodes.validate());
 }
 
 void Node::closeBranch() {
@@ -336,7 +333,6 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
 }
 
 void Node::appendBranch(const DNF &dnf) {
-  assert(tableau->unreducedNodes.validate());
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
   assert(dnf.size() <= 2);  // We only support binary branching for now (might change in the future)
@@ -363,7 +359,6 @@ void Node::appendBranch(const DNF &dnf) {
   } else {
     appendBranchInternalDownDisjunctive(dnfCopy);
   }
-  assert(tableau->unreducedNodes.validate());
 }
 
 std::optional<DNF> Node::applyRule() {

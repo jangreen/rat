@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Assumption.h"
+#include "Stats.h"
 #include "parsing/LogicVisitor.h"
 #include "regularTableau/RegularTableau.h"
 #include "utility.h"
@@ -45,18 +46,13 @@ int main(int argc, const char *argv[]) {
   for (auto &goal : goals) {
     spdlog::info("[Status] Goal: ");
     print(goal);
-    if (programArguments.size() > 1 && programArguments[1] == "infinite") {
-      /*
-      Tableau tableau{goal};
-      tableau.normalize(200);
-      tableau.exportProof("infinite");
-      */
-    } else {
-      std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-      RegularTableau tableau(goal);
-      tableau.solve();
-      spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
-      tableau.exportProof("regular");
-    }
+
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    RegularTableau tableau(goal);
+    tableau.solve();
+    spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
+    tableau.exportProof("regular");
   }
+
+  Stats::print();
 }

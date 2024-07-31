@@ -4,6 +4,7 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "Stats.h"
 #include "basic/Literal.h"
 
 template <class RangeType, class RangeValueType>
@@ -15,6 +16,13 @@ bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
   std::unordered_set<T> set(std::make_move_iterator(largerSet.begin()),
                             std::make_move_iterator(largerSet.end()));
   return std::ranges::all_of(smallerSet, [&](auto &element) { return set.contains(element); });
+}
+
+template <typename T>
+std::vector<T> flatten(const std::vector<std::vector<T>> &orig) {
+  std::vector<T> ret;
+  for (const auto &v : orig) ret.insert(ret.end(), v.begin(), v.end());
+  return ret;
 }
 
 inline void print(const DNF &dnf) {
@@ -71,8 +79,8 @@ const typename ADAPTER::container_type &get_const_container(ADAPTER &a) {
 inline bool validateCube(const Cube &cube) {
   Cube copy = cube;
   std::ranges::sort(copy);
-  // const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
-  // assert(!hasDuplicates);
+  const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
+  assert(!hasDuplicates);
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
@@ -256,6 +264,23 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   return removedLiterals;
 }
 
+// TODO: Return value unused
+inline void removeUselessLiterals(Cube &cube) {
+  const auto &activeEvents = gatherActiveEvents(cube);
+  filterNegatedLiterals(cube, activeEvents);
+  std::erase_if(cube, [&](const Literal &literal) {
+    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+  });
+}
+
+inline void removeUselessLiterals(DNF &dnf) {
+  Stats::diff("removeUselessLiterals").first(flatten(dnf).size());
+  for (auto &cube : dnf) {
+    removeUselessLiterals(cube);
+  }
+  Stats::diff("removeUselessLiterals").second(flatten(dnf).size());
+}
+
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
@@ -266,21 +291,6 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
     return false;
   });
   return removedLiterals;
-}
-
-// // TODO: Return value unused
-// inline Cube removeUselessLiterals(Cube &cube) {
-//   const auto &activeEvents = gatherActiveEvents(cube);
-//   return filterNegatedLiterals(cube, activeEvents);
-// }
-
-// TODO: Return value unused
-inline void removeUselessLiterals(Cube &cube) {
-  const auto &activeEventBasePairs = gatherActivePairs(cube);
-  filterNegatedLiterals(cube, activeEventBasePairs);
-  std::erase_if(cube, [&](const Literal &literal) {
-    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
-  });
 }
 
 // ===================================================================================

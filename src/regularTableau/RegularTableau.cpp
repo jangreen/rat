@@ -136,6 +136,8 @@ std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   const auto &[newNode, renaming] = RegularNode::newNode(cube);
   auto newNodePtr = std::unique_ptr<RegularNode>(newNode);
   auto [iter, added] = nodes.insert(std::move(newNodePtr));
+  Stats::boolean("#nodes").count(added);
+  Stats::value("node size").set(cube.size());
   unreducedNodes.push(iter->get());
 
   assert(iter->get()->validate());
@@ -218,6 +220,7 @@ bool RegularTableau::solve() {
 
     currentNode = unreducedNodes.top();
     unreducedNodes.pop();
+    Stats::counter("#iterations").operator++();
     assert(validate());
 
     if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
@@ -334,6 +337,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
       const auto [fixedNode, renaming] = newNode(cube);
       addEpsilonEdge(parent, fixedNode, renaming);
     }
+    Stats::counter("isInconsistent").operator++();
     return true;
   }
 
