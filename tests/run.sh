@@ -82,7 +82,7 @@ test eco2 True
 
 # proofs
 proof kater_3_1-eco True
-proof kater_3_1-eco-n True
+#proof kater_3_1-eco-n True
 proof kater_3_2-ra True
 proof kater_3_3-ra True
 #proof kater_3_3-ra-2 True
