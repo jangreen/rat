@@ -393,10 +393,19 @@ DNF simplifyDnf(const DNF &dnf) {
   return simplified;
 }
 
+size_t computeSize(const Node *node) {
+  size_t size = 1;
+  for (const auto &child : node->getChildren()) {
+    size += computeSize(child.get());
+  }
+  return size;
+}
+
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
   exportDebug("debug");
+  Stats::value("normalize size").set(computeSize(rootNode.get()));
   auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   assert(validateDNF(dnf));
   assert(validate());
