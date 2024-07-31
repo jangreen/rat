@@ -15,7 +15,7 @@ struct Counter {
   int numberCounters = 1;
 
  public:
-  long operator++() {
+  long operator++(int) {
     const auto r = ++value;
     absoluteValue++;
     if (r > maxValue) {
@@ -112,6 +112,13 @@ class Stats {
     return Condition::conditions[name];
   }
 
+  static void reset() {
+    Counter::counters.clear();
+    Difference::diffs.clear();
+    Value::values.clear();
+    Condition::conditions.clear();
+  }
+
   static void print() {
     std::cout << "\n ---------------------- Stats ---------------------- \n";
 
@@ -119,9 +126,10 @@ class Stats {
       if (counter.absoluteValue == counter.maxValue) {
         std::cout << std::format("{:40} | Total: {:5}", name, counter.absoluteValue) << std::endl;
       } else {
-        std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}", name,
+        std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}, Calls: {:5}", name,
                                  counter.absoluteValue, counter.maxValue,
-                                 (counter.absoluteValue / counter.numberCounters))
+                                 (counter.absoluteValue / counter.numberCounters),
+                                 counter.numberCounters)
                   << std::endl;
       }
     }
@@ -136,8 +144,9 @@ class Stats {
     std::cout << "\n";
 
     for (const auto &[name, value] : Value::values) {
-      std::cout << std::format("{:40} | Max: {:5}, Average: {:5}", name, value.absoluteValue,
-                               value.maxValue, (value.absoluteValue / value.valueCounter))
+      std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}", name,
+                               value.absoluteValue, value.maxValue,
+                               (value.absoluteValue / value.valueCounter))
                 << std::endl;
     }
 

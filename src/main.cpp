@@ -52,7 +52,8 @@ int main(int argc, const char *argv[]) {
     tableau.solve();
     spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
     tableau.exportProof("regular");
-  }
 
-  Stats::print();
+    Stats::print();
+    Stats::reset();
+  }
 }
