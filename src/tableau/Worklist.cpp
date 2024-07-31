@@ -96,21 +96,23 @@ bool Worklist::contains(const Node *node) const {
 }
 
 Node *Worklist::pop() {
-  Node *next;
-  if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
-    next = posEqualitiesHeadDummy->nextInWorkList;
-  } else if (!isEmpty(positiveHeadDummy, positiveTailDummy)) {
-    next = positiveHeadDummy->nextInWorkList;
-  } else if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
-    next = nonNormalNegatedHeadDummy->nextInWorkList;
-  } else if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
-    next = remainingHeadDummy->nextInWorkList;
-  } else {
-    next = nullptr;
-  }
+  Node *next = top();
   assert(next != nullptr);
   disconnect(*next);
   return next;
+}
+
+Node *Worklist::top() const {
+  if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
+    return posEqualitiesHeadDummy->nextInWorkList;
+  } else if (!isEmpty(positiveHeadDummy, positiveTailDummy)) {
+    return positiveHeadDummy->nextInWorkList;
+  } else if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
+    return nonNormalNegatedHeadDummy->nextInWorkList;
+  } else if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
+    return remainingHeadDummy->nextInWorkList;
+  }
+  return nullptr;
 }
 
 bool Worklist::isEmpty() const {

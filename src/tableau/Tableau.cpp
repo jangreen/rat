@@ -71,6 +71,16 @@ void Tableau::normalize() {
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
+    // remove useless literals in each iteration
+    // do this after all positive literals are processed (top is negated)
+    // unreduced nodes could become empty
+    if (unreducedNodes.top()->getLiteral().negated) {
+      removeUselessLiterals();
+      if (unreducedNodes.isEmpty()) {
+        break;
+      }
+    }
+
     Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();
     assert(currentNode->validate());
@@ -108,6 +118,10 @@ void Tableau::normalize() {
     // 2) Rules which require context (only to normalized literals)
     // IMPORTANT: it is not sufficient to look upwards
 
+    // we reset transitiveClosureNode to prevent too many unrelated connections
+    // this is needed to remove useless literals without worrying about xrefs
+    Node::transitiveClosureNode = nullptr;
+
     // wo do not need this becuase we check after each modal rule bidirectional
     // if (currentNode->getLiteral().hasFullSet() /* TODO (topEvent optimization): hasTopEvent()*/)
     // {
@@ -130,22 +144,26 @@ void Tableau::normalize() {
     }
 
     // 3) Saturation Rules
-    if (!Assumption::baseAssumptions.empty()) {
-      if (auto literal = Rules::saturateBase(currentNode->getLiteral())) {
-        currentNode->appendBranch(*literal);
-      }
-    }
+    saturate(currentNode);
+  }
+}
 
-    if (!Assumption::idAssumptions.empty()) {
-      if (auto literal = Rules::saturateId(currentNode->getLiteral())) {
-        currentNode->appendBranch(*literal);
-      }
+void Tableau::saturate(Node *currentNode) {
+  if (!Assumption::baseAssumptions.empty()) {
+    if (const auto literal = Rules::saturateBase(currentNode->getLiteral())) {
+      currentNode->appendBranch(*literal);
     }
+  }
 
-    if (!Assumption::baseSetAssumptions.empty()) {
-      if (auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
-        currentNode->appendBranch(*literal);
-      }
+  if (!Assumption::idAssumptions.empty()) {
+    if (const auto literal = Rules::saturateId(currentNode->getLiteral())) {
+      currentNode->appendBranch(*literal);
+    }
+  }
+
+  if (!Assumption::baseSetAssumptions.empty()) {
+    if (const auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
+      currentNode->appendBranch(*literal);
     }
   }
 }
@@ -404,7 +422,7 @@ size_t computeSize(const Node *node) {
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
-  exportDebug("debug");
+  removeUselessLiterals();
   Stats::value("normalize size").set(computeSize(rootNode.get()));
   auto dnf = simplifyDnf(extractDNF(rootNode.get()));
   assert(validateDNF(dnf));

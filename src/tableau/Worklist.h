@@ -22,7 +22,7 @@
  *  Implementation note: The worklist is implemented as an intrusive doubly-linked list.
  */
 class Worklist {
-private:
+ private:
   // (1)
   std::unique_ptr<Node> posEqualitiesHeadDummy;
   std::unique_ptr<Node> posEqualitiesTailDummy;
@@ -40,10 +40,12 @@ private:
   static void disconnect(const Node &node);
   static void insertAfter(Node &location, Node &node);
   static bool isEmpty(const std::unique_ptr<Node> &head, const std::unique_ptr<Node> &tail);
-public:
+
+ public:
   Worklist();
   void push(Node *node);
   Node *pop();
+  [[nodiscard]] Node *top() const;
   void erase(const Node *node);
   bool contains(const Node *node) const;
 

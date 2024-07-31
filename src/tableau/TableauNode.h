@@ -68,7 +68,6 @@ class Node {
   void attachChildren(std::vector<std::unique_ptr<Node>> newChildren);
   [[nodiscard]] std::unique_ptr<Node> detachChild(Node *child);
   [[nodiscard]] std::vector<std::unique_ptr<Node>> detachAllChildren();
-
   [[nodiscard]] std::unique_ptr<Node> detachFromParent() { return parentNode->detachChild(this); }
 
   void rename(const Renaming &renaming);
@@ -86,6 +85,7 @@ class Node {
   void inferModalTop();
   void inferModalBaseSet();
   void inferModalAtomic();
+  void removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePairCubes);
 
   // ================== Printing ==================
   void toDotFormat(std::ofstream &output) const;
