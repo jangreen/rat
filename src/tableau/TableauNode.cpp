@@ -224,6 +224,7 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
   const auto nodeIt = std::ranges::find(nodeCube, literal, &Node::literal);
   const bool cubeContainsLiteral = nodeIt != nodeCube.end();
   if (cubeContainsLiteral) {
+    Stats::counter("reduceBranch - delete node")++;
     const auto node = *nodeIt;
 
     // choose minimal annotation
@@ -327,6 +328,7 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   // children, potentially invalidating the iterator.
   // IMPORTANT: This loop may delete iterated children,
   // so we need to perform a safer kind of iteration
+  Stats::counter("reduceBranch - delete node").reset();
   for (auto childIt = newNode->beginSafe(); childIt != newNode->endSafe(); ++childIt) {
     childIt->reduceBranchInternalDown(newNodes);
   }

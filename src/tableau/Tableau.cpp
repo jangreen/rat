@@ -71,7 +71,7 @@ void Tableau::normalize() {
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
-    Stats::counter("#iterations - normalize").operator++();
+    Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();
     assert(currentNode->validate());
     assert(currentNode->getParentNode()->validate());
@@ -373,7 +373,7 @@ DNF extractDNF(const Node *root) {
 
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
-  Stats::diff("simplifyDnf").first(flatten(dnf).size());
+  Stats::diff("simplifyDnf - removed cubes").first(dnf.size());
   DNF sortedDnf = dnf;
   std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
@@ -389,7 +389,7 @@ DNF simplifyDnf(const DNF &dnf) {
   /*if (simplified.size() < dnf.size()) {
     std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
   }*/
-  Stats::diff("simplifyDnf").second(flatten(simplified).size());
+  Stats::diff("simplifyDnf - removed cubes").second(simplified.size());
   return simplified;
 }
 

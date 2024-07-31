@@ -220,17 +220,17 @@ bool RegularTableau::solve() {
 
     currentNode = unreducedNodes.top();
     unreducedNodes.pop();
-    Stats::counter("#iterations").operator++();
+    Stats::counter("#iterations")++;
     assert(validate());
 
-    if (!currentNode->isOpenLeaf() || !currentNode->getEpsilonChildren().empty() ||
-        !isReachableFromRoots(currentNode)) {
+    if (!currentNode->isOpenLeaf() || !isReachableFromRoots(currentNode)) {
       // skip already closed nodes and nodes that cannot be reached by a root node
       assert(validate());
       continue;
     }
     // current node is open leaf
     assert(currentNode->isOpenLeaf());
+    Stats::counter("#iterations - open leaf")++;
     Cube currentCube = currentNode->cube;
 
     // 1) weaken positive edge predicates and positive setMembership
@@ -337,7 +337,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
       const auto [fixedNode, renaming] = newNode(cube);
       addEpsilonEdge(parent, fixedNode, renaming);
     }
-    Stats::counter("isInconsistent").operator++();
+    Stats::counter("isInconsistent")++;
     return true;
   }
 
@@ -476,6 +476,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
       return false;
     }
   }
+  Stats::counter("isInconsistentLazy")++;
   return true;
 
   // if (node->firstParentNode == nullptr) {
