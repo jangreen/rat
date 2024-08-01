@@ -90,6 +90,68 @@ AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalSet 
   }
 }
 
+AnnotatedRelation substituteAll(const AnnotatedRelation &annotatedRelation,
+                                const CanonicalRelation search, const CanonicalRelation replace) {
+  const auto &[relation, annotation] = annotatedRelation;
+
+  if (relation == search) {
+    return makeWithValue(replace, {0, 0});
+  }
+
+  switch (relation->operation) {
+    case RelationOperation::relationIntersection:
+    case RelationOperation::composition:
+    case RelationOperation::relationUnion: {
+      const auto &left =
+          substituteAll(getLeft<AnnotatedRelation>(annotatedRelation), search, replace);
+      const auto &right = substituteAll(getRight(annotatedRelation), search, replace);
+      return newRelation(relation->operation, left, right);
+    }
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure: {
+      const auto &left =
+          substituteAll(getLeft<AnnotatedRelation>(annotatedRelation), search, replace);
+      return newRelation(relation->operation, left);
+    }
+    case RelationOperation::baseRelation:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
+    case RelationOperation::setIdentity:
+      return annotatedRelation;
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, const CanonicalRelation search,
+                           const CanonicalRelation replace) {
+  const auto &[set, annotation] = annotatedSet;
+  switch (set->operation) {
+    case SetOperation::event:
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      return annotatedSet;
+    case SetOperation::setIntersection:
+    case SetOperation::setUnion: {
+      const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
+      const auto &right = substituteAll(getRight<AnnotatedSet>(annotatedSet), search, replace);
+      return newSet(set->operation, left, right);
+    }
+    case SetOperation::image:
+    case SetOperation::domain: {
+      const auto &left = substituteAll(getLeft(annotatedSet), search, replace);
+      const auto &right = substituteAll(getRight<AnnotatedRelation>(annotatedSet), search, replace);
+      return newSet(set->operation, left, right);
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 AnnotatedSet substitute(const AnnotatedSet &annotatedSet, const CanonicalSet search,
                         const CanonicalSet replace, int *n) {
   assert(*n >= 0 && "Negative occurrence counter");

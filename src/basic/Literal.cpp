@@ -326,6 +326,27 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
   }
 }
 
+std::optional<Literal> Literal::substituteAll(const CanonicalRelation search,
+                                              const CanonicalRelation replace) const {
+  switch (operation) {
+    case PredicateOperation::setNonEmptiness: {
+      const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
+      if (newSet.first != set) {
+        return Literal(newSet);
+      }
+      return std::nullopt;
+    }
+    case PredicateOperation::constant:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return std::nullopt;
+    case PredicateOperation::edge:
+      throw std::logic_error("not implemented");
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
   switch (operation) {
     case PredicateOperation::constant:

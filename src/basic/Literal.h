@@ -83,6 +83,7 @@ class Literal {
   // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
 
   std::optional<Literal> substituteAll(CanonicalSet search, CanonicalSet replace) const;
+  std::optional<Literal> substituteAll(CanonicalRelation search, CanonicalRelation replace) const;
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
   [[nodiscard]] Literal substituteSet(const AnnotatedSet &set) const;
   void rename(const Renaming &renaming);

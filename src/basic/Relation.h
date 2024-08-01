@@ -59,7 +59,7 @@ class Relation {
                                        const CanonicalRelation left,
                                        const CanonicalRelation right) {
     return newRelation(operation, left, right, std::nullopt, nullptr);
-  };
+  }
 
   Relation(const Relation &other) = delete;
   Relation(const Relation &&other) = delete;

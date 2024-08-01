@@ -129,10 +129,27 @@ inline AnnotatedSet newBaseSet(const std::string &identifier) {
   return {Set::newBaseSet(identifier), Annotation::none()};
 }
 
+// wrapped newRelation
+inline AnnotatedRelation newRelation(const RelationOperation operation,
+                                     const AnnotatedRelation &left) {
+  return {Relation::newRelation(operation, left.first), left.second};
+}
+inline AnnotatedRelation newRelation(const RelationOperation operation,
+                                     const AnnotatedRelation &left,
+                                     const AnnotatedRelation &right) {
+  return {Relation::newRelation(operation, left.first, right.first),
+          Annotation::newAnnotation(left.second, right.second)};
+}
+
 AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, CanonicalSet search,
                            CanonicalSet replace);
 AnnotatedSet substitute(const AnnotatedSet &annotatedSet, CanonicalSet search, CanonicalSet replace,
                         int *n);
+AnnotatedRelation substituteAll(const AnnotatedRelation &annotatedRelation,
+                                CanonicalRelation search, CanonicalRelation replace);
+
+AnnotatedSet substituteAll(const AnnotatedSet &annotatedSet, CanonicalRelation search,
+                           CanonicalRelation replace);
 
 [[nodiscard]] bool validate(const AnnotatedSet &annotatedSet);
 [[nodiscard]] bool validate(const AnnotatedRelation &annotatedRelation);
