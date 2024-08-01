@@ -614,8 +614,11 @@ void Node::inferModalAtomicUp(const CanonicalSet search1, const CanonicalSet rep
   auto *cur = this;
   while ((cur = cur->parentNode) != nullptr) {
     auto newLiteralsNode = cur->inferModalAtomicNode(search1, replace1, search2, replace2);
-    newLiterals.insert(newLiterals.end(), std::make_move_iterator(newLiteralsNode.begin()),
-                       std::make_move_iterator(newLiteralsNode.end()));
+    for (const auto &newLit : newLiteralsNode) {
+      if (!contains(newLiterals, newLit)) {
+        newLiterals.push_back(newLit);
+      }
+    }
   }
   appendBranch(newLiterals);
 }
@@ -671,6 +674,13 @@ void Node::toDotFormat(std::ofstream &output) const {
   output << "events: " << toString(literal.events()) << "\n";
   output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
   output << "lastUnrollingParent: " << lastUnrollingParent << "\n";
+  if (tableau->crossReferenceMap.contains(this)) {
+    output << "crossrefs: ";
+    for (const auto ref : tableau->crossReferenceMap.at(this)) {
+      output << ref << " ";
+    }
+    output << "\n";
+  }
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";

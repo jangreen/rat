@@ -45,6 +45,10 @@ void Tableau::deleteNode(Node *node) {
   assert(node->getParentNode() != nullptr);  // there is always a dummy root node
   assert(!crossReferenceMap.contains(node) || crossReferenceMap.at(node).empty());  // has no xrefs
 
+  if (unreducedNodes.contains(node)) {
+    unreducedNodes.erase(node);
+  }
+
   const auto parentNode = node->getParentNode();
   if (node->isLeaf()) {
     // SUPER IMPORTANT OPTIMIZATION: If we remove a leaf node, we can remove all children from

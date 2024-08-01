@@ -153,9 +153,9 @@ class Stats {
     std::cout << "\n";
 
     for (const auto &[name, diff] : Difference::diffs) {
-      std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}", name,
+      std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}, Calls: {:5}", name,
                                diff.absoluteDiff, diff.maxDiff,
-                               (diff.absoluteDiff / diff.diffCounter))
+                               (diff.absoluteDiff / diff.diffCounter), diff.diffCounter)
                 << std::endl;
     }
   }
