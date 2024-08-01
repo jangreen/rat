@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_set>
 
+#include "../Stats.h"
 #include "../basic/Literal.h"
 #include "TableauNode.h"
 #include "Worklist.h"
@@ -35,6 +36,7 @@ class Tableau {
   [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
 
   void normalize();
+  void saturate(Node *currentNode);
   void deleteNode(Node *node);
 
   void renameBranches(Node *node);
@@ -45,4 +47,11 @@ class Tableau {
                                   std::unordered_set<Literal> &allRenamedLiterals,
                                   const std::unordered_map<const Node *, Node *> &originalToCopy,
                                   std::unordered_set<const Node *> &unrollingParents);
+
+  void removeUselessLiterals() {
+    boost::container::flat_set<SetOfSets> activePairCubes = {{}};
+    Stats::counter("removeUselessLiterals tabl").reset();
+    exportDebug("debug");
+    rootNode->removeUselessLiterals(activePairCubes);
+  }
 };

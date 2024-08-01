@@ -171,7 +171,7 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
 
 inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
   // IMPORTANT includes requires the sets to be sorted
-  return std::ranges::includes(activePairs, literal.labelBaseCombinations());
+  return std::ranges::includes(activePairs, literal.eventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal
@@ -190,6 +190,20 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
   }
 
   return activeEvents;
+}
+
+inline SetOfSets gatherActivePairs(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  SetOfSets activePairs;
+  for (const auto &literal : cube) {
+    if (!literal.negated) {
+      const auto &literalLabels = literal.eventBasePairs();
+      activePairs.insert(literalLabels.begin(), literalLabels.end());
+    }
+  }
+  return activePairs;
 }
 
 inline void countActiveEvents(const CanonicalSet set,
@@ -242,7 +256,7 @@ inline std::optional<int> gatherMinimalOccurringActiveEvent(const Cube &cube) {
                                      : std::optional(activeEventCounters.front().first);
 }
 
-// removes all negated literals in cube with events that do not occur in events
+// removes all negated literals in cube with eventBasePairs that do not occur in activePairs
 // returns removed literals
 inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   Cube removedLiterals;
@@ -259,10 +273,22 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
   return removedLiterals;
 }
 
+inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
+  Cube removedLiterals;
+  std::erase_if(cube, [&](auto &literal) {
+    if (literal.negated && !isLiteralActive(literal, activePairs)) {
+      removedLiterals.push_back(literal);
+      return true;
+    }
+    return false;
+  });
+  return removedLiterals;
+}
+
 // TODO: Return value unused
 inline void removeUselessLiterals(Cube &cube) {
-  const auto &activeEvents = gatherActiveEvents(cube);
-  filterNegatedLiterals(cube, activeEvents);
+  const auto &activePairs = gatherActivePairs(cube);
+  filterNegatedLiterals(cube, activePairs);
   std::erase_if(cube, [&](const Literal &literal) {
     return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
   });
@@ -274,18 +300,6 @@ inline void removeUselessLiterals(DNF &dnf) {
     removeUselessLiterals(cube);
   }
   Stats::diff("removeUselessLiterals").second(flatten(dnf).size());
-}
-
-inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
-  Cube removedLiterals;
-  std::erase_if(cube, [&](auto &literal) {
-    if (literal.negated && !isLiteralActive(literal, activePairs)) {
-      removedLiterals.push_back(literal);
-      return true;
-    }
-    return false;
-  });
-  return removedLiterals;
 }
 
 // ===================================================================================

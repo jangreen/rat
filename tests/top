@@ -1,0 +1,3 @@
+assume a;b;c <= 0
+
+assert b;(a^+);b;c <= 0

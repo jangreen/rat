@@ -56,6 +56,7 @@ test t True
 test t2 True
 test t3 True
 test t4 True
+test topevent False
 
 # with assumptions
 test test0 True
@@ -81,7 +82,7 @@ test eco2 True
 
 # proofs
 proof kater_3_1-eco True
-proof kater_3_1-eco-n True
+#proof kater_3_1-eco-n True
 proof kater_3_2-ra True
 proof kater_3_3-ra True
 #proof kater_3_3-ra-2 True

@@ -61,8 +61,7 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
 EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftOperand,
                           const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
-    case SetOperation::setIntersection:
-    case SetOperation::setUnion: {
+    case SetOperation::setIntersection: {
       auto leftLabels = leftOperand->getNormalEvents();
       auto rightLabels = rightOperand->getNormalEvents();
       leftLabels.insert(rightLabels.begin(), rightLabels.end());
@@ -75,6 +74,7 @@ EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftO
         return {leftOperand->label.value()};
       }
       return leftOperand->getNormalEvents();
+    case SetOperation::setUnion:
     case SetOperation::event:
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
@@ -152,14 +152,14 @@ bool calcHasBaseSet(const SetOperation operation, const CanonicalSet leftOperand
   }
 }
 
-SetOfSets calcLabelBaseCombinations(const SetOperation operation, const CanonicalSet leftOperand,
-                                    const CanonicalSet rightOperand,
-                                    const CanonicalRelation relation, const CanonicalSet thisRef) {
+SetOfSets calcEventBasePairs(const SetOperation operation, const CanonicalSet leftOperand,
+                             const CanonicalSet rightOperand, const CanonicalRelation relation,
+                             const CanonicalSet thisRef) {
   switch (operation) {
     case SetOperation::setUnion:
     case SetOperation::setIntersection: {
-      auto left = leftOperand->getLabelBaseCombinations();
-      auto right = rightOperand->getLabelBaseCombinations();
+      auto left = leftOperand->getEventBasePairs();
+      auto right = rightOperand->getEventBasePairs();
       left.insert(right.begin(), right.end());
       return left;
     }
@@ -168,7 +168,7 @@ SetOfSets calcLabelBaseCombinations(const SetOperation operation, const Canonica
       return leftOperand->operation == SetOperation::event &&
                      relation->operation == RelationOperation::baseRelation
                  ? SetOfSets{thisRef}
-                 : leftOperand->getLabelBaseCombinations();
+                 : leftOperand->getEventBasePairs();
     }
     case SetOperation::baseSet:
     case SetOperation::emptySet:
@@ -193,8 +193,7 @@ void Set::completeInitialization() const {
   this->_hasBaseSet = calcHasBaseSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);
-  this->eventRelationCombinations =
-      calcLabelBaseCombinations(operation, leftOperand, rightOperand, relation, this);
+  this->eventBasePairs = calcEventBasePairs(operation, leftOperand, rightOperand, relation, this);
   if constexpr (DEBUG) {
     // To populate the cache for better debugging
     std::ignore = toString();

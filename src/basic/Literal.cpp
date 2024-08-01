@@ -258,14 +258,14 @@ EventSet Literal::events() const {
 //   }
 // }
 
-SetOfSets Literal::labelBaseCombinations() const {
+SetOfSets Literal::eventBasePairs() const {
   switch (operation) {
     case PredicateOperation::constant:
     case PredicateOperation::equality:
     case PredicateOperation::set:
       return {};
     case PredicateOperation::setNonEmptiness: {
-      return set->getLabelBaseCombinations();
+      return set->getEventBasePairs();
     }
     case PredicateOperation::edge: {
       // (e1,e2) \in b

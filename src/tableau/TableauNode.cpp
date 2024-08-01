@@ -308,6 +308,40 @@ void Node::closeBranch() {
   } while (cur->isClosed() && (cur = cur->parentNode) != nullptr);
 }
 
+// IMPORTANT this method relies on the fact that we consider positive literals first
+void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePairCubes) {
+  assert(activePairCubes.size() == 1);
+  auto &activePairs = *activePairCubes.begin();
+  const auto &literalPairs = literal.eventBasePairs();
+  if (!literal.negated) {
+    activePairs.insert(literalPairs.begin(), literalPairs.end());
+  }
+
+  // IMPORTANT: This loop may delete iterated children,
+  // so we need to perform a safer kind of iteration
+  if (!isLeaf()) {
+    const auto activePairCubesCopy = activePairCubes;
+    activePairCubes.clear();
+    for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
+      auto activePairsCopyTemp = activePairCubesCopy;
+      childIt->removeUselessLiterals(activePairsCopyTemp);
+      activePairCubes.insert(activePairsCopyTemp.begin(), activePairsCopyTemp.end());
+    }
+  }
+
+  if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
+        return !isLiteralActive(literal, active);
+      })) {
+    if (const auto ann = literal.annotation->getValue();
+        ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
+      // if literal can be saturated, satriate first
+      tableau->saturate(this);
+    }
+    Stats::counter("removeUselessLiterals tabl")++;
+    tableau->deleteNode(this);
+  }
+}
+
 void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   const auto &cube = dnf.at(0);
 
