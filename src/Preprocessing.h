@@ -14,6 +14,12 @@ typedef std::map<std::string, std::vector<CanonicalRelation>> ReplaceMap;
 inline void updateParentMap(const CanonicalRelation relation, CanonicalParents& parentMap) {
   switch (relation->operation) {
     case RelationOperation::relationIntersection:
+      parentMap[relation->leftOperand].insert(relation);
+      parentMap[relation->rightOperand].insert(relation);
+
+      updateParentMap(relation->leftOperand, parentMap);
+      updateParentMap(relation->rightOperand, parentMap);
+      return;
     case RelationOperation::composition:
       // only add non binary children
       if (relation->leftOperand->operation == RelationOperation::setIdentity ||
@@ -123,24 +129,34 @@ inline ReplaceMap greatestCommonConjunctiveContext(const Cube& goal) {
   return commonContexts;
 }
 
+inline void eleminateRedundantConjunctiveContexts(Literal& literal,
+                                                  const ReplaceMap& commonContexts) {
+  for (const auto& [baseRelation, replacedRelations] : commonContexts) {
+    for (const auto replaceRelation : replacedRelations) {
+      const auto result =
+          literal.substituteAll(replaceRelation, Relation::newBaseRelation(baseRelation));
+      if (result) {
+        literal = result.value();
+      }
+      Stats::boolean("#reduced literals - preprocessing").count(result.has_value());
+    }
+  }
+}
+
 inline void eleminateRedundantConjunctiveContexts(Cube& goal) {
   const auto commonContexts = greatestCommonConjunctiveContext(goal);
 
   auto negatedGoal = goal | std::views::filter(&Literal::negated);
   for (auto& literal : negatedGoal) {
     if (literal.operation == PredicateOperation::setNonEmptiness) {
-      for (const auto& [baseRelation, replacedRelations] : commonContexts) {
-        for (const auto replaceRelation : replacedRelations) {
-          const auto result =
-              literal.substituteAll(replaceRelation, Relation::newBaseRelation(baseRelation));
-          if (result) {
-            literal = result.value();
-          }
-          Stats::boolean("#reduced literals - preprocessing").count(result.has_value());
-        }
-      }
+      eleminateRedundantConjunctiveContexts(literal, commonContexts);
     }
   }
+
+  // TODO: reduce also assumptions
+  // for (auto& assumption : Assumption::baseAssumptions) {
+  //   eleminateRedundantConjunctiveContexts()
+  // }
 }
 
 inline void preprocessing(Cube& goal) {
