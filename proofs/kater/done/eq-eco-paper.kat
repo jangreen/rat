@@ -1,0 +1,12 @@
+let fr = rf-1;co
+
+let eco1 = (rf | co | fr)+
+let eco2 = rf | (co|fr);rf?
+
+assume co+ <= co
+assume co;rf-1 <= 0
+assume rf;rf <= 0
+assume rf;co <= 0
+assume rf;rf-1 <= id
+
+assert eco1 <= eco2

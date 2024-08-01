@@ -1,0 +1,11 @@
+include ./proofs/kater/kat/rc11.kat
+let rc11-hb = hb
+let rc11-psc = psc
+include ./proofs/kater/kat/rc112.kat
+let rc112-hb = hb
+let rc112-psc = psc
+
+assert rc11-hb <= rc112-hb | po
+assert rc112-hb | po <= rc11-hb
+assert rc11-psc <= rc112-psc
+assert rc112-psc <= rc11-psc

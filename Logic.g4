@@ -15,4 +15,4 @@ FILEINCLUDE: 'include';
 ASSUME: 'assume';
 ASSERT: 'assert';
 INEQUAL: '<=';
-FILEPATH: '.'? '/' ~'/' (.)+? '.cat';
+FILEPATH: '.'? '/' ~'/' (.)+? ('.cat' | '.kat');

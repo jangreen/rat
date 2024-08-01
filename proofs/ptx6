@@ -1,1 +1,0 @@
-cat assert ./cat/ptx6_rewrite.cat <= ./cat/ptx6_rewrite.cat

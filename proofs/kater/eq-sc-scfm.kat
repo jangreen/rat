@@ -1,0 +1,15 @@
+include ./proofs/kater/base-theory.cat
+
+include ./proofs/kater/kat/sc-fm.kat
+let sc-fm = sc
+let hb-fm = hb
+include ./proofs/kater/kat/sc.kat
+
+
+
+// WTP: sc == sc-fm
+
+assert sc+ <= sc-fm+ | hb-fm;fr?
+
+// assert [R|W|F];sc+;[R|W|F] <=&id rot (sc-fm+ | hb-fm;fr?)
+// assert [R|W|F];(rot (sc-fm+ | hb-fm;fr?));[R|W|F] <=&id [R|W|F];sc+;[R|W|F]
