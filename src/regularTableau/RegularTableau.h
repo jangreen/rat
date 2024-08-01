@@ -11,6 +11,7 @@
 
 class RegularTableau {
  private:
+  const Cube initialCube;
   std::unordered_set<std::unique_ptr<RegularNode>, RegularNode::Hash, RegularNode::Equal> nodes;
   std::unordered_set<RegularNode *> rootNodes;
 

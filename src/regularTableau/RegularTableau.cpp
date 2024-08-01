@@ -59,7 +59,7 @@ bool RegularTableau::isReachableFromRoots(const RegularNode *node) const {
          rootNodes.contains(const_cast<RegularNode *>(node));
 }
 
-RegularTableau::RegularTableau(const Cube &initialLiterals) {
+RegularTableau::RegularTableau(const Cube &initialLiterals) : initialCube(initialLiterals) {
   Tableau t(initialLiterals);
   expandNode(nullptr, &t);
 }
@@ -530,13 +530,8 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
   const auto model = getModel(openLeaf);
 
-  auto rootNode = openLeaf;
-  while (rootNode->reachabilityTreeParent != nullptr) {
-    rootNode = rootNode->reachabilityTreeParent;
-  }
-
   Cube checkedCube = model;
-  std::ranges::copy_if(rootNode->cube, std::back_inserter(checkedCube), &Literal::negated);
+  std::ranges::copy_if(initialCube, std::back_inserter(checkedCube), &Literal::negated);
   Tableau finiteTableau(checkedCube);
   return finiteTableau.computeDnf().empty();
 }
