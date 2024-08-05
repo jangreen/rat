@@ -72,18 +72,22 @@ void Tableau::deleteNode(Node *node) {
 void Tableau::normalize() {
   Stats::counter("#iterations - normalize").reset();
 
+  auto modCounter = 0;
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
     // remove useless literals in each iteration
     // do this after all positive literals are processed (top is negated)
     // unreduced nodes could become empty
-    if (unreducedNodes.top()->getLiteral().negated) {
-      removeUselessLiterals();
-      if (unreducedNodes.isEmpty()) {
-        break;
+    if (modCounter % 2 == 1) {
+      if (unreducedNodes.top()->getLiteral().negated) {
+        removeUselessLiterals();
+        if (unreducedNodes.isEmpty()) {
+          break;
+        }
       }
     }
+    modCounter++;
 
     Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();

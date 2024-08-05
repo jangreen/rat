@@ -110,7 +110,6 @@ bool Node::validate() const {
     std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
     return false;
   }
-  assert(lastUnrollingParent == nullptr || lastUnrollingParent->validate());
   assert(lastUnrollingParent == nullptr ||
          tableau->crossReferenceMap.at(lastUnrollingParent).contains(const_cast<Node *>(this)));
   assert(!tableau->crossReferenceMap.contains(this) ||
@@ -118,6 +117,38 @@ bool Node::validate() const {
            assert(node->lastUnrollingParent == this);
            return node->lastUnrollingParent == this;
          }));
+
+  // crossReferenceMap is acyclic (in connected component of this node)
+  auto noIncomingEdge = this;  // interpret crossReferenceMap as outgoing edges
+  std::unordered_set<const Node *> visited;
+  while (noIncomingEdge->getLastUnrollingParent() != nullptr) {
+    const auto &[_, inserted] = visited.insert(noIncomingEdge);
+    assert(inserted);  // otherwise there is cycle
+    noIncomingEdge = noIncomingEdge->getLastUnrollingParent();
+  }
+
+  visited.clear();
+  std::deque<const Node *> stack;
+  stack.push_back(noIncomingEdge);
+  visited.insert(noIncomingEdge);
+
+  while (!stack.empty()) {
+    const auto node = stack.back();
+    stack.pop_back();
+
+    if (tableau->crossReferenceMap.contains(node)) {                      // has outgoing edges
+      for (const auto &nextNode : tableau->crossReferenceMap.at(node)) {  // for each outgoing edge
+        const bool cycleFound = std::find(stack.begin(), stack.end(), nextNode) != stack.end();
+        assert(!cycleFound);
+
+        const auto &[_, inserted] = visited.insert(nextNode);
+        if (inserted) {
+          stack.push_back(nextNode);
+        }
+      }
+    }
+  }
+
   return literal.validate();
 }
 
@@ -334,7 +365,7 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
       })) {
     if (const auto ann = literal.annotation->getValue();
         ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
-      // if literal can be saturated, satriate first
+      // if literal can be saturated, saturate first
       tableau->saturate(this);
     }
     Stats::counter("removeUselessLiterals tabl")++;
