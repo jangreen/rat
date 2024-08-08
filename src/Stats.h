@@ -105,10 +105,16 @@ struct Difference {
 
 class Stats {
  public:
-  [[nodiscard]] static Counter &counter(const std::string &name) { return Counter::counters[name]; }
-  [[nodiscard]] static Difference &diff(const std::string &name) { return Difference::diffs[name]; }
-  [[nodiscard]] static Value &value(const std::string &name) { return Value::values[name]; }
-  [[nodiscard]] static Condition &boolean(const std::string &name) {
+  [[nodiscard]] static constexpr Counter &counter(const std::string &name) {
+    return Counter::counters[name];
+  }
+  [[nodiscard]] static constexpr Difference &diff(const std::string &name) {
+    return Difference::diffs[name];
+  }
+  [[nodiscard]] static constexpr Value &value(const std::string &name) {
+    return Value::values[name];
+  }
+  [[nodiscard]] static constexpr Condition &boolean(const std::string &name) {
     return Condition::conditions[name];
   }
 

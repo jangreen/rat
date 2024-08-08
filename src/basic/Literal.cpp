@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "../Assumption.h"
+#include "../tableau/Rules.h"
 #include "../utility.h"
 #include "Annotation.h"
 
@@ -26,14 +27,15 @@ Literal::Literal(const CanonicalSet set)
       rightEvent(nullptr),
       identifier(std::nullopt) {}
 
-Literal::Literal(const AnnotatedSet &annotatedSet)
+Literal::Literal(const AnnotatedSet &annotatedSet, const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
       set(std::get<CanonicalSet>(annotatedSet)),
       annotation(std::get<CanonicalAnnotation>(annotatedSet)),
       leftEvent(nullptr),
       rightEvent(nullptr),
-      identifier(std::nullopt) {
+      identifier(std::nullopt),
+      applySaturation(applySaturation) {
   assert(Annotated::validate(annotatedSet));
 }
 
@@ -46,14 +48,16 @@ Literal::Literal(const CanonicalSet event, std::string identifier)
       rightEvent(nullptr),
       identifier(identifier) {}
 
-Literal::Literal(const CanonicalSet event, std::string identifier, const AnnotationType &annotation)
+Literal::Literal(const CanonicalSet event, std::string identifier, const AnnotationType &annotation,
+                 const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::set),
       set(nullptr),
       annotation(Annotation::newLeaf(annotation)),
       leftEvent(event),
       rightEvent(nullptr),
-      identifier(identifier) {}
+      identifier(identifier),
+      applySaturation(applySaturation) {}
 
 Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
                  std::string identifier)
@@ -69,26 +73,30 @@ Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
 }
 
 Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
-                 std::string identifier, const AnnotationType &annotation)
+                 std::string identifier, const AnnotationType &annotation,
+                 const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
       annotation(Annotation::newLeaf(annotation)),
       leftEvent(leftEvent),
       rightEvent(rightEvent),
-      identifier(identifier) {
+      identifier(identifier),
+      applySaturation(applySaturation) {
   assert(leftEvent->isEvent());
   assert(rightEvent->isEvent());
 }
 
-Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent)
+Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent,
+                 const bool applySaturation)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
       annotation(Annotation::none()),
       leftEvent(leftEvent),
       rightEvent(rightEvent),
-      identifier(std::nullopt) {}
+      identifier(std::nullopt),
+      applySaturation(applySaturation) {}
 
 bool Literal::validate() const {
   switch (operation) {
@@ -132,8 +140,12 @@ bool Literal::validate() const {
 }
 
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
-  if (const auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
-  if (const auto cmp = operation <=> other.operation; cmp != 0) return cmp;
+  if (const auto cmp = (other.negated <=> negated); cmp != 0) {
+    return cmp;
+  }
+  if (const auto cmp = operation <=> other.operation; cmp != 0) {
+    return cmp;
+  }
 
   // We assume well-formed literals
   switch (operation) {
@@ -180,7 +192,7 @@ bool Literal::isNormal() const {
     case PredicateOperation::constant:
       return false;
     case PredicateOperation::equality:
-      return negated && rightEvent != leftEvent;
+      return negated && rightEvent != leftEvent || !negated;
     case PredicateOperation::set:
     case PredicateOperation::edge:
       return true;
@@ -284,11 +296,13 @@ SetOfSets Literal::eventBasePairs() const {
 
 std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
                                               const CanonicalSet replace) const {
+  assert(negated);
+
   switch (operation) {
     case PredicateOperation::setNonEmptiness: {
       const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
       if (newSet.first != set) {
-        return Literal(newSet);
+        return Literal(newSet, applySaturation);
       }
       return std::nullopt;
     }
@@ -304,7 +318,8 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       const auto right = rightEvent == search ? replace : rightEvent;
 
       if (left != leftEvent || right != rightEvent) {
-        return negated ? Literal(left, right, identifier.value(), annotation->getValue().value())
+        return negated ? Literal(left, right, identifier.value(), annotation->getValue().value(),
+                                 applySaturation)
                        : Literal(left, right, identifier.value());
       }
       return std::nullopt;
@@ -316,7 +331,8 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       const auto left = leftEvent == search ? replace : leftEvent;
 
       if (left != leftEvent) {
-        return negated ? Literal(left, identifier.value(), annotation->getValue().value())
+        return negated ? Literal(left, identifier.value(), annotation->getValue().value(),
+                                 applySaturation)
                        : Literal(left, identifier.value());
       }
       return std::nullopt;
@@ -372,9 +388,31 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
 Literal Literal::substituteSet(const AnnotatedSet &set) const {
   assert(operation == PredicateOperation::setNonEmptiness);
   if (negated) {
-    return Literal(set);
+    return Literal(set, applySaturation);
   }
   return Literal(std::get<CanonicalSet>(set));
+}
+
+Cube Literal::saturate() const {
+  Cube saturatedLiterals;
+  if (!Assumption::baseAssumptions.empty()) {
+    if (const auto literal = Rules::saturateBase(*this)) {
+      saturatedLiterals.push_back(literal.value());
+    }
+  }
+
+  if (!Assumption::idAssumptions.empty()) {
+    if (const auto literal = Rules::saturateId(*this)) {
+      saturatedLiterals.push_back(literal.value());
+    }
+  }
+
+  if (!Assumption::baseSetAssumptions.empty()) {
+    if (const auto literal = Rules::saturateBaseSet(*this)) {
+      saturatedLiterals.push_back(literal.value());
+    }
+  }
+  return saturatedLiterals;
 }
 
 void Literal::rename(const Renaming &renaming) {

@@ -11,13 +11,6 @@ Renaming::Renaming(Mapping&& map) : mapping(std::move(map)) {
   assert(std::ranges::is_sorted(mapping, std::less(), projFirst) && "domain is unsorted");
   assert(std::ranges::adjacent_find(mapping, std::equal_to(), projFirst) == mapping.end() &&
          "duplicates in domain");
-  assert(({
-           boost::container::flat_set<int> rangeSet;
-           rangeSet.reserve(mapping.size());
-           std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
-           rangeSet.size() == mapping.size();
-         }) &&
-         "duplicates in range");
 }
 
 Renaming Renaming::minimal(const std::vector<int>& from) {
@@ -42,6 +35,13 @@ Renaming Renaming::identity(const boost::container::flat_set<int>& domain) {
 }
 
 Renaming Renaming::inverted() const {
+  assert(({
+           boost::container::flat_set<int> rangeSet;
+           rangeSet.reserve(mapping.size());
+           std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
+           rangeSet.size() == mapping.size();
+         }) &&
+         "duplicates in range");
   Mapping inverted;
   inverted.reserve(mapping.size());
   for (auto [from, to] : mapping) {
@@ -51,7 +51,7 @@ Renaming Renaming::inverted() const {
   return Renaming(std::move(inverted));
 }
 
-Renaming Renaming::compose(const Renaming& other) const {
+Renaming Renaming::strictCompose(const Renaming& other) const {
   Mapping composed;
   composed.reserve(mapping.size());
   for (auto [a, b] : mapping) {
@@ -62,11 +62,25 @@ Renaming Renaming::compose(const Renaming& other) const {
   return Renaming(std::move(composed));
 }
 
-Renaming Renaming::totalCompose(const Renaming& other) const {
+Renaming Renaming::compose(const Renaming& other) const {
   Mapping composed;
   composed.reserve(mapping.size());
   for (auto [a, b] : mapping) {
     composed.emplace_back(a, other.rename(b));
+  }
+  return Renaming(std::move(composed));
+}
+
+Renaming Renaming::totalCompose(const Renaming& other) const {
+  Mapping composed;
+  composed.reserve(mapping.size() + other.size());
+  for (auto [a, b] : mapping) {
+    composed.emplace_back(a, other.rename(b));
+  }
+  for (auto [a, b] : other.mapping) {
+    if (std::ranges::find(mapping, a, projFirst) == mapping.end()) {
+      composed.emplace_back(a, b);
+    }
   }
   return Renaming(std::move(composed));
 }
