@@ -42,12 +42,12 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   Stats::diff("reduceDNF - removed cubes").second(dnf.size());
 
   // remove l from dnf
-  Stats::diff("reduceDNF - removed literals").first(flatten(dnf).size());
+  Stats::diff("reduceDNF - removed literals").first(flatten<Literal>(dnf).size());
   for (auto &cube : dnf) {
     auto [begin, end] = std::ranges::remove(cube, literal);
     cube.erase(begin, end);
   }
-  Stats::diff("reduceDNF - removed literals").second(flatten(dnf).size());
+  Stats::diff("reduceDNF - removed literals").second(flatten<Literal>(dnf).size());
 
   assert(validateDNF(dnf));
 }
@@ -103,14 +103,15 @@ Node::~Node() {
 
 bool Node::validate() const {
   if (tableau == nullptr) {
-    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
+    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString();
+    std::flush(std::cout);
     return false;
   }
   if (tableau->getRoot() != this && parentNode == nullptr) {
-    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
+    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString();
+    std::flush(std::cout);
     return false;
   }
-  assert(lastUnrollingParent == nullptr || lastUnrollingParent->validate());
   assert(lastUnrollingParent == nullptr ||
          tableau->crossReferenceMap.at(lastUnrollingParent).contains(const_cast<Node *>(this)));
   assert(!tableau->crossReferenceMap.contains(this) ||
@@ -118,6 +119,38 @@ bool Node::validate() const {
            assert(node->lastUnrollingParent == this);
            return node->lastUnrollingParent == this;
          }));
+
+  // crossReferenceMap is acyclic (in connected component of this node)
+  auto noIncomingEdge = this;  // interpret crossReferenceMap as outgoing edges
+  std::unordered_set<const Node *> visited;
+  while (noIncomingEdge->getLastUnrollingParent() != nullptr) {
+    const auto &[_, inserted] = visited.insert(noIncomingEdge);
+    assert(inserted);  // otherwise there is cycle
+    noIncomingEdge = noIncomingEdge->getLastUnrollingParent();
+  }
+
+  visited.clear();
+  std::deque<const Node *> stack;
+  stack.push_back(noIncomingEdge);
+  visited.insert(noIncomingEdge);
+
+  while (!stack.empty()) {
+    const auto node = stack.back();
+    stack.pop_back();
+
+    if (tableau->crossReferenceMap.contains(node)) {                      // has outgoing edges
+      for (const auto &nextNode : tableau->crossReferenceMap.at(node)) {  // for each outgoing edge
+        const bool cycleFound = std::find(stack.begin(), stack.end(), nextNode) != stack.end();
+        assert(!cycleFound);
+
+        const auto &[_, inserted] = visited.insert(nextNode);
+        if (inserted) {
+          stack.push_back(nextNode);
+        }
+      }
+    }
+  }
+
   return literal.validate();
 }
 
@@ -332,11 +365,13 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
   if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
         return !isLiteralActive(literal, active);
       })) {
-    if (const auto ann = literal.annotation->getValue();
-        ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
-      // if literal can be saturated, satriate first
-      tableau->saturate(this);
-    }
+    // TODO: do we have to do this while lazy saturation?
+    // if (const auto ann = literal.annotation->getValue();
+    //     ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
+    //   // if literal can be saturated, saturate first
+    //   auto saturatedLiterals = literal.saturate();
+    //   appendBranch(saturatedLiterals);
+    // }
     Stats::counter("removeUselessLiterals tabl")++;
     tableau->deleteNode(this);
   }
@@ -574,7 +609,6 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
     return {};
   }
   Cube newLiterals;
-
   // Negated and normal lit
   // negated modal rule
   auto sub1 = substituteAllOnce(literal, search1, replace1);
@@ -605,6 +639,7 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
   //     newLiterals.push_back(substituted2.value());
   //   }
   // }
+  removeDuplicates(newLiterals);  // TODO: performance?
   return newLiterals;
 }
 
@@ -681,6 +716,12 @@ void Node::toDotFormat(std::ofstream &output) const {
     }
     output << "\n";
   }
+  output << "applySaturation: " << literal.applySaturation << "\n";
+  output << "branch equalities: ";
+  for (const auto &equality : equalities) {
+    output << equality.toString();
+  }
+  output << "\n";
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";
@@ -689,12 +730,12 @@ void Node::toDotFormat(std::ofstream &output) const {
   if (isClosed()) {
     output << ", fontcolor=green";
   }
-  output << "];" << std::endl;
+  output << "];\n";
 
   // children
   for (const auto &child : children) {
     child->toDotFormat(output);
     output << "N" << this << " -- "
-           << "N" << child << ";" << std::endl;
+           << "N" << child << ";\n";
   }
 }

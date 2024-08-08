@@ -105,11 +105,14 @@ Node *Worklist::pop() {
 Node *Worklist::top() const {
   if (!isEmpty(posEqualitiesHeadDummy, posEqualitiesTailDummy)) {
     return posEqualitiesHeadDummy->nextInWorkList;
-  } else if (!isEmpty(positiveHeadDummy, positiveTailDummy)) {
+  }
+  if (!isEmpty(positiveHeadDummy, positiveTailDummy)) {
     return positiveHeadDummy->nextInWorkList;
-  } else if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
+  }
+  if (!isEmpty(nonNormalNegatedHeadDummy, nonNormalNegatedTailDummy)) {
     return nonNormalNegatedHeadDummy->nextInWorkList;
-  } else if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
+  }
+  if (!isEmpty(remainingHeadDummy, remainingTailDummy)) {
     return remainingHeadDummy->nextInWorkList;
   }
   return nullptr;
@@ -126,19 +129,27 @@ bool Worklist::validate() const {
   // TODO: Implement iterator and use it here
   for (const Node *cur = posEqualitiesHeadDummy->nextInWorkList;
        cur != posEqualitiesTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate()) return false;
+    if (!cur->validate()) {
+      return false;
+    }
   }
   for (const Node *cur = nonNormalNegatedHeadDummy->nextInWorkList;
        cur != nonNormalNegatedTailDummy.get(); cur = cur->nextInWorkList) {
-    if (!cur->validate()) return false;
+    if (!cur->validate()) {
+      return false;
+    }
   }
   for (const Node *cur = positiveHeadDummy->nextInWorkList; cur != positiveTailDummy.get();
        cur = cur->nextInWorkList) {
-    if (!cur->validate()) return false;
+    if (!cur->validate()) {
+      return false;
+    }
   }
   for (const Node *cur = remainingHeadDummy->nextInWorkList; cur != remainingTailDummy.get();
        cur = cur->nextInWorkList) {
-    if (!cur->validate()) return false;
+    if (!cur->validate()) {
+      return false;
+    }
   }
 
   return true;

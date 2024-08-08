@@ -30,17 +30,21 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  explicit Literal(bool negated);                           // constant
-  explicit Literal(CanonicalSet set);                       // positive setNonEmptiness
-  explicit Literal(const AnnotatedSet &annotatedSet);       // negated setNonEmptiness
-  Literal(CanonicalSet event, std::string identifier);      // positive set
-  Literal(CanonicalSet event, std::string identifier,       //
-          const AnnotationType &annotation);                // negated set
-  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,  //
-          std::string identifier);                          // positive edge
+  explicit Literal(bool negated);      // constant
+  explicit Literal(CanonicalSet set);  // positive setNonEmptiness
+  explicit Literal(const AnnotatedSet &annotatedSet,
+                   bool applySaturation);               // negated setNonEmptiness
+  Literal(CanonicalSet event, std::string identifier);  // positive set
+  Literal(CanonicalSet event, std::string identifier,   //
+          const AnnotationType &annotation,
+          bool applySaturation);                                                    // negated set
+  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,                          //
+          std::string identifier);                                                  // positive edge
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
-          const AnnotationType &annotation);                                        // negated edge
-  Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent);           // equality
+          const AnnotationType &annotation,
+          bool applySaturation);  // negated edge
+  Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent,
+          bool applySaturation);  // equality
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
@@ -55,6 +59,7 @@ class Literal {
   CanonicalSet rightEvent;         // edge, equality
   // std::optional<std::string> identifier;  // edge, set
   std::optional<CanonicalString> identifier;  // edge, set
+  bool applySaturation = false;               // indicates if we want to saturate this node
 
   [[nodiscard]] bool isNormal() const;
   // TODO (topEvent optimization): [[nodiscard]] bool hasTopEvent() const { return
@@ -86,6 +91,7 @@ class Literal {
   std::optional<Literal> substituteAll(CanonicalRelation search, CanonicalRelation replace) const;
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
   [[nodiscard]] Literal substituteSet(const AnnotatedSet &set) const;
+  [[nodiscard]] Cube saturate() const;
   void rename(const Renaming &renaming);
   [[nodiscard]] AnnotatedSet annotatedSet() const { return {set, annotation}; }
 

@@ -22,10 +22,11 @@ class RegularNode {
 
   // =============== Metadata ===============
   bool closed = false;
-  RegularNode *reachabilityTreeParent = nullptr;   // for dynamic multi source reachability
+  RegularNode *reachabilityTreeParent = nullptr;  // for dynamic multi source reachability
   std::map<const RegularNode *, EdgeLabel> inconsistentChildrenChecked;
 
-  bool connect(RegularNode *child, const EdgeLabel& label, NodeSet &children, std::map<RegularNode *, EdgeLabel> &parents) {
+  bool connect(RegularNode *child, const EdgeLabel &label, NodeSet &children,
+               std::map<RegularNode *, EdgeLabel> &parents) {
     const auto [_, inserted] = children.insert(child);
     if (!inserted) {
       return false;
@@ -35,7 +36,6 @@ class RegularNode {
   }
 
  public:
-
   static std::pair<RegularNode *, Renaming> newNode(Cube cube);
   [[nodiscard]] bool validate() const;
 
@@ -53,26 +53,19 @@ class RegularNode {
   [[nodiscard]] bool isOpenLeaf() const {
     return children.empty() && epsilonChildren.empty() && !closed;
   }
-
+  // TODO: remove, dont use this function -> use tableau methods to update reachabiity invariant
   bool addChild(RegularNode *child, const EdgeLabel &label) {
     return connect(child, label, children, child->parents);
   }
   bool addEpsilonChild(RegularNode *child, const EdgeLabel &label) {
     return connect(child, label, epsilonChildren, child->epsilonParents);
   }
-  void removeChild(RegularNode *child) {
-    children.erase(child);
-    child->parents.erase(this);
-  }
-
 
   void toDotFormat(std::ofstream &output) const;
 
   // FIXME calculate cached lazy property
   // hashing and comparison is insensitive to label renaming
-  bool operator==(const RegularNode &otherNode) const {
-    return cube == otherNode.cube;
-  }
+  bool operator==(const RegularNode &otherNode) const { return cube == otherNode.cube; }
 
   struct Hash {
     size_t operator()(const std::unique_ptr<RegularNode> &node) const;

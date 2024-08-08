@@ -6,6 +6,7 @@
 
 #include "Stats.h"
 #include "basic/Literal.h"
+#include "tableau/Rules.h"
 
 // currently it is not possible to pass a concept as a template parameter
 // we would like to write something like this: range_of<Literal>, range_of<rane_of<Literal>>, ...
@@ -28,7 +29,7 @@ bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
 }
 
 template <typename T>
-std::vector<T> flatten(const std::vector<std::vector<T>> &orig) {
+std::vector<T> flatten(const range_of<std::vector<T>> auto &orig) {
   std::vector<T> ret;
   for (const auto &v : orig) ret.insert(ret.end(), v.begin(), v.end());
   return ret;
@@ -93,10 +94,18 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
+inline void removeDuplicates(Cube &cube) {
+  std::ranges::sort(cube);
+  const auto [first, last] = std::ranges::unique(cube);
+  cube.erase(first, last);
+}
+
 inline void renameCube(const Renaming &renaming, Cube &cube) {
+  assert(validateCube(cube));
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
+  // currently we dont want to ensure sortedness assert(validateCube(cube));
 }
 
 inline bool validatePartialCube(const PartialCube &cube) {
@@ -113,7 +122,7 @@ inline bool validateNormalizedCube(const Cube &cube) {
   return validateCube(cube) && std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
 }
 
-inline bool validateDNF(const DNF &dnf) {
+inline bool validateDNF(const range_of<Cube> auto &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return validateCube(cube); });
 }
 
@@ -294,12 +303,12 @@ inline void removeUselessLiterals(Cube &cube) {
   });
 }
 
-inline void removeUselessLiterals(DNF &dnf) {
-  Stats::diff("removeUselessLiterals").first(flatten(dnf).size());
+inline void removeUselessLiterals(range_of<Cube> auto &dnf) {
+  Stats::diff("removeUselessLiterals").first(flatten<Literal>(dnf).size());
   for (auto &cube : dnf) {
     removeUselessLiterals(cube);
   }
-  Stats::diff("removeUselessLiterals").second(flatten(dnf).size());
+  Stats::diff("removeUselessLiterals").second(flatten<Literal>(dnf).size());
 }
 
 // ===================================================================================

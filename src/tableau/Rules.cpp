@@ -39,7 +39,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
         return PartialDNF{{Literal(eAndS), AnnotatedSet(event, Annotation::none())}};
       }
 
-      return PartialDNF{{Literal(AnnotatedSet(eAndS, setAnnotation))},
+      return PartialDNF{{Literal(AnnotatedSet(eAndS, setAnnotation), context.applySaturation)},
                         {AnnotatedSet(event, Annotation::none())}};
     }
     case RelationOperation::cartesianProduct: {
@@ -405,13 +405,14 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
         return DNF{{Literal(e, *s->identifier)}};
       }
 
-      return DNF{{Literal(e, *s->identifier, sAnnotation->getValue().value())}};
+      return DNF{
+          {Literal(e, *s->identifier, sAnnotation->getValue().value(), literal.applySaturation)}};
     // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
       // LeftRule: e & f != 0  ->  e == f
       // RightRule: f & e != 0  ->  e == f (in both cases use same here)
       // Rule (=)
-      return DNF{{Literal(literal.negated, e, s)}};
+      return DNF{{Literal(literal.negated, e, s, literal.applySaturation)}};
     case SetOperation::emptySet:
       // LeftRule: e & 0 != 0  ->  false
       // RightRule: 0 & e != 0  ->  false
@@ -508,7 +509,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
         const auto ra = sAnnotation->getRight();
         assert(ra->isLeaf() && ra->getValue().has_value());
         const AnnotationType value = ra->getValue().value();
-        return DNF{{Literal(first, second, b, value)}};
+        return DNF{{Literal(first, second, b, value, literal.applySaturation)}};
       }
 
       // LeftRule: e & fr     or      e & rf
@@ -620,11 +621,12 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
       assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
       const auto [idAnn, baseAnn] = literal.annotation->getValue().value();
       // annotation tree should be the on of e1R_and_e2
-      return Literal(Annotated::makeWithValue(e1R_and_e2, {idAnn, baseAnn + 1}));
+      return Literal(Annotated::makeWithValue(e1R_and_e2, {idAnn, baseAnn + 1}),
+                     literal.applySaturation);
     }
     case PredicateOperation::setNonEmptiness: {
       if (const auto saturatedLiteral = saturateBase(literal.annotatedSet())) {
-        return Literal(saturatedLiteral.value());
+        return Literal(saturatedLiteral.value(), literal.applySaturation);
       }
       return std::nullopt;
     }
@@ -662,11 +664,12 @@ std::optional<Literal> Rules::saturateBaseSet(const Literal& literal) {
       const auto e_and_s = Set::newSet(SetOperation::setIntersection, e, assumption.set);
       assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
       const auto [idAnn, baseAnn] = literal.annotation->getValue().value();
-      return Literal(Annotated::makeWithValue(e_and_s, {idAnn, baseAnn + 1}));
+      return Literal(Annotated::makeWithValue(e_and_s, {idAnn, baseAnn + 1}),
+                     literal.applySaturation);
     }
     case PredicateOperation::setNonEmptiness: {
       if (const auto saturatedLiteral = saturateBaseSet(literal.annotatedSet())) {
-        return Literal(saturatedLiteral.value());
+        return Literal(saturatedLiteral.value(), literal.applySaturation);
       }
       return std::nullopt;
     }
@@ -699,7 +702,7 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
       // annotation tree should be the on of R
       // FIXME: masterId and annotation for masterID should be cached
-      return Literal(Annotated::makeWithValue(e1R_and_e2, {1, 0}));
+      return Literal(Annotated::makeWithValue(e1R_and_e2, {1, 0}), literal.applySaturation);
     }
     case PredicateOperation::edge: {
       // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
@@ -716,11 +719,12 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
 
       // annotation tree should be the on of e1R_and_bRe2
       assert(literal.annotation->isLeaf());
-      return Literal(Annotated::makeWithValue(e1R_and_bRe2, {idAnn + 1, baseAnn}));
+      return Literal(Annotated::makeWithValue(e1R_and_bRe2, {idAnn + 1, baseAnn}),
+                     literal.applySaturation);
     }
     case PredicateOperation::setNonEmptiness: {
       if (const auto saturatedLiteral = saturateId(literal.annotatedSet())) {
-        return Literal(*saturatedLiteral);
+        return Literal(*saturatedLiteral, literal.applySaturation);
       }
       return std::nullopt;
     }
