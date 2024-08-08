@@ -11,13 +11,6 @@ Renaming::Renaming(Mapping&& map) : mapping(std::move(map)) {
   assert(std::ranges::is_sorted(mapping, std::less(), projFirst) && "domain is unsorted");
   assert(std::ranges::adjacent_find(mapping, std::equal_to(), projFirst) == mapping.end() &&
          "duplicates in domain");
-  assert(({
-           boost::container::flat_set<int> rangeSet;
-           rangeSet.reserve(mapping.size());
-           std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
-           rangeSet.size() == mapping.size();
-         }) &&
-         "duplicates in range");
 }
 
 Renaming Renaming::minimal(const std::vector<int>& from) {
@@ -42,6 +35,13 @@ Renaming Renaming::identity(const boost::container::flat_set<int>& domain) {
 }
 
 Renaming Renaming::inverted() const {
+  assert(({
+           boost::container::flat_set<int> rangeSet;
+           rangeSet.reserve(mapping.size());
+           std::ranges::for_each(mapping, [&](const auto x) { rangeSet.insert(x); }, projSecond);
+           rangeSet.size() == mapping.size();
+         }) &&
+         "duplicates in range");
   Mapping inverted;
   inverted.reserve(mapping.size());
   for (auto [from, to] : mapping) {
