@@ -17,6 +17,7 @@ class Renaming {
   Mapping mapping;
 
  public:
+  static Renaming empty() { return Renaming({}); }
   static Renaming minimal(const std::vector<int> &from);
   static Renaming simple(int from, int to);
   static Renaming identity(const boost::container::flat_set<int> &domain);
