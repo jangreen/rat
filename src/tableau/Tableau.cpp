@@ -26,6 +26,40 @@ Tableau::Tableau(const Cube &cube) {
   }
 }
 
+void dnfBuilder(const Node *node, DNF &dnf) {
+  if (node->isClosed()) {
+    return;
+  }
+
+  for (const auto &child : node->getChildren()) {
+    DNF childDNF;
+    dnfBuilder(child.get(), childDNF);
+    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
+               std::make_move_iterator(childDNF.end()));
+  }
+
+  const auto &literal = node->getLiteral();
+  if (node->isLeaf()) {
+    dnf.push_back(literal.isNormal() ? Cube{literal} : Cube{});
+    return;
+  }
+
+  if (!literal.isNormal()) {
+    // Ignore non-normal literals.
+    return;
+  }
+
+  for (auto &cube : dnf) {
+    cube.push_back(literal);
+  }
+}
+
+DNF Tableau::extractDNF() const {
+  DNF dnf;
+  dnfBuilder(rootNode.get(), dnf);
+  return dnf;
+}
+
 // ===========================================================================================
 // ======================================= Validation ========================================
 // ===========================================================================================
@@ -69,21 +103,28 @@ void Tableau::deleteNode(Node *node) {
   assert(parentNode->validateRecursive());
 }
 
-void Tableau::normalize() {
+void Tableau::normalize(const bool weakenening) {
   Stats::counter("#iterations - normalize").reset();
 
+  auto modCounter = 0;
+  auto tableauRenaming = Renaming::empty();
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
     // remove useless literals in each iteration
     // do this after all positive literals are processed (top is negated)
     // unreduced nodes could become empty
-    if (unreducedNodes.top()->getLiteral().negated) {
-      removeUselessLiterals();
-      if (unreducedNodes.isEmpty()) {
-        break;
+    if (modCounter % 4 == 0) {
+      if (weakenening) {
+        if (unreducedNodes.top()->getLiteral().negated) {
+          removeUselessLiterals();
+          if (unreducedNodes.isEmpty()) {
+            break;
+          }
+        }
       }
     }
+    modCounter++;
 
     Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();
@@ -105,7 +146,6 @@ void Tableau::normalize() {
 
     // 2) Renaming rule
     if (currentNode->getLiteral().isPositiveEqualityPredicate()) {
-      // we want to process equalities first
       // Rule (\equivL), Rule (\equivR)
       renameBranches(currentNode);
       continue;
@@ -148,26 +188,12 @@ void Tableau::normalize() {
     }
 
     // 3) Saturation Rules
-    saturate(currentNode);
-  }
-}
-
-void Tableau::saturate(Node *currentNode) {
-  if (!Assumption::baseAssumptions.empty()) {
-    if (const auto literal = Rules::saturateBase(currentNode->getLiteral())) {
-      currentNode->appendBranch(*literal);
-    }
-  }
-
-  if (!Assumption::idAssumptions.empty()) {
-    if (const auto literal = Rules::saturateId(currentNode->getLiteral())) {
-      currentNode->appendBranch(*literal);
-    }
-  }
-
-  if (!Assumption::baseSetAssumptions.empty()) {
-    if (const auto literal = Rules::saturateBaseSet(currentNode->getLiteral())) {
-      currentNode->appendBranch(*literal);
+    // lazy saturation:
+    // nodes that should be saturated are marked if a spurious counterexample is found
+    // we do this at node level because child nodes sould inherit this property
+    if (currentNode->getLiteral().applySaturation) {
+      auto saturatedLiterals = currentNode->getLiteral().saturate();
+      currentNode->appendBranch(saturatedLiterals);
     }
   }
 }
@@ -271,10 +297,13 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
 }
 
 void Tableau::renameBranchesInternalDown(
-    Node *node, const Renaming &renaming, std::unordered_set<Literal> &allRenamedLiterals,
+    Node *nodeWithEquality, Node *node, const Renaming &renaming,
+    std::unordered_set<Literal> &allRenamedLiterals,
     const std::unordered_map<const Node *, Node *> &originalToCopy,
     std::unordered_set<const Node *> &unrollingParents) {
-  node->rename(renaming);
+  if (nodeWithEquality != node) {  // do not rename the original equality
+    node->rename(renaming);
+  }
   // gather all unrollingParents in the subtree to prevent deleting them
   if (node->getLastUnrollingParent() != nullptr) {
     unrollingParents.insert(node->getLastUnrollingParent());
@@ -296,7 +325,8 @@ void Tableau::renameBranchesInternalDown(
       } else {
         allRenamedLiteralsCopy = allRenamedLiterals;
       }
-      renameBranchesInternalDown(*childIt, renaming, allRenamedLiteralsCopy, originalToCopy,
+      renameBranchesInternalDown(nodeWithEquality, *childIt, renaming, allRenamedLiteralsCopy,
+                                 originalToCopy,
                                  unrollingParents);  // copy for each branching
     }
   }
@@ -307,10 +337,9 @@ void Tableau::renameBranchesInternalDown(
 }
 
 /*
- *  Given a leaf node with an equality predicate, renames the branch according to the equality.
- *  The original branch is destroyed and the renamed branch is added to the tableau.
- *  The renamed branch will contain a trivial leaf of the shape "l = l" which is likely
- *  to get removed in the next step.
+ *  Given a node with an equality predicate, renames the branch according to the equality.
+ *  The original branch is copied from the root to the node and moved from the node downwards while
+ *  renaming. The renamed branch will still contain the equality predicate "e1 = e2" to remember it.
  *  All newly added nodes are automatically added to the worklist.
  *
  *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
@@ -320,12 +349,14 @@ void Tableau::renameBranches(Node *node) {
   assert(node->getLiteral().operation == PredicateOperation::equality);
 
   // Compute renaming according to equality predicate (from larger label to lower label).
+  // e1 = e2
   const int e1 = node->getLiteral().leftEvent->label.value();
   const int e2 = node->getLiteral().rightEvent->label.value();
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
-  const auto renaming = Renaming::simple(from, to);
   assert(from != to);
+  const auto renaming = Renaming::simple(from, to);
+  // TODO: node->renaming = node->renaming.totalCompose(renaming);
 
   // Determine first node that belongs to the renamed branches only
   Node *firstUnsharedNode = node;
@@ -341,9 +372,9 @@ void Tableau::renameBranches(Node *node) {
 
   const auto renamedLastSharedNode =
       renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals, originalToCopy);
-  renameBranchesInternalDown(firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
+  // do not rename node, begin with children
+  renameBranchesInternalDown(node, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
                              unrollingParents);
-
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
 }
 
@@ -358,52 +389,17 @@ bool isSubsumed(const Cube &a, const Cube &b) {
   return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
 }
 
-void dnfBuilder(const Node *node, DNF &dnf) {
-  if (node->isClosed()) {
-    return;
-  }
-
-  for (const auto &child : node->getChildren()) {
-    DNF childDNF;
-    dnfBuilder(child.get(), childDNF);
-    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
-               std::make_move_iterator(childDNF.end()));
-  }
-
-  const auto &literal = node->getLiteral();
-  if (node->isLeaf()) {
-    dnf.push_back(literal.isNormal() ? Cube{literal} : Cube{});
-    return;
-  }
-
-  if (!literal.isNormal()) {
-    // Ignore non-normal literals.
-    return;
-  }
-
-  for (auto &cube : dnf) {
-    cube.push_back(literal);
-  }
-}
-
-DNF extractDNF(const Node *root) {
-  DNF dnf;
-  dnfBuilder(root, dnf);
-  removeUselessLiterals(dnf);
-  return dnf;
-}
-
 DNF simplifyDnf(const DNF &dnf) {
   // return dnf;  // To disable simplification
   Stats::diff("simplifyDnf - removed cubes").first(dnf.size());
-  DNF sortedDnf = dnf;
+  auto sortedDnf = dnf;
   std::ranges::sort(sortedDnf, std::less(), &Cube::size);
 
   DNF simplified;
   simplified.reserve(sortedDnf.size());
   for (const auto &c1 : sortedDnf) {
     const bool subsumed =
-        std::ranges::any_of(simplified, [&](const auto &c2) { return isSubsumed(c1, c2); });
+        std::ranges::any_of(simplified, [&](const Cube &c2) { return isSubsumed(c1, c2); });
     if (!subsumed) {
       simplified.push_back(c1);
     }
@@ -423,12 +419,19 @@ size_t computeSize(const Node *node) {
   return size;
 }
 
-DNF Tableau::computeDnf() {
+DNF Tableau::computeDnf(const bool weakenening) {
   assert(validate());
-  normalize();
-  removeUselessLiterals();
+  normalize(weakenening);
+  if (weakenening) {
+    removeUselessLiterals();
+  }
   Stats::value("normalize size").set(computeSize(rootNode.get()));
-  auto dnf = simplifyDnf(extractDNF(rootNode.get()));
+
+  auto dnf = extractDNF();
+  if (weakenening) {
+    ::removeUselessLiterals(dnf);
+  }
+  dnf = simplifyDnf(dnf);
   assert(validateDNF(dnf));
   assert(validate());
   assert(unreducedNodes.isEmpty());
@@ -440,7 +443,7 @@ DNF Tableau::computeDnf() {
 // ===========================================================================================
 
 void Tableau::toDotFormat(std::ofstream &output) const {
-  output << "graph {" << std::endl << "node[shape=\"plaintext\"]" << std::endl;
+  output << "graph {" << std::endl << "node[shape=\"plaintext\"]\n";
   if (rootNode != nullptr) {
     rootNode->toDotFormat(output);
   }

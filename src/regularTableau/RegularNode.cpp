@@ -85,6 +85,10 @@ bool RegularNode::validate() const {
   // literals must be normal
   const bool literalsAreNormal = std::ranges::all_of(cube, &Literal::isNormal);
   assert(literalsAreNormal);
+  // edges are valid
+  assert(std::ranges::all_of(children, [&](const RegularNode *child) {
+    return child->parents.contains(const_cast<RegularNode *>(this));
+  }));
   assert(std::ranges::all_of(epsilonChildren, [&](const RegularNode *epsilonChild) {
     return epsilonChild->epsilonParents.contains(const_cast<RegularNode *>(this));
   }));
@@ -98,7 +102,6 @@ size_t RegularNode::Hash::operator()(const std::unique_ptr<RegularNode> &node) c
 void RegularNode::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";
-  output << "Hash:\n" << std::hash<RegularNode>()(*this);
 
   // label is cube
   output << "\", label=\"";

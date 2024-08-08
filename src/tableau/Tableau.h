@@ -11,7 +11,10 @@ class Tableau {
   explicit Tableau(const Cube &cube);
 
   // ================== Core algorithm ==================
-  DNF computeDnf();
+  void normalize(bool weakenening = true);
+  DNF computeDnf(bool weakenening = true);
+  [[nodiscard]] DNF extractDNF() const;
+  [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
   // methods for regular reasoning
   bool tryApplyModalRuleOnce(int applyToEvent);
 
@@ -33,17 +36,13 @@ class Tableau {
   std::unordered_map<const Node *, std::unordered_set<Node *>> crossReferenceMap;
   std::unique_ptr<Node> rootNode;
 
-  [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
-
-  void normalize();
-  void saturate(Node *currentNode);
   void deleteNode(Node *node);
 
   void renameBranches(Node *node);
   Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
                                  std::unordered_set<Literal> &allRenamedLiterals,
                                  std::unordered_map<const Node *, Node *> &originalToCopy);
-  void renameBranchesInternalDown(Node *node, const Renaming &renaming,
+  void renameBranchesInternalDown(Node *nodeWithEquality, Node *node, const Renaming &renaming,
                                   std::unordered_set<Literal> &allRenamedLiterals,
                                   const std::unordered_map<const Node *, Node *> &originalToCopy,
                                   std::unordered_set<const Node *> &unrollingParents);

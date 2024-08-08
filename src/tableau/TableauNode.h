@@ -53,6 +53,8 @@ class Node {
   explicit Node(const Node *other) = delete;
   ~Node();
 
+  Cube equalities;  // used to track renameBranches
+
   // ================== Accessors ==================
   [[nodiscard]] Tableau *getTableau() const { return tableau; }
   [[nodiscard]] Node *getParentNode() const { return parentNode; }

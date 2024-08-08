@@ -42,12 +42,12 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   Stats::diff("reduceDNF - removed cubes").second(dnf.size());
 
   // remove l from dnf
-  Stats::diff("reduceDNF - removed literals").first(flatten(dnf).size());
+  Stats::diff("reduceDNF - removed literals").first(flatten<Literal>(dnf).size());
   for (auto &cube : dnf) {
     auto [begin, end] = std::ranges::remove(cube, literal);
     cube.erase(begin, end);
   }
-  Stats::diff("reduceDNF - removed literals").second(flatten(dnf).size());
+  Stats::diff("reduceDNF - removed literals").second(flatten<Literal>(dnf).size());
 
   assert(validateDNF(dnf));
 }
@@ -332,11 +332,13 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
   if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
         return !isLiteralActive(literal, active);
       })) {
-    if (const auto ann = literal.annotation->getValue();
-        ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
-      // if literal can be saturated, satriate first
-      tableau->saturate(this);
-    }
+    // TODO: do we have to do this while lazy saturation?
+    // if (const auto ann = literal.annotation->getValue();
+    //     ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
+    //   // if literal can be saturated, saturate first
+    //   auto saturatedLiterals = literal.saturate();
+    //   appendBranch(saturatedLiterals);
+    // }
     Stats::counter("removeUselessLiterals tabl")++;
     tableau->deleteNode(this);
   }
@@ -574,7 +576,6 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
     return {};
   }
   Cube newLiterals;
-
   // Negated and normal lit
   // negated modal rule
   auto sub1 = substituteAllOnce(literal, search1, replace1);
@@ -682,6 +683,12 @@ void Node::toDotFormat(std::ofstream &output) const {
     }
     output << "\n";
   }
+  output << "applySaturation: " << literal.applySaturation << "\n";
+  output << "branch equalities: ";
+  for (const auto equality : equalities) {
+    output << equality.toString();
+  }
+  output << "\n";
 
   // label
   output << "\",label=\"" << literal.toString() << "\"";
