@@ -1,10 +1,11 @@
 // base theory
 
 let rf = [W];rf-base;[R]
-let co = [W];co-base;[W]
+let co = [W];co-base;[W] & loc
 let fr = rf^-1;co
 let mo = co
 
 assume W & R <= 0
 assume co-base+ <= co-base
+assume loc+ <= loc
 assume rf;rf^-1 <= id
