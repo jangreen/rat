@@ -27,7 +27,7 @@ Literal::Literal(const CanonicalSet set)
       rightEvent(nullptr),
       identifier(std::nullopt) {}
 
-Literal::Literal(const AnnotatedSet &annotatedSet, bool applySaturation)
+Literal::Literal(const AnnotatedSet &annotatedSet, const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
       set(std::get<CanonicalSet>(annotatedSet)),
@@ -49,7 +49,7 @@ Literal::Literal(const CanonicalSet event, std::string identifier)
       identifier(identifier) {}
 
 Literal::Literal(const CanonicalSet event, std::string identifier, const AnnotationType &annotation,
-                 bool applySaturation)
+                 const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::set),
       set(nullptr),
@@ -73,7 +73,8 @@ Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
 }
 
 Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
-                 std::string identifier, const AnnotationType &annotation, bool applySaturation)
+                 std::string identifier, const AnnotationType &annotation,
+                 const bool applySaturation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
@@ -87,7 +88,7 @@ Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
 }
 
 Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent,
-                 bool applySaturation)
+                 const bool applySaturation)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
@@ -139,8 +140,12 @@ bool Literal::validate() const {
 }
 
 std::strong_ordering Literal::operator<=>(const Literal &other) const {
-  if (const auto cmp = (other.negated <=> negated); cmp != 0) return cmp;
-  if (const auto cmp = operation <=> other.operation; cmp != 0) return cmp;
+  if (const auto cmp = (other.negated <=> negated); cmp != 0) {
+    return cmp;
+  }
+  if (const auto cmp = operation <=> other.operation; cmp != 0) {
+    return cmp;
+  }
 
   // We assume well-formed literals
   switch (operation) {

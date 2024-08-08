@@ -103,11 +103,13 @@ Node::~Node() {
 
 bool Node::validate() const {
   if (tableau == nullptr) {
-    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString() << std::endl;
+    std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString();
+    std::flush(std::cout);
     return false;
   }
   if (tableau->getRoot() != this && parentNode == nullptr) {
-    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString() << std::endl;
+    std::cout << "Invalid node(no parent) " << this << ": " << literal.toString();
+    std::flush(std::cout);
     return false;
   }
   assert(lastUnrollingParent == nullptr || lastUnrollingParent->validate());
@@ -685,7 +687,7 @@ void Node::toDotFormat(std::ofstream &output) const {
   }
   output << "applySaturation: " << literal.applySaturation << "\n";
   output << "branch equalities: ";
-  for (const auto equality : equalities) {
+  for (const auto &equality : equalities) {
     output << equality.toString();
   }
   output << "\n";
@@ -697,12 +699,12 @@ void Node::toDotFormat(std::ofstream &output) const {
   if (isClosed()) {
     output << ", fontcolor=green";
   }
-  output << "];" << std::endl;
+  output << "];\n";
 
   // children
   for (const auto &child : children) {
     child->toDotFormat(output);
     output << "N" << this << " -- "
-           << "N" << child << ";" << std::endl;
+           << "N" << child << ";\n";
   }
 }

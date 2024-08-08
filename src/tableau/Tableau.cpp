@@ -107,7 +107,6 @@ void Tableau::normalize(const bool weakenening) {
   Stats::counter("#iterations - normalize").reset();
 
   auto modCounter = 0;
-  auto tableauRenaming = Renaming::empty();
   while (!unreducedNodes.isEmpty()) {
     exportDebug("debug");
 
@@ -443,11 +442,11 @@ DNF Tableau::computeDnf(const bool weakenening) {
 // ===========================================================================================
 
 void Tableau::toDotFormat(std::ofstream &output) const {
-  output << "graph {" << std::endl << "node[shape=\"plaintext\"]\n";
+  output << "graph {\nnode[shape=\"plaintext\"]\n";
   if (rootNode != nullptr) {
     rootNode->toDotFormat(output);
   }
-  output << "}" << std::endl;
+  output << "}\n";
 }
 
 void Tableau::exportProof(const std::string &filename) const {

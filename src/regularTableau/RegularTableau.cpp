@@ -463,8 +463,8 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
         }
 
         // remove all paths that contain parent -> child
-        const auto &[begin, end] = std::ranges::remove_if(allPaths, [&](const Path &path) {
-          for (auto it = path.rbegin(); it != path.rend(); ++it) {
+        const auto &[begin, end] = std::ranges::remove_if(allPaths, [&](const Path &curPath) {
+          for (auto it = curPath.rbegin(); it != curPath.rend(); ++it) {
             const bool parentMatch = parent == it[0];
             const bool childMatch = child == it[1];
             if (parentMatch || childMatch) {
@@ -824,7 +824,7 @@ void RegularTableau::exportModel(const std::string &filename, const Cube &model)
   }
 
   // export events + set memberships
-  for (const auto [_, event] : representatives) {
+  for (const auto event : representatives | std::views::values) {
     counterexamleModel << "N" << event << "[label = \"";
     // set memberships
     if (representativeSetMap.contains(event)) {
@@ -851,10 +851,10 @@ void RegularTableau::exportModel(const std::string &filename, const Cube &model)
     auto baseRelation = edge.identifier.value();
 
     counterexamleModel << "N" << representatives.at(left) << " -> N" << representatives.at(right);
-    counterexamleModel << "[label = \"" << baseRelation << "\"];" << std::endl;
+    counterexamleModel << "[label = \"" << baseRelation << "\"];\n";
   }
 
-  counterexamleModel << "}" << std::endl;
+  counterexamleModel << "}" << '\n';
   counterexamleModel.close();
 }
 
@@ -898,7 +898,7 @@ void RegularTableau::exportCounterexamplePath(const RegularNode *openLeaf) const
     }
   }
 
-  counterexamplePath << "}" << std::endl;
+  counterexamplePath << "}\n";
   counterexamplePath.close();
 }
 
@@ -928,7 +928,7 @@ void RegularTableau::toDotFormat(std::ofstream &output) const {
     }
   }
 
-  output << "}" << std::endl;
+  output << "}\n";
 }
 
 void RegularTableau::nodeToDotFormat(const RegularNode *node, std::ofstream &output) const {

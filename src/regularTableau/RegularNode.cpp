@@ -114,5 +114,5 @@ void RegularNode::toDotFormat(std::ofstream &output) const {
   if (closed) {
     output << ", color=green";
   }
-  output << "];" << std::endl;
+  output << "];\n";
 }
