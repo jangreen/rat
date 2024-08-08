@@ -51,7 +51,7 @@ Renaming Renaming::inverted() const {
   return Renaming(std::move(inverted));
 }
 
-Renaming Renaming::compose(const Renaming& other) const {
+Renaming Renaming::strictCompose(const Renaming& other) const {
   Mapping composed;
   composed.reserve(mapping.size());
   for (auto [a, b] : mapping) {
@@ -62,11 +62,25 @@ Renaming Renaming::compose(const Renaming& other) const {
   return Renaming(std::move(composed));
 }
 
-Renaming Renaming::totalCompose(const Renaming& other) const {
+Renaming Renaming::compose(const Renaming& other) const {
   Mapping composed;
   composed.reserve(mapping.size());
   for (auto [a, b] : mapping) {
     composed.emplace_back(a, other.rename(b));
+  }
+  return Renaming(std::move(composed));
+}
+
+Renaming Renaming::totalCompose(const Renaming& other) const {
+  Mapping composed;
+  composed.reserve(mapping.size() + other.size());
+  for (auto [a, b] : mapping) {
+    composed.emplace_back(a, other.rename(b));
+  }
+  for (auto [a, b] : other.mapping) {
+    if (std::ranges::find(mapping, a, projFirst) == mapping.end()) {
+      composed.emplace_back(a, b);
+    }
   }
   return Renaming(std::move(composed));
 }

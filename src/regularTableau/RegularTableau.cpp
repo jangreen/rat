@@ -181,7 +181,7 @@ void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const Edge
   // if child has epsilon edge -> add shortcuts
   for (const auto epsilonChildChild : child->getEpsilonChildren()) {
     const auto &childRenaming = epsilonChildChild->getEpsilonParents().at(child);
-    addEdge(parent, epsilonChildChild, label.compose(childRenaming));
+    addEdge(parent, epsilonChildChild, label.strictCompose(childRenaming));
   }
   assert(validate());
 }
@@ -200,14 +200,13 @@ void RegularTableau::addEpsilonEdge(RegularNode *parent, RegularNode *child,
 
   // add shortcuts
   for (const auto &[grandparentNode, grandparentLabel] : parent->getParents()) {
-    addEdge(grandparentNode, child, grandparentLabel.compose(label));
+    addEdge(grandparentNode, child, grandparentLabel.strictCompose(label));
   }
   for (const auto &[grandparentNode, grandparentLabel] : parent->getEpsilonParents()) {
-    addEpsilonEdge(grandparentNode, child, grandparentLabel.compose(label));
-  }
   // add epsilon child of a root nodes to root nodes
   if (rootNodes.contains(parent)) {
     rootNodes.insert(child);
+    addEpsilonEdge(grandparentNode, child, grandparentLabel.strictCompose(label));
   }
 
   assert(validate());
@@ -520,7 +519,7 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
   auto renCur = node->reachabilityTreeParent;
   while (renCur->reachabilityTreeParent != nullptr) {
     auto curRenaming = renCur->reachabilityTreeParent->getLabelForChild(renCur).inverted();
-    rootRenaming = rootRenaming.totalCompose(curRenaming);
+    rootRenaming = rootRenaming.compose(curRenaming);
     renCur = renCur->reachabilityTreeParent;
   }
 
