@@ -93,6 +93,12 @@ inline bool validateCube(const Cube &cube) {
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
+inline void removeDuplicates(Cube &cube) {
+  std::ranges::sort(cube);
+  const auto [first, last] = std::ranges::unique(cube);
+  cube.erase(first, last);
+}
+
 inline void renameCube(const Renaming &renaming, Cube &cube) {
   for (auto &literal : cube) {
     literal.rename(renaming);

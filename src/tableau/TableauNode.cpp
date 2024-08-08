@@ -605,6 +605,7 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
   //     newLiterals.push_back(substituted2.value());
   //   }
   // }
+  removeDuplicates(newLiterals);  // TODO: performance?
   return newLiterals;
 }
 
