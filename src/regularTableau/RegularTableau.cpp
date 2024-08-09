@@ -514,9 +514,10 @@ bool RegularTableau::saturationLazy(RegularNode *openLeaf) {
     auto curNode = openLeaf;
     while (curNode->reachabilityTreeParent != nullptr) {
       curNode = curNode->reachabilityTreeParent;
+      assert(validateReachabilityTree());
 
       // check
-      const auto &nodeRenaming = getRootRenaming(curNode).inverted();
+      const auto &nodeRenaming = getRootRenaming(curNode);
       for (const auto &cubeLiteral : curNode->cube | std::views::filter(&Literal::negated)) {
         // rename cubeLiteral to root + saturationRenaming
         auto renamedLiteral = cubeLiteral;
@@ -547,7 +548,7 @@ bool RegularTableau::saturationLazy(RegularNode *openLeaf) {
           }
 
           const auto &dnf = tableau.computeDnf(false);  // dont weakening, do saturate
-          tableau.exportProof("debug");
+          tableau.exportDebug("debug");
 
           if (dnf.empty()) {
             curNode->closed = true;
@@ -563,6 +564,7 @@ bool RegularTableau::saturationLazy(RegularNode *openLeaf) {
     if (!pathNeedsSaturation) {
       return false;
     }
+    exportDebug("debug");
   }
   return true;
 }
