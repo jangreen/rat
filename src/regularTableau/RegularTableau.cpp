@@ -81,13 +81,13 @@ bool RegularTableau::validate() const {
     return nodeValid;
   });
 
-  // get open leafs
+  // get open leafs (except for currentNode)
   auto openLeafs = reachable;
   std::erase_if(openLeafs, [&](const RegularNode *node) {
-    return !node->isOpenLeaf() || !node->getEpsilonChildren().empty() || node == currentNode;
+    return !node->isOpenLeaf() || node == currentNode;
   });
 
-  // open leafs are in unreduced nodes
+  // open leafs are in unreduced nodes (except for currentNode)
   const auto openLeafsAreUnreduced = std::ranges::all_of(openLeafs, [&](const auto &openLeaf) {
     const auto container = get_const_container(unreducedNodes);
     const auto leafValid =
@@ -130,7 +130,6 @@ bool RegularTableau::validateReachabilityTree() const {
 // checks if renaming exists when adding and returns already existing node if possible
 std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   assert(validateNormalizedCube(cube));  // cube is in normal form
-  assert(validate());
 
   // create node, add to "nodes" (returns pointer to existing node if already exists)
   // we do not need to push newNode to unreducedNodes
@@ -143,7 +142,6 @@ std::pair<RegularNode *, Renaming> RegularTableau::newNode(const Cube &cube) {
   Stats::value("node size").set(cube.size());
 
   assert(iter->get()->validate());
-  assert(validate());
   return {iter->get(), renaming};
 }
 
@@ -537,6 +535,8 @@ bool RegularTableau::saturationLazy(RegularNode *openLeaf) {
         if (!spurious && saturatedSpurious) {
           // remove old children
           removeChildren(curNode);
+          // IMPORTANT: invariant in validation of tableau is temporally violated
+          // after removing all children we may have an open leaf that is not on unreduced nodes
 
           // literal is only contradicting if we saturate
           // mark cubeLiterals to saturate it during normalization
