@@ -13,15 +13,16 @@
 template <class result_t = std::chrono::milliseconds, class clock_t = std::chrono::steady_clock,
           class duration_t = std::chrono::milliseconds>
 auto since(std::chrono::time_point<clock_t, duration_t> const &start) {
-  return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+  constexpr double millisecondInSeconds = 1000;
+  return std::chrono::duration_cast<result_t>(clock_t::now() - start).count() /
+         millisecondInSeconds;
 }
 
 int main(int argc, const char *argv[]) {
 #if DEBUG
   spdlog::set_level(spdlog::level::debug);  // Set global log level to debug
 #endif
-  // parse arguments or ask for arguments
-  std::string programName = argv[0];
+  // parse arguments or ask for arguments argv[0] is path to executed program
   std::vector<std::string> programArguments;
   if (argc > 1) {
     programArguments.assign(argv + 1, argv + argc);
@@ -52,7 +53,7 @@ int main(int argc, const char *argv[]) {
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     RegularTableau tableau(goal);
     tableau.solve();
-    spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start).count() / 1000.0));
+    spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start)));
     tableau.exportProof("regular");
 
     Stats::print();

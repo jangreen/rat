@@ -1,11 +1,18 @@
 // base theory
 
-let rf = [W];rf-base;[R]
-let co = [W];co-base;[W] & loc
+let rfe = [W];(rfe-base & loc);[R]
+let rfi = [W];(rfi-base & loc);[R]
+let rf = rfi | rfe
+// let rf = [W];rf-base;[R]
+let co = [W];(co-base & loc);[W]
+let po = [W | R];po-base;[W | R]
+let po-loc = [W | R];(po-base & loc);[W | R]
+
 let fr = rf^-1;co
 let mo = co
 
 assume W & R <= 0
 assume co-base+ <= co-base
-assume loc+ <= loc
+assume (loc | loc^-1)+ <= loc
 assume rf;rf^-1 <= id
+assume (po-base | rfi-base)^+ <= po-base

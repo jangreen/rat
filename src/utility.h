@@ -31,7 +31,9 @@ bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
 template <typename T>
 std::vector<T> flatten(const range_of<std::vector<T>> auto &orig) {
   std::vector<T> ret;
-  for (const auto &v : orig) ret.insert(ret.end(), v.begin(), v.end());
+  for (const auto &v : orig) {
+    ret.insert(ret.end(), v.begin(), v.end());
+  }
   return ret;
 }
 
@@ -105,7 +107,8 @@ inline void renameCube(const Renaming &renaming, Cube &cube) {
   for (auto &literal : cube) {
     literal.rename(renaming);
   }
-  // currently we dont want to ensure sortedness assert(validateCube(cube));
+  // currently we dont want to ensure no duplicates: assert(validateCube(cube));
+  // this decreases performance due to permanent sorting
 }
 
 inline bool validatePartialCube(const PartialCube &cube) {
@@ -113,7 +116,7 @@ inline bool validatePartialCube(const PartialCube &cube) {
     if (std::holds_alternative<Literal>(literal)) {
       return std::get<Literal>(literal).validate();
     } else {
-      return Annotated::validate(std::get<AnnotatedSet>(literal));
+      return Annotated::validate(std::get<SaturationAnnotatedSet>(literal));
     }
   });
 }
@@ -155,7 +158,7 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
         auto l = std::get<Literal>(partialLiteral);
         cube.push_back(std::move(l));
       } else {
-        const auto as = std::get<AnnotatedSet>(partialLiteral);
+        const auto as = std::get<SaturationAnnotatedSet>(partialLiteral);
         cube.push_back(context.substituteSet(as));
       }
     }
@@ -178,9 +181,11 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
   return std::ranges::includes(activeEvents, literal.normalEvents());
 }
 
-inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
+inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs,
+                            const bool preserveSaturatable) {
   // IMPORTANT includes requires the sets to be sorted
-  return std::ranges::includes(activePairs, literal.eventBasePairs());
+  return std::ranges::includes(activePairs, preserveSaturatable ? literal.saturatedEventBasePairs()
+                                                                : literal.eventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal
@@ -285,7 +290,7 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
-    if (literal.negated && !isLiteralActive(literal, activePairs)) {
+    if (literal.negated && !isLiteralActive(literal, activePairs, false)) {
       removedLiterals.push_back(literal);
       return true;
     }
@@ -294,7 +299,6 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   return removedLiterals;
 }
 
-// TODO: Return value unused
 inline void removeUselessLiterals(Cube &cube) {
   const auto &activePairs = gatherActivePairs(cube);
   filterNegatedLiterals(cube, activePairs);
@@ -303,7 +307,7 @@ inline void removeUselessLiterals(Cube &cube) {
   });
 }
 
-inline void removeUselessLiterals(range_of<Cube> auto &dnf) {
+void removeUselessLiterals(range_of<Cube> auto &dnf) {
   Stats::diff("removeUselessLiterals").first(flatten<Literal>(dnf).size());
   for (auto &cube : dnf) {
     removeUselessLiterals(cube);
@@ -320,7 +324,9 @@ double measure_unordered_badness(Unordered const &map) {
   auto const lambda = map.size() / static_cast<double>(map.bucket_count());
 
   auto cost = 0.;
-  for (int i = 0; i < map.bucket_count(); i++) cost += map.bucket_size(i) * map.bucket_size(i);
+  for (int i = 0; i < map.bucket_count(); i++) {
+    cost += map.bucket_size(i) * map.bucket_size(i);
+  }
   cost /= map.size();
 
   return std::max(0., cost / (1 + lambda) - 1);

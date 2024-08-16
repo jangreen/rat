@@ -1,12 +1,24 @@
 #pragma once
 #include <sys/stat.h>
 
+#include <boost/container/flat_set.hpp>
 #include <optional>
 #include <string>
+#include <unordered_set>
 
+template <typename AnnotationType>
 class Annotation;
-typedef const Annotation *CanonicalAnnotation;
-typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
+// typedef + template are not supported
+// template <typename AnnotationType>
+// typedef const Annotation<AnnotationType> *CanonicalAnnotation;
+template <typename AnnotationType>
+using CanonicalAnnotation = const Annotation<AnnotationType> *;
+typedef std::pair<int, int> SaturationAnnotation;  // <id, base> saturation bounds
+typedef int Event;
+typedef std::pair<Event, Event> EventPair;
+typedef boost::container::flat_set<EventPair> RelationValue;
+typedef boost::container::flat_set<Event> SetValue;
+typedef std::variant<RelationValue, SetValue> ExprValue;
 
 /*
  *  Let T be a binary tree-like structure. A leaf annotation L is a function that maps each
@@ -59,42 +71,105 @@ typedef std::pair<int, int> AnnotationType;  // <id, base> saturation bounds
  *    for leaf annotations. It does come with the disadvantage that the annotation itself cannot
  *    be used to avoid exploration of subtrees without annotatable leaves.
  */
+namespace {
+
+template <typename AnnotationType>
+std::optional<AnnotationType> meet(const std::optional<AnnotationType> &a,
+                                   const std::optional<AnnotationType> &b);
+template <>
+std::optional<SaturationAnnotation> meet(const std::optional<SaturationAnnotation> &a,
+                                         const std::optional<SaturationAnnotation> &b) {
+  if (!a.has_value() && !b.has_value()) {
+    return std::nullopt;
+  }
+  if (!a.has_value()) {
+    return b;
+  }
+  if (!b.has_value()) {
+    return a;
+  }
+  return SaturationAnnotation{std::min(a->first, b->first), std::min(a->second, b->second)};
+}
+
+}  // namespace
+
+template <typename AnnotationType>
 class Annotation {
  private:
-  Annotation(std::optional<AnnotationType> value, CanonicalAnnotation left,
-             CanonicalAnnotation right);
-  static CanonicalAnnotation newAnnotation(const std::optional<AnnotationType> &value,
-                                           CanonicalAnnotation left, CanonicalAnnotation right);
+  Annotation(std::optional<AnnotationType> value, const CanonicalAnnotation<AnnotationType> left,
+             const CanonicalAnnotation<AnnotationType> right)
+      : value(std::move(value)), left(left), right(right) {}
 
   [[nodiscard]] bool validate() const;
 
-  const std::optional<AnnotationType> value;  // nullopt: subtree has default annotation
-  const CanonicalAnnotation left;             // is set iff operation unary/binary
-  const CanonicalAnnotation right;            // is set iff operation binary
+  const std::optional<AnnotationType> value;        // nullopt: subtree has default annotation
+  const CanonicalAnnotation<AnnotationType> left;   // is set iff operation unary/binary
+  const CanonicalAnnotation<AnnotationType> right;  // is set iff operation binary
 
  public:
   // WARNING: Never call these constructors: they are only public for technical reasons
   Annotation(const Annotation &other) = default;
   // Annotation(const Annotation &&other) = default;
 
-  static CanonicalAnnotation none() {
-    static CanonicalAnnotation cached = nullptr;
+  static CanonicalAnnotation<AnnotationType> newAnnotation(
+      const std::optional<AnnotationType> &value, const CanonicalAnnotation<AnnotationType> left,
+      const CanonicalAnnotation<AnnotationType> right) {
+    assert(value.has_value() || (left == nullptr && right == nullptr));  // No value => Leaf
+
+    static std::unordered_set<Annotation> canonicalizer;
+    auto [iter, created] = canonicalizer.insert(std::move(Annotation(value, left, right)));
+    return &*iter;
+  }
+  static CanonicalAnnotation<AnnotationType> newAnnotation(
+      const std::optional<AnnotationType> &value, CanonicalAnnotation<AnnotationType> left) {
+    return newAnnotation(value, left, nullptr);
+  }
+  static CanonicalAnnotation<AnnotationType> none() {
+    static CanonicalAnnotation<AnnotationType> cached = nullptr;
     if (cached == nullptr) {
       cached = newAnnotation(std::nullopt, nullptr, nullptr);
     }
     return cached;
   }
-  static CanonicalAnnotation newLeaf(AnnotationType value) {
+  static CanonicalAnnotation<AnnotationType> newLeaf(AnnotationType value) {
     return newAnnotation(value, nullptr, nullptr);
   }
-  static CanonicalAnnotation newAnnotation(CanonicalAnnotation left, CanonicalAnnotation right);
+  static CanonicalAnnotation<AnnotationType> meetAnnotation(
+      const CanonicalAnnotation<AnnotationType> left,
+      const CanonicalAnnotation<AnnotationType> right) {
+    assert(left != nullptr && right != nullptr);
+    if (left == right && left->isLeaf()) {
+      // Two constant annotations (leafs) together form just the same constant annotation.
+      return left;
+    }
+
+    const auto annotationValue = meet(left->getValue(), right->getValue());
+    assert(annotationValue.has_value());  // TODO: maybe return none();?
+    return newAnnotation(annotationValue.value(), left, right);
+  }
 
   // make non-optional return type
   [[nodiscard]] std::optional<AnnotationType> getValue() const { return value; }
-  [[nodiscard]] CanonicalAnnotation getLeft() const { return left == nullptr ? this : left; }
-  [[nodiscard]] CanonicalAnnotation getRight() const { return right == nullptr ? this : right; }
+  [[nodiscard]] CanonicalAnnotation<AnnotationType> getLeft() const {
+    return left == nullptr ? this : left;
+  }
+  [[nodiscard]] CanonicalAnnotation<AnnotationType> getRight() const {
+    return right == nullptr ? this : right;
+  }
   [[nodiscard]] bool isLeaf() const { return left == nullptr && right == nullptr; }
-  static CanonicalAnnotation min(CanonicalAnnotation first, CanonicalAnnotation second);
+  static CanonicalAnnotation<AnnotationType> min(const CanonicalAnnotation<AnnotationType> first,
+                                                 const CanonicalAnnotation<AnnotationType> second) {
+    if (first->isLeaf() && first->getValue() <= second->getValue()) {
+      return first;
+    }
+    if (second->isLeaf() && second->getValue() <= first->getValue()) {
+      return second;
+    }
+    const auto minLeft = min(first->getLeft(), second->getLeft());
+    const auto minRight = min(first->getRight(), second->getRight());
+
+    return meetAnnotation(minLeft, minRight);
+  }
 
   bool operator==(const Annotation &other) const {
     return value == other.value && left == other.left && right == other.right;
@@ -104,17 +179,17 @@ class Annotation {
 };
 
 template <>
-struct std::hash<AnnotationType> {
-  std::size_t operator()(const AnnotationType &pair) const noexcept {
+struct std::hash<SaturationAnnotation> {
+  std::size_t operator()(const SaturationAnnotation &pair) const noexcept {
     return (static_cast<size_t>(pair.first) << 32) | pair.second;
   }
 };
 
-template <>
-struct std::hash<Annotation> {
-  std::size_t operator()(const Annotation &annotation) const noexcept {
-    const size_t leftHash = hash<CanonicalAnnotation>()(annotation.left);
-    const size_t rightHash = hash<CanonicalAnnotation>()(annotation.right);
+template <typename AnnotationType>
+struct std::hash<Annotation<AnnotationType>> {
+  std::size_t operator()(const Annotation<AnnotationType> &annotation) const noexcept {
+    const size_t leftHash = hash<CanonicalAnnotation<AnnotationType>>()(annotation.left);
+    const size_t rightHash = hash<CanonicalAnnotation<AnnotationType>>()(annotation.right);
     const size_t annotationHash = hash<std::optional<AnnotationType>>()(annotation.value);
 
     return (leftHash ^ (rightHash << 1) >> 1) + 31 * annotationHash;

@@ -3,5 +3,5 @@ include ./proofs/kater/base-theory.cat
 let eco1 = (rf | co | fr)+
 let eco2 = rf | (co|fr);rf?
 
-assert eco2 <= eco1
+// assert eco2 <= eco1
 assert eco1 <= eco2

@@ -13,7 +13,7 @@
 class Literal;
 typedef std::vector<Literal> Cube;
 typedef std::vector<Cube> DNF;
-typedef std::variant<AnnotatedSet, Literal> PartialLiteral;
+typedef std::variant<SaturationAnnotatedSet, Literal> PartialLiteral;
 typedef std::vector<PartialLiteral> PartialCube;
 typedef std::vector<PartialCube> PartialDNF;
 
@@ -30,21 +30,17 @@ enum class PredicateOperation {
 
 class Literal {
  public:
-  explicit Literal(bool negated);      // constant
-  explicit Literal(CanonicalSet set);  // positive setNonEmptiness
-  explicit Literal(const AnnotatedSet &annotatedSet,
-                   bool applySaturation);               // negated setNonEmptiness
-  Literal(CanonicalSet event, std::string identifier);  // positive set
-  Literal(CanonicalSet event, std::string identifier,   //
-          const AnnotationType &annotation,
-          bool applySaturation);                                                    // negated set
-  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,                          //
-          std::string identifier);                                                  // positive edge
+  explicit Literal(bool negated);                                // constant
+  explicit Literal(CanonicalSet set);                            // positive setNonEmptiness
+  explicit Literal(const SaturationAnnotatedSet &annotatedSet);  // negated setNonEmptiness
+  Literal(CanonicalSet event, std::string identifier);           // positive set
+  Literal(CanonicalSet event, std::string identifier,            //
+          const SaturationAnnotation &annotation);               // negated set
+  Literal(CanonicalSet leftEvent, CanonicalSet rightEvent,       //
+          std::string identifier);                               // positive edge
   Literal(CanonicalSet leftEvent, CanonicalSet rightEvent, std::string identifier,  //
-          const AnnotationType &annotation,
-          bool applySaturation);  // negated edge
-  Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent,
-          bool applySaturation);  // equality
+          const SaturationAnnotation &annotation);                                  // negated edge
+  Literal(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent);           // equality
   [[nodiscard]] bool validate() const;
 
   std::strong_ordering operator<=>(const Literal &other) const;
@@ -53,13 +49,12 @@ class Literal {
 
   bool negated;
   PredicateOperation operation;
-  CanonicalSet set;                // setNonEmptiness
-  CanonicalAnnotation annotation;  // negated + setNonEmptiness, edge
-  CanonicalSet leftEvent;          // edge, set, equality
-  CanonicalSet rightEvent;         // edge, equality
+  CanonicalSet set;                                      // setNonEmptiness
+  CanonicalAnnotation<SaturationAnnotation> annotation;  // negated + setNonEmptiness, edge
+  CanonicalSet leftEvent;                                // edge, set, equality
+  CanonicalSet rightEvent;                               // edge, equality
   // std::optional<std::string> identifier;  // edge, set
   std::optional<CanonicalString> identifier;  // edge, set
-  bool applySaturation = false;               // indicates if we want to saturate this node
 
   [[nodiscard]] bool isNormal() const;
   // TODO (topEvent optimization): [[nodiscard]] bool hasTopEvent() const { return
@@ -85,15 +80,16 @@ class Literal {
   [[nodiscard]] EventSet normalEvents() const;
   [[nodiscard]] EventSet events() const;
   [[nodiscard]] SetOfSets eventBasePairs() const;
+  [[nodiscard]] SetOfSets saturatedEventBasePairs() const;
   // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
 
   std::optional<Literal> substituteAll(CanonicalSet search, CanonicalSet replace) const;
   std::optional<Literal> substituteAll(CanonicalRelation search, CanonicalRelation replace) const;
   bool substitute(CanonicalSet search, CanonicalSet replace, int n);  // substitute n-th occurrence
-  [[nodiscard]] Literal substituteSet(const AnnotatedSet &set) const;
+  [[nodiscard]] Literal substituteSet(const SaturationAnnotatedSet &set) const;
   [[nodiscard]] Cube saturate() const;
   void rename(const Renaming &renaming);
-  [[nodiscard]] AnnotatedSet annotatedSet() const { return {set, annotation}; }
+  [[nodiscard]] SaturationAnnotatedSet annotatedSet() const { return {set, annotation}; }
 
   // printing
   [[nodiscard]] std::string toString() const;

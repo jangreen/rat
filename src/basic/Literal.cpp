@@ -13,7 +13,7 @@ Literal::Literal(const bool negated)
     : negated(negated),
       operation(PredicateOperation::constant),
       set(nullptr),
-      annotation(Annotation::none()),
+      annotation(Annotation<SaturationAnnotation>::none()),
       leftEvent(nullptr),
       rightEvent(nullptr),
       identifier(std::nullopt) {}
@@ -22,20 +22,19 @@ Literal::Literal(const CanonicalSet set)
     : negated(false),
       operation(PredicateOperation::setNonEmptiness),
       set(set),
-      annotation(Annotation::none()),
+      annotation(Annotation<SaturationAnnotation>::none()),
       leftEvent(nullptr),
       rightEvent(nullptr),
       identifier(std::nullopt) {}
 
-Literal::Literal(const AnnotatedSet &annotatedSet, const bool applySaturation)
+Literal::Literal(const SaturationAnnotatedSet &annotatedSet)
     : negated(true),
       operation(PredicateOperation::setNonEmptiness),
       set(std::get<CanonicalSet>(annotatedSet)),
-      annotation(std::get<CanonicalAnnotation>(annotatedSet)),
+      annotation(std::get<CanonicalAnnotation<SaturationAnnotation>>(annotatedSet)),
       leftEvent(nullptr),
       rightEvent(nullptr),
-      identifier(std::nullopt),
-      applySaturation(applySaturation) {
+      identifier(std::nullopt) {
   assert(Annotated::validate(annotatedSet));
 }
 
@@ -43,28 +42,27 @@ Literal::Literal(const CanonicalSet event, std::string identifier)
     : negated(false),
       operation(PredicateOperation::set),
       set(nullptr),
-      annotation(Annotation::none()),
+      annotation(Annotation<SaturationAnnotation>::none()),
       leftEvent(event),
       rightEvent(nullptr),
       identifier(identifier) {}
 
-Literal::Literal(const CanonicalSet event, std::string identifier, const AnnotationType &annotation,
-                 const bool applySaturation)
+Literal::Literal(const CanonicalSet event, std::string identifier,
+                 const SaturationAnnotation &annotation)
     : negated(true),
       operation(PredicateOperation::set),
       set(nullptr),
-      annotation(Annotation::newLeaf(annotation)),
+      annotation(Annotation<SaturationAnnotation>::newLeaf(annotation)),
       leftEvent(event),
       rightEvent(nullptr),
-      identifier(identifier),
-      applySaturation(applySaturation) {}
+      identifier(identifier) {}
 
 Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
                  std::string identifier)
     : negated(false),
       operation(PredicateOperation::edge),
       set(nullptr),
-      annotation(Annotation::none()),
+      annotation(Annotation<SaturationAnnotation>::none()),
       leftEvent(leftEvent),
       rightEvent(rightEvent),
       identifier(identifier) {
@@ -73,57 +71,56 @@ Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
 }
 
 Literal::Literal(const CanonicalSet leftEvent, const CanonicalSet rightEvent,
-                 std::string identifier, const AnnotationType &annotation,
-                 const bool applySaturation)
+                 std::string identifier, const SaturationAnnotation &annotation)
     : negated(true),
       operation(PredicateOperation::edge),
       set(nullptr),
-      annotation(Annotation::newLeaf(annotation)),
+      annotation(Annotation<SaturationAnnotation>::newLeaf(annotation)),
       leftEvent(leftEvent),
       rightEvent(rightEvent),
-      identifier(identifier),
-      applySaturation(applySaturation) {
+      identifier(identifier) {
   assert(leftEvent->isEvent());
   assert(rightEvent->isEvent());
 }
 
-Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent,
-                 const bool applySaturation)
+Literal::Literal(const bool negated, const CanonicalSet leftEvent, const CanonicalSet rightEvent)
     : negated(negated),
       operation(PredicateOperation::equality),
       set(nullptr),
-      annotation(Annotation::none()),
+      annotation(Annotation<SaturationAnnotation>::none()),
       leftEvent(leftEvent),
       rightEvent(rightEvent),
-      identifier(std::nullopt),
-      applySaturation(applySaturation) {}
+      identifier(std::nullopt) {}
 
 bool Literal::validate() const {
   switch (operation) {
     case PredicateOperation::constant: {
       const auto isValid = set == nullptr && leftEvent == nullptr && rightEvent == nullptr &&
-                           !identifier.has_value() && annotation == Annotation::none();
+                           !identifier.has_value() &&
+                           annotation == Annotation<SaturationAnnotation>::none();
       assert(isValid);
       return isValid;
     }
     case PredicateOperation::edge: {
       const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
                            leftEvent->isEvent() && rightEvent->isEvent() &&
-                           identifier.has_value() && (!negated || annotation != Annotation::none());
+                           identifier.has_value() &&
+                           (!negated || annotation != Annotation<SaturationAnnotation>::none());
       assert(isValid);
       return isValid;
     }
     case PredicateOperation::equality: {
       const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
                            leftEvent->isEvent() && rightEvent->isEvent() &&
-                           !identifier.has_value() && annotation == Annotation::none();
+                           !identifier.has_value() &&
+                           annotation == Annotation<SaturationAnnotation>::none();
       assert(isValid);
       return isValid;
     }
     case PredicateOperation::set: {
       const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
                            leftEvent->isEvent() && identifier.has_value() &&
-                           (!negated || annotation != Annotation::none());
+                           (!negated || annotation != Annotation<SaturationAnnotation>::none());
       assert(isValid);
       return isValid;
     }
@@ -294,6 +291,60 @@ SetOfSets Literal::eventBasePairs() const {
   }
 }
 
+SetOfSets getSaturatedEventBasePairs(const SaturationAnnotatedSet &annotatedSet) {
+  const auto &[set, annotation] = annotatedSet;
+
+  switch (set->operation) {
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection: {
+      auto left = getSaturatedEventBasePairs(Annotated::getLeft(annotatedSet));
+      auto right = getSaturatedEventBasePairs(Annotated::getRightSet(annotatedSet));
+      left.insert(right.begin(), right.end());
+      return left;
+    }
+    case SetOperation::domain:
+    case SetOperation::image: {
+      if (set->leftOperand->operation == SetOperation::event &&
+          set->relation->operation == RelationOperation::baseRelation) {
+        return annotation->getValue() && (annotation->getValue().value().first > 0 ||
+                                          annotation->getValue().value().second > 0)
+                   ? SetOfSets{}
+                   : SetOfSets{set};
+      }
+      return getSaturatedEventBasePairs(Annotated::getLeft(annotatedSet));
+    }
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+      return {};
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+SetOfSets Literal::saturatedEventBasePairs() const {
+  switch (operation) {
+    case PredicateOperation::constant:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+      return {};
+    case PredicateOperation::setNonEmptiness: {
+      return getSaturatedEventBasePairs(annotatedSet());
+    }
+    case PredicateOperation::edge: {
+      if (annotation->getValue() &&
+          (annotation->getValue().value().first > 0 || annotation->getValue().value().second > 0)) {
+        // could be saturated
+        return {};
+      }
+      return eventBasePairs();
+    }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
                                               const CanonicalSet replace) const {
   assert(negated);
@@ -302,7 +353,7 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
     case PredicateOperation::setNonEmptiness: {
       const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
       if (newSet.first != set) {
-        return Literal(newSet, applySaturation);
+        return Literal(newSet);
       }
       return std::nullopt;
     }
@@ -318,8 +369,7 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       const auto right = rightEvent == search ? replace : rightEvent;
 
       if (left != leftEvent || right != rightEvent) {
-        return negated ? Literal(left, right, identifier.value(), annotation->getValue().value(),
-                                 applySaturation)
+        return negated ? Literal(left, right, identifier.value(), annotation->getValue().value())
                        : Literal(left, right, identifier.value());
       }
       return std::nullopt;
@@ -331,8 +381,7 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       const auto left = leftEvent == search ? replace : leftEvent;
 
       if (left != leftEvent) {
-        return negated ? Literal(left, identifier.value(), annotation->getValue().value(),
-                                 applySaturation)
+        return negated ? Literal(left, identifier.value(), annotation->getValue().value())
                        : Literal(left, identifier.value());
       }
       return std::nullopt;
@@ -350,7 +399,7 @@ std::optional<Literal> Literal::substituteAll(const CanonicalRelation search,
     case PredicateOperation::setNonEmptiness: {
       const auto newSet = Annotated::substituteAll(annotatedSet(), search, replace);
       if (newSet.first != set) {
-        return Literal(newSet, applySaturation);
+        return Literal(newSet);
       }
       return std::nullopt;
     }
@@ -387,10 +436,10 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
   }
 }
 
-Literal Literal::substituteSet(const AnnotatedSet &set) const {
+Literal Literal::substituteSet(const SaturationAnnotatedSet &set) const {
   assert(operation == PredicateOperation::setNonEmptiness);
   if (negated) {
-    return Literal(set, applySaturation);
+    return Literal(set);
   }
   return Literal(std::get<CanonicalSet>(set));
 }

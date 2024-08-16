@@ -1,0 +1,26 @@
+include ./proofs/kater/base-theory.cat
+
+let hb = (po | rf)+
+let ra = hb | hb;mo | hb;fr
+
+let ppo = po;[W] | [R];po
+let hb2 = (ppo | rfe)+
+let ra2 = (hb2 | hb2;mo | hb2;fr | po;fr)
+
+// Show ra irreflexive <-> ra2 irreflexive
+// sufficient but not necessary condition:
+assert ra2 & id <= ra & id
+// fails for direction: assert ra <= ra2
+// since po is irreflexive we show:
+assert ra | po <= ra2 | po
+
+// TODO:
+// we can also show this:
+// assume ra2 & id <= 0
+// assert ra & id <= ra2 & id
+
+// TODO:
+let ra3 = (mo | fr)?;hb
+// assert [R|W];ra1;[R|W] <= ra3 // &id rot
+// assume ra1 & id <= 0
+// assert ra3 & id <= 0 // &id rot

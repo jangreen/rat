@@ -11,8 +11,8 @@ class Tableau {
   explicit Tableau(const Cube &cube);
 
   // ================== Core algorithm ==================
-  void normalize(bool weakenening = true);
-  DNF computeDnf(bool weakenening = true);
+  void normalize();
+  DNF computeDnf();
   [[nodiscard]] DNF extractDNF() const;
   [[nodiscard]] const Node *getRoot() const { return rootNode.get(); }
   // methods for regular reasoning
@@ -47,7 +47,7 @@ class Tableau {
                                   const std::unordered_map<const Node *, Node *> &originalToCopy,
                                   std::unordered_set<const Node *> &unrollingParents);
 
-  void removeUselessLiterals() {
+  void removeUselessLiterals(const bool preserveSaturatable = true) {
     boost::container::flat_set<SetOfSets> activePairCubes = {{}};
     Stats::counter("removeUselessLiterals tabl").reset();
     exportDebug("debug");

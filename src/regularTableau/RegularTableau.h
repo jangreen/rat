@@ -53,7 +53,6 @@ class RegularTableau {
   auto getPathEvents(const RegularNode *openLeaf) const;
 
   // ================== Printing ==================
-  void exportModel(const std::string &filename, const Cube &model) const;
   void exportCounterexamplePath(const RegularNode *openLeaf) const;
   void toDotFormat(std::ofstream &output) const;
   void nodeToDotFormat(const RegularNode *node, std::ofstream &output) const;
@@ -68,4 +67,5 @@ class RegularTableau {
 
   bool solve();
   void exportProof(const std::string &filename) const;
+  static void exportModel(const std::string &filename, const Cube &model);
 };

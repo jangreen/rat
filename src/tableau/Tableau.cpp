@@ -103,7 +103,7 @@ void Tableau::deleteNode(Node *node) {
   assert(parentNode->validateRecursive());
 }
 
-void Tableau::normalize(const bool weakenening) {
+void Tableau::normalize() {
   Stats::counter("#iterations - normalize").reset();
 
   auto modCounter = 0;
@@ -113,13 +113,11 @@ void Tableau::normalize(const bool weakenening) {
     // remove useless literals in each iteration
     // do this after all positive literals are processed (top is negated)
     // unreduced nodes could become empty
-    if (modCounter % 4 == 0) {
-      if (weakenening) {
-        if (unreducedNodes.top()->getLiteral().negated) {
-          removeUselessLiterals();
-          if (unreducedNodes.isEmpty()) {
-            break;
-          }
+    if (modCounter % 10 == 0) {
+      if (unreducedNodes.top()->getLiteral().negated) {
+        removeUselessLiterals();
+        if (unreducedNodes.isEmpty()) {
+          break;
         }
       }
     }
@@ -190,10 +188,8 @@ void Tableau::normalize(const bool weakenening) {
     // lazy saturation:
     // nodes that should be saturated are marked if a spurious counterexample is found
     // we do this at node level because child nodes sould inherit this property
-    if (currentNode->getLiteral().applySaturation) {
-      auto saturatedLiterals = currentNode->getLiteral().saturate();
-      currentNode->appendBranch(saturatedLiterals);
-    }
+    auto saturatedLiterals = currentNode->getLiteral().saturate();
+    currentNode->appendBranch(saturatedLiterals);
   }
 }
 
@@ -418,18 +414,14 @@ size_t computeSize(const Node *node) {
   return size;
 }
 
-DNF Tableau::computeDnf(const bool weakenening) {
+DNF Tableau::computeDnf() {
   assert(validate());
-  normalize(weakenening);
-  if (weakenening) {
-    removeUselessLiterals();
-  }
+  normalize();
+  removeUselessLiterals();
   Stats::value("normalize size").set(computeSize(rootNode.get()));
 
   auto dnf = extractDNF();
-  if (weakenening) {
-    ::removeUselessLiterals(dnf);
-  }
+  ::removeUselessLiterals(dnf);
   dnf = simplifyDnf(dnf);
   assert(validateDNF(dnf));
   assert(validate());

@@ -12,23 +12,23 @@ std::optional<Literal> saturateBase(const Literal &literal);
 std::optional<Literal> saturateBaseSet(const Literal &literal);
 std::optional<Literal> saturateId(const Literal &literal);
 // ---------------------- SET RULES ----------------------
-std::optional<PartialDNF> applyRule(const Literal &context, const AnnotatedSet &annotatedSet);
-std::optional<AnnotatedSet> saturateBase(const AnnotatedSet &annotatedSet);
-std::optional<AnnotatedSet> saturateBaseSet(const AnnotatedSet &annotatedSet);
-std::optional<AnnotatedSet> saturateId(const AnnotatedSet &annotatedSet);
+std::optional<PartialDNF> applyRule(const Literal &context,
+                                    const SaturationAnnotatedSet &annotatedSet);
+std::optional<SaturationAnnotatedSet> saturateBase(const SaturationAnnotatedSet &annotatedSet);
+std::optional<SaturationAnnotatedSet> saturateBaseSet(const SaturationAnnotatedSet &annotatedSet);
+std::optional<SaturationAnnotatedSet> saturateId(const SaturationAnnotatedSet &annotatedSet);
 // ---------------------- RELATIONAL RULES ----------------------
 std::optional<PartialDNF> applyRelationalRule(const Literal &context,
-                                              const AnnotatedSet &annotatedSet);
+                                              const SaturationAnnotatedSet &annotatedSet);
 
 // ---------------------- MODAL RULES ----------------------
 std::optional<DNF> applyPositiveModalRule(const Literal &literal, int minimalEvent);
-std::optional<PartialDNF> applyPositiveModalRule(const AnnotatedSet &annotatedSet,
+std::optional<PartialDNF> applyPositiveModalRule(const SaturationAnnotatedSet &annotatedSet,
                                                  int minimalEvent);
 
 // TODO: give better name
 PartialDNF substituteIntersectionOperand(bool substituteRight, const PartialDNF &disjunction,
-                                         const AnnotatedSet &otherOperand);
+                                         const SaturationAnnotatedSet &otherOperand);
 
-static int saturationBound = 1;
 inline bool lastRuleWasUnrolling = false;
 }  // namespace Rules

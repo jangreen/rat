@@ -3,74 +3,17 @@
 #include <cassert>
 #include <unordered_set>
 
-namespace {
-
-std::optional<AnnotationType> meet(const std::optional<AnnotationType> &a,
-                                   const std::optional<AnnotationType> &b) {
-  if (!a.has_value() && !b.has_value()) {
-    return std::nullopt;
-  }
-  if (!a.has_value()) {
-    return b;
-  }
-  if (!b.has_value()) {
-    return a;
-  }
-  return AnnotationType{std::min(a->first, b->first), std::min(a->second, b->second)};
-}
-
-}  // namespace
-
-Annotation::Annotation(std::optional<AnnotationType> value, const CanonicalAnnotation left,
-                       const CanonicalAnnotation right)
-    : value(std::move(value)), left(left), right(right) {}
-
-CanonicalAnnotation Annotation::newAnnotation(const std::optional<AnnotationType> &value,
-                                              const CanonicalAnnotation left,
-                                              const CanonicalAnnotation right) {
-  assert((left == nullptr) == (right == nullptr));                     // Binary or leaf
-  assert(value.has_value() || (left == nullptr && right == nullptr));  // No value => Leaf
-
-  static std::unordered_set<Annotation> canonicalizer;
-  auto [iter, created] = canonicalizer.insert(std::move(Annotation(value, left, right)));
-  return &*iter;
-}
-
-CanonicalAnnotation Annotation::newAnnotation(const CanonicalAnnotation left,
-                                              const CanonicalAnnotation right) {
-  assert(left != nullptr && right != nullptr);
-  if (left == right && left->isLeaf()) {
-    // Two constant annotations (leafs) together form just the same constant annotation.
-    return left;
-  }
-
-  const auto annotationValue = meet(left->getValue(), right->getValue());
-  assert(annotationValue.has_value());  // TODO: maybe return none();?
-  return newAnnotation(annotationValue.value(), left, right);
-}
-
-CanonicalAnnotation Annotation::min(const CanonicalAnnotation first,
-                                    const CanonicalAnnotation second) {
-  if (first->isLeaf() && first->getValue() <= second->getValue()) {
-    return first;
-  }
-  if (second->isLeaf() && second->getValue() <= first->getValue()) {
-    return second;
-  }
-  return newAnnotation(min(first->getLeft(), second->getLeft()),
-                       min(first->getRight(), second->getRight()));
-}
-
-bool Annotation::validate() const {
+template <typename AnnotationType>
+bool Annotation<AnnotationType>::validate() const {
   // Binary or leaf
   bool isValid = ((left == nullptr) == (right == nullptr));
-  assert (isValid && "Unary annotation node");
+  assert(isValid && "Unary annotation node");
   // No value => Leaf
   isValid &= value.has_value() || isLeaf();
-  assert (isValid && "Non-leaf annotation without value");
+  assert(isValid && "Non-leaf annotation without value");
   // No leaf => value is meet of children.
   isValid &= isLeaf() || value.value() == meet(left->value, right->value);
-  assert (isValid && "Non-leaf annotation with incorrect value");
+  assert(isValid && "Non-leaf annotation with incorrect value");
   // left is valid
   isValid &= left == nullptr || left->validate();
   // right is valid

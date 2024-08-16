@@ -261,7 +261,8 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
     const auto node = *nodeIt;
 
     // choose minimal annotation
-    node->literal.annotation = Annotation::min(node->literal.annotation, literal.annotation);
+    node->literal.annotation =
+        Annotation<SaturationAnnotation>::min(node->literal.annotation, literal.annotation);
 
     // if this has cross references(aka is a lastUnrollingParent), then use node as alternative
     if (tableau->crossReferenceMap.contains(this)) {
@@ -363,7 +364,7 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
   }
 
   if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
-        return !isLiteralActive(literal, active);
+        return !isLiteralActive(literal, active, true);
       })) {
     // TODO: do we have to do this while lazy saturation?
     // if (const auto ann = literal.annotation->getValue();
@@ -701,13 +702,18 @@ void Node::toDotFormat(std::ofstream &output) const {
   output << "unreduced: " << tableau->unreducedNodes.contains(this) << "\n";
   if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
     output << "Id annotation: \n";
-    output << Annotated::toString<true>(literal.annotatedSet());  // annotation id
+    output << Annotated::toString<true>(literal.annotatedSet()) << "\n";  // annotation id
     output << "base annotation: \n";
     output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
     output << "\n";
   }
   output << "events: " << toString(literal.events()) << "\n";
   output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
+  output << "saturatedEventPairs: ";
+  for (const auto pair : literal.saturatedEventBasePairs()) {
+    output << pair->toString() << " ";
+  }
+  output << "\n";
   output << "lastUnrollingParent: " << lastUnrollingParent << "\n";
   if (tableau->crossReferenceMap.contains(this)) {
     output << "crossrefs: ";
@@ -716,7 +722,6 @@ void Node::toDotFormat(std::ofstream &output) const {
     }
     output << "\n";
   }
-  output << "applySaturation: " << literal.applySaturation << "\n";
   output << "branch equalities: ";
   for (const auto &equality : equalities) {
     output << equality.toString();
@@ -729,6 +734,8 @@ void Node::toDotFormat(std::ofstream &output) const {
   // color closed branches
   if (isClosed()) {
     output << ", fontcolor=green";
+  } else if (tableau->unreducedNodes.contains(this)) {
+    output << ", fontcolor=blue";
   }
   output << "];\n";
 
