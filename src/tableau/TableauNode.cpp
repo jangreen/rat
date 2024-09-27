@@ -52,7 +52,6 @@ void reduceDNF(DNF &dnf, const Literal &literal) {
   assert(validateDNF(dnf));
 }
 
-// TODO: give better name
 Cube substituteAllOnce(const Literal &literal, const CanonicalSet search,
                        const CanonicalSet replace) {
   int c = 1;
@@ -522,7 +521,6 @@ void Node::inferModal() {
 }
 
 // replace fullSet by concrete positive existential events
-// TODO: do this only for active
 void Node::inferModalTop() {
   if (!literal.negated) {
     return;

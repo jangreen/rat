@@ -330,9 +330,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   const Renaming inverted = label.inverted();
   // erase literals that cannot be renamed
   std::erase_if(renamedChild, [&](const Literal &literal) {
-    const bool isRenamable = inverted.isStrictlyRenameable(literal.events()) /* TODO (topEvent
-                             optimization): && inverted.isStrictlyRenameable(literal.topEvents())*/
-        ;
+    const bool isRenamable = inverted.isStrictlyRenameable(literal.events());
     const bool isPositiveEdgeOrNegated = literal.isPositiveEdgePredicate() || literal.negated;
     const bool keep = isRenamable && isPositiveEdgeOrNegated;
     return !keep;
@@ -440,8 +438,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
         pathInconsistent = true;
         // remove inconsistent edge parent -> child
         removeEdge(parent, child);
-        if (parent->children.empty() && parent->epsilonChildren.empty()) {
-          // is leaf // TODO: use function
+        if (parent->isLeaf()) {
           parent->closed = true;
         }
 
@@ -562,7 +559,6 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       // }
     }
     case RelationOperation::baseRelation: {
-      // TODO: assert that base relation contains value
       const auto [_, sMap] = std::get<SatRelationValue>(annotation->getValue().value());
       return Annotation<SaturationAnnotation>::newLeaf(sMap.at(tracedValue));
     }
@@ -658,49 +654,20 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotation(
   if (value.empty()) {
     return Annotation<SaturationAnnotation>::newLeaf({0, 0});
   }
-  // TODO: rewrite this
-  // choose any event as witness.
-  // Could be improved by choosing a minimal witness:
-  // minimal could mean: as few saturations as possible
-  // currently when evalutating expressions bottom-up it is not rememberered if this fact comes from
-  // saturation (a value should be makred as saturated if all combinations that lead to this value
-  // have some operand that is marked as saturated)
-  // TODO: remember this & when marking base relation in top-down pass: only choose those that
-  // cannot be retrieved without saturation
-  // be even more precise: we need the exact minimal amount of saturations needed per base relation
+  // The genearate Saturation annotation reflects the saturations needed for some witness in the
+  // set. Currently we chosse some arbitrary witness (which may be improved)
+  // TODO: choose a minimal witness: minimal (as few saturations as possible)
+  // REMARK: We need the exact minimal amount of saturations needed per base relation
   // to exclude the counterexample. Otherwise we could saturate (not enough) and weaken the newly
   // saturated stuff, leading to the same state from which we began saturating
   // thus evalutating expression bottom-up we should save the minimal number of saturations needed
   // then top-down we can assign exact saturation bounds
-  const auto someEvent = *value.begin();  // TODO: choose minimal
+  const auto someEvent = *value.begin();
   const auto saturationAnnotation = makeSaturationAnnotationHelper(annotatedSet, someEvent);
   assert(Annotated::validate({set, saturationAnnotation}));
   return saturationAnnotation;
 }
 
-// TODO: not used but reduces models size
-// // IMPORTANT annotateLiteral assume that model has no equalities anymore
-// auto modelCopy = model;
-// removeEqualitiesFromModel(modelCopy);
-// void removeEqualitiesFromModel(Model &model) {
-//   print(model);
-//   const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
-//   auto renaming = Renaming::empty();
-//   for (const auto [event, representive] : representatives) {
-//     renaming = renaming.totalCompose(Renaming::simple(event, representive));
-//   }
-//
-//   for (auto &literal : model) {
-//     literal.rename(renaming);
-//   }
-//
-//   std::erase_if(model, std::mem_fn(&Literal::isPositiveEqualityPredicate));
-//   removeDuplicates(model);
-//
-//   print(model);
-// }
-
-// TODO: change name
 // return std::nullopt if not spurious (== evaluated negated set non emptiness literal is empty)
 // return Literal with annotated saturations otherwise
 std::optional<Literal> checkAndMarkSaturation(const Model &model, const Literal &negatedLiteral) {
@@ -805,7 +772,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // Then, apply the same sequence of saturations in the proof to exclude the spurious
       // counterexample
       // We do this by decorating the base relations and base sets in the respective expression
-      // in the proof: TODO: currently this is not as precise as it could be
+      // in the proof. (currently this is not as precise as it could be)
       // decorating the atomic expressions is already done insde checkAndMarkSaturation
       // here we just have to modify the proof accordingly
       const auto &annotatedLiteral = resultSaturated.value();
@@ -891,7 +858,7 @@ Model RegularTableau::getModel(const RegularNode *openLeaf) const {
   Cube model;
   while (cur != nullptr) {
     std::ranges::copy_if(cur->cube, std::back_inserter(model), &Literal::isPositiveAtomic);
-    removeDuplicates(model);  // TODO:
+    removeDuplicates(model);
 
     if (cur->reachabilityTreeParent != nullptr) {
       auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();

@@ -147,38 +147,6 @@ bool validate(const AnnotatedSet<SatExprValue> &annotatedSet) {
       throw std::logic_error("unreachable");
   }
 }
-
-// std::pair<std::map<int, int>, std::map<int, EventSet>> getEquivalenceClasses(const Cube &cube) {
-//   std::map<int, int> minimalRepresentatives;
-//   std::map<int, EventSet> setsForRepresentatives;
-//
-//   // each event is in its own equivalence class
-//   const auto events = gatherActiveEvents(cube);
-//   for (const auto event : events) {
-//     minimalRepresentatives.insert({event, event});
-//     setsForRepresentatives[event].insert(event);
-//   }
-//
-//   for (const auto &literal : cube) {
-//     assert(literal.isPositiveAtomic());
-//     if (literal.isPositiveEqualityPredicate()) {
-//       // e1 = e2
-//       const int e1 = literal.leftEvent->label.value();
-//       const int e2 = literal.rightEvent->label.value();
-//       if (minimalRepresentatives.at(e1) < minimalRepresentatives.at(e2)) {
-//         minimalRepresentatives.at(e2) = e1;
-//       } else {
-//         minimalRepresentatives.at(e1) = e2;
-//       }
-//       const int min = std::min(minimalRepresentatives.at(e1), minimalRepresentatives.at(e2));
-//       setsForRepresentatives[min].insert(setsForRepresentatives.at(e1).begin(),
-//                                          setsForRepresentatives.at(e1).end());
-//       setsForRepresentatives[min].insert(setsForRepresentatives.at(e2).begin(),
-//                                          setsForRepresentatives.at(e2).end());
-//     }
-//   }
-//   return {minimalRepresentatives, setsForRepresentatives};
-// }
 }  // namespace
 
 // TODO: use dependency graphs?
@@ -695,18 +663,6 @@ class Model {
 
     std::ofstream counterexamleModel("./output/" + filename + ".dot");
     counterexamleModel << "digraph { node[shape=\"circle\",margin=0]\n";
-    // TODO: remove
-    // print(model);
-    // for (auto [a, b] : representatives) {
-    //   std::cout << a << " -- " << b << std::endl;
-    // }
-    // std::cout << std::endl;
-    // for (auto [_, b] : equivalenceClasses) {
-    //   for (auto s : b) {
-    //     std::cout << s << " ";
-    //   }
-    //   std::cout << std::endl;
-    // }
 
     // export events + set memberships
     for (const auto event : events) {
@@ -785,9 +741,6 @@ class Model {
     }
     return incidentEdges;
   }
-  // void mergeEquivalenceClasses(const RelationValue &equivalences) {
-  //   // TODO:
-  // }
 };
 
 // returns true iff model changed

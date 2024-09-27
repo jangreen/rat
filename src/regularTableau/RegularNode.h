@@ -50,10 +50,9 @@ class RegularNode {
     return child->parents.at(const_cast<RegularNode *>(this));
   }
 
-  [[nodiscard]] bool isOpenLeaf() const {
-    return children.empty() && epsilonChildren.empty() && !closed;
-  }
-  // TODO: remove, dont use this function -> use tableau methods to update reachabiity invariant
+  [[nodiscard]] bool isLeaf() const { return children.empty() && epsilonChildren.empty(); }
+  [[nodiscard]] bool isOpenLeaf() const { return isLeaf() && !closed; }
+  // TODO: remove, dont use this function -> use tableau methods to update reachability invariant
   bool addChild(RegularNode *child, const EdgeLabel &label) {
     return connect(child, label, children, child->parents);
   }

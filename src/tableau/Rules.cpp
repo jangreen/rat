@@ -345,8 +345,7 @@ std::optional<SaturationAnnotatedSet> Rules::saturateBaseSet(
 std::optional<SaturationAnnotatedSet> Rules::saturateId(
     const SaturationAnnotatedSet& annotatedSet) {
   const auto& [set, annotation] = annotatedSet;
-  if (!annotation->getValue().has_value() ||
-      annotation->getValue().value().first <= 0) {  // TODO: is this checked twice?
+  if (!annotation->getValue().has_value() || annotation->getValue().value().first <= 0) {
     // We reached the saturation bound everywhere, or there is nothing to saturate
     return std::nullopt;
   }
@@ -652,7 +651,7 @@ std::optional<Literal> Rules::saturateBase(const Literal& literal) {
   }
 }
 
-// TODO: merge with saturateBase?
+// TODO: refactor merge with saturateBase?
 std::optional<Literal> Rules::saturateBaseSet(const Literal& literal) {
   if (!literal.negated) {
     return std::nullopt;  // no rule applicable
@@ -679,8 +678,8 @@ std::optional<Literal> Rules::saturateBaseSet(const Literal& literal) {
       const auto e_and_s = Set::newSet(SetOperation::setIntersection, e, assumption.set);
       assert(literal.annotation->isLeaf() && literal.annotation->getValue().has_value());
       const auto [idAnn, baseAnn] = literal.annotation->getValue().value();
-      return Literal(
-          AnnotatedSet<SaturationAnnotation>{e_and_s, Annotated::makeWithValue(e_and_s, {idAnn, baseAnn - 1})});
+      return Literal(AnnotatedSet<SaturationAnnotation>{
+          e_and_s, Annotated::makeWithValue(e_and_s, {idAnn, baseAnn - 1})});
     }
     case PredicateOperation::setNonEmptiness: {
       if (const auto saturatedLiteral = saturateBaseSet(literal.annotatedSet())) {
@@ -717,7 +716,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
       const CanonicalSet e1R_and_e2 = Set::newSet(SetOperation::setIntersection, e1R, e2);
       // annotation tree should be the on of R
       // FIXME: masterId and annotation for masterID should be cached
-      return Literal(AnnotatedSet<SaturationAnnotation>{e1R_and_e2, Annotated::makeWithValue(e1R_and_e2, {0, 0})});
+      return Literal(AnnotatedSet<SaturationAnnotation>{
+          e1R_and_e2, Annotated::makeWithValue(e1R_and_e2, {0, 0})});
     }
     case PredicateOperation::edge: {
       // ~(e1, e2) \in b, R <= id -> ~e1R & b.Re2
@@ -734,7 +734,8 @@ std::optional<Literal> Rules::saturateId(const Literal& literal) {
 
       // annotation tree should be the on of e1R_and_bRe2
       assert(literal.annotation->isLeaf());
-      return Literal(AnnotatedSet<SaturationAnnotation>{e1R_and_bRe2, Annotated::makeWithValue(e1R_and_bRe2, {0, 0})});
+      return Literal(AnnotatedSet<SaturationAnnotation>{
+          e1R_and_bRe2, Annotated::makeWithValue(e1R_and_bRe2, {0, 0})});
     }
     case PredicateOperation::setNonEmptiness: {
       if (const auto saturatedLiteral = saturateId(literal.annotatedSet())) {
@@ -799,8 +800,8 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
       const bool isRoot = context.set == set;  // e & s != 0
       if (isRoot) {
         // do not apply (eL) rule
-        throw std::logic_error("unreachable");  // is implemented in handleIntersectionWithEvent //
-                                                // TODO maybe move here?
+        throw std::logic_error("unreachable");
+        // case is implemented in handleIntersectionWithEvent TODO: maybe move here?
       }
       // Case [e & s] OR [s & e]
       // Rule (~eL) / (~eR):

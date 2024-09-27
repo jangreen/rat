@@ -57,7 +57,6 @@ void Worklist::push(Node *node) {
   const bool negated = node->literal.negated;
   const bool isNormal = node->literal.isNormal();
   if (op == PredicateOperation::constant) {
-    // TODO: Make sure that this is correct
     assert(!negated);  // BOTTOM is not handled currently
     return;            // TOP doesn't ever need to get processed.
   }

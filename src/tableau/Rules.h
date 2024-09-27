@@ -26,7 +26,6 @@ std::optional<DNF> applyPositiveModalRule(const Literal &literal, int minimalEve
 std::optional<PartialDNF> applyPositiveModalRule(const SaturationAnnotatedSet &annotatedSet,
                                                  int minimalEvent);
 
-// TODO: give better name
 PartialDNF substituteIntersectionOperand(bool substituteRight, const PartialDNF &disjunction,
                                          const SaturationAnnotatedSet &otherOperand);
 

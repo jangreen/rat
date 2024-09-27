@@ -5,10 +5,6 @@
 #include "Relation.h"
 #include "Set.h"
 
-// TODO: useful? separate Literal class from Annotation class
-// typedef std::pair<PartialLiteral, CanonicalAnnotation<SaturationAnnotation>>
-//     AnnotatedPartialLiteral;
-// typedef std::pair<Literal, CanonicalAnnotation<SaturationAnnotation>> AnnotatedLiteral;
 template <typename AnnotationType>
 using AnnotatedSet = std::pair<CanonicalSet, CanonicalAnnotation<AnnotationType>>;
 template <typename AnnotationType>
