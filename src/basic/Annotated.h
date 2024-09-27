@@ -247,36 +247,6 @@ template <bool first>
       throw std::logic_error("unreachable");
   }
 }
-[[nodiscard]] inline std::string annotationToString(
-    const CanonicalAnnotation<ExprValue> annotation) {
-  std::string output;
-
-  if (annotation->getValue()) {
-    if (std::holds_alternative<SetValue>(annotation->getValue().value())) {
-      const auto set = std::get<SetValue>(annotation->getValue().value());
-      for (const auto event : set) {
-        output += std::to_string(event) + " ";
-      }
-    }
-
-    if (std::holds_alternative<RelationValue>(annotation->getValue().value())) {
-      const auto relation = std::get<RelationValue>(annotation->getValue().value());
-      for (const auto [from, to] : relation) {
-        output += std::to_string(from) + "." + std::to_string(to) + " ";
-      }
-    }
-  }
-
-  if (annotation->getLeft() != annotation) {
-    output += "(" + annotationToString(annotation->getLeft());
-    if (annotation->getRight() != annotation) {
-      output += "," + annotationToString(annotation->getRight());
-    }
-    output += ")";
-  }
-
-  return output;
-}
 template <bool first>
 [[nodiscard]] std::string toString(const SaturationAnnotatedSet annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
@@ -286,6 +256,34 @@ template <bool first>
 [[nodiscard]] std::string toString(const SaturationAnnotatedRelation annotatedRelation) {
   const auto &[relation, annotation] = annotatedRelation;
   return relation->toString() + "\n" + annotationToString<first>(annotatedRelation);
+}
+// requires two annotations for the same structure
+inline CanonicalAnnotation<SaturationAnnotation> sum(
+    const CanonicalAnnotation<SaturationAnnotation> a,
+    const CanonicalAnnotation<SaturationAnnotation> b) {
+  if (a->isLeaf() || b->isLeaf()) {
+    if (a->getValue().has_value() && b->getValue().has_value()) {
+      const SaturationAnnotation summedValue = {
+          a->getValue().value().first + b->getValue().value().first,
+          a->getValue().value().second + b->getValue().value().second};
+      return Annotation<SaturationAnnotation>::newLeaf(summedValue);
+    }
+    if (a->getValue().has_value()) {
+      return a;
+    }
+    return b;  // in either case (if b has value or not)
+  }
+  const auto left = a->getLeftInteral();
+  auto newLeft = Annotation<SaturationAnnotation>::none();
+  if (left != nullptr) {
+    newLeft = sum(a->getLeftInteral(), b->getLeftInteral());
+  }
+  const auto right = a->getRightInteral();
+  auto newRight = Annotation<SaturationAnnotation>::none();
+  if (right != nullptr) {
+    newRight = sum(a->getRightInteral(), b->getRightInteral());
+  }
+  return Annotation<SaturationAnnotation>::meetAnnotation(newLeft, newRight);
 }
 
 }  // namespace Annotated

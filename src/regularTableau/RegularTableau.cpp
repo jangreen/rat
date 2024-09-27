@@ -7,7 +7,6 @@
 #include <map>
 #include <unordered_set>
 
-#include "../Assumption.h"
 #include "../tableau/Rules.h"
 #include "../utility.h"
 
@@ -53,95 +52,6 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   }
 
   return dnf;
-}
-
-std::pair<std::map<int, int>, std::map<int, std::unordered_set<int>>> getEquivalenceClasses(
-    const Cube &model) {
-  std::map<int, int> minimalRepresentatives;
-  std::map<int, std::unordered_set<int>> setsForRepresentatives;
-
-  // each event is in its own equivalence class
-  const auto events = gatherActiveEvents(model);
-  for (const auto event : events) {
-    minimalRepresentatives.insert({event, event});
-    setsForRepresentatives[event].insert(event);
-  }
-
-  for (const auto &literal : model) {
-    assert(literal.isPositiveAtomic());
-    if (literal.isPositiveEqualityPredicate()) {
-      // e1 = e2
-      const int e1 = literal.leftEvent->label.value();
-      const int e2 = literal.rightEvent->label.value();
-      if (minimalRepresentatives.at(e1) < minimalRepresentatives.at(e2)) {
-        minimalRepresentatives.at(e2) = e1;
-      } else {
-        minimalRepresentatives.at(e1) = e2;
-      }
-      const int min = std::min(minimalRepresentatives.at(e1), minimalRepresentatives.at(e2));
-      setsForRepresentatives[min].insert(setsForRepresentatives.at(e1).begin(),
-                                         setsForRepresentatives.at(e1).end());
-      setsForRepresentatives[min].insert(setsForRepresentatives.at(e2).begin(),
-                                         setsForRepresentatives.at(e2).end());
-    }
-  }
-  return {minimalRepresentatives, setsForRepresentatives};
-}
-
-bool validate(const AnnotatedSet<ExprValue> &annotatedSet);
-bool validate(const AnnotatedRelation<ExprValue> &annotatedRelation) {
-  const auto &[relation, annotation] = annotatedRelation;
-
-  assert(std::holds_alternative<RelationValue>(annotation->getValue().value()));
-
-  switch (relation->operation) {
-    case RelationOperation::relationIntersection:
-    case RelationOperation::relationUnion:
-    case RelationOperation::composition:
-      assert(validate(Annotated::getLeftRelation(annotatedRelation)));
-      assert(validate(Annotated::getRight(annotatedRelation)));
-      return true;
-    case RelationOperation::converse:
-    case RelationOperation::transitiveClosure:
-      assert(validate(Annotated::getLeftRelation(annotatedRelation)));
-      return true;
-    case RelationOperation::setIdentity:
-      assert(validate(Annotated::getLeftSet(annotatedRelation)));
-      return true;
-    case RelationOperation::cartesianProduct:
-      throw std::logic_error("not implemneted");
-    case RelationOperation::baseRelation:
-    case RelationOperation::idRelation:
-    case RelationOperation::fullRelation:
-    case RelationOperation::emptyRelation:
-      return true;
-    default:
-      throw std::logic_error("unreachable");
-  }
-}
-bool validate(const AnnotatedSet<ExprValue> &annotatedSet) {
-  const auto &[set, annotation] = annotatedSet;
-  assert(std::holds_alternative<SetValue>(annotation->getValue().value()));
-
-  switch (set->operation) {
-    case SetOperation::image:
-    case SetOperation::domain:
-      assert(validate(Annotated::getLeft(annotatedSet)));
-      assert(validate(Annotated::getRightRelation(annotatedSet)));
-      return true;
-    case SetOperation::setIntersection:
-    case SetOperation::setUnion:
-      assert(validate(Annotated::getLeft(annotatedSet)));
-      assert(validate(Annotated::getRightSet(annotatedSet)));
-      return true;
-    case SetOperation::fullSet:
-    case SetOperation::event:
-    case SetOperation::baseSet:
-    case SetOperation::emptySet:
-      return true;
-    default:
-      throw std::logic_error("unreachable");
-  }
 }
 
 }  // namespace
@@ -252,7 +162,6 @@ void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) const {
 void RegularTableau::addEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label) {
   assert(parent != nullptr && (parent == rootNode.get() || parent->validate()));
   assert(child != nullptr && child->validate());
-  assert(validate());
 
   // don't add edges that already exist
   if (child->getParents().contains(parent)) {
@@ -359,7 +268,7 @@ bool RegularTableau::solve() {
     }
 
     // 4) Check saturation lazy
-    exportDebug("debug");
+    exportDebug("debug-regularTableau");
     if (saturationLazy(currentNode)) {
       assert(validate());
       continue;
@@ -368,7 +277,7 @@ bool RegularTableau::solve() {
     exportProof("error");
     auto model = getModel(currentNode);
     saturateModel(model);
-    exportModel("error-model", model);
+    model.exportModel("error-model");
     throw std::logic_error("unreachable: no rule applicable");
   }
   spdlog::info("[Solver] Answer: True");
@@ -559,286 +468,10 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
 
   // return isInconsistent(node->firstParentNode, node, node->parents.at(node->firstParentNode));
 }
-
-template <>
-struct std::hash<ExprValue> {
-  std::size_t operator()(const ExprValue &value) const noexcept {
-    if (std::holds_alternative<SetValue>(value)) {
-      const auto events = std::get<SetValue>(value);
-      size_t seed = 0;
-      for (const auto event : events) {
-        boost::hash_combine(seed, std::hash<int>()(event));
-      }
-      return seed;
-    }
-    const auto eventPairs = std::get<RelationValue>(value);
-    size_t seed = 0;
-    for (const auto pair : eventPairs) {
-      boost::hash_combine(seed, std::hash<EventPair>()(pair));
-    }
-    return seed;
-  }
-};
-CanonicalAnnotation<ExprValue> annotateLiteral(const Cube &model, CanonicalSet set);
-CanonicalAnnotation<ExprValue> annotateLiteral(const Cube &model,
-                                               const CanonicalRelation relation) {
-  const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
-
-  switch (relation->operation) {
-    case RelationOperation::relationIntersection: {
-      const auto left = annotateLiteral(model, relation->leftOperand);
-      const auto right = annotateLiteral(model, relation->rightOperand);
-      const auto leftValue = std::get<RelationValue>(left->getValue().value());
-      const auto rightValue = std::get<RelationValue>(right->getValue().value());
-
-      RelationValue intersect;
-      std::ranges::set_intersection(leftValue, rightValue,
-                                    std::inserter(intersect, intersect.begin()));
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(intersect, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(intersect, left, right);
-    }
-    case RelationOperation::composition: {
-      auto left = annotateLiteral(model, relation->leftOperand);
-      const auto right = annotateLiteral(model, relation->rightOperand);
-      const auto leftValue = std::get<RelationValue>(left->getValue().value());
-      const auto rightValue = std::get<RelationValue>(right->getValue().value());
-
-      RelationValue composition;
-      for (const auto &l : leftValue) {
-        for (const auto &r : rightValue) {
-          if (l.second == r.first) {
-            composition.insert({l.first, r.second});
-          }
-        }
-      }
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(composition, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(composition, left, right);
-    }
-    case RelationOperation::relationUnion: {
-      const auto left = annotateLiteral(model, relation->leftOperand);
-      const auto right = annotateLiteral(model, relation->rightOperand);
-      const auto leftValue = std::get<RelationValue>(left->getValue().value());
-      const auto rightValue = std::get<RelationValue>(right->getValue().value());
-
-      RelationValue relunion;
-      std::ranges::set_union(leftValue, rightValue, std::inserter(relunion, relunion.begin()));
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(relunion, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(relunion, left, right);
-    }
-    case RelationOperation::converse: {
-      auto left = annotateLiteral(model, relation->leftOperand);
-      auto leftValue = std::get<RelationValue>(left->getValue().value());
-
-      RelationValue converse;
-      for (auto &[from, to] : leftValue) {
-        converse.insert({to, from});
-      }
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(converse, left)}));
-      return Annotation<ExprValue>::newAnnotation(converse, left);
-    }
-    case RelationOperation::transitiveClosure: {
-      auto left = annotateLiteral(model, relation->leftOperand);
-      const auto underlying = std::get<RelationValue>(left->getValue().value());
-
-      RelationValue transitiveClosure;
-      // insert id
-      const auto events = gatherActiveEvents(model);
-      for (const auto event : events) {
-        transitiveClosure.insert({event, event});
-      }
-      // iterate underlying
-      while (true) {
-        RelationValue newPairs;
-        for (const auto [clFrom, clTo] : transitiveClosure) {
-          for (const auto [rFrom, rTo] : underlying) {
-            const EventPair composition = {clFrom, rTo};
-            if (clTo == rFrom && !transitiveClosure.contains(composition)) {
-              newPairs.insert(composition);
-            }
-          }
-        }
-        if (newPairs.empty()) {
-          break;
-        }
-        transitiveClosure.insert(std::make_move_iterator(newPairs.begin()),
-                                 std::make_move_iterator(newPairs.end()));
-      }
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(transitiveClosure, left)}));
-      return Annotation<ExprValue>::newAnnotation(transitiveClosure, left);
-    }
-    case RelationOperation::baseRelation: {
-      RelationValue value;
-      for (const auto &edge : model | std::views::filter(&Literal::isPositiveEdgePredicate)) {
-        const int left = representatives.at(edge.leftEvent->label.value());
-        const int right = representatives.at(edge.rightEvent->label.value());
-        auto baseRelation = edge.identifier.value();
-
-        if (baseRelation == relation->identifier.value()) {
-          value.insert({left, right});
-        }
-      }
-      assert(validate({relation, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case RelationOperation::idRelation: {
-      RelationValue value;
-      const auto events = gatherActiveEvents(model);
-      for (const auto event : events) {
-        const auto repEvent = representatives.at(event);
-        value.insert({repEvent, repEvent});
-      }
-      assert(validate({relation, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case RelationOperation::emptyRelation:
-      assert(validate({relation, Annotation<ExprValue>::newLeaf(RelationValue{})}));
-      return Annotation<ExprValue>::newLeaf(RelationValue{});
-    case RelationOperation::fullRelation: {
-      RelationValue value;
-      const auto events = gatherActiveEvents(model);
-      for (const auto e1 : events) {
-        const auto repE1 = representatives.at(e1);
-        for (const auto e2 : events) {
-          const auto repE2 = representatives.at(e2);
-          value.insert({repE1, repE2});
-        }
-      }
-      assert(validate({relation, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case RelationOperation::setIdentity: {
-      auto left = annotateLiteral(model, relation->set);
-      auto leftValue = std::get<SetValue>(left->getValue().value());
-
-      RelationValue value;
-      for (const auto event : leftValue) {
-        value.insert({event, event});
-      }
-      assert(validate({relation, Annotation<ExprValue>::newAnnotation(value, left)}));
-      return Annotation<ExprValue>::newAnnotation(value, left);
-    }
-    case RelationOperation::cartesianProduct:
-      throw std::logic_error("not implemented");
-    default:
-      throw std::logic_error("unreachable");
-  }
-}
-CanonicalAnnotation<ExprValue> annotateLiteral(const Cube &model, const CanonicalSet set) {
-  const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
-
-  switch (set->operation) {
-    case SetOperation::event: {
-      const auto value = SetValue{representatives.at(set->label.value())};
-      assert(validate({set, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case SetOperation::image: {
-      const auto left = annotateLiteral(model, set->leftOperand);
-      const auto right = annotateLiteral(model, set->relation);
-      const auto leftValue = std::get<SetValue>(left->getValue().value());
-      const auto rightValue = std::get<RelationValue>(right->getValue().value());
-
-      SetValue image;
-      for (const auto &r : rightValue) {
-        if (leftValue.contains(r.first)) {
-          image.insert({r.second});
-        }
-      }
-      assert(validate({set, Annotation<ExprValue>::newAnnotation(image, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(image, left, right);
-    }
-    case SetOperation::domain: {
-      const auto left = annotateLiteral(model, set->leftOperand);
-      const auto right = annotateLiteral(model, set->relation);
-      const auto leftValue = std::get<SetValue>(left->getValue().value());
-      const auto rightValue = std::get<RelationValue>(right->getValue().value());
-
-      SetValue domain;
-      for (const auto &r : rightValue) {
-        if (leftValue.contains(r.second)) {
-          domain.insert({r.first});
-        }
-      }
-      assert(validate({set, Annotation<ExprValue>::newAnnotation(domain, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(domain, left, right);
-    }
-    case SetOperation::baseSet: {
-      SetValue value;
-      for (const auto &setMembership :
-           model | std::views::filter(&Literal::isPositiveSetPredicate)) {
-        const auto left = representatives.at(setMembership.leftEvent->label.value());
-        auto baseSet = setMembership.identifier.value();
-
-        if (baseSet == set->identifier.value()) {
-          value.insert(left);
-        }
-      }
-      assert(validate({set, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case SetOperation::emptySet:
-      assert(validate({set, Annotation<ExprValue>::newLeaf(SetValue{})}));
-      return Annotation<ExprValue>::newLeaf(SetValue{});
-    case SetOperation::fullSet: {
-      SetValue value;
-      const auto events = gatherActiveEvents(model);
-      for (const auto event : events) {
-        value.insert(representatives.at(event));
-      }
-      assert(validate({set, Annotation<ExprValue>::newLeaf(value)}));
-      return Annotation<ExprValue>::newLeaf(value);
-    }
-    case SetOperation::setIntersection: {
-      const auto left = annotateLiteral(model, set->leftOperand);
-      const auto right = annotateLiteral(model, set->rightOperand);
-      const auto leftValue = std::get<SetValue>(left->getValue().value());
-      const auto rightValue = std::get<SetValue>(right->getValue().value());
-
-      SetValue intersect;
-      std::ranges::set_intersection(leftValue, rightValue,
-                                    std::inserter(intersect, intersect.begin()));
-      assert(validate({set, Annotation<ExprValue>::newAnnotation(intersect, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(intersect, left, right);
-    }
-    case SetOperation::setUnion: {
-      const auto left = annotateLiteral(model, set->leftOperand);
-      const auto right = annotateLiteral(model, set->rightOperand);
-      const auto leftValue = std::get<SetValue>(left->getValue().value());
-      const auto rightValue = std::get<SetValue>(right->getValue().value());
-
-      SetValue setunion;
-      std::ranges::set_union(leftValue, rightValue, std::inserter(setunion, setunion.begin()));
-      assert(validate({set, Annotation<ExprValue>::newAnnotation(setunion, left, right)}));
-      return Annotation<ExprValue>::newAnnotation(setunion, left, right);
-    }
-    default:
-      throw std::logic_error("unreachable");
-  }
-}
-// TODO: remove
-// bool annotateLiteral(const Cube &model, const Literal &literal) {
-//   switch (literal.operation) {
-//     case PredicateOperation::constant:
-//       return !literal.negated;
-//     case PredicateOperation::edge:
-//     case PredicateOperation::set:
-//       if (literal.negated) {
-//         return std::ranges::none_of(
-//             model, [&](const Literal &modelLit) { return modelLit.isNegatedOf(literal); });
-//       }
-//       return contains(model, literal);
-//     case PredicateOperation::equality:
-//       throw std::logic_error("not implemented");
-//     case PredicateOperation::setNonEmptiness:
-//       return annotateLiteral(model, literal.set).empty() == literal.negated;
-//     default:
-//       throw std::logic_error("unreachable");
-//   }
-// }
 CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
-    const AnnotatedSet<ExprValue> &annotatedSet, const Event &tracedValue);
+    const AnnotatedSet<SatExprValue> &annotatedSet, const Event &tracedValue);
 CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
-    const AnnotatedRelation<ExprValue> &annotatedRelation, const EventPair &tracedValue) {
+    const AnnotatedRelation<SatExprValue> &annotatedRelation, const EventPair &tracedValue) {
   const auto &[relation, annotation] = annotatedRelation;
 
   switch (relation->operation) {
@@ -852,8 +485,10 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       return Annotation<SaturationAnnotation>::meetAnnotation(newLeft, newRight);
     }
     case RelationOperation::relationUnion: {
-      const auto left = std::get<RelationValue>(annotation->getLeft()->getValue().value());
-      const auto right = std::get<RelationValue>(annotation->getRight()->getValue().value());
+      const auto [left, lsMap] =
+          std::get<SatRelationValue>(annotation->getLeft()->getValue().value());
+      const auto [right, rsMap] =
+          std::get<SatRelationValue>(annotation->getRight()->getValue().value());
       if (left.contains(tracedValue)) {
         const auto newLeft = makeSaturationAnnotationHelper(
             Annotated::getLeftRelation(annotatedRelation), tracedValue);
@@ -870,8 +505,10 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
     }
     case RelationOperation::composition: {
       const auto [from, to] = tracedValue;
-      const auto left = std::get<RelationValue>(annotation->getLeft()->getValue().value());
-      const auto right = std::get<RelationValue>(annotation->getRight()->getValue().value());
+      const auto [left, lsMap] =
+          std::get<SatRelationValue>(annotation->getLeft()->getValue().value());
+      const auto [right, rsMap] =
+          std::get<SatRelationValue>(annotation->getRight()->getValue().value());
       for (const auto [lFrom, lTo] : left) {
         if (from == lFrom) {
           for (const auto [rFrom, rTo] : right) {
@@ -924,9 +561,11 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       //   length++;
       // }
     }
-    case RelationOperation::baseRelation:
+    case RelationOperation::baseRelation: {
       // TODO: assert that base relation contains value
-      return Annotation<SaturationAnnotation>::newLeaf({1, 1});
+      const auto [_, sMap] = std::get<SatRelationValue>(annotation->getValue().value());
+      return Annotation<SaturationAnnotation>::newLeaf(sMap.at(tracedValue));
+    }
     case RelationOperation::idRelation:
     case RelationOperation::fullRelation:
       return Annotation<SaturationAnnotation>::none();
@@ -938,13 +577,14 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
   }
 }
 CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
-    const AnnotatedSet<ExprValue> &annotatedSet, const Event &tracedValue) {
+    const AnnotatedSet<SatExprValue> &annotatedSet, const Event &tracedValue) {
   const auto &[set, annotation] = annotatedSet;
 
   switch (set->operation) {
     case SetOperation::image: {
-      const auto left = std::get<SetValue>(annotation->getLeft()->getValue().value());
-      const auto right = std::get<RelationValue>(annotation->getRight()->getValue().value());
+      const auto [left, lsMap] = std::get<SatSetValue>(annotation->getLeft()->getValue().value());
+      const auto [right, rsMap] =
+          std::get<SatRelationValue>(annotation->getRight()->getValue().value());
       for (const auto [from, to] : right) {
         if (to == tracedValue && left.contains(from)) {
           const auto newLeft =
@@ -958,8 +598,9 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       }
     }
     case SetOperation::domain: {
-      const auto left = std::get<SetValue>(annotation->getLeft()->getValue().value());
-      const auto right = std::get<RelationValue>(annotation->getRight()->getValue().value());
+      const auto [left, lsMap] = std::get<SatSetValue>(annotation->getLeft()->getValue().value());
+      const auto [right, rsMap] =
+          std::get<SatRelationValue>(annotation->getRight()->getValue().value());
       for (const auto [from, to] : right) {
         if (from == tracedValue && left.contains(to)) {
           const auto newLeft = makeSaturationAnnotationHelper(Annotated::getLeft(annotatedSet), to);
@@ -972,7 +613,8 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       }
     }
     case SetOperation::baseSet: {
-      return Annotation<SaturationAnnotation>::newLeaf({1, 1});
+      const auto [_, sMap] = std::get<SatSetValue>(annotation->getLeft()->getValue().value());
+      return Annotation<SaturationAnnotation>::newLeaf(sMap.at(tracedValue));
     }
     case SetOperation::fullSet:
     case SetOperation::event:
@@ -987,8 +629,8 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
       return Annotation<SaturationAnnotation>::meetAnnotation(newLeft, newRight);
     }
     case SetOperation::setUnion: {
-      const auto left = std::get<SetValue>(annotation->getLeft()->getValue().value());
-      const auto right = std::get<SetValue>(annotation->getRight()->getValue().value());
+      const auto [left, lsMap] = std::get<SatSetValue>(annotation->getLeft()->getValue().value());
+      const auto [right, rsMap] = std::get<SatSetValue>(annotation->getRight()->getValue().value());
       if (left.contains(tracedValue)) {
         const auto newLeft =
             makeSaturationAnnotationHelper(Annotated::getLeft(annotatedSet), tracedValue);
@@ -1010,13 +652,27 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotationHelper(
 }
 
 CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotation(
-    const AnnotatedSet<ExprValue> &annotatedSet) {
+    const AnnotatedSet<SatExprValue> &annotatedSet) {
   const auto &[set, annotation] = annotatedSet;
-  const auto value = std::get<SetValue>(annotation->getValue().value());
+  const auto [value, sMap] = std::get<SatSetValue>(annotation->getValue().value());
   if (value.empty()) {
     return Annotation<SaturationAnnotation>::newLeaf({0, 0});
   }
-  const auto someEvent = *value.begin();
+  // TODO: rewrite this
+  // choose any event as witness.
+  // Could be improved by choosing a minimal witness:
+  // minimal could mean: as few saturations as possible
+  // currently when evalutating expressions bottom-up it is not rememberered if this fact comes from
+  // saturation (a value should be makred as saturated if all combinations that lead to this value
+  // have some operand that is marked as saturated)
+  // TODO: remember this & when marking base relation in top-down pass: only choose those that
+  // cannot be retrieved without saturation
+  // be even more precise: we need the exact minimal amount of saturations needed per base relation
+  // to exclude the counterexample. Otherwise we could saturate (not enough) and weaken the newly
+  // saturated stuff, leading to the same state from which we began saturating
+  // thus evalutating expression bottom-up we should save the minimal number of saturations needed
+  // then top-down we can assign exact saturation bounds
+  const auto someEvent = *value.begin();  // TODO: choose minimal
   const auto saturationAnnotation = makeSaturationAnnotationHelper(annotatedSet, someEvent);
   assert(Annotated::validate({set, saturationAnnotation}));
   return saturationAnnotation;
@@ -1026,7 +682,7 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotation(
 // // IMPORTANT annotateLiteral assume that model has no equalities anymore
 // auto modelCopy = model;
 // removeEqualitiesFromModel(modelCopy);
-// void removeEqualitiesFromModel(Cube &model) {
+// void removeEqualitiesFromModel(Model &model) {
 //   print(model);
 //   const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
 //   auto renaming = Renaming::empty();
@@ -1044,15 +700,16 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotation(
 //   print(model);
 // }
 
+// TODO: change name
 // return std::nullopt if not spurious (== evaluated negated set non emptiness literal is empty)
 // return Literal with annotated saturations otherwise
-std::optional<Literal> checkAndMarkSaturation(const Cube &model, const Literal &negatedLiteral) {
+std::optional<Literal> checkAndMarkSaturation(const Model &model, const Literal &negatedLiteral) {
   assert(negatedLiteral.negated);
 
   switch (negatedLiteral.operation) {
     case PredicateOperation::setNonEmptiness: {
-      const auto annotation = annotateLiteral(model, negatedLiteral.set);
-      const auto result = std::get<SetValue>(annotation->getValue().value());
+      const auto annotation = model.evaluateExpression(negatedLiteral.set);
+      const auto [result, sMap] = std::get<SatSetValue>(annotation->getValue().value());
       if (result.empty()) {
         return std::nullopt;
       }
@@ -1066,20 +723,22 @@ std::optional<Literal> checkAndMarkSaturation(const Cube &model, const Literal &
     }
     case PredicateOperation::set:
     case PredicateOperation::edge: {
-      if (std::ranges::any_of(model, [&](const Literal &modelLit) {
-            return modelLit.isNegatedOf(negatedLiteral);
-          })) {
+      const auto baseRelation = negatedLiteral.identifier.value();
+      const auto from = negatedLiteral.leftEvent->label.value();
+      const auto to = negatedLiteral.rightEvent->label.value();
+
+      if (model.contains(Edge(baseRelation, {from, to}))) {
         auto litCopy = negatedLiteral;
         litCopy.annotation = Annotation<SaturationAnnotation>::newLeaf({1, 1});
         return litCopy;
       }
+
       return std::nullopt;
     }
     case PredicateOperation::equality: {
       const auto e1 = negatedLiteral.leftEvent->label.value();
       const auto e2 = negatedLiteral.rightEvent->label.value();
-      const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
-      if (representatives.at(e1) == representatives.at(e2)) {
+      if (model.sameEquivalenceClass(e1, e2)) {
         throw std::logic_error("does this happen?");
         return negatedLiteral;
       }
@@ -1091,96 +750,121 @@ std::optional<Literal> checkAndMarkSaturation(const Cube &model, const Literal &
   }
 }
 
-bool RegularTableau::saturationLazy(RegularNode *openLeaf) {
+bool RegularTableau::saturationLazy(RegularNode *const openLeaf) {
   assert(openLeaf != nullptr);
   assert(!openLeaf->closed);
   assert(openLeaf->getChildren().empty());
 
-  const auto model = getModel(openLeaf);
-  auto saturatedNodeModel = model;
-  const auto saturationRenaming = saturateModel(saturatedNodeModel);
+  while (isReachableFromRoots(openLeaf)) {  // as long as a path from openLeaf to some root exists
+    // get model & saturated model (wrt to root namespace)
+    // IMPORTANT: we must get the model inside the while loop, because each loop iteration may have
+    // a different path to some root (which corrsponds to different models)
+    const auto model = getModel(openLeaf);
+    auto saturatedModel = model;
+    saturateModel(saturatedModel);
+#if DEBUG
+    model.exportModel("debug-saturationLazy.model");
+    saturatedModel.exportModel("debug-saturationLazy.saturatedModel");
+#endif
 
-  while (isReachableFromRoots(openLeaf)) {  // as long as a path exists
+    exportDebug("debug-regularTableau");
     auto pathNeedsSaturation = false;
 
     // follow some path to root
     auto curNode = openLeaf;
     while (curNode != nullptr) {
       assert(validateReachabilityTree());
-
-      // check
-      const auto &nodeRenaming = getRootRenaming(curNode);
-      for (const auto &cubeLiteral : curNode->cube | std::views::filter(&Literal::negated)) {
-        // rename cubeLiteral to root + saturationRenaming
-        auto renamedLiteral = cubeLiteral;
-        renamedLiteral.rename(nodeRenaming);
-        Cube checkedCube = model;
-        checkedCube.push_back(renamedLiteral);
-
-        const auto result = checkAndMarkSaturation(model, renamedLiteral);
-
-        renamedLiteral.rename(saturationRenaming);
-        Cube checkedCubeSaturated = saturatedNodeModel;
-        checkedCubeSaturated.push_back(renamedLiteral);
-
-        const auto resultSaturated = checkAndMarkSaturation(saturatedNodeModel, renamedLiteral);
-
-        if (!result && resultSaturated) {
-          const auto &annotatedLiteral = resultSaturated.value();
-          // std::cout << Annotated::toString<false>(annotatedLiteral.annotatedSet()) << "\n";
-          //  std::cout << Annotated::toString<true>(annotatedLiteral.annotatedSet()) <<
-          //  std::endl;
-
-          // old check:
-          // Tableau finiteTableau(checkedCube);
-          // Tableau finiteTableauSaturated(checkedCubeSaturated);
-          // const auto spurious = finiteTableau.computeDnf().empty();
-          // const auto saturatedSpurious = finiteTableauSaturated.computeDnf().empty();
-          //
-          // if (!spurious && saturatedSpurious) {
-
-          // remove old children (if there are any)
-          removeChildren(curNode);
-          // IMPORTANT: invariant in validation of tableau is temporally violated
-          // after removing all children we may have an open leaf that is not on unreduced nodes
-
-          // literal is only contradicting if we saturate
-          // mark cubeLiterals to saturate it during normalization
-          auto cubeCopy = curNode->getCube();
-          for (auto &copyLiteral : cubeCopy) {
-            if (copyLiteral == cubeLiteral) {
-              copyLiteral.annotation = annotatedLiteral.annotation;
-              assert(Annotated::validate(copyLiteral.annotatedSet()));
-            }
-          }
-          Tableau tableau(cubeCopy);
-          tableau.exportDebug("debug");
-
-          const auto &dnf =
-              tableau.computeDnf();  // TODO: remove :false  // dont weakening, do saturate
-          tableau.exportDebug("debug");
-
-          if (dnf.empty()) {
-            curNode->closed = true;
-          } else {
-            newChildren(curNode, dnf);
-          }
-
-          pathNeedsSaturation = true;
-        }
-      }
+      pathNeedsSaturation |= saturateNodeLazy(curNode, model, saturatedModel);
       curNode = curNode->reachabilityTreeParent;
     }
     if (!pathNeedsSaturation) {
       return false;
     }
-    exportDebug("debug");
   }
   Stats::counter("#saturations (lazy)")++;
   return true;
 }
+// returns if node could has been saturated
+bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
+                                      const Model &saturatedModel) {
+  // evaluate each node on model & saturatedModel
+  // evaluate every negated literal
+  // Inconsistent iff for some literal the results from both models differ
+  const auto &nodeRenaming = getRootRenaming(node);
+  for (const auto &cubeLiteral : node->cube | std::views::filter(&Literal::negated)) {
+    // rename cubeLiteral to root + saturationRenaming
+    auto renamedLiteral = cubeLiteral;
+    renamedLiteral.rename(nodeRenaming);
+    const auto result = checkAndMarkSaturation(model, renamedLiteral);
+    const auto resultSaturated = checkAndMarkSaturation(saturatedModel, renamedLiteral);
+
+    if (!result && resultSaturated) {
+      // REMARK: saturation leads to different evaluation
+      // We want to do the following: anaylze the counterexample and determine exactly
+      // which saturations we needed
+      // Then, apply the same sequence of saturations in the proof to exclude the spurious
+      // counterexample
+      // We do this by decorating the base relations and base sets in the respective expression
+      // in the proof: TODO: currently this is not as precise as it could be
+      // decorating the atomic expressions is already done insde checkAndMarkSaturation
+      // here we just have to modify the proof accordingly
+      const auto &annotatedLiteral = resultSaturated.value();
+      // TODO: remove:
+      // std::cout << renamedLiteral.toString() << std::endl;
+      // std::cout << Annotated::annotationToString<false>(annotatedLiteral.annotatedSet())
+      //           << std::endl;
+      // std::cout << Annotated::annotationToString<true>(annotatedLiteral.annotatedSet())
+      //           << std::endl;
+
+      // remove old children (if there are any)
+      removeChildren(node);
+      exportDebug("debug-regularTableau");
+      // IMPORTANT: invariant in validation of tableau is temporally violated
+      // after removing all children we may have an open leaf that is not on unreduced nodes
+
+      // literal is only contradicting if we saturate
+      // mark cubeLiterals to saturate it during normalization
+      auto cubeCopy = node->getCube();
+      for (auto &copyLiteral : cubeCopy) {
+        if (copyLiteral == cubeLiteral) {
+          // IMPORTANT: here the annotation should be added:
+          // copyLiteral could have some SatAnnotation from the previous iteration of
+          // saturationLazy(probably from another path to another openLeaf)
+          // If we do not add we get the counterexample to this other openLeaf again
+          // So we want to add all SatAnnotation for all branches to be sure that we saturate enough
+          // to finish all branches
+          // TODO: remove copyLiteral.annotation = annotatedLiteral.annotation;
+          copyLiteral.annotation =
+              Annotated::sum(copyLiteral.annotation, annotatedLiteral.annotation);
+          // TODO: remove:
+          // std::cout << "New sum:" << std::endl;
+          // std::cout << Annotated::annotationToString<false>(copyLiteral.annotatedSet())
+          //           << std::endl;
+          // std::cout << Annotated::annotationToString<true>(copyLiteral.annotatedSet()) <<
+          // std::endl;
+          assert(Annotated::validate(copyLiteral.annotatedSet()));
+        }
+      }
+      Tableau tableau(cubeCopy);
+
+      const auto &dnf = tableau.computeDnf();  // dont weakening, do saturate
+      tableau.exportDebug("debug-saturateNodeLazy.fixedDnfCalculation");
+
+      // IMPORTANT: invariant in validation of tableau is valid again (after next if/else)
+      if (dnf.empty()) {
+        node->closed = true;
+      } else {
+        newChildren(node, dnf);
+      }
+
+      return true;
+    }
+  }
+  return false;
+}
 
 auto RegularTableau::getPathEvents(const RegularNode *openLeaf) const {
+  // union-find data structure
   typedef std::pair<const RegularNode *, int> EventPointer;
   typedef std::map<EventPointer, int> rank_t;
   typedef std::map<EventPointer, EventPointer> parent_t;
@@ -1215,7 +899,7 @@ auto RegularTableau::getPathEvents(const RegularNode *openLeaf) const {
   return globalEvents;
 }
 
-Cube RegularTableau::getModel(const RegularNode *openLeaf) const {
+Model RegularTableau::getModel(const RegularNode *openLeaf) const {
   const RegularNode *cur = openLeaf;
   Cube model;
   while (cur != nullptr) {
@@ -1230,94 +914,7 @@ Cube RegularTableau::getModel(const RegularNode *openLeaf) const {
     cur = cur->reachabilityTreeParent;
   }
   assert(validateCube(model));
-  return model;
-}
-
-void saturateModelHelper(Cube &model, Renaming &renaming) {
-  bool wasSaturated = false;
-
-  const auto events = gatherActiveEvents(model);
-  for (const auto from : events) {
-    const auto f = Set::newEvent(from);
-    for (const auto to : events) {
-      const auto t = Set::newEvent(to);
-
-      if (from != to) {
-        for (const auto &idAssumption : Assumption::idAssumptions) {
-          Cube checkedCube = model;
-          const auto r = idAssumption.relation;
-          const auto fromR = Set::newSet(SetOperation::image, f, r);
-          const auto fromR_and_to = Set::newSet(SetOperation::setIntersection, fromR, t);
-          checkedCube.emplace_back(AnnotatedSet<SaturationAnnotation>{
-              fromR_and_to, Annotated::makeWithValue(fromR_and_to, {0, 0})});
-          Tableau finiteTableau(checkedCube);
-          if (finiteTableau.computeDnf().empty()) {
-            // from == to
-            // rename from -> to
-            renameCube(Renaming::simple(from, to), model);
-            removeDuplicates(model);
-
-            // update renaming
-            renaming = renaming.totalCompose(Renaming::simple(from, to));
-
-            wasSaturated = true;
-          }
-        }
-      }
-      for (const auto &[baseRelation, baseAssumption] : Assumption::baseAssumptions) {
-        Cube checkedCube = model;
-        const auto r = baseAssumption.relation;
-        const auto fromR = Set::newSet(SetOperation::image, f, r);
-        const auto fromR_and_to = Set::newSet(SetOperation::setIntersection, fromR, t);
-        checkedCube.emplace_back(AnnotatedSet<SaturationAnnotation>{
-            fromR_and_to, Annotated::makeWithValue(fromR_and_to, {0, 0})});
-        Tableau finiteTableau(checkedCube);
-        if (finiteTableau.computeDnf().empty()) {
-          // add edge (from, to) \in baseRelation
-          auto edge = Literal(f, t, baseRelation);
-          if (!contains(model, edge)) {
-            model.push_back(std::move(edge));
-
-            wasSaturated = true;
-
-            saturateModelHelper(model, renaming);  // refresh events
-            return;
-          }
-        }
-      }
-    }
-    for (const auto &[baseSet, baseAssumption] : Assumption::baseSetAssumptions) {
-      Cube checkedCube = model;
-      const auto s = baseAssumption.set;
-      const auto fS = Set::newSet(SetOperation::setIntersection, f, s);
-      checkedCube.emplace_back(
-          AnnotatedSet<SaturationAnnotation>{fS, Annotated::makeWithValue(fS, {0, 0})});
-      Tableau finiteTableau(checkedCube);
-      if (finiteTableau.computeDnf().empty()) {
-        // add set membership from \in baseSet
-        auto setMembership = Literal(f, baseSet);
-        if (!contains(model, setMembership)) {
-          model.push_back(std::move(setMembership));
-
-          wasSaturated = true;
-        }
-      }
-    }
-  }
-
-  if (wasSaturated) {
-    saturateModelHelper(model, renaming);
-  }
-}
-
-Renaming RegularTableau::saturateModel(Cube &model) const {
-  assert(validateCube(model));
-
-  auto renaming = Renaming::empty();
-  saturateModelHelper(model, renaming);
-
-  assert(validateCube(model));
-  return renaming;
+  return Model(model);
 }
 
 // TODO: this function does not respect renmaing due to appendBranches
@@ -1362,98 +959,23 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
   return rootRenaming;
 }
 
-// this spurious check does not consider the case where a branch is renamed
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
   auto model = getModel(openLeaf);
-  auto updatedInitialCube = initialCube;
-  const auto saturationRenaming = saturateModel(model);
-  renameCube(saturationRenaming, updatedInitialCube);
+  saturateModel(model);
+  model.exportModel("debug-isSpurious.model");
 
-  // check if negated literal of initial cube are satisfied
-  Cube checkedCube = model;
-  std::ranges::copy_if(updatedInitialCube, std::back_inserter(checkedCube), &Literal::negated);
-  Tableau finiteTableau(checkedCube);
-  const auto spurious = finiteTableau.computeDnf().empty();
-  if (!spurious) {  // counterexample found
-    spdlog::info("[Solver] Counterexample:");
-    print(model);
-    finiteTableau.exportProof("spurious-check");
-    exportModel("counterexample", getModel(openLeaf));
-    exportModel("counterexample-saturated", model);
-    exportCounterexamplePath(currentNode);
-  }
-  return spurious;
-}
-
-void RegularTableau::exportModel(const std::string &filename, const Cube &model) {
-  assert(validateCube(model));
-
-  std::ofstream counterexamleModel("./output/" + filename + ".dot");
-  counterexamleModel << "digraph { node[shape=\"circle\",margin=0]\n";
-
-  const auto [representatives, equivalenceClasses] = getEquivalenceClasses(model);
-
-  // TODO: remove
-  // print(model);
-  // for (auto [a, b] : representatives) {
-  //   std::cout << a << " -- " << b << std::endl;
-  // }
-  // std::cout << std::endl;
-  // for (auto [_, b] : equivalenceClasses) {
-  //   for (auto s : b) {
-  //     std::cout << s << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
-
-  auto setMemberships = model | std::views::filter(&Literal::isPositiveSetPredicate);
-  std::map<int, std::unordered_set<std::string>> representativeSetMap;
-  for (const auto &setMembership : setMemberships) {
-    const auto representativ = representatives.at(setMembership.leftEvent->label.value());
-    representativeSetMap[representativ].insert(setMembership.identifier.value());
-  }
-
-  // export events + set memberships
-  for (const auto event : representatives | std::views::values) {
-    counterexamleModel << "N" << event << "[label = \"";
-    // set memberships
-    if (representativeSetMap.contains(event)) {
-      for (const auto &baseSet : representativeSetMap.at(event)) {
-        counterexamleModel << baseSet << " ";
-      }
+  // check if any negated literals of initial cube evaluates to false
+  for (const auto &negatedLiteral : initialCube | std::views::filter(&Literal::negated)) {
+    if (!model.evaluateExpression(negatedLiteral)) {
+      return true;
     }
-    counterexamleModel << "";
-    counterexamleModel << "\", tooltip=\"";
-    counterexamleModel << "event: " << event << "\n";
-    counterexamleModel << "equivalenceClass: ";
-    for (const auto equivlenceClassEvent : equivalenceClasses.at(event)) {
-      counterexamleModel << equivlenceClassEvent << " ";
-    }
-    counterexamleModel << "\n";
-    counterexamleModel << "\"];";
   }
-
-  // export edges
-  std::unordered_set<Literal> insertedEdges;
-  auto edges = model | std::views::filter(&Literal::isPositiveEdgePredicate);
-  for (const auto &edge : edges) {
-    const int left = edge.leftEvent->label.value();
-    const int right = edge.rightEvent->label.value();
-    auto baseRelation = edge.identifier.value();
-
-    const auto insertedEdge = Literal(Set::newEvent(representatives.at(left)),
-                                      Set::newEvent(representatives.at(right)), baseRelation);
-    const auto [_, inserted] = insertedEdges.insert(insertedEdge);
-    if (!inserted) {
-      continue;
-    }
-
-    counterexamleModel << "N" << representatives.at(left) << " -> N" << representatives.at(right);
-    counterexamleModel << "[label = \"" << baseRelation << "\"];\n";
-  }
-
-  counterexamleModel << "}" << '\n';
-  counterexamleModel.close();
+  // no negated Literal violated -> not spurious
+  spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
+  getModel(openLeaf).exportModel("counterexample");
+  model.exportModel("counterexample-saturated");
+  exportCounterexamplePath(currentNode);
+  return false;
 }
 
 void RegularTableau::exportCounterexamplePath(const RegularNode *openLeaf) const {

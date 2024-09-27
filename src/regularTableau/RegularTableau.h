@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../basic/Literal.h"
+#include "../basic/Model.h"
 #include "../tableau/Tableau.h"
 #include "RegularNode.h"
 
@@ -43,8 +44,8 @@ class RegularTableau {
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   bool isInconsistentLazy(RegularNode *openLeaf);
   bool saturationLazy(RegularNode *openLeaf);
-  Cube getModel(const RegularNode *openLeaf) const;
-  Renaming saturateModel(Cube &model) const;
+  bool saturateNodeLazy(RegularNode *node, const Model &model, const Model &saturatedModel);
+  Model getModel(const RegularNode *openLeaf) const;
   Renaming getRootRenaming(const RegularNode *node) const;
   bool isSpurious(const RegularNode *openLeaf) const;
   bool isReachableFromRoots(const RegularNode *node) const;
@@ -67,5 +68,4 @@ class RegularTableau {
 
   bool solve();
   void exportProof(const std::string &filename) const;
-  static void exportModel(const std::string &filename, const Cube &model);
 };

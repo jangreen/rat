@@ -1,5 +1,7 @@
 #include "Assumption.h"
 
+#include "basic/CanonicalString.h"
+
 Assumption::Assumption(const CanonicalRelation relation, std::optional<std::string> baseRelation)
     : relation(relation), set(nullptr), baseIdentifier(std::move(baseRelation)) {}
 

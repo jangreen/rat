@@ -108,7 +108,7 @@ void Tableau::normalize() {
 
   auto modCounter = 0;
   while (!unreducedNodes.isEmpty()) {
-    exportDebug("debug");
+    exportDebug("debug-tableau");
 
     // remove useless literals in each iteration
     // do this after all positive literals are processed (top is negated)

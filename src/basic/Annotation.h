@@ -14,11 +14,6 @@ class Annotation;
 template <typename AnnotationType>
 using CanonicalAnnotation = const Annotation<AnnotationType> *;
 typedef std::pair<int, int> SaturationAnnotation;  // <id, base> saturation bounds
-typedef int Event;
-typedef std::pair<Event, Event> EventPair;
-typedef boost::container::flat_set<EventPair> RelationValue;
-typedef boost::container::flat_set<Event> SetValue;
-typedef std::variant<RelationValue, SetValue> ExprValue;
 
 /*
  *  Let T be a binary tree-like structure. A leaf annotation L is a function that maps each
@@ -88,9 +83,9 @@ std::optional<SaturationAnnotation> meet(const std::optional<SaturationAnnotatio
   if (!b.has_value()) {
     return a;
   }
-  return SaturationAnnotation{std::min(a->first, b->first), std::min(a->second, b->second)};
+  // use max: complex terms should indicate if some subterm can be saturated
+  return SaturationAnnotation{std::max(a->first, b->first), std::max(a->second, b->second)};
 }
-
 }  // namespace
 
 template <typename AnnotationType>
@@ -156,6 +151,8 @@ class Annotation {
   [[nodiscard]] CanonicalAnnotation<AnnotationType> getRight() const {
     return right == nullptr ? this : right;
   }
+  [[nodiscard]] CanonicalAnnotation<AnnotationType> getLeftInteral() const { return left; }
+  [[nodiscard]] CanonicalAnnotation<AnnotationType> getRightInteral() const { return right; }
   [[nodiscard]] bool isLeaf() const { return left == nullptr && right == nullptr; }
   static CanonicalAnnotation<AnnotationType> min(const CanonicalAnnotation<AnnotationType> first,
                                                  const CanonicalAnnotation<AnnotationType> second) {
