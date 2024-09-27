@@ -57,8 +57,6 @@ class Literal {
   std::optional<CanonicalString> identifier;  // edge, set
 
   [[nodiscard]] bool isNormal() const;
-  // TODO (topEvent optimization): [[nodiscard]] bool hasTopEvent() const { return
-  // !topEvents().empty(); };
   [[nodiscard]] bool hasFullSet() const {
     return operation == PredicateOperation::setNonEmptiness && set->hasFullSet();
   }
@@ -81,7 +79,6 @@ class Literal {
   [[nodiscard]] EventSet events() const;
   [[nodiscard]] SetOfSets eventBasePairs() const;
   [[nodiscard]] SetOfSets saturatedEventBasePairs() const;
-  // TODO (topEvent optimization): [[nodiscard]] EventSet topEvents() const;
 
   std::optional<Literal> substituteAll(CanonicalSet search, CanonicalSet replace) const;
   std::optional<Literal> substituteAll(CanonicalRelation search, CanonicalRelation replace) const;

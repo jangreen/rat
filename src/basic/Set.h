@@ -12,9 +12,8 @@ typedef boost::container::flat_set<int> EventSet;
 typedef boost::container::flat_set<CanonicalSet> SetOfSets;
 
 enum class SetOperation {
-  baseSet,  // nullary function (constant): base Set
-  event,    // nullary function (constant): single Set
-  // TODO (topEvent optimization): topEvent,         // special event for lazy top evaluation
+  baseSet,          // nullary function (constant): base Set
+  event,            // nullary function (constant): single Set
   emptySet,         // nullary function (constant): empty Set
   fullSet,          // nullary function (constant): full Set
   setUnion,         // binary function
@@ -40,7 +39,6 @@ class Set {
   mutable EventSet events;
   mutable EventSet normalEvents;
   mutable SetOfSets eventBasePairs;
-  // TODO (topEvent optimization): mutable EventSet topEvents;
 
   // Calculates the above properties: we do not do this inside the constructor
   //  to avoid doing it for non-canonical sets.
@@ -66,10 +64,6 @@ class Set {
   static CanonicalSet newEvent(int label) {
     return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
   }
-  // TODO (topEvent optimization):
-  // static CanonicalSet newTopEvent(int label) {
-  //   return newSet(SetOperation::topEvent, nullptr, nullptr, nullptr, label, std::nullopt);
-  // }
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
     return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
   }
@@ -78,8 +72,6 @@ class Set {
     return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
   }
   static CanonicalSet freshEvent() { return newEvent(maxEvent++); }
-  // TODO (topEvent optimization):
-  // static CanonicalSet freshTopEvent() { return newTopEvent(maxEvent++); }
 
   bool operator==(const Set &other) const {
     return operation == other.operation && leftOperand == other.leftOperand &&
@@ -87,20 +79,13 @@ class Set {
            label == other.label && identifier == other.identifier;
   }
 
-  bool isEvent() const {
-    return operation == SetOperation::event;  // TODO (topEvent optimization): || operation ==
-                                              // SetOperation::topEvent;
-  }
+  bool isEvent() const { return operation == SetOperation::event; }
   const bool &isNormal() const { return _isNormal; }
   bool hasFullSet() const { return _hasFullSet; }
   bool hasBaseSet() const { return _hasBaseSet; }
-  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
-  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
   const EventSet &getEvents() const { return events; }
   const SetOfSets &getEventBasePairs() const { return eventBasePairs; }
   const EventSet &getNormalEvents() const { return normalEvents; }
-  // TODO (topEvent optimization): bool hasTopEvent() const { return !topEvents.empty(); }
-  // TODO (topEvent optimization): const EventSet &getTopEvents() const { return topEvents; }
 
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base

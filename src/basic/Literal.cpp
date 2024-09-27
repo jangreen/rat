@@ -245,28 +245,6 @@ EventSet Literal::events() const {
   }
 }
 
-// TODO (topEvent optimization):
-// EventSet Literal::topEvents() const {
-//   switch (operation) {
-//     case PredicateOperation::setNonEmptiness: {
-//       return set->getTopEvents();
-//     }
-//     case PredicateOperation::constant:
-//       return {};
-//     case PredicateOperation::equality:
-//     case PredicateOperation::edge: {
-//       auto events = leftEvent->getTopEvents();
-//       auto rightEvents = rightEvent->getTopEvents();
-//       events.insert(rightEvents.begin(), rightEvents.end());
-//       return events;
-//     }
-//     case PredicateOperation::set:
-//       return leftEvent->getTopEvents();
-//     default:
-//       throw std::logic_error("unreachable");
-//   }
-// }
-
 SetOfSets Literal::eventBasePairs() const {
   switch (operation) {
     case PredicateOperation::constant:

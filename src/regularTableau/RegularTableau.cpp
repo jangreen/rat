@@ -809,12 +809,6 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // decorating the atomic expressions is already done insde checkAndMarkSaturation
       // here we just have to modify the proof accordingly
       const auto &annotatedLiteral = resultSaturated.value();
-      // TODO: remove:
-      // std::cout << renamedLiteral.toString() << std::endl;
-      // std::cout << Annotated::annotationToString<false>(annotatedLiteral.annotatedSet())
-      //           << std::endl;
-      // std::cout << Annotated::annotationToString<true>(annotatedLiteral.annotatedSet())
-      //           << std::endl;
 
       // remove old children (if there are any)
       removeChildren(node);
@@ -833,15 +827,8 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
           // If we do not add we get the counterexample to this other openLeaf again
           // So we want to add all SatAnnotation for all branches to be sure that we saturate enough
           // to finish all branches
-          // TODO: remove copyLiteral.annotation = annotatedLiteral.annotation;
           copyLiteral.annotation =
               Annotated::sum(copyLiteral.annotation, annotatedLiteral.annotation);
-          // TODO: remove:
-          // std::cout << "New sum:" << std::endl;
-          // std::cout << Annotated::annotationToString<false>(copyLiteral.annotatedSet())
-          //           << std::endl;
-          // std::cout << Annotated::annotationToString<true>(copyLiteral.annotatedSet()) <<
-          // std::endl;
           assert(Annotated::validate(copyLiteral.annotatedSet()));
         }
       }

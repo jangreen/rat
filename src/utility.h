@@ -242,7 +242,6 @@ inline void countActiveEvents(const CanonicalSet set,
       countActiveEvents(set->leftOperand, activeEventCounters);
       countActiveEvents(set->rightOperand, activeEventCounters);
       return;
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:

@@ -14,6 +14,4 @@ class Constraint {
   ConstraintType type;
   CanonicalRelation relation;
   std::optional<std::string> name;  // for printing
-
-  // TODO: void toEmptyNormalForm();
 };

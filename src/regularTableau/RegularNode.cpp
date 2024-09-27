@@ -39,12 +39,6 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
         events.push_back(l);
       }
     }
-    // TODO (topEvent optimization):
-    // for (const auto &l : literal.topEvents()) {
-    //   if (std::ranges::find(events, l) == events.end()) {
-    //     events.push_back(l);
-    //   }
-    // }
   }
   assert(validateNormalizedCube(cube));
   assert(std::ranges::all_of(cube, [&](const auto &literal) {
@@ -60,9 +54,7 @@ std::pair<RegularNode *, Renaming> RegularNode::newNode(Cube cube) {
   EventSet allEvents;
   for (const auto &literal : cube) {
     const auto &literalEvents = literal.events();
-    // TODO (topEvent optimization): const auto &topEvents = literal.topEvents();
     allEvents.insert(literalEvents.begin(), literalEvents.end());
-    // TODO (topEvent optimization): allEvents.insert(topEvents.begin(), topEvents.end());
   }
   if (!allEvents.empty()) {
     const auto maxEvent = std::ranges::max(allEvents);

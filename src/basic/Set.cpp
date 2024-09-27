@@ -13,7 +13,6 @@ namespace {
 bool calcIsNormal(const SetOperation operation, const CanonicalSet leftOperand,
                   const CanonicalSet rightOperand, const CanonicalRelation relation) {
   switch (operation) {
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::fullSet:
     case SetOperation::baseSet:
       return true;
@@ -48,7 +47,6 @@ EventSet calcEvents(const SetOperation operation, const CanonicalSet leftOperand
       return leftOperand->getEvents();
     case SetOperation::event:
       return {label.value()};
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -76,7 +74,6 @@ EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftO
       return leftOperand->getNormalEvents();
     case SetOperation::setUnion:
     case SetOperation::event:
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -85,32 +82,6 @@ EventSet calcNormalEvents(const SetOperation operation, const CanonicalSet leftO
       throw std::logic_error("unreachable");
   }
 }
-
-// TODO (topEvent optimization):
-// EventSet calcTopEvents(const SetOperation operation, const CanonicalSet leftOperand,
-//                        const CanonicalSet rightOperand, const std::optional<int> label) {
-//   switch (operation) {
-//     case SetOperation::setIntersection:
-//     case SetOperation::setUnion: {
-//       auto leftEvents = leftOperand->getTopEvents();
-//       auto rightEvents = rightOperand->getTopEvents();
-//       leftEvents.insert(rightEvents.begin(), rightEvents.end());
-//       return leftEvents;
-//     }
-//     case SetOperation::domain:
-//     case SetOperation::image:
-//       return leftOperand->getTopEvents();
-//     case SetOperation::topEvent:
-//       return {*label};
-//     case SetOperation::event:
-//     case SetOperation::baseSet:
-//     case SetOperation::emptySet:
-//     case SetOperation::fullSet:
-//       return {};
-//     default:
-//       throw std::logic_error("unreachable");
-//   }
-// }
 
 bool calcHasFullSet(const SetOperation operation, const CanonicalSet leftOperand,
                     const CanonicalSet rightOperand) {
@@ -173,7 +144,6 @@ SetOfSets calcEventBasePairs(const SetOperation operation, const CanonicalSet le
     case SetOperation::baseSet:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
       return {};
     default:
@@ -187,8 +157,6 @@ int Set::maxEvent = 0;
 
 void Set::completeInitialization() const {
   this->_isNormal = calcIsNormal(operation, leftOperand, rightOperand, relation);
-  // TODO (topEvent optimization): this->topEvents = calcTopEvents(operation, leftOperand,
-  // rightOperand, label);
   this->_hasFullSet = calcHasFullSet(operation, leftOperand, rightOperand);
   this->_hasBaseSet = calcHasBaseSet(operation, leftOperand, rightOperand);
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
@@ -225,10 +193,6 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
       case SetOperation::baseSet:
         assert(identifier.has_value() && !label.has_value() && isSimple);
         break;
-      // TODO (topEvent optimization):
-      // case SetOperation::topEvent:
-      //   assert(label.has_value() && !identifier.has_value() && isSimple);
-      //   break;
       case SetOperation::event:
         assert(label.has_value() && !identifier.has_value() && isSimple);
         break;
@@ -280,11 +244,6 @@ CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
-    // TODO (topEvent optimization):
-    // case SetOperation::topEvent: {
-    //   const int renamed = renaming.rename(label.value());
-    //   return label.value() == renamed ? this : newTopEvent(renaming.rename(label.value()));
-    // }
     case SetOperation::event: {
       const int renamed = renaming.rename(label.value());
       return label.value() == renamed ? this : newEvent(renaming.rename(label.value()));
@@ -316,10 +275,6 @@ std::string Set::toString() const {
   }
   std::string output;
   switch (operation) {
-    // TODO (topEvent optimization):
-    // case SetOperation::topEvent:
-    //   output += "[" + std::to_string(*label) + "]";
-    //   break;
     case SetOperation::event:
       output += std::to_string(*label);
       break;

@@ -5,7 +5,6 @@ namespace Annotated {
 CanonicalAnnotation<SaturationAnnotation> makeWithValue(const CanonicalSet set,
                                                         const SaturationAnnotation &value) {
   switch (set->operation) {
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
@@ -68,7 +67,6 @@ SaturationAnnotatedSet substituteAll(const SaturationAnnotatedSet &annotatedSet,
     return {replace, makeWithValue(replace, {0, 0})};
   }
   switch (set->operation) {
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::baseSet:
     case SetOperation::emptySet:
@@ -225,7 +223,6 @@ bool validate(const SaturationAnnotatedSet &annotatedSet) {
       assert(annotation->isLeaf());
       assert(annotation->getValue().has_value());
       return annotation->isLeaf() && annotation->getValue().has_value();
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:

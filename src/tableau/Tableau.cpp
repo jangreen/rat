@@ -162,15 +162,7 @@ void Tableau::normalize() {
     // we reset transitiveClosureNode to prevent too many unrelated connections
     // this is needed to remove useless literals without worrying about xrefs
     Node::transitiveClosureNode = nullptr;
-
-    // wo do not need this becuase we check after each modal rule bidirectional
-    // if (currentNode->getLiteral().hasFullSet() /* TODO (topEvent optimization): hasTopEvent()*/)
-    // {
-    //   // Rule (~\top_1)
-    //   // here: we replace universal events by concrete positive existential events
-    //   assert(currentNode->getLiteral().negated);
-    //   currentNode->inferModalTop();
-    // }
+    // wo do not need this because we check after each modal rule bidirectional
 
     if (currentNode->getLiteral().operation == PredicateOperation::setNonEmptiness) {
       // Rule (~aL), Rule (~aR)

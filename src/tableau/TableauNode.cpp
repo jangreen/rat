@@ -549,19 +549,6 @@ void Node::inferModalTop() {
     const auto substituted = substituteAllOnce(literal, search, replaceSet);
     appendBranch(substituted);
   }
-
-  // TODO (topEvent optimization):
-  // for (const auto search : literal.topEvents()) {
-  //   for (const auto replace : existentialReplaceEvents) {
-  //     // [search] -> {replace}
-  //     // replace all occurrences of the same search at once
-  //     const CanonicalSet searchSet = Set::newTopEvent(search);
-  //     const CanonicalSet replaceSet = Set::newEvent(replace);
-  //     if (const auto substituted = literal.substituteAll(searchSet, replaceSet)) {
-  //       appendBranch(substituted.value());
-  //     }
-  //   }
-  // }
 }
 
 void Node::inferModalBaseSetUp() {
@@ -628,18 +615,6 @@ Cube Node::inferModalAtomicNode(const CanonicalSet search1, const CanonicalSet r
   newLiterals.insert(newLiterals.end(), std::make_move_iterator(substituted2.begin()),
                      std::make_move_iterator(substituted2.end()));
 
-  // TODO (topEvent optimization):
-  // for (const auto search : literal.topEvents()) {
-  //   const CanonicalSet searchSet = Set::newTopEvent(search);
-  //
-  //   if (const auto substituted1 = literal.substituteAll(searchSet, replace1)) {
-  //     newLiterals.push_back(substituted1.value());
-  //   }
-  //
-  //   if (const auto substituted2 = literal.substituteAll(searchSet, replace2)) {
-  //     newLiterals.push_back(substituted2.value());
-  //   }
-  // }
   removeDuplicates(newLiterals);  // TODO: performance?
   return newLiterals;
 }

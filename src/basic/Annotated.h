@@ -235,7 +235,6 @@ template <bool first>
     case SetOperation::setUnion:
       return "(" + annotationToString<first>(getLeft(annotatedSet)) + " | " +
              annotationToString<first>(getRightSet<SaturationAnnotation>(annotatedSet)) + ")";
-    // TODO (topEvent optimization): case SetOperation::topEvent:
     case SetOperation::event:
     case SetOperation::emptySet:
     case SetOperation::fullSet:
