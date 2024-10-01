@@ -2,6 +2,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/pending/disjoint_sets.hpp>
+#include <utility>
 
 #include "../utility.h"
 #include "Literal.h"
@@ -18,6 +19,9 @@ typedef std::variant<SatRelationValue, SatSetValue> SatExprValue;
 struct SetMembership {
   std::string baseSet;
   Event event;
+
+  SetMembership(std::string baseSet, const Event event)
+      : baseSet(std::move(baseSet)), event(event) {}
 };
 struct UndirectedEdge {
   Event e1;
@@ -46,6 +50,9 @@ struct std::hash<UndirectedEdge> {
 struct Edge {
   std::string baseRelation;
   EventPair pair;
+
+  Edge(std::string baseRelation, EventPair pair)
+      : baseRelation(std::move(baseRelation)), pair(std::move(pair)) {}
 
   [[nodiscard]] Event from() const { return pair.first; }
   [[nodiscard]] Event to() const { return pair.second; }
