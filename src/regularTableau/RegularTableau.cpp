@@ -694,7 +694,7 @@ std::optional<Literal> checkAndMarkSaturation(const Model &model, const Literal 
       const auto from = negatedLiteral.leftEvent->label.value();
       const auto to = negatedLiteral.rightEvent->label.value();
 
-      if (model.contains(Edge(baseRelation, {from, to}))) {
+      if (model.containsEdge(Edge(baseRelation, {from, to}))) {
         auto litCopy = negatedLiteral;
         litCopy.annotation = Annotation<SaturationAnnotation>::newLeaf({1, 1});
         return litCopy;
@@ -705,7 +705,7 @@ std::optional<Literal> checkAndMarkSaturation(const Model &model, const Literal 
     case PredicateOperation::equality: {
       const auto e1 = negatedLiteral.leftEvent->label.value();
       const auto e2 = negatedLiteral.rightEvent->label.value();
-      if (model.sameEquivalenceClass(e1, e2)) {
+      if (model.containsIdentity(e1, e2)) {
         throw std::logic_error("does this happen?");
         return negatedLiteral;
       }
