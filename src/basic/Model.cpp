@@ -608,6 +608,13 @@ void Model::exportModel(const std::string &filename) const {
 
   // export events + set memberships
   for (const auto event : events) {
+    // skip non minimal representative
+    const auto eventClass = getEquivalenceClass(event);
+    const auto minRepresentative = *std::ranges::min_element(eventClass);
+    if (minRepresentative != event) {
+      continue;
+    }
+
     counterexamleModel << "N" << event << "[label = \"";
     // set memberships
     for (const auto &[baseSet, satEvents] : baseSets) {
@@ -628,6 +635,15 @@ void Model::exportModel(const std::string &filename) const {
   // export edges
   for (const auto &[baseRelation, satEdges] : baseRelations) {
     for (const auto [from, to] : satEdges.first) {
+      // skip edge containing non minimal representative
+      const auto fromClass = getEquivalenceClass(from);
+      const auto toClass = getEquivalenceClass(to);
+      const auto minFromRep = *std::ranges::min_element(fromClass);
+      const auto minToRep = *std::ranges::min_element(toClass);
+      if (minFromRep != from || minToRep != to) {
+        continue;
+      }
+
       counterexamleModel << "N" << from << " -> N" << to;
       counterexamleModel << "[label = \"" << baseRelation;
       counterexamleModel << "\", tooltip=\"";
