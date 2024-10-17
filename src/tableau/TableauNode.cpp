@@ -1,5 +1,6 @@
 #include "TableauNode.h"
 
+#include <deque>
 #include <iostream>
 #include <ranges>
 
