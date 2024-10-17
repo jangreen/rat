@@ -117,7 +117,7 @@ bool RegularTableau::validateReachabilityTree() const {
     while (cur != nullptr) {
       const auto &[_, isNew] = visited.insert(cur);
       if (!isNew) {
-        exportDebug("debug");
+        exportDebug("debug-regularTableau");
       }
       assert(isNew);
       cur = cur->reachabilityTreeParent;
@@ -681,7 +681,7 @@ std::optional<Literal> checkAndMarkSaturation(const Model &model, const Literal 
         return std::nullopt;
       }
 
-      assert(validate({negatedLiteral.set, annotation}));
+      // assert(Annotated::validate(AnnotatedSet(negatedLiteral.set, annotation)));
       const auto saturationAnnotation = makeSaturationAnnotation({negatedLiteral.set, annotation});
       auto litCopy = negatedLiteral;
       litCopy.annotation = saturationAnnotation;

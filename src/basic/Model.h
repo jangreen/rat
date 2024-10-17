@@ -99,6 +99,11 @@ class Model {
   [[nodiscard]] bool containsSetMembership(const SetMembership &memberhsip) const;
   [[nodiscard]] bool containsIdentity(Event e1, Event e2) const;
 
+  [[nodiscard]] SaturationAnnotation getEdgeSaturation(const Edge &edge) const;
+  [[nodiscard]] SaturationAnnotation getSetMembershipSaturation(
+      const SetMembership &memberhsip) const;
+  [[nodiscard]] SaturationAnnotation getIdentitySaturation(Event e1, Event e2) const;
+
   void exportModel(const std::string &filename) const;
 
  private:

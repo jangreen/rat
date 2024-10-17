@@ -325,8 +325,12 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(const CanonicalSet s
   switch (set->operation) {
     case SetOperation::event: {
       const Event event = set->label.value();
-      EventSaturationMap sMap = {{event, {0, 0}}};
-      const SatSetValue satValue(SetValue{event}, sMap);
+      EventSaturationMap sMap;
+      const auto value = getEquivalenceClass(event);
+      for (const auto e : value) {
+        sMap.insert({e, getIdentitySaturation(event, e)});
+      }
+      const SatSetValue satValue(value, sMap);
       assert(validate({set, Annotation<SatExprValue>::newLeaf(satValue)}));
       return Annotation<SatExprValue>::newLeaf(satValue);
     }
@@ -600,6 +604,19 @@ bool Model::addIdentity(const Event e1, const Event e2, SaturationAnnotation sat
     }
   }
   return incidentEdges;
+}
+
+SaturationAnnotation Model::getEdgeSaturation(const Edge &edge) const {
+  return baseRelations.at(edge.baseRelation).second.at(edge.pair);
+}
+SaturationAnnotation Model::getSetMembershipSaturation(const SetMembership &memberhsip) const {
+  return baseSets.at(memberhsip.baseSet).second.at(memberhsip.event);
+}
+SaturationAnnotation Model::getIdentitySaturation(Event e1, Event e2) const {
+  if (e1 == e2) {
+    return {0, 0};
+  }
+  return identities.second.at({e1, e2});
 }
 
 void Model::exportModel(const std::string &filename) const {
