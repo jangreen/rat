@@ -54,7 +54,6 @@ int main(int argc, const char *argv[]) {
     RegularTableau tableau(goal);
     tableau.solve();
     spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start)));
-    tableau.exportProof("regular");
 
     Stats::print();
     Stats::reset();

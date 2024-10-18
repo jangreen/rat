@@ -94,11 +94,20 @@ size_t RegularNode::Hash::operator()(const std::unique_ptr<RegularNode> &node) c
 void RegularNode::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";
+  for (const auto &literal : cube) {
+    if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
+      output << "Id annotation: \n";
+      output << Annotated::toString<true>(literal.annotatedSet()) << "\n";  // annotation id
+      output << "base annotation: \n";
+      output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
+      output << "\n";
+    }
+  }
 
   // label is cube
   output << "\", label=\"";
-  for (const auto &lit : cube) {
-    output << lit.toString() << "\n";
+  for (const auto &literal : cube) {
+    output << literal.toString() << "\n";
   }
   output << "\"";
 

@@ -184,8 +184,12 @@ inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents
 inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs,
                             const bool preserveSaturatable) {
   // IMPORTANT includes requires the sets to be sorted
-  return std::ranges::includes(activePairs, preserveSaturatable ? literal.saturatedEventBasePairs()
-                                                                : literal.eventBasePairs());
+  assert(std::ranges::is_sorted(activePairs));
+  assert(std::ranges::is_sorted(preserveSaturatable ? literal.saturatedEventBasePairs()
+                                                    : literal.eventBasePairs()));
+  return std::ranges::includes(activePairs, preserveSaturatable
+                                                ? literal.saturatedEventBasePairs()
+                                                : literal.eventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal

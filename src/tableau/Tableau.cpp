@@ -103,28 +103,37 @@ void Tableau::deleteNode(Node *node) {
   assert(parentNode->validateRecursive());
 }
 
+// size_t lastSize = 0;
+// std::string lastString;
 void Tableau::normalize() {
   Stats::counter("#iterations - normalize").reset();
 
-  auto modCounter = 0;
+  bool activePairsPopulated = false;
   while (!unreducedNodes.isEmpty()) {
-    exportDebug("debug-tableau");
-
     // remove useless literals in each iteration
-    // do this after all positive literals are processed (top is negated)
+    // do this after all positive literals are processed
     // unreduced nodes could become empty
-    if (modCounter % 10 == 0) {
-      if (unreducedNodes.top()->getLiteral().negated) {
-        removeUselessLiterals();
-        if (unreducedNodes.isEmpty()) {
-          break;
-        }
-      }
+    const auto allPositiveLiteralsProcessed = unreducedNodes.top()->getLiteral().negated;
+    if (allPositiveLiteralsProcessed && !activePairsPopulated) {
+      SetOfSets activePairs = {};
+      rootNode->computeActivePairs(activePairs);
+      exportDebug("debug-tableau");
+      activePairsPopulated = true;
     }
-    modCounter++;
+    // TODO: remove
+    // if (modCounter % 50 == 0) {
+    //   if (allPositiveLiteralsProcessed) {
+    //     removeUselessLiterals();
+    //     if (unreducedNodes.isEmpty()) {
+    //       break;
+    //     }
+    //   }
+    // }
+    // modCounter++;
 
     Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();
+    exportDebug("debug-tableau");
     assert(currentNode->validate());
     assert(currentNode->getParentNode()->validate());
     if (currentNode->isClosed()) {
@@ -133,10 +142,20 @@ void Tableau::normalize() {
 
     Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
+    // if (size(rootNode.get()) > lastSize * 1.5 && lastSize != 0) {
+    //   std::cout << lastString << "\n" << lastSize << std::endl;
+    //
+    //   std::cout << currentNode->getLiteral().toString() << "\n"
+    //             << size(rootNode.get()) << ", " << leafSize(rootNode.get()) << ", "
+    //             << depth(rootNode.get()) << std::endl;
+    // }
+    // lastSize = size(rootNode.get());
+    // lastString = currentNode->getLiteral().toString();
+
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
-      if (!Rules::lastRuleWasUnrolling) {
-        deleteNode(currentNode);  // in-place rule application
+      if (!Rules::lastRuleWasUnrolling) {  // prevent cycling
+        deleteNode(currentNode);           // in-place rule application
       }
       continue;
     }
@@ -179,7 +198,7 @@ void Tableau::normalize() {
     // 3) Saturation Rules
     // lazy saturation:
     // nodes that should be saturated are marked if a spurious counterexample is found
-    // we do this at node level because child nodes sould inherit this property
+    // we do this at node level because child nodes should inherit this property
     auto saturatedLiterals = currentNode->getLiteral().saturate();
     currentNode->appendBranch(saturatedLiterals);
   }
@@ -191,7 +210,6 @@ void Tableau::normalize() {
 bool Tableau::tryApplyModalRuleOnce(const int applyToEvent) {
   while (!unreducedNodes.isEmpty()) {
     Node *currentNode = unreducedNodes.pop();
-    exportDebug("debug");
 
     if (const auto result =
             Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
