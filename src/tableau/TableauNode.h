@@ -20,29 +20,36 @@ class Node {
   // ================== Core members ==================
   Tableau *const tableau;
   Node *parentNode = nullptr;
-  Literal literal;
-  const Node *lastUnrollingParent = nullptr;  // to detect at the world cycles
   std::vector<std::unique_ptr<Node>> children;
+  Literal literal;
+
+  const Node *lastUnrollingParent = nullptr;  // to detect at the world cycles
 
   // ================== Cached ==================
   // gather information about the prefix of the branch
   mutable bool _isClosed = false;
+  mutable std::optional<boost::container::flat_set<SetOfSets>> _activeEventBasePairs;
 
   void appendBranchInternalUp(DNF &dnf) const;
   void appendBranchInternalDownDisjunctive(DNF &dnf);
   void appendBranchInternalDownConjunctive(const DNF &dnf);
+
   void reduceBranchInternalDown(NodeCube &nodeCube);
+  void reduceBranchInternalDown(Cube &cube);
+
   void inferModalAtomicUp(CanonicalSet search1, CanonicalSet replace1, CanonicalSet search2,
                           CanonicalSet replace2);
   void inferModalAtomicDown(CanonicalSet search1, CanonicalSet replace1, CanonicalSet search2,
                             CanonicalSet replace2);
   Cube inferModalAtomicNode(CanonicalSet search1, CanonicalSet replace1, CanonicalSet search2,
                             CanonicalSet replace2);
+
   void inferModalUp();
   void inferModalDown(const Literal &negatedLiteral);
+
   void inferModalBaseSetUp();
   void inferModalBaseSetDown(const Literal &negatedLiteral);
-  void reduceBranchInternalDown(Cube &cube);
+
   void closeBranch();
 
   void dnfBuilder(DNF &dnf) const;
@@ -82,12 +89,14 @@ class Node {
     }
   }
   void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
+
   std::optional<DNF> applyRule();
   void inferModal();
   void inferModalTop();
   void inferModalBaseSet();
   void inferModalAtomic();
   void removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePairCubes);
+  void computeActivePairs(SetOfSets &prefixActivePairs) const;
 
   // ================== Printing ==================
   void toDotFormat(std::ofstream &output) const;

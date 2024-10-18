@@ -162,8 +162,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(
       std::ranges::set_intersection(leftValue, rightValue,
                                     std::inserter(intersect, intersect.begin()));
       for (const auto edge : intersect) {
-        intersectSMap[edge] = {lsMap.at(edge).first + rsMap.at(edge).first,
-                               lsMap.at(edge).second + rsMap.at(edge).second};
+        intersectSMap[edge] = {std::max(lsMap.at(edge).first, rsMap.at(edge).first),
+                               std::max(lsMap.at(edge).second, rsMap.at(edge).second)};
       }
       SatRelationValue satIntersect(intersect, intersectSMap);
       assert(
@@ -183,8 +183,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(
           if (l.second == r.first) {
             const EventPair composed = {l.first, r.second};
             composition.insert(composed);
-            compSMap[composed] = {lsMap.at(l).first + rsMap.at(r).first,
-                                  lsMap.at(l).second + rsMap.at(r).second};
+            compSMap[composed] = {std::max(lsMap.at(l).first, rsMap.at(r).first),
+                                  std::max(lsMap.at(l).second, rsMap.at(r).second)};
           }
         }
       }
@@ -248,8 +248,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(
             if (clTo == rFrom && !transitiveClosure.contains(composition)) {
               newPairs.insert(composition);
               tClsMap[composition] = {
-                  tClsMap.at({clFrom, clTo}).first + sMap.at({rFrom, rTo}).first,
-                  tClsMap.at({clFrom, clTo}).second + sMap.at({rFrom, rTo}).second};
+                  std::max(tClsMap.at({clFrom, clTo}).first, sMap.at({rFrom, rTo}).first),
+                  std::max(tClsMap.at({clFrom, clTo}).second, sMap.at({rFrom, rTo}).second)};
             }
           }
         }
@@ -345,8 +345,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(const CanonicalSet s
       for (const auto &r : rightValue) {
         if (leftValue.contains(r.first)) {
           image.insert(r.second);
-          imageSMap[r.second] = {lsMap.at(r.first).first + rsMap.at(r).first,
-                                 lsMap.at(r.first).second + rsMap.at(r).second};
+          imageSMap[r.second] = {std::max(lsMap.at(r.first).first, rsMap.at(r).first),
+                                 std::max(lsMap.at(r.first).second, rsMap.at(r).second)};
         }
       }
       SatSetValue satImage(image, imageSMap);
@@ -364,8 +364,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(const CanonicalSet s
       for (const auto &r : rightValue) {
         if (leftValue.contains(r.second)) {
           domain.insert(r.first);
-          domainSMap[r.first] = {lsMap.at(r.second).first + rsMap.at(r).first,
-                                 lsMap.at(r.second).second + rsMap.at(r).second};
+          domainSMap[r.first] = {std::max(lsMap.at(r.second).first, rsMap.at(r).first),
+                                 std::max(lsMap.at(r.second).second, rsMap.at(r).second)};
         }
       }
       SatSetValue satDomain(domain, domainSMap);
@@ -406,8 +406,8 @@ CanonicalAnnotation<SatExprValue> Model::evaluateExpression(const CanonicalSet s
       std::ranges::set_intersection(leftValue, rightValue,
                                     std::inserter(intersect, intersect.begin()));
       for (const auto event : intersect) {
-        intersectSMap[event] = {lsMap.at(event).first + rsMap.at(event).first,
-                                lsMap.at(event).second + rsMap.at(event).second};
+        intersectSMap[event] = {std::max(lsMap.at(event).first, rsMap.at(event).first),
+                                std::max(lsMap.at(event).second, rsMap.at(event).second)};
       }
       SatSetValue satIntersect(intersect, intersectSMap);
       assert(validate({set, Annotation<SatExprValue>::newAnnotation(satIntersect, left, right)}));

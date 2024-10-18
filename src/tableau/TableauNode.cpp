@@ -76,6 +76,11 @@ Node::Node(Node *parent, Literal literal)
     : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
   parent->children.emplace_back(this);
+  _activeEventBasePairs = parent->_activeEventBasePairs;
+  assert(!_activeEventBasePairs.has_value() ||
+         std::ranges::any_of(_activeEventBasePairs.value(), [&](const auto &pairs) {
+           return isLiteralActive(literal, pairs, true);
+         }));
 }
 
 Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
@@ -102,6 +107,8 @@ Node::~Node() {
 // ===========================================================================================
 
 bool Node::validate() const {
+  // tableau->exportDebug("debug-tableau.validate");
+
   if (tableau == nullptr) {
     std::cout << "Invalid node(no tableau) " << this << ": " << literal.toString();
     std::flush(std::cout);
@@ -281,6 +288,21 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
 void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(validateDNF(dnf));
 
+  for (auto &cube : dnf) {
+    const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
+      if (!_activeEventBasePairs.has_value()) {
+        return false;
+      }
+      return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
+        return !isLiteralActive(literal, active, true);
+      });
+    });
+    cube.erase(begin, end);
+  }
+  if (std::ranges::any_of(dnf, &Cube::empty)) {
+    return;
+  }
+
   if (isClosed()) {
     // Closed leaf: nothing to do
     assert(tableau->unreducedNodes.validate());
@@ -366,20 +388,55 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
   if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
         return !isLiteralActive(literal, active, true);
       })) {
-    // TODO: do we have to do this while lazy saturation?
-    // if (const auto ann = literal.annotation->getValue();
-    //     ann->first <= Rules::saturationBound || ann->second <= Rules::saturationBound) {
-    //   // if literal can be saturated, saturate first
-    //   auto saturatedLiterals = literal.saturate();
-    //   appendBranch(saturatedLiterals);
-    // }
     Stats::counter("removeUselessLiterals tabl")++;
     tableau->deleteNode(this);
   }
 }
 
+void Node::computeActivePairs(SetOfSets &prefixActivePairs) const {
+  // compute top-down each leaf
+  if (!literal.negated) {
+    const auto &literalPairs = literal.eventBasePairs();
+    prefixActivePairs.insert(literalPairs.begin(), literalPairs.end());
+  }
+
+  for (const auto &child : children) {
+    auto prefixActivePairsCopy = prefixActivePairs;
+    child->computeActivePairs(prefixActivePairsCopy);
+  }
+
+  if (isLeaf()) {
+    _activeEventBasePairs = {prefixActivePairs};
+    return;
+  }
+
+  // compute bottom-up by merging & populate _activeEventBasePairs
+  boost::container::flat_set<SetOfSets> activePairsCombinations;
+  for (const auto &child : children) {
+    for (const auto &set : child->_activeEventBasePairs.value()) {
+      auto setCopy = set;
+      setCopy.insert(prefixActivePairs.begin(), prefixActivePairs.end());
+      activePairsCombinations.insert(setCopy);
+    }
+  }
+  _activeEventBasePairs = activePairsCombinations;
+}
+
 void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
-  const auto &cube = dnf.at(0);
+  auto cube = dnf.at(0);
+
+  const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
+    if (!_activeEventBasePairs.has_value()) {
+      return false;
+    }
+    return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
+      return !isLiteralActive(literal, active, true);
+    });
+  });
+  cube.erase(begin, end);
+  if (cube.empty()) {
+    return;
+  }
 
   // 1. insert cube in-place
   auto thisChildren = detachAllChildren();
@@ -683,6 +740,11 @@ void Node::toDotFormat(std::ofstream &output) const {
   }
   output << "events: " << toString(literal.events()) << "\n";
   output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
+  output << "eventPairs: ";
+  for (const auto pair : literal.eventBasePairs()) {
+    output << pair->toString() << " ";
+  }
+  output << "\n";
   output << "saturatedEventPairs: ";
   for (const auto pair : literal.saturatedEventBasePairs()) {
     output << pair->toString() << " ";
@@ -699,6 +761,17 @@ void Node::toDotFormat(std::ofstream &output) const {
   output << "branch equalities: ";
   for (const auto &equality : equalities) {
     output << equality.toString();
+  }
+  output << "\n";
+  output << "active pairs for any branch: ";
+  if (_activeEventBasePairs.has_value()) {
+    for (const auto &branch : _activeEventBasePairs.value()) {
+      output << "\t";
+      for (const auto &pair : branch) {
+        output << pair->toString() << ", ";
+      }
+      output << ";\n";
+    }
   }
   output << "\n";
 

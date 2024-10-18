@@ -117,7 +117,7 @@ bool RegularTableau::validateReachabilityTree() const {
     while (cur != nullptr) {
       const auto &[_, isNew] = visited.insert(cur);
       if (!isNew) {
-        exportDebug("debug-regularTableau");
+        exportDebug("debug-validateReachabilityTree");
       }
       assert(isNew);
       cur = cur->reachabilityTreeParent;
@@ -218,9 +218,8 @@ void RegularTableau::addEpsilonEdge(RegularNode *parent, RegularNode *child,
 
 bool RegularTableau::solve() {
   while (!unreducedNodes.empty()) {
-    exportDebug("debug");
-
     currentNode = unreducedNodes.top();
+    exportDebug("debug-regularTableau");
     unreducedNodes.pop();
     Stats::counter("#iterations")++;
     assert(validate());
@@ -268,7 +267,6 @@ bool RegularTableau::solve() {
     }
 
     // 4) Check saturation lazy
-    exportDebug("debug-regularTableau");
     if (saturationLazy(currentNode)) {
       assert(validate());
       continue;
@@ -281,6 +279,7 @@ bool RegularTableau::solve() {
     throw std::logic_error("unreachable: no rule applicable");
   }
   spdlog::info("[Solver] Answer: True");
+  exportProof("proof");
   return true;
 }
 
@@ -657,7 +656,7 @@ CanonicalAnnotation<SaturationAnnotation> makeSaturationAnnotation(
   // The genearate Saturation annotation reflects the saturations needed for some witness in the
   // set. Currently we chosse some arbitrary witness (which may be improved)
   // TODO: choose a minimal witness: minimal (as few saturations as possible)
-  // REMARK: We need the exact minimal amount of saturations needed per base relation
+  // REMARK: We need the exact minimal depth of saturations needed per base relation
   // to exclude the counterexample. Otherwise we could saturate (not enough) and weaken the newly
   // saturated stuff, leading to the same state from which we began saturating
   // thus evalutating expression bottom-up we should save the minimal number of saturations needed
@@ -734,7 +733,7 @@ bool RegularTableau::saturationLazy(RegularNode *const openLeaf) {
     saturatedModel.exportModel("debug-saturationLazy.saturatedModel");
 #endif
 
-    exportDebug("debug-regularTableau");
+    exportDebug("debug-saturationLazy.regularTableau");
     auto pathNeedsSaturation = false;
 
     // follow some path to root
@@ -768,7 +767,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
     if (!result && resultSaturated) {
       // REMARK: saturation leads to different evaluation
       // We want to do the following: anaylze the counterexample and determine exactly
-      // which saturations we needed
+      // which saturations we needed (currently only saturation depth)
       // Then, apply the same sequence of saturations in the proof to exclude the spurious
       // counterexample
       // We do this by decorating the base relations and base sets in the respective expression
@@ -779,7 +778,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
 
       // remove old children (if there are any)
       removeChildren(node);
-      exportDebug("debug-regularTableau");
+      exportDebug("debug-saturateNodeLazy.regularTableau");
       // IMPORTANT: invariant in validation of tableau is temporally violated
       // after removing all children we may have an open leaf that is not on unreduced nodes
 
@@ -798,6 +797,13 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
               Annotated::sum(copyLiteral.annotation, annotatedLiteral.annotation);
           assert(Annotated::validate(copyLiteral.annotatedSet()));
         }
+      }
+
+      // IMPORTANT performance optimization
+      // compare with solve method
+      if (cubeHasPositiveAtomic(cubeCopy)) {
+        std::erase_if(cubeCopy, std::mem_fn(&Literal::isPositiveAtomic));
+        removeUselessLiterals(cubeCopy);
       }
       Tableau tableau(cubeCopy);
 
@@ -1016,7 +1022,8 @@ void RegularTableau::nodeToDotFormat(const RegularNode *node, std::ofstream &out
   // unreduced nodes are blue
   const auto container = get_const_container(unreducedNodes);
   if (std::ranges::find(container, node) != container.end()) {
-    output << "N" << node << " [color=blue, fontcolor=blue]";
+    output << "N" << node << " [color=blue, fontcolor=blue";
+    output << (node == currentNode ? ", fillcolor=lightgrey, style=filled]" : "]");
   }
 
   // edges

@@ -1,14 +1,16 @@
-let rfe = rf & ext
+let rfe = rf-base & ext & loc
+let rfi = rf-base & int & loc
+let rf = rfi | rfe
 let po-loc = po & loc
 let fr = rf^-1;co
-
+let dep = [R];(dep-base & int)
 
 // TSO
 let com = (co | fr | rf)
 let uniproc = (po-loc | com)^+ & id
 
 let com-tso = (co | fr | rfe)
-let po-tso = ((po & ((R*M) | (W*W))) | mfence)
+let po-tso = ([R];po | [W];po;[W] | mfence)
 let ghb-tso = (po-tso | com-tso)^+ & id
 
 let tso = ghb-tso | uniproc
@@ -19,6 +21,11 @@ let oota = (dep | rf)^+ & id
 // Assumptions
 assume dep <= po
 assume rf;rf <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume int^-1 <= int
+assume loc^-1 <= loc
+assume rfi <= po
 
 // Goal
 assume tso <= 0

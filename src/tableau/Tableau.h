@@ -38,6 +38,30 @@ class Tableau {
 
   void deleteNode(Node *node);
 
+  // size_t size(const Node *node) {
+  //   size_t nodeSize = 1;
+  //   for (const auto &child : node->getChildren()) {
+  //     nodeSize += size(child.get());
+  //   }
+  //   return nodeSize;
+  // }
+  //
+  // size_t leafSize(const Node *node) {
+  //   size_t nodeSize = node->isLeaf() ? 1 : 0;
+  //   for (const auto &child : node->getChildren()) {
+  //     nodeSize += leafSize(child.get());
+  //   }
+  //   return nodeSize;
+  // }
+  //
+  // size_t depth(const Node *node) {
+  //   size_t nodeDepth = 0;
+  //   for (const auto &child : node->getChildren()) {
+  //     nodeDepth = std::max(nodeDepth, depth(child.get()));
+  //   }
+  //   return nodeDepth + 1;
+  // }
+
   void renameBranches(Node *node);
   Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
                                  std::unordered_set<Literal> &allRenamedLiterals,
@@ -47,10 +71,9 @@ class Tableau {
                                   const std::unordered_map<const Node *, Node *> &originalToCopy,
                                   std::unordered_set<const Node *> &unrollingParents);
 
-  void removeUselessLiterals(const bool preserveSaturatable = true) {
+  void removeUselessLiterals() const {
     boost::container::flat_set<SetOfSets> activePairCubes = {{}};
     Stats::counter("removeUselessLiterals tabl").reset();
-    exportDebug("debug");
     rootNode->removeUselessLiterals(activePairCubes);
   }
 };
