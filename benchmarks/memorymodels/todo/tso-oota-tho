@@ -1,0 +1,34 @@
+//let int = int-base | int-base^-1 | id
+
+let rfe = [W];rf-base;[R] & ext & loc
+let rfi = [W];rf-base;[R] & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let fr = rf^-1;co
+let dep = [R];dep-base;[M] & po
+
+
+// TSO
+let com = (co | fr | rf)
+let uniproc = (po-loc | com)^+ & id
+
+let com-tso = (co | fr | rfe)
+let po-tso = ([R];po | [W];po;[W] | mfence)
+let ghb-tso = (po-tso | com-tso)^+ & id
+
+let tso = ghb-tso | uniproc
+
+// OOTA
+let oota = (dep | rf)^+ & id
+
+// Assumptions
+//assume W & R <= 0
+//assume po^+ <= po
+//assume po & id <= 0
+assume int^-1 <= int
+// assume loc^-1 <= loc
+// assert rfi <= po
+
+// Goal
+assume tso <= 0
+assert oota <= 0

@@ -1,0 +1,10 @@
+// preprocessing bug
+// preprocessing ignores assumptions (i^-1 <= i must enforce that a & i will not be simplified)
+let ae = a & e
+let ai = a & i
+
+assume i^-1 <= i
+assume p;ae & id <= 0
+assume ai;ai & id <= 0
+
+assert p;(ai | ae) & id <= 0

@@ -5,21 +5,9 @@
 #include <unordered_set>
 
 #include "Stats.h"
+#include "assert_catch.h"
 #include "basic/Literal.h"
-#include "tableau/Rules.h"
-
-// currently it is not possible to pass a concept as a template parameter
-// we would like to write something like this: range_of<Literal>, range_of<rane_of<Literal>>, ...
-// template <typename RangeType, template <typename> concept ValueConcept>
-// concept range_of =
-//     std::ranges::range<RangeType> && ValueConcept<std::ranges::range_value_t<RangeType>>;
-// workaround:
-template <class RangeType, class RangeValueType>
-concept range_of = std::ranges::range<RangeType> &&
-                   std::same_as<RangeValueType, std::ranges::range_value_t<RangeType>>;
-template <class RangeType, class RangeValueType>
-concept range_of_range_of = std::ranges::range<RangeType> &&
-                            range_of<std::ranges::range_value_t<RangeType>, RangeValueType>;
+#include "range_of.h"
 
 template <typename T>
 bool isSubset(const std::vector<T> &smallerSet, std::vector<T> largerSet) {
@@ -51,6 +39,13 @@ void print(const range_of_range_of<Literal> auto &dnf) {
 void print(const range_of<Literal> auto &cube) {
   for (auto &literal : cube) {
     std::cout << literal.toString() << "\n";
+  }
+  std::cout << std::endl;
+}
+
+void printAnnotation(const range_of<Literal> auto &cube) {
+  for (auto &literal : cube) {
+    std::cout << literal.annotation->toString() << "\n";
   }
   std::cout << std::endl;
 }
@@ -92,7 +87,10 @@ inline bool validateCube(const Cube &cube) {
   Cube copy = cube;
   std::ranges::sort(copy);
   const bool hasDuplicates = std::ranges::adjacent_find(copy) != copy.end();
-  assert(!hasDuplicates);
+  assert_catch(!hasDuplicates, [&] {
+    std::cout << "Cube with duplicates: \n";
+    print(cube);
+  });
   return std::ranges::all_of(cube, [](const auto &literal) { return literal.validate(); });
 }
 
@@ -115,9 +113,8 @@ inline bool validatePartialCube(const PartialCube &cube) {
   return std::ranges::all_of(cube, [](const PartialLiteral &literal) {
     if (std::holds_alternative<Literal>(literal)) {
       return std::get<Literal>(literal).validate();
-    } else {
-      return Annotated::validate(std::get<SaturationAnnotatedSet>(literal));
     }
+    return validateReasons(std::get<LeafAnnotatedSet<Reasons>>(literal));
   });
 }
 
@@ -125,7 +122,7 @@ inline bool validateNormalizedCube(const Cube &cube) {
   return validateCube(cube) && std::ranges::all_of(cube, [](auto &lit) { return lit.isNormal(); });
 }
 
-inline bool validateDNF(const range_of<Cube> auto &dnf) {
+bool validateDNF(const range_of<Cube> auto &dnf) {
   return std::ranges::all_of(dnf, [](const auto &cube) { return validateCube(cube); });
 }
 
@@ -137,6 +134,41 @@ inline bool validatePartialDNF(const PartialDNF &dnf) {
 template <typename T>
 bool contains(const std::vector<T> &vector, const T &object) {
   return std::ranges::find(vector, object) != vector.end();
+}
+
+template <typename T>
+void moveAppend(std::vector<T> &first, std::vector<T> &&second) {
+  first.insert(first.end(), std::make_move_iterator(second.begin()),
+               std::make_move_iterator(second.end()));
+}
+
+inline bool isSubsumed(const Cube &a, const Cube &b) {
+  if (a.size() < b.size()) {
+    return false;
+  }
+  return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
+}
+
+inline DNF simplifyDnf(const DNF &dnf) {
+  // return dnf;  // To disable simplification
+  Stats::diff("simplifyDnf - removed cubes").first(dnf.size());
+  auto sortedDnf = dnf;
+  std::ranges::sort(sortedDnf, std::less(), &Cube::size);
+
+  DNF simplified;
+  simplified.reserve(sortedDnf.size());
+  for (const auto &c1 : sortedDnf) {
+    const bool subsumed =
+        std::ranges::any_of(simplified, [&](const Cube &c2) { return isSubsumed(c1, c2); });
+    if (!subsumed) {
+      simplified.push_back(c1);
+    }
+  }
+  /*if (simplified.size() < dnf.size()) {
+    std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
+  }*/
+  Stats::diff("simplifyDnf - removed cubes").second(simplified.size());
+  return simplified;
 }
 
 inline std::strong_ordering lexCompare(const std::string &left, const std::string &right) {
@@ -158,7 +190,7 @@ inline DNF toDNF(const Literal &context, const PartialDNF &partialDNF) {
         auto l = std::get<Literal>(partialLiteral);
         cube.push_back(std::move(l));
       } else {
-        const auto as = std::get<SaturationAnnotatedSet>(partialLiteral);
+        const auto as = std::get<LeafAnnotatedSet<Reasons>>(partialLiteral);
         cube.push_back(context.substituteSet(as));
       }
     }
@@ -178,18 +210,16 @@ inline bool cubeHasPositiveAtomic(const Cube &cube) {
 
 inline bool isLiteralActive(const Literal &literal, const EventSet &activeEvents) {
   // IMPORTANT includes requires the sets to be sorted
+  assert(std::ranges::is_sorted(activeEvents));
+  assert(std::ranges::is_sorted(literal.normalEvents()));
   return std::ranges::includes(activeEvents, literal.normalEvents());
 }
 
-inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs,
-                            const bool preserveSaturatable) {
+inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs) {
   // IMPORTANT includes requires the sets to be sorted
   assert(std::ranges::is_sorted(activePairs));
-  assert(std::ranges::is_sorted(preserveSaturatable ? literal.saturatedEventBasePairs()
-                                                    : literal.eventBasePairs()));
-  return std::ranges::includes(activePairs, preserveSaturatable
-                                                ? literal.saturatedEventBasePairs()
-                                                : literal.eventBasePairs());
+  assert(std::ranges::is_sorted(literal.saturatedEventBasePairs()));
+  return std::ranges::includes(activePairs, literal.saturatedEventBasePairs());
 }
 
 // activeEvent = event occurs in positive literal
@@ -210,6 +240,7 @@ inline EventSet gatherActiveEvents(const Cube &cube) {
   return activeEvents;
 }
 
+// active pair = all event base pairs of cube restricted to positive literals
 inline SetOfSets gatherActivePairs(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
@@ -293,7 +324,7 @@ inline Cube filterNegatedLiterals(Cube &cube, const EventSet &activeEvents) {
 inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   Cube removedLiterals;
   std::erase_if(cube, [&](auto &literal) {
-    if (literal.negated && !isLiteralActive(literal, activePairs, false)) {
+    if (literal.negated && !isLiteralActive(literal, activePairs)) {
       removedLiterals.push_back(literal);
       return true;
     }
@@ -305,9 +336,22 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
 inline void removeUselessLiterals(Cube &cube) {
   const auto &activePairs = gatherActivePairs(cube);
   filterNegatedLiterals(cube, activePairs);
+
+  // Optimization: if normalized we can drop atomic negated literals
+  // (they lead either to a contradiction or cannot be used in the future)
   std::erase_if(cube, [&](const Literal &literal) {
     return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
   });
+  assert(std::ranges::all_of(
+      cube, [&](const auto &literal) { return isLiteralActive(literal, activePairs); }));
+  assert(std::ranges::all_of(cube, [&](const Literal &literal) {
+    const auto activeEvents = gatherActiveEvents(cube);
+    assert_catch(isLiteralActive(literal, activeEvents), [&] {
+      std::cout << "Non-active literal " << literal.toString() << " in cube:\n";
+      print(cube);
+    });
+    return true;
+  }));
 }
 
 void removeUselessLiterals(range_of<Cube> auto &dnf) {

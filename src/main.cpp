@@ -46,7 +46,7 @@ int main(int argc, const char *argv[]) {
           Assumption::emptinessAssumptions.size(),
       Assumption::setEmptinessAssumptions.size() + Assumption::baseSetAssumptions.size()));
   for (auto &goal : goals) {
-    preprocessing(goal);
+    // TODO: fix: preprocessing(goal);
     spdlog::info("[Status] Goal: ");
     print(goal);
 

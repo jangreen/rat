@@ -12,8 +12,6 @@
 #include "../cat/Constraint.h"
 #include "LogicVisitor.h"
 
-typedef std::variant<CanonicalSet, CanonicalRelation> CanonicalExpression;
-
 class Logic : LogicBaseVisitor {
  public:
   /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;

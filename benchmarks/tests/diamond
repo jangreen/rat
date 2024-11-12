@@ -1,0 +1,8 @@
+// proving this test constructs a small diamond which has to be saturated
+
+let cid = c | id
+
+assume b+ <= b
+assume c+ <= c
+
+assert (a & cid);(b & cid);(b & c) <= (a & cid);(b & c)

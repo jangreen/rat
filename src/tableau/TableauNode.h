@@ -9,13 +9,12 @@ class Node;
 typedef std::vector<Node *> NodeCube;
 
 class Node {
- private:
   // ================== Intrusive Worklist ==================
   friend class Worklist;
   mutable Node *nextInWorkList = nullptr;
   mutable Node *prevInWorkList = nullptr;
   // To generate dummy sentinel nodes
-  Node() : tableau(nullptr), literal(BOTTOM) {}
+  Node() : tableau(nullptr), literal(Literal::BOTTOM()) {}
 
   // ================== Core members ==================
   Tableau *const tableau;
@@ -33,6 +32,7 @@ class Node {
   void appendBranchInternalUp(DNF &dnf) const;
   void appendBranchInternalDownDisjunctive(DNF &dnf);
   void appendBranchInternalDownConjunctive(const DNF &dnf);
+  void appendBranchInternal(DNF &dnf);
 
   void reduceBranchInternalDown(NodeCube &nodeCube);
   void reduceBranchInternalDown(Cube &cube);
@@ -68,27 +68,24 @@ class Node {
   [[nodiscard]] const Literal &getLiteral() const { return literal; }
   [[nodiscard]] std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
   [[nodiscard]] const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
-  void setLastUnrollingParent(const Node *node);
+  void setLastUnrollingParent(const Node *newLastUnrollingParent);
   [[nodiscard]] bool isClosed() const { return _isClosed; }
   [[nodiscard]] bool isLeaf() const { return children.empty(); }
+  size_t size() const;
 
   // ================== Node manipulation ==================
   void attachChild(std::unique_ptr<Node> child);
   void attachChildren(std::vector<std::unique_ptr<Node>> newChildren);
   [[nodiscard]] std::unique_ptr<Node> detachChild(Node *child);
   [[nodiscard]] std::vector<std::unique_ptr<Node>> detachAllChildren();
-  [[nodiscard]] std::unique_ptr<Node> detachFromParent() { return parentNode->detachChild(this); }
+  [[nodiscard]] std::unique_ptr<Node> detachFromParent();
 
   void rename(const Renaming &renaming);
 
   // ================== Tree manipulation ==================
   void appendBranch(const DNF &dnf);
-  void appendBranch(const Cube &cube) {
-    if (!cube.empty()) {
-      appendBranch(DNF{cube});
-    }
-  }
-  void appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
+  void appendBranch(const Cube &cube);
+  void appendBranch(const Literal &literal);
 
   std::optional<DNF> applyRule();
   void inferModal();

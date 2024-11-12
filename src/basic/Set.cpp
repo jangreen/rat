@@ -3,7 +3,6 @@
 
 #include "../Assumption.h"
 #include "../utility.h"
-#include "Annotation.h"
 #include "Literal.h"
 
 namespace {
@@ -151,6 +150,35 @@ SetOfSets calcEventBasePairs(const SetOperation operation, const CanonicalSet le
   }
 }
 
+SetOfSets calcBaseSets(const SetOperation operation, const CanonicalSet leftOperand,
+                       const CanonicalSet rightOperand, const CanonicalRelation relation,
+                       const CanonicalSet thisRef) {
+  switch (operation) {
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection: {
+      auto left = leftOperand->getBaseSets();
+      auto right = rightOperand->getBaseSets();
+      left.insert(right.begin(), right.end());
+      return left;
+    }
+    case SetOperation::domain:
+    case SetOperation::image: {
+      auto left = leftOperand->getBaseSets();
+      // TODO: auto right = relation->getBaseSets();
+      // left.insert(right.begin(), right.end());
+      return left;
+    }
+    case SetOperation::baseSet:
+      return {thisRef};
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+      return {};
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
 }  // namespace
 
 int Set::maxEvent = 0;
@@ -162,10 +190,41 @@ void Set::completeInitialization() const {
   this->events = calcEvents(operation, leftOperand, rightOperand, label);
   this->normalEvents = calcNormalEvents(operation, leftOperand, rightOperand, relation);
   this->eventBasePairs = calcEventBasePairs(operation, leftOperand, rightOperand, relation, this);
+  this->baseSets = calcBaseSets(operation, leftOperand, rightOperand, relation, this);
   if constexpr (DEBUG) {
     // To populate the cache for better debugging
     std::ignore = toString();
   }
+}
+CanonicalSet Set::emptySet() {
+  return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+}
+
+CanonicalSet Set::fullSet() {
+  return newSet(SetOperation::fullSet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
+}
+
+CanonicalSet Set::newBaseSet(const std::string &identifier) {
+  return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
+}
+
+CanonicalSet Set::newEvent(int label) {
+  return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
+}
+
+CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
+  return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
+}
+
+CanonicalSet Set::newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation) {
+  return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
+}
+
+CanonicalSet Set::freshEvent() { return newEvent(maxEvent++); }
+bool Set::operator==(const Set &other) const {
+  return operation == other.operation && leftOperand == other.leftOperand &&
+         rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
+         identifier == other.identifier;
 }
 
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
@@ -240,13 +299,68 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   return &*iter;
 }
 
+CanonicalSet Set::intersectWith(const CanonicalSet other) const {
+  return newSet(SetOperation::setIntersection, this, other);
+}
+
+CanonicalSet Set::imageWith(const CanonicalRelation other) const {
+  return newSet(SetOperation::image, this, other);
+}
+
+CanonicalSet Set::domainWith(const CanonicalRelation other) const {
+  return newSet(SetOperation::domain, this, other);
+}
+
+int Set::intersectionWidth() const {
+  switch (operation) {
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+      return 0;
+    case SetOperation::setUnion:
+      return std::max(leftOperand->intersectionWidth(), rightOperand->intersectionWidth());
+    case SetOperation::setIntersection:
+      return leftOperand->intersectionWidth() + rightOperand->intersectionWidth();
+    case SetOperation::image:
+    case SetOperation::domain:
+      return std::max(leftOperand->intersectionWidth(), relation->intersectionWidth());
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+int Set::compositionLength() const {
+  switch (operation) {
+    case SetOperation::baseSet:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+    case SetOperation::event:
+      return 0;
+    case SetOperation::setUnion:
+    case SetOperation::setIntersection:
+      return std::max(leftOperand->compositionLength(), rightOperand->compositionLength());
+    case SetOperation::image:
+    case SetOperation::domain:
+      return leftOperand->compositionLength() + relation->compositionLength();
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+bool Set::isSmallerReason(const CanonicalSet other) const {
+  auto lWidth = intersectionWidth();
+  auto rWidth = other->intersectionWidth();
+  auto lLength = compositionLength();
+  auto rLength = other->compositionLength();
+  return std::tie(lWidth, lLength) < std::tie(rWidth, rLength);
+}
+
 CanonicalSet Set::rename(const Renaming &renaming) const {
   CanonicalSet leftRenamed;
   CanonicalSet rightRenamed;
   switch (operation) {
     case SetOperation::event: {
-      const int renamed = renaming.rename(label.value());
-      return label.value() == renamed ? this : newEvent(renaming.rename(label.value()));
+      const int renamed = renaming.apply(label.value());
+      return label.value() == renamed ? this : newEvent(renaming.apply(label.value()));
     }
     case SetOperation::baseSet:
     case SetOperation::emptySet:

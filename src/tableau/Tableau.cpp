@@ -7,25 +7,7 @@
 #include "../utility.h"
 #include "Rules.h"
 
-// ===========================================================================================
-// ====================================== Construction =======================================
-// ===========================================================================================
-
-Tableau::Tableau(const Cube &cube) {
-  assert(validateCube(cube));
-  // avoids the need for multiple root nodes
-  const auto dummyNode = new Node(this, TOP);
-  rootNode = std::unique_ptr<Node>(dummyNode);
-
-  Node *parentNode = dummyNode;
-  for (const auto &literal : cube) {
-    auto *newNode = new Node(parentNode, literal);
-    assert(newNode->validate());
-    unreducedNodes.push(newNode);
-    parentNode = newNode;
-  }
-}
-
+namespace {
 void dnfBuilder(const Node *node, DNF &dnf) {
   if (node->isClosed()) {
     return;
@@ -34,8 +16,7 @@ void dnfBuilder(const Node *node, DNF &dnf) {
   for (const auto &child : node->getChildren()) {
     DNF childDNF;
     dnfBuilder(child.get(), childDNF);
-    dnf.insert(dnf.end(), std::make_move_iterator(childDNF.begin()),
-               std::make_move_iterator(childDNF.end()));
+    moveAppend(dnf, std::move(childDNF));
   }
 
   const auto &literal = node->getLiteral();
@@ -53,21 +34,97 @@ void dnfBuilder(const Node *node, DNF &dnf) {
     cube.push_back(literal);
   }
 }
+}  // namespace
 
-DNF Tableau::extractDNF() const {
+// ===========================================================================================
+// ====================================== Construction =======================================
+// ===========================================================================================
+
+Tableau::Tableau(const Cube &cube) {
+  assert(validateCube(cube));
+  // ensures that there is a root node that does not get processed/removed
+  const auto dummyNode = new Node(this, Literal::TOP());
+  rootNode = std::unique_ptr<Node>(dummyNode);
+
+  Node *parentNode = dummyNode;
+  for (const auto &literal : cube) {
+    auto *newNode = new Node(parentNode, literal);
+    assert(newNode->validate());
+    unreducedNodes.push(newNode);
+    parentNode = newNode;
+  }
+}
+
+const Node *Tableau::getRoot() const { return rootNode.get(); }
+
+// TODO: do we need simplification on both levels?
+DNF Tableau::computeDnf() {
+  assert(validate());
+  normalize();
+
+  // simplify tableau
+  removeUselessLiterals();
+  Stats::value("normalize size").set(rootNode->size());
+
+  // extract DNF
   DNF dnf;
   dnfBuilder(rootNode.get(), dnf);
+
+  // simplify DNF
+  ::removeUselessLiterals(dnf);
+  dnf = simplifyDnf(dnf);
+
+  assert(validateDNF(dnf));
+  // no cube contains usless literals
+  assert(std::ranges::all_of(dnf, [](const auto &cube) {
+    const auto activeEvents = gatherActiveEvents(cube);
+    return std::ranges::all_of(
+        cube, [&](const auto &literal) { return isLiteralActive(literal, activeEvents); });
+  }));
+  assert(validate());
+  assert(unreducedNodes.isEmpty());
   return dnf;
 }
 
+// IMPORTANT: correctnes of this function relies on the fact that the worklist pops positive
+// literals first. (because we reuse the tableau for nomalization and do not readd any nodes to
+// unreduced nodes)
+bool Tableau::tryApplyModalRuleOnce(const int applyToEvent) {
+  while (!unreducedNodes.isEmpty()) {
+    Node *currentNode = unreducedNodes.pop();
+
+    if (const auto result =
+            Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
+      assert(unreducedNodes.validate());
+      assert(currentNode->getParentNode()->validate());
+
+      // to detect at the world cycles
+      // set it before appendBranch call
+      Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
+      currentNode->appendBranch(result.value());
+
+      deleteNode(currentNode);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // ===========================================================================================
-// ======================================= Validation ========================================
+// ======================================= Debugging =========================================
 // ===========================================================================================
 
 bool Tableau::validate() const {
   assert(rootNode->validateRecursive());
   assert(unreducedNodes.validate());
   return true;
+}
+
+void Tableau::exportDebug(const std::string &filename) const {
+  if constexpr (DEBUG) {
+    exportProof(filename);
+  }
 }
 
 // ===========================================================================================
@@ -93,43 +150,37 @@ void Tableau::deleteNode(Node *node) {
     // parent node.
     std::ignore = parentNode->detachAllChildren();
   } else {
-    // No leaf: move all children to parent's children
+    // No leaf
+    // move all children to parent's children
     parentNode->attachChildren(node->detachAllChildren());
-    // Remove node from parent. This will automatically delete the node and remove it from the
-    // worklist.
+    // Remove node from parent.
+    // This will automatically delete the node and remove it from the worklist.
     std::ignore = node->detachFromParent();
   }
 
   assert(parentNode->validateRecursive());
 }
 
-// size_t lastSize = 0;
-// std::string lastString;
+Tableau::~Tableau() {
+  // call destructors of all nodes before other destructors
+  rootNode.~unique_ptr();
+  crossReferenceMap.~unordered_map();
+  unreducedNodes.~Worklist();
+}
+
 void Tableau::normalize() {
   Stats::counter("#iterations - normalize").reset();
 
   bool activePairsPopulated = false;
   while (!unreducedNodes.isEmpty()) {
-    // remove useless literals in each iteration
-    // do this after all positive literals are processed
-    // unreduced nodes could become empty
+    // compute known edges after all positive literals have been processed
     const auto allPositiveLiteralsProcessed = unreducedNodes.top()->getLiteral().negated;
-    if (allPositiveLiteralsProcessed && !activePairsPopulated) {
+    if (!activePairsPopulated && allPositiveLiteralsProcessed) {
       SetOfSets activePairs = {};
       rootNode->computeActivePairs(activePairs);
       exportDebug("debug-tableau");
       activePairsPopulated = true;
     }
-    // TODO: remove
-    // if (modCounter % 50 == 0) {
-    //   if (allPositiveLiteralsProcessed) {
-    //     removeUselessLiterals();
-    //     if (unreducedNodes.isEmpty()) {
-    //       break;
-    //     }
-    //   }
-    // }
-    // modCounter++;
 
     Stats::counter("#iterations - normalize")++;
     Node *currentNode = unreducedNodes.pop();
@@ -142,20 +193,11 @@ void Tableau::normalize() {
 
     Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
-    // if (size(rootNode.get()) > lastSize * 1.5 && lastSize != 0) {
-    //   std::cout << lastString << "\n" << lastSize << std::endl;
-    //
-    //   std::cout << currentNode->getLiteral().toString() << "\n"
-    //             << size(rootNode.get()) << ", " << leafSize(rootNode.get()) << ", "
-    //             << depth(rootNode.get()) << std::endl;
-    // }
-    // lastSize = size(rootNode.get());
-    // lastString = currentNode->getLiteral().toString();
-
     // 1) Rules that just rewrite a single literal
     if (currentNode->applyRule()) {
       if (!Rules::lastRuleWasUnrolling) {  // prevent cycling
-        deleteNode(currentNode);           // in-place rule application
+        exportDebug("debug-tableau");
+        deleteNode(currentNode);  // in-place rule application
       }
       continue;
     }
@@ -199,34 +241,15 @@ void Tableau::normalize() {
     // lazy saturation:
     // nodes that should be saturated are marked if a spurious counterexample is found
     // we do this at node level because child nodes should inherit this property
-    auto saturatedLiterals = currentNode->getLiteral().saturate();
-    currentNode->appendBranch(saturatedLiterals);
-  }
-}
-
-// IMPORTANT: correctnes of this funtcion relies on the fact that the worklist pops positive
-// literals first. (because we reuse the tableau for nomalization and do not readd any nodes to
-// unreduced nodes)
-bool Tableau::tryApplyModalRuleOnce(const int applyToEvent) {
-  while (!unreducedNodes.isEmpty()) {
-    Node *currentNode = unreducedNodes.pop();
-
-    if (const auto result =
-            Rules::applyPositiveModalRule(currentNode->getLiteral(), applyToEvent)) {
-      assert(unreducedNodes.validate());
-      assert(currentNode->getParentNode()->validate());
-
-      // to detect at the world cycles
-      // set it before appendBranch call
-      Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
-      currentNode->appendBranch(result.value());
-
-      deleteNode(currentNode);
-      return true;
+    if (currentNode->getLiteral().annotation->hasValue() &&
+        !currentNode->getLiteral().annotation->getValue().empty()) {
+      auto saturatedLiterals = currentNode->getLiteral().saturate();
+      currentNode->appendBranch(saturatedLiterals);
+      // do not delete node but remove annotation
+      // deleteNode(currentNode);
+      currentNode->getLiteral().annotation = LeafAnnotation<Reasons>::newLeaf({});
     }
   }
-
-  return false;
 }
 
 // ===========================================================================================
@@ -341,6 +364,12 @@ void Tableau::renameBranchesInternalDown(
   assert(unreducedNodes.validate());
 }
 
+void Tableau::removeUselessLiterals() const {
+  boost::container::flat_set<SetOfSets> activePairCubes = {{}};
+  Stats::counter("removeUselessLiterals tabl").reset();
+  rootNode->removeUselessLiterals(activePairCubes);
+}
+
 /*
  *  Given a node with an equality predicate, renames the branch according to the equality.
  *  The original branch is copied from the root to the node and moved from the node downwards while
@@ -381,62 +410,6 @@ void Tableau::renameBranches(Node *node) {
   renameBranchesInternalDown(node, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
                              unrollingParents);
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
-}
-
-// ===========================================================================================
-// ==================================== DNF computation ======================================
-// ===========================================================================================
-
-bool isSubsumed(const Cube &a, const Cube &b) {
-  if (a.size() < b.size()) {
-    return false;
-  }
-  return std::ranges::all_of(b, [&](auto const lit) { return contains(a, lit); });
-}
-
-DNF simplifyDnf(const DNF &dnf) {
-  // return dnf;  // To disable simplification
-  Stats::diff("simplifyDnf - removed cubes").first(dnf.size());
-  auto sortedDnf = dnf;
-  std::ranges::sort(sortedDnf, std::less(), &Cube::size);
-
-  DNF simplified;
-  simplified.reserve(sortedDnf.size());
-  for (const auto &c1 : sortedDnf) {
-    const bool subsumed =
-        std::ranges::any_of(simplified, [&](const Cube &c2) { return isSubsumed(c1, c2); });
-    if (!subsumed) {
-      simplified.push_back(c1);
-    }
-  }
-  /*if (simplified.size() < dnf.size()) {
-    std::cout << "DNF reduction: " << dnf.size() << " -> " << simplified.size() << "\n";
-  }*/
-  Stats::diff("simplifyDnf - removed cubes").second(simplified.size());
-  return simplified;
-}
-
-size_t computeSize(const Node *node) {
-  size_t size = 1;
-  for (const auto &child : node->getChildren()) {
-    size += computeSize(child.get());
-  }
-  return size;
-}
-
-DNF Tableau::computeDnf() {
-  assert(validate());
-  normalize();
-  removeUselessLiterals();
-  Stats::value("normalize size").set(computeSize(rootNode.get()));
-
-  auto dnf = extractDNF();
-  ::removeUselessLiterals(dnf);
-  dnf = simplifyDnf(dnf);
-  assert(validateDNF(dnf));
-  assert(validate());
-  assert(unreducedNodes.isEmpty());
-  return dnf;
 }
 
 // ===========================================================================================
