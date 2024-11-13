@@ -1,0 +1,29 @@
+let int = po | po^-1 | id
+//let rf-base = rf-base
+let rfe = rf-base & ext & loc
+let rfi = rf-base & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let fr = rf^-1;co
+
+// TSO
+let com = (co | fr | rf)
+let uniproc = (po-loc | com)^+ & id
+let com-tso = (co | fr | rfe)
+let po-tso = ([R];po | [W];po;[W] | mfence)
+let ghb-tso = (po-tso | com-tso)^+ & id
+let tso = ghb-tso | uniproc
+
+// OOTA
+let dep = [R];(po & dep-base)
+let oota = (dep | rf+)^+ & id // Returns TRUE if inner + is removed
+
+//assume W & R <= 0
+assume po^+ <= po
+assume loc^-1 <= loc
+
+assume tso <= 0
+assert oota <= 0
+assert dep;rfe;rfi;rfe & id <= 0
+
+
