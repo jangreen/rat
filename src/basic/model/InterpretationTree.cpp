@@ -7,7 +7,7 @@ bool insertOrUpdateReason(SetContainerType<ExprType> &set, const ExprType &eleme
     set.insert(element);
     return true;
   }
-  ExprType existingElement = *existingElementIt;
+  ExprType &existingElement = *existingElementIt;
   return existingElement.updateReason(element.reason());
 }
 
