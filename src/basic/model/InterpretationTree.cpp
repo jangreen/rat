@@ -136,7 +136,7 @@ InterpretationPtr Interpretation::setUnion(InterpretationPtr left, Interpretatio
   }
   for (const auto &event : right->getSetValue()) {
     if (insertOrUpdateReason(setunion, event)) {
-      isLeftWitness.at(event) = false;
+      isLeftWitness[event] = false;
     }
   }
   return std::make_unique<Interpretation>(setunion, std::move(left), std::move(right),

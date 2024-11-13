@@ -190,6 +190,7 @@ CanonicalLeafAnnotation<Reasons> annotateReasonsHelper(const CanonicalSet set,
       return LeafAnnotation<Reasons>::newLeaf({event.reason()});
     }
     case SetOperation::fullSet:
+      return LeafAnnotation<Reasons>::newLeaf({});
     case SetOperation::event: {
       const auto value = *interpretation->getSetValue().find(tracedValue);
       // only annotate if non-trivial

@@ -602,9 +602,8 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
     //           << (resultSaturated.has_value() ? resultSaturated->annotation->toString() : "?")
     //           << std::endl;
     if (!result && resultSaturated) {  // node needs saturation
-      // TODO: check T
-      std::cout << "violated literal: " << cubeLiteral.toString()
-                << "\n\treason:" << resultSaturated->annotation->toString() << std::endl;
+      // std::cout << "violated literal: " << cubeLiteral.toString()
+      //          << "\n\treason:" << resultSaturated->annotation->toString() << std::endl;
       // Analyze the counterexample and determine which assumptions we need. Then, we apply
       // the same sequence of assumptions in the proof to exclude the spurious counterexample. We do
       // this by decorating the base relations and base sets in the respective expression in the
