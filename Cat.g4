@@ -49,7 +49,7 @@ expression:
 		TOID LPAR e = expression RPAR
 		| LBRAC e = expression RBRAC
 	)									# relationIdentity
-	| FENCEREL LPAR n = RELNAME RPAR	# relationFencerel
+	| FENCEREL LPAR e = expression RPAR	# relationFencerel
 	| LPAR e1 = expression RPAR			# parentheses
 	| EMPTYSET							# emptyset
 	| n = RELNAME						# relationBasic

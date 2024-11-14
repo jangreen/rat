@@ -238,17 +238,18 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {
-  const auto relationName = context->n->getText();
-  if (derivedRelations.contains(relationName)) {
-    const auto r = derivedRelations.at(relationName);
-    const CanonicalRelation po = Relation::newBaseRelation("po");
-    const CanonicalRelation po_r = Relation::newRelation(RelationOperation::composition, po, r);
-    const CanonicalRelation po_r_po =
-        Relation::newRelation(RelationOperation::composition, po_r, po);
-    CanonicalExpression result = po_r_po;
-    return result;
+  const auto expr = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalSet>(expr)) {
+    throw parsingError(context, "fencerel() of unknown relation" );
   }
-  throw parsingError(context, "fencerel() of unknown relation.");
+  const auto setExpr = std::get<CanonicalSet>(expr);
+  const CanonicalRelation setId = Relation::setIdentity(setExpr);
+  const CanonicalRelation po = Relation::newBaseRelation("po");
+  const CanonicalRelation po_set = Relation::newRelation(RelationOperation::composition, po, setId);
+  const CanonicalRelation po_set_po =
+    Relation::newRelation(RelationOperation::composition, po_set, po);
+  CanonicalExpression result = po_set_po;
+  return result;
 }
 /*CanonicalExpression*/ std::any Logic::visitSetSingleton(
     LogicParser::SetSingletonContext *context) {
