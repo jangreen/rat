@@ -52,10 +52,11 @@ int main(int argc, const char *argv[]) {
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     RegularTableau tableau(goal);
-    tableau.solve();
+    const auto answer = tableau.solve();
     spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start)));
 
     Stats::print();
     Stats::reset();
+    spdlog::info("[Solver] Answer: " + std::to_string(answer));
   }
 }
