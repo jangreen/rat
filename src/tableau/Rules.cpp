@@ -200,7 +200,8 @@ PartialDNF Rules::substituteIntersectionOperand(const bool substituteRight,
 }
 
 DNF eventIntersectionWithPartialDNF(const bool isLeftRule, const Literal& context,
-                                    const CanonicalSet event, const PartialDNF& partialDnf) {
+                                    const LeafAnnotatedSet<Reasons>& event,
+                                    const PartialDNF& partialDnf) {
   DNF result;
   result.reserve(partialDnf.size());
   for (const auto& partialCube : partialDnf) {
@@ -215,13 +216,12 @@ DNF eventIntersectionWithPartialDNF(const bool isLeftRule, const Literal& contex
         const auto asi = std::get<LeafAnnotatedSet<Reasons>>(partialLiteral);
         const auto si = std::get<CanonicalSet>(asi);
         const auto ai = std::get<CanonicalLeafAnnotation<Reasons>>(asi);
-        const CanonicalSet e_and_si = isLeftRule
-                                          ? Set::newSet(SetOperation::setIntersection, event, si)
-                                          : Set::newSet(SetOperation::setIntersection, si, event);
-        auto e_and_si_annotation =
-            isLeftRule
-                ? LeafAnnotation<Reasons>::joinAnnotation(LeafAnnotation<Reasons>::newLeaf({}), ai)
-                : LeafAnnotation<Reasons>::joinAnnotation(ai, LeafAnnotation<Reasons>::newLeaf({}));
+        const CanonicalSet e_and_si =
+            isLeftRule ? Set::newSet(SetOperation::setIntersection, event.first, si)
+                       : Set::newSet(SetOperation::setIntersection, si, event.first);
+        auto e_and_si_annotation = isLeftRule
+                                       ? LeafAnnotation<Reasons>::joinAnnotation(event.second, ai)
+                                       : LeafAnnotation<Reasons>::joinAnnotation(ai, event.second);
         cube.emplace_back(
             context.substituteSet(LeafAnnotatedSet<Reasons>(e_and_si, e_and_si_annotation)));
       }
@@ -430,8 +430,11 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
   const bool leftRule = literal.set->leftOperand->isEvent();
   const CanonicalSet e = leftRule ? literal.set->leftOperand : literal.set->rightOperand;
   const CanonicalSet s = leftRule ? literal.set->rightOperand : literal.set->leftOperand;
+  const auto eAnnotation =
+      leftRule ? literal.annotation->getLeft() : literal.annotation->getRight();
   const auto sAnnotation =
       leftRule ? literal.annotation->getRight() : literal.annotation->getLeft();
+  const LeafAnnotatedSet<Reasons> annotatedE = {e, eAnnotation};
   const LeafAnnotatedSet<Reasons> annotatedS = {s, sAnnotation};
 
   // LeftRule: handle "e & s != 0"
@@ -498,7 +501,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
       assert(sResult);
       // LeftRule: e & sResult
       // RightRule: sResult & e
-      return eventIntersectionWithPartialDNF(leftRule, literal, e, sResult.value());
+      return eventIntersectionWithPartialDNF(leftRule, literal, annotatedE, sResult.value());
     }
     // -------------- Complex case --------------
     case SetOperation::image:
@@ -569,7 +572,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
 
       // LeftRule: e & sResult
       // RightRule: sResult & e
-      return eventIntersectionWithPartialDNF(leftRule, literal, e, sResult.value());
+      return eventIntersectionWithPartialDNF(leftRule, literal, annotatedE, sResult.value());
     }
     default:
       throw std::logic_error("unreachable");
