@@ -29,6 +29,7 @@ class RegularTableau {
   void newEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void newEpsilonEdge(RegularNode *parent, RegularNode *child, const EdgeLabel &label);
   void newChildren(RegularNode *node, const DNF &dnf);
+  void newEpsilonChildren(RegularNode *node, const DNF &dnf);
   void removeEdge(RegularNode *parent, RegularNode *child) const;
   void removeChildren(RegularNode *parent) const;
   void newEdgeUpdateReachabilityTree(RegularNode *parent, RegularNode *child);

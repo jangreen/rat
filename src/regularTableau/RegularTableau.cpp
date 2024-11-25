@@ -183,6 +183,13 @@ void RegularTableau::newChildren(RegularNode *node, const DNF &dnf) {
   }
 }
 
+void RegularTableau::newEpsilonChildren(RegularNode *node, const DNF &dnf) {
+  for (const auto &cube : dnf) {
+    const auto [child, edgeLabel] = newNode(cube);
+    newEpsilonEdge(node, child, edgeLabel);
+  }
+}
+
 void RegularTableau::removeEdge(RegularNode *parent, RegularNode *child) const {
   parent->children.erase(child);
   child->parents.erase(parent);
@@ -266,6 +273,9 @@ void RegularTableau::fixLazy() {
 
     // 3) Check inconsistencies lazy
     // TODO: test in isolation
+    // TODO: fix it: bug: an inconsistency fix currently generates a new inconsistent/fixed child
+    // if inconsistency is checked again this gets removed and closed
+    // -> need again epsilon edges
     if (isInconsistentLazy(currentNode)) {
       assert(validate());
       exportDebug("debug-regularTableau");
@@ -321,7 +331,7 @@ void RegularTableau::expandNodeInternal(RegularNode *node, Tableau *tableau) {
 }
 
 // input is edge (parent,label,child)
-// must not be part of the proof graph
+// may or may not be part of the proof graph
 // returns if given edge is inconsistent
 bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *child,
                                     const EdgeLabel &label) {
@@ -357,7 +367,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   if (const auto fixedDNF = getFixedDnf(parent, renamedChild)) {
     // create new fixed Node
-    newChildren(parent, fixedDNF.value());
+    newEpsilonChildren(parent, fixedDNF.value());
     Stats::counter("isInconsistent")++;
     return true;
   }

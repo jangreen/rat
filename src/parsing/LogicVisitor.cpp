@@ -39,9 +39,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   for (auto &cube : assertionCubes) {
     for (const auto &assumption : Assumption::emptinessAssumptions) {
       const CanonicalSet fullSet = Set::fullSet();
-      const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
-      const CanonicalSet TrT = Set::newSet(SetOperation::setIntersection, fullSet, rT);
-      cube.emplace_back(Literal::newSetNonEmptiness(true, TrT));  // T & r.T
+      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, assumption.relation);
+      cube.emplace_back(Literal::newSetNonEmptiness(true, Tr));
     }
   }
   // s = 0 |- r1 <= r2 |- r1 <= r2 or s != 0
