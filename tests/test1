@@ -1,3 +1,0 @@
-assert a^* <= (a;((a;a)^*)) | ((a;a)^*)
-// as literal (without syntactic sugar)
-// assert ({0};(a^*);{1}) & ~({0};((a;((a;a)^*)) | ((a;a)^*));{1})

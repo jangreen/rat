@@ -75,12 +75,12 @@ Cube substituteAllOnce(const Literal &literal, const CanonicalSet search,
 Node::Node(Node *parent, Literal literal)
     : tableau(parent->tableau), parentNode(parent), literal(std::move(literal)) {
   assert(parent != nullptr);
+  assert(parent->tableau != nullptr);
   parent->children.emplace_back(this);
   _activeEventBasePairs = parent->_activeEventBasePairs;
   assert(!_activeEventBasePairs.has_value() ||
-         std::ranges::any_of(_activeEventBasePairs.value(), [&](const auto &pairs) {
-           return isLiteralActive(literal, pairs, true);
-         }));
+         std::ranges::any_of(_activeEventBasePairs.value(),
+                             [&](const auto &pairs) { return isLiteralActive(literal, pairs); }));
 }
 
 Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
@@ -89,17 +89,18 @@ Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::m
 
 Node::~Node() {
   // sentinel dummy nodes in worklist have no tableau
-  if (tableau != nullptr) {
-    // remove this from lastUnrollingParent in xrefMap and this from xrefMap
-    tableau->crossReferenceMap.erase(this);
-    if (lastUnrollingParent != nullptr &&
-        tableau->crossReferenceMap.contains(lastUnrollingParent)) {
-      tableau->crossReferenceMap.at(lastUnrollingParent).erase(this);
-    }
-
-    // remove this from unreducedNodes
-    tableau->unreducedNodes.erase(this);
+  if (tableau == nullptr) {
+    return;
   }
+
+  // remove this from lastUnrollingParent in xrefMap and this from xrefMap
+  tableau->crossReferenceMap.erase(this);
+  if (lastUnrollingParent != nullptr && tableau->crossReferenceMap.contains(lastUnrollingParent)) {
+    tableau->crossReferenceMap.at(lastUnrollingParent).erase(this);
+  }
+
+  // remove this from unreducedNodes
+  tableau->unreducedNodes.erase(this);
 }
 
 // ===========================================================================================
@@ -171,30 +172,30 @@ bool Node::validateRecursive() const {
 // ==================================== Node manipulation ====================================
 // ===========================================================================================
 
-void Node::setLastUnrollingParent(const Node *node) {
-  if (node == nullptr) {
+void Node::setLastUnrollingParent(const Node *newLastUnrollingParent) {
+  if (newLastUnrollingParent == nullptr) {
     lastUnrollingParent = nullptr;
     return;
   }
 
-  if (node != lastUnrollingParent) {
-    auto &xrefMap = tableau->crossReferenceMap;
-    // remove old reference
-    if (lastUnrollingParent != nullptr) {
-      assert(xrefMap.contains(lastUnrollingParent));
-      auto &lastSet = xrefMap.at(lastUnrollingParent);
-      assert(lastSet.contains(this));
-      lastSet.erase(this);
-    }
-    // insert new reference
-    xrefMap[node].insert(this);
-
-    assert(lastUnrollingParent == nullptr ||
-           !tableau->crossReferenceMap.at(lastUnrollingParent).contains(this));
+  if (lastUnrollingParent == newLastUnrollingParent) {
+    return;
   }
 
+  // remove old reference
+  if (lastUnrollingParent != nullptr) {
+    assert(tableau->crossReferenceMap.contains(lastUnrollingParent));
+    auto &lastSet = tableau->crossReferenceMap.at(lastUnrollingParent);
+    assert(lastSet.contains(this));
+    lastSet.erase(this);
+  }
+  // insert new reference
+  tableau->crossReferenceMap[newLastUnrollingParent].insert(this);
+
+  assert(lastUnrollingParent == nullptr ||
+         !tableau->crossReferenceMap.at(lastUnrollingParent).contains(this));
   // set value
-  lastUnrollingParent = node;
+  lastUnrollingParent = newLastUnrollingParent;
 }
 
 void Node::attachChild(std::unique_ptr<Node> child) {
@@ -224,6 +225,7 @@ std::vector<std::unique_ptr<Node>> Node::detachAllChildren() {
   children.clear();
   return std::move(detachedChildren);
 }
+std::unique_ptr<Node> Node::detachFromParent() { return parentNode->detachChild(this); }
 
 void Node::rename(const Renaming &renaming) { literal.rename(renaming); }
 
@@ -267,9 +269,10 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
     Stats::counter("reduceBranch - delete node")++;
     const auto node = *nodeIt;
 
-    // choose minimal annotation
-    node->literal.annotation =
-        Annotation<SaturationAnnotation>::min(node->literal.annotation, literal.annotation);
+    // TODO: introduce meet operation
+    // // choose minimal annotation
+    // node->literal.annotation =
+    //     LeafAnnotation<SaturationAnnotation>::min(node->literal.annotation, literal.annotation);
 
     // if this has cross references(aka is a lastUnrollingParent), then use node as alternative
     if (tableau->crossReferenceMap.contains(this)) {
@@ -294,7 +297,7 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
         return false;
       }
       return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
-        return !isLiteralActive(literal, active, true);
+        return !isLiteralActive(literal, active);
       });
     });
     cube.erase(begin, end);
@@ -336,15 +339,7 @@ void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(isLeaf() && !isClosed());
   assert(isAppendable(dnf));
 
-  // append: transform dnf into a tableau and append it
-  for (const auto &cube : dnf) {
-    auto newNode = this;
-    for (const auto &literal : cube) {
-      newNode = new Node(newNode, literal);
-      newNode->setLastUnrollingParent(transitiveClosureNode);
-      tableau->unreducedNodes.push(newNode);
-    }
-  }
+  appendBranchInternal(dnf);
 }
 
 void Node::closeBranch() {
@@ -354,7 +349,7 @@ void Node::closeBranch() {
   // will make sure to remove them from worklist
   std::ignore = detachAllChildren();
   assert(tableau->unreducedNodes.validate());  // validate that it was indeed safe to clear
-  const auto bottom = new Node(this, BOTTOM);
+  const auto bottom = new Node(this, Literal::BOTTOM());
   bottom->_isClosed = true;
 
   // update isClosed cache
@@ -386,7 +381,7 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
   }
 
   if (literal.negated && std::ranges::all_of(activePairCubes, [&](const SetOfSets &active) {
-        return !isLiteralActive(literal, active, true);
+        return !isLiteralActive(literal, active);
       })) {
     Stats::counter("removeUselessLiterals tabl")++;
     tableau->deleteNode(this);
@@ -422,15 +417,17 @@ void Node::computeActivePairs(SetOfSets &prefixActivePairs) const {
   _activeEventBasePairs = activePairsCombinations;
 }
 
+// TODO: refactor arguments??
 void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   auto cube = dnf.at(0);
 
+  // remove inactive
   const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
     if (!_activeEventBasePairs.has_value()) {
       return false;
     }
     return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
-      return !isLiteralActive(literal, active, true);
+      return !isLiteralActive(literal, active);
     });
   });
   cube.erase(begin, end);
@@ -442,7 +439,7 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   auto thisChildren = detachAllChildren();
   auto newNode = this;
   NodeCube newNodes;
-  for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternalDown
+  for (const auto &literal : cube) {  // TODO: refactor, merge with appendBranchInternal
     newNode = new Node(newNode, literal);
     newNode->setLastUnrollingParent(transitiveClosureNode);
     tableau->unreducedNodes.push(newNode);
@@ -458,6 +455,47 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   Stats::counter("reduceBranch - delete node").reset();
   for (auto childIt = newNode->beginSafe(); childIt != newNode->endSafe(); ++childIt) {
     childIt->reduceBranchInternalDown(newNodes);
+  }
+
+  // postprocessing
+  Stats::counter("appendBranch - postprocessing (conj)").reset();
+  for (const auto node : newNodes) {
+    const bool needsSaturation =
+        node->literal.annotation->hasValue() && !node->literal.annotation->getValue().empty();
+    if (node->literal.isNegatedAtomic() && !needsSaturation &&
+        node->literal.operation != PredicateOperation::equality) {
+      // CAUTION:
+      // currently exclude ~ 0 & 0 -> ~ 0 = 0 (dropped) -> False
+      // similar: ~ 0 & 1 (dropped)-> ~0=1 st. it could be saturated
+      tableau->deleteNode(node);
+      Stats::counter("appendBranch - postprocessing (conj)")++;
+    }
+  }
+}
+void Node::appendBranchInternal(DNF &dnf) {
+  // postprocessing of dnf (here we have seen the full branch)
+  // OPTIMIZATION: throw away all negated atomic literals
+  // sound: negated atomic literals may lead to contradiction or are usless
+  // after seeing the full branch, remaining negated atomic literals are useless
+  for (auto &cube : dnf) {
+    Stats::diff("appendBranch - postprocessing").first(cube.size());
+    const auto [begin, end] = std::ranges::remove_if(cube, &Literal::isNegatedAtomic);
+    cube.erase(begin, end);
+    Stats::diff("appendBranch - postprocessing").second(cube.size());
+  }
+  if (!isAppendable(dnf)) {
+    return;
+  }
+
+  // append: transform dnf into a tableau and append it
+  for (const auto &cube : dnf) {
+    auto newNode = this;
+    for (const auto &literal : cube) {
+      assert(!literal.isNegatedAtomic());
+      newNode = new Node(newNode, literal);
+      newNode->setLastUnrollingParent(transitiveClosureNode);
+      tableau->unreducedNodes.push(newNode);
+    }
   }
 }
 
@@ -490,7 +528,24 @@ void Node::appendBranch(const DNF &dnf) {
   }
 }
 
+void Node::appendBranch(const Cube &cube) {
+  if (!cube.empty()) {
+    appendBranch(DNF{cube});
+  }
+}
+
+void Node::appendBranch(const Literal &literal) { appendBranch(Cube{literal}); }
+
+size_t Node::size() const {
+  size_t size = 1;
+  for (const auto &child : getChildren()) {
+    size += child->size();
+  }
+  return size;
+}
+
 std::optional<DNF> Node::applyRule() {
+  assert(literal.validate());
   auto const result = Rules::applyRule(literal);
   if (!result) {
     return std::nullopt;
@@ -731,13 +786,8 @@ void Node::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[tooltip=\"";
   output << this << "\n\n";  // address
   output << "unreduced: " << tableau->unreducedNodes.contains(this) << "\n";
-  if (literal.operation == PredicateOperation::setNonEmptiness && literal.negated) {
-    output << "Id annotation: \n";
-    output << Annotated::toString<true>(literal.annotatedSet()) << "\n";  // annotation id
-    output << "base annotation: \n";
-    output << Annotated::toString<false>(literal.annotatedSet());  // annotation base
-    output << "\n";
-  }
+  output << "annotation: \n";
+  output << literal.annotation->toString() << "\n";
   output << "events: " << toString(literal.events()) << "\n";
   output << "normalEvents: " << toString(literal.normalEvents()) << "\n";
   output << "eventPairs: ";

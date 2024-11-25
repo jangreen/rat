@@ -19,26 +19,18 @@ class RegularNode {
   NodeSet epsilonChildren;
   std::map<RegularNode *, EdgeLabel> parents;
   std::map<RegularNode *, EdgeLabel> epsilonParents;
-
-  // =============== Metadata ===============
   bool closed = false;
-  RegularNode *reachabilityTreeParent = nullptr;  // for dynamic multi source reachability
-  std::map<const RegularNode *, EdgeLabel> inconsistentChildrenChecked;
+  RegularNode *reachabilityTreeParent = nullptr;  // for dynamic single source reachability
 
-  bool connect(RegularNode *child, const EdgeLabel &label, NodeSet &children,
-               std::map<RegularNode *, EdgeLabel> &parents) {
-    const auto [_, inserted] = children.insert(child);
-    if (!inserted) {
-      return false;
-    }
-    parents.insert({this, label});
-    return true;
-  }
-
- public:
+  // =========== Node manipulation ===========
   static std::pair<RegularNode *, Renaming> newNode(Cube cube);
+  bool newChild(RegularNode *child, const EdgeLabel &label);
+  bool newEpsilonChild(RegularNode *child, const EdgeLabel &label);
+
+  // ============== Validation ===============
   [[nodiscard]] bool validate() const;
 
+ public:
   [[nodiscard]] const Cube &getCube() const { return cube; }
   [[nodiscard]] const NodeSet &getChildren() const { return children; }
   [[nodiscard]] const NodeSet &getEpsilonChildren() const { return epsilonChildren; }
@@ -49,16 +41,8 @@ class RegularNode {
   const EdgeLabel &getLabelForChild(const RegularNode *child) const {
     return child->parents.at(const_cast<RegularNode *>(this));
   }
-
   [[nodiscard]] bool isLeaf() const { return children.empty() && epsilonChildren.empty(); }
   [[nodiscard]] bool isOpenLeaf() const { return isLeaf() && !closed; }
-  // TODO: remove, dont use this function -> use tableau methods to update reachability invariant
-  bool addChild(RegularNode *child, const EdgeLabel &label) {
-    return connect(child, label, children, child->parents);
-  }
-  bool addEpsilonChild(RegularNode *child, const EdgeLabel &label) {
-    return connect(child, label, epsilonChildren, child->epsilonParents);
-  }
 
   void toDotFormat(std::ofstream &output) const;
 

@@ -46,16 +46,17 @@ int main(int argc, const char *argv[]) {
           Assumption::emptinessAssumptions.size(),
       Assumption::setEmptinessAssumptions.size() + Assumption::baseSetAssumptions.size()));
   for (auto &goal : goals) {
-    preprocessing(goal);
+    // TODO: fix: preprocessing(goal);
     spdlog::info("[Status] Goal: ");
     print(goal);
 
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     RegularTableau tableau(goal);
-    tableau.solve();
+    const auto answer = tableau.solve();
     spdlog::info(fmt::format("[Solver] Duration: {} seconds", since(start)));
 
     Stats::print();
     Stats::reset();
+    spdlog::info("[Solver] Answer: " + std::to_string(answer));
   }
 }

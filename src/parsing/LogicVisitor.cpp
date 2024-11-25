@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "../Assumption.h"
-#include "../basic/Annotated.h"
+#include "../basic/annotations/LeafAnnotated.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -39,17 +39,14 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   for (auto &cube : assertionCubes) {
     for (const auto &assumption : Assumption::emptinessAssumptions) {
       const CanonicalSet fullSet = Set::fullSet();
-      const CanonicalSet rT = Set::newSet(SetOperation::domain, fullSet, assumption.relation);
-      const CanonicalSet TrT = Set::newSet(SetOperation::setIntersection, fullSet, rT);
-      cube.emplace_back(AnnotatedSet<SaturationAnnotation>{
-          TrT, Annotated::makeWithValue(TrT, {0, 0})});  // T & r.T
+      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, assumption.relation);
+      cube.emplace_back(Literal::newSetNonEmptiness(true, Tr));
     }
   }
   // s = 0 |- r1 <= r2 |- r1 <= r2 or s != 0
   for (auto &cube : assertionCubes) {
     for (const auto &assumption : Assumption::setEmptinessAssumptions) {
-      cube.emplace_back(AnnotatedSet<SaturationAnnotation>{
-          assumption.set, Annotated::makeWithValue(assumption.set, {0, 0})});
+      cube.emplace_back(Literal::newSetNonEmptiness(true, assumption.set));
     }
   }
 
@@ -76,9 +73,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   if (isSetAssertion) {
     const auto lhSet = std::get<CanonicalSet>(lhs);
     const auto rhSet = std::get<CanonicalSet>(rhs);
-    const auto rhSetAnnotated =
-        AnnotatedSet<SaturationAnnotation>{rhSet, Annotated::makeWithValue(rhSet, {0, 0})};
-    return Cube{Literal(lhSet), Literal(rhSetAnnotated)};
+    return Cube{Literal::newSetNonEmptiness(false, lhSet),
+                Literal::newSetNonEmptiness(true, rhSet)};
   }
 
   // relation assertion
@@ -91,9 +87,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 
   const CanonicalSet e1LHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1LHS, e2);
   const CanonicalSet e1RHS_and_e2 = Set::newSet(SetOperation::setIntersection, e1RHS, e2);
-  const auto e1RHS_and_e2_annotated = AnnotatedSet<SaturationAnnotation>{
-      e1RHS_and_e2, Annotated::makeWithValue(e1RHS_and_e2, {0, 0})};
-  return Cube{Literal(e1LHS_and_e2), Literal(e1RHS_and_e2_annotated)};
+  return Cube{Literal::newSetNonEmptiness(false, e1LHS_and_e2),
+              Literal::newSetNonEmptiness(true, e1RHS_and_e2)};
 }
 
 /*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
@@ -242,17 +237,18 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationFencerel(
     LogicParser::RelationFencerelContext *context) {
-  const auto relationName = context->n->getText();
-  if (derivedRelations.contains(relationName)) {
-    const auto r = derivedRelations.at(relationName);
-    const CanonicalRelation po = Relation::newBaseRelation("po");
-    const CanonicalRelation po_r = Relation::newRelation(RelationOperation::composition, po, r);
-    const CanonicalRelation po_r_po =
-        Relation::newRelation(RelationOperation::composition, po_r, po);
-    CanonicalExpression result = po_r_po;
-    return result;
+  const auto expr = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalSet>(expr)) {
+    throw parsingError(context, "fencerel() of unknown relation" );
   }
-  throw parsingError(context, "fencerel() of unknown relation.");
+  const auto setExpr = std::get<CanonicalSet>(expr);
+  const CanonicalRelation setId = Relation::setIdentity(setExpr);
+  const CanonicalRelation po = Relation::newBaseRelation("po");
+  const CanonicalRelation po_set = Relation::newRelation(RelationOperation::composition, po, setId);
+  const CanonicalRelation po_set_po =
+    Relation::newRelation(RelationOperation::composition, po_set, po);
+  CanonicalExpression result = po_set_po;
+  return result;
 }
 /*CanonicalExpression*/ std::any Logic::visitSetSingleton(
     LogicParser::SetSingletonContext *context) {

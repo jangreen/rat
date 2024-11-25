@@ -23,7 +23,6 @@ enum class SetOperation {
 };
 
 class Set {
- private:
   Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
       std::optional<int> label, std::optional<std::string> identifier);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
@@ -39,6 +38,7 @@ class Set {
   mutable EventSet events;
   mutable EventSet normalEvents;
   mutable SetOfSets eventBasePairs;
+  mutable SetOfSets baseSets;
 
   // Calculates the above properties: we do not do this inside the constructor
   //  to avoid doing it for non-canonical sets.
@@ -52,32 +52,15 @@ class Set {
   Set(const Set &other) = default;
   // Set(const Set &&other) = default;
 
-  static CanonicalSet emptySet() {
-    return newSet(SetOperation::emptySet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
-  }
-  static CanonicalSet fullSet() {
-    return newSet(SetOperation::fullSet, nullptr, nullptr, nullptr, std::nullopt, std::nullopt);
-  }
-  static CanonicalSet newBaseSet(const std::string &identifier) {
-    return newSet(SetOperation::baseSet, nullptr, nullptr, nullptr, std::nullopt, identifier);
-  }
-  static CanonicalSet newEvent(int label) {
-    return newSet(SetOperation::event, nullptr, nullptr, nullptr, label, std::nullopt);
-  }
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right) {
-    return newSet(operation, left, right, nullptr, std::nullopt, std::nullopt);
-  }
-  static CanonicalSet newSet(SetOperation operation, CanonicalSet left,
-                             CanonicalRelation relation) {
-    return newSet(operation, left, nullptr, relation, std::nullopt, std::nullopt);
-  }
-  static CanonicalSet freshEvent() { return newEvent(maxEvent++); }
+  static CanonicalSet emptySet();
+  static CanonicalSet fullSet();
+  static CanonicalSet newBaseSet(const std::string &identifier);
+  static CanonicalSet newEvent(int label);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right);
+  static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
+  static CanonicalSet freshEvent();
 
-  bool operator==(const Set &other) const {
-    return operation == other.operation && leftOperand == other.leftOperand &&
-           rightOperand == other.rightOperand && relation == other.relation &&
-           label == other.label && identifier == other.identifier;
-  }
+  [[nodiscard]] bool operator==(const Set &other) const;
 
   bool isEvent() const { return operation == SetOperation::event; }
   const bool &isNormal() const { return _isNormal; }
@@ -85,7 +68,14 @@ class Set {
   bool hasBaseSet() const { return _hasBaseSet; }
   const EventSet &getEvents() const { return events; }
   const SetOfSets &getEventBasePairs() const { return eventBasePairs; }
+  const SetOfSets &getBaseSets() const { return baseSets; }
   const EventSet &getNormalEvents() const { return normalEvents; }
+  [[nodiscard]] CanonicalSet intersectWith(CanonicalSet other) const;
+  [[nodiscard]] CanonicalSet imageWith(CanonicalRelation other) const;
+  [[nodiscard]] CanonicalSet domainWith(CanonicalRelation other) const;
+  [[nodiscard]] int intersectionWidth() const;
+  [[nodiscard]] int compositionLength() const;
+  [[nodiscard]] bool isSmallerReason(CanonicalSet other) const;
 
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base

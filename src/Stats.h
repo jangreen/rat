@@ -15,18 +15,8 @@ struct Counter {
   int numberCounters = 1;
 
  public:
-  long operator++(int) {
-    const auto r = ++value;
-    absoluteValue++;
-    if (r > maxValue) {
-      maxValue = r;
-    }
-    return r;
-  }
-  void reset() {
-    numberCounters++;
-    value = 0;
-  }
+  long operator++(int);
+  void reset();
 };
 
 struct Condition {
@@ -39,13 +29,7 @@ struct Condition {
   long falseCounter = 0;
 
  public:
-  void count(const bool isTrue) {
-    if (isTrue) {
-      trueCounter++;
-    } else {
-      falseCounter++;
-    }
-  }
+  void count(bool isTrue);
 };
 
 struct Value {
@@ -59,13 +43,7 @@ struct Value {
   int valueCounter = 0;
 
  public:
-  void set(const long value) {
-    if (value > maxValue) {
-      maxValue = value;
-    }
-    absoluteValue += value;
-    valueCounter++;
-  }
+  void set(long value);
 };
 
 struct Difference {
@@ -81,88 +59,22 @@ struct Difference {
   int diffCounter = 0;
 
  public:
-  void first(const unsigned long value) {
-    if (_first || _second) {
-      throw std::exception();
-    }
-    _first = value;
-  }
-  void second(const unsigned long value) {
-    if (!_first || _second) {
-      throw std::exception();
-    }
-    _second = value;
-    const auto diff = _first.value() - _second.value();
-    if (diff > maxDiff) {
-      maxDiff = diff;
-    }
-    absoluteDiff += diff;
-    diffCounter++;
-    _first = std::nullopt;
-    _second = std::nullopt;
-  }
+  void first(unsigned long value);
+  void second(unsigned long value);
 };
 
 class Stats {
  public:
-  [[nodiscard]] static constexpr Counter &counter(const std::string &name) {
-    return Counter::counters[name];
-  }
-  [[nodiscard]] static constexpr Difference &diff(const std::string &name) {
-    return Difference::diffs[name];
-  }
-  [[nodiscard]] static constexpr Value &value(const std::string &name) {
-    return Value::values[name];
-  }
-  [[nodiscard]] static constexpr Condition &boolean(const std::string &name) {
-    return Condition::conditions[name];
-  }
+  [[nodiscard]] static constexpr Counter &counter(const std::string &name);
+  [[nodiscard]] static constexpr Difference &diff(const std::string &name);
+  [[nodiscard]] static constexpr Value &value(const std::string &name);
+  [[nodiscard]] static constexpr Condition &boolean(const std::string &name);
 
-  static void reset() {
-    Counter::counters.clear();
-    Difference::diffs.clear();
-    Value::values.clear();
-    Condition::conditions.clear();
-  }
-
-  static void print() {
-    std::cout << "\n ---------------------- Stats ---------------------- \n";
-
-    for (const auto &[name, counter] : Counter::counters) {
-      if (counter.absoluteValue == counter.maxValue) {
-        std::cout << std::format("{:40} | Total: {:5}", name, counter.absoluteValue) << std::endl;
-      } else {
-        std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}, Calls: {:5}", name,
-                                 counter.absoluteValue, counter.maxValue,
-                                 (counter.absoluteValue / counter.numberCounters),
-                                 counter.numberCounters)
-                  << std::endl;
-      }
-    }
-    std::cout << "\n";
-
-    for (const auto &[name, condition] : Condition::conditions) {
-      std::cout << std::format("{:40} | Yes: {:5}, No: {:5}", name, condition.trueCounter,
-                               condition.falseCounter)
-                << std::endl;
-    }
-
-    std::cout << "\n";
-
-    for (const auto &[name, value] : Value::values) {
-      std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}", name,
-                               value.absoluteValue, value.maxValue,
-                               (value.absoluteValue / value.valueCounter))
-                << std::endl;
-    }
-
-    std::cout << "\n";
-
-    for (const auto &[name, diff] : Difference::diffs) {
-      std::cout << std::format("{:40} | Total: {:5}, Max: {:5}, Average: {:5}, Calls: {:5}", name,
-                               diff.absoluteDiff, diff.maxDiff,
-                               (diff.absoluteDiff / diff.diffCounter), diff.diffCounter)
-                << std::endl;
-    }
-  }
+  static void reset();
+  static void print();
 };
+
+constexpr Counter &Stats::counter(const std::string &name) { return Counter::counters[name]; }
+constexpr Difference &Stats::diff(const std::string &name) { return Difference::diffs[name]; }
+constexpr Value &Stats::value(const std::string &name) { return Value::values[name]; }
+constexpr Condition &Stats::boolean(const std::string &name) { return Condition::conditions[name]; }
