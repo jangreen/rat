@@ -26,8 +26,9 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   if (parent == nullptr) {
     return std::nullopt;
   }
-  Cube mergedCube = parent->getCube();
-  std::ranges::copy_if(newLiterals, std::back_inserter(mergedCube),
+  // TODO: preserve/or merge? annotation of child
+  Cube mergedCube = newLiterals;
+  std::ranges::copy_if(parent->getCube(), std::back_inserter(mergedCube),
                        [&](const auto &literal) { return !contains(mergedCube, literal); });
   assert(validateNormalizedCube(mergedCube));
 
