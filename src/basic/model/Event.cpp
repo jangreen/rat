@@ -8,6 +8,8 @@ EventType Event::event() const { return _event; }
 
 CanonicalSet Event::reason() const { return _reason; }
 
+void Event::resetReason() { _reason = nullptr; }
+
 bool Event::updateReason(const CanonicalSet newReason) {
   assert(newReason != nullptr);
   if (newReason->isSmallerReason(_reason)) {

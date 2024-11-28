@@ -17,6 +17,7 @@ class Edge {
   [[nodiscard]] EventType from() const;
   [[nodiscard]] EventType to() const;
   [[nodiscard]] CanonicalRelation reason() const;
+  void resetReason();
   [[nodiscard]] bool updateReason(CanonicalRelation newReason);
   [[nodiscard]] bool operator==(const Edge &other) const;
   [[nodiscard]] bool operator<(const Edge &other) const;

@@ -18,6 +18,8 @@ EventType Edge::to() const { return _to; }
 
 CanonicalRelation Edge::reason() const { return _reason; }
 
+void Edge::resetReason() { _reason = nullptr; }
+
 bool Edge::updateReason(const CanonicalRelation newReason) {
   assert(newReason != nullptr);
   if (newReason->isSmallerReason(_reason)) {
