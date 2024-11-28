@@ -1,0 +1,4 @@
+assume a;a <= id
+// assume (a;a)^+ <= id
+
+assert a^+ <= a | id
