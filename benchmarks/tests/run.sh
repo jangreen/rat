@@ -61,6 +61,7 @@ run tests/id True
 run tests/id2 True
 run tests/id3 True
 run tests/id4 True
+run tests/id8 True
 run tests/setid True
 run tests/setid2 False
 run tests/setDist True
