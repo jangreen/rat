@@ -77,7 +77,7 @@ DNF Tableau::computeDnf() {
   assert(validateDNF(dnf));
   // no cube contains usless literals
   assert(std::ranges::all_of(dnf, [](const auto &cube) {
-    const auto activeEvents = gatherActiveEvents(cube);
+    const auto activeEvents = gatherPositiveEvents(cube);
     return std::ranges::all_of(
         cube, [&](const auto &literal) { return isLiteralActive(literal, activeEvents); });
   }));

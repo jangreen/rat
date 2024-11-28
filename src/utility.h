@@ -222,22 +222,40 @@ inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs
   return std::ranges::includes(activePairs, literal.saturatedEventBasePairs());
 }
 
-// activeEvent = event occurs in positive literal
+// event occurs in positive literal
 inline EventSet gatherActiveEvents(const Cube &cube) {
   // preconditions:
   assert(validateNormalizedCube(cube));  // cube is normal
 
   EventSet activeEvents;
   for (const auto &literal : cube) {
+    if (literal.negated || literal.operation != PredicateOperation::setNonEmptiness) {
+      continue;
+    }
+
+    const auto &literalEvents = literal.events();
+    activeEvents.insert(literalEvents.begin(), literalEvents.end());
+  }
+
+  return activeEvents;
+}
+
+// event occurs in positive literal
+inline EventSet gatherPositiveEvents(const Cube &cube) {
+  // preconditions:
+  assert(validateNormalizedCube(cube));  // cube is normal
+
+  EventSet positiveEvents;
+  for (const auto &literal : cube) {
     if (literal.negated) {
       continue;
     }
 
-    const auto &literalLabels = literal.events();
-    activeEvents.insert(literalLabels.begin(), literalLabels.end());
+    const auto &literalEvents = literal.events();
+    positiveEvents.insert(literalEvents.begin(), literalEvents.end());
   }
 
-  return activeEvents;
+  return positiveEvents;
 }
 
 // active pair = all event base pairs of cube restricted to positive literals
@@ -345,7 +363,7 @@ inline void removeUselessLiterals(Cube &cube) {
   assert(std::ranges::all_of(
       cube, [&](const auto &literal) { return isLiteralActive(literal, activePairs); }));
   assert(std::ranges::all_of(cube, [&](const Literal &literal) {
-    const auto activeEvents = gatherActiveEvents(cube);
+    const auto activeEvents = gatherPositiveEvents(cube);
     assert_catch(isLiteralActive(literal, activeEvents), [&] {
       std::cout << "Non-active literal " << literal.toString() << " in cube:\n";
       print(cube);
