@@ -415,6 +415,21 @@ bool RegularTableau::expandNode() {
   // 1. drop inactive negated literals
   std::erase_if(cube,
                 [&](const Literal &literal) { return !isLiteralActive(literal, activeEvents); });
+  // insert positive atomic edge literals with projected inactive events
+  for (const auto &literal : currentNode->cube) {
+    if (literal.isPositiveEdgePredicate() && !isLiteralActive(literal, activeEvents)) {
+      const auto &e1 = literal.leftEvent;
+      const auto &e2 = literal.rightEvent;
+      const auto &b = literal.identifier.value();
+
+      if (activeEvents.contains(e1->label.value())) {
+        cube.push_back(Literal::newOutgoingEdge(false, e1, b));
+      }
+      if (activeEvents.contains(e2->label.value())) {
+        cube.push_back(Literal::newIncomingEdge(false, e2, b));
+      }
+    }
+  }
   // TODO: does this line remove additional literals?
   removeUselessLiterals(cube);
 
