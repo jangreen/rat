@@ -1,0 +1,9 @@
+// sporadic non-termination if annotation are used at leafs
+
+let c = b;a | b
+
+assume b;a <= id
+assume b^+ <= b
+
+assert c^+ <= c
+
