@@ -244,7 +244,7 @@ bool RegularTableau::solve() {
     assert(isReachableFromRoots(currentNode));
 
     // current node = open leaf
-    if (expandNode()) {
+    if (expandNode(currentNode)) {
       continue;
     }
 
@@ -316,7 +316,6 @@ void RegularTableau::fixLazy() {
 void RegularTableau::expandNodeInternal(RegularNode *node, Tableau *tableau) {
   assert(node != nullptr && (node == rootNode.get() || node->validate()));
   assert(tableau->validate());
-  assert(validate());
 
   // calculate dnf
   const auto dnf = tableau->computeDnf();
@@ -405,9 +404,9 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
   }
 }
 
-bool RegularTableau::expandNode() {
+bool RegularTableau::expandNode(RegularNode* node) {
   // 1. weaken positive edge predicates and positive setMembership
-  Cube currentCube = currentNode->cube;
+  Cube currentCube = node->cube;
   if (cubeHasPositiveAtomic(currentCube)) {
     std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveAtomic));
     removeUselessLiterals(currentCube);
@@ -421,7 +420,7 @@ bool RegularTableau::expandNode() {
   auto minimalOccurringActiveEvent = gatherMinimalOccurringActiveEvent(currentCube);
   if (minimalOccurringActiveEvent &&
       tableau.tryApplyModalRuleOnce(minimalOccurringActiveEvent.value())) {
-    expandNodeInternal(currentNode, &tableau);
+    expandNodeInternal(node, &tableau);
     assert(validate());
     return true;
   }
@@ -631,14 +630,12 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // example: A<=B |- ~A&B, A(0). B gets saturation annotation, but then ~B(0) would be active
       // TODO: assert(Annotated::validate(cubeLiteral.annotatedSet()));
 
-      // normalize/dnf
-      Tableau tableau(node->getCube());
-      const auto &dnf = tableau.computeDnf();
-      if (dnf.empty()) {
-        node->closed = true;
-      } else {
-        newChildren(node, dnf);
-      }
+      // expand saturated node
+      // TODO: is this sufficient? saturation must ensure that it either derives new literals or
+      // becomes inconsistent with parent
+      Tableau t{node->cube};
+      expandNodeInternal(node, &t);
+      exportDebug("debug-regularTableau");
       // IMPORTANT: invariant in validation of tableau is valid again
       return true;
     }
