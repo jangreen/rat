@@ -191,6 +191,11 @@ void Tableau::normalize() {
       continue;
     }
 
+    if (currentNode->getLiteral().operation == PredicateOperation::incomingEdge ||
+        currentNode->getLiteral().operation == PredicateOperation::outgoingEdge) {
+      continue;
+    }
+
     Node::transitiveClosureNode = currentNode->getLastUnrollingParent();
 
     // 1) Rules that just rewrite a single literal

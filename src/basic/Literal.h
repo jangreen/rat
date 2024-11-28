@@ -24,6 +24,8 @@ typedef std::vector<PartialCube> PartialDNF;
 
 enum class PredicateOperation {
   edge,             // (e1, e2) \in a
+  outgoingEdge,     // e.a
+  incomingEdge,     // a.e
   set,              // e1 \in A
   equality,         // e1 = e2
   setNonEmptiness,  // s != 0
@@ -44,6 +46,12 @@ class Literal {
       CanonicalLeafAnnotation<Reasons> annotation = LeafAnnotation<Reasons>::newLeaf({}));
   static Literal newRelationMembership(
       bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent, CanonicalString identifier,
+      CanonicalLeafAnnotation<Reasons> annotation = LeafAnnotation<Reasons>::newLeaf({}));
+  static Literal newOutgoingEdge(
+      bool negated, CanonicalSet leftEvent, CanonicalString identifier,
+      CanonicalLeafAnnotation<Reasons> annotation = LeafAnnotation<Reasons>::newLeaf({}));
+  static Literal newIncomingEdge(
+      bool negated, CanonicalSet leftEvent, CanonicalString identifier,
       CanonicalLeafAnnotation<Reasons> annotation = LeafAnnotation<Reasons>::newLeaf({}));
   static Literal newEquality(
       bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent,

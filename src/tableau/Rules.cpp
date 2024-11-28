@@ -617,6 +617,8 @@ std::optional<DNF> Rules::applyPositiveModalRule(const Literal& literal, const i
 
   switch (literal.operation) {
     case PredicateOperation::edge:
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     case PredicateOperation::constant:
     case PredicateOperation::set:
     case PredicateOperation::equality:

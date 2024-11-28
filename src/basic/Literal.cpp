@@ -40,6 +40,16 @@ Literal Literal::newRelationMembership(bool negated, const CanonicalSet leftEven
   return Literal(negated, PredicateOperation::edge, nullptr, annotation, leftEvent, rightEvent,
                  identifier);
 }
+Literal Literal::newOutgoingEdge(bool negated, CanonicalSet leftEvent, CanonicalString identifier,
+                                 CanonicalLeafAnnotation<Reasons> annotation) {
+  return Literal(negated, PredicateOperation::outgoingEdge, nullptr, annotation, leftEvent, nullptr,
+                 identifier);
+}
+Literal Literal::newIncomingEdge(bool negated, CanonicalSet leftEvent, CanonicalString identifier,
+                                 CanonicalLeafAnnotation<Reasons> annotation) {
+  return Literal(negated, PredicateOperation::incomingEdge, nullptr, annotation, leftEvent, nullptr,
+                 identifier);
+}
 
 Literal Literal::newEquality(bool negated, CanonicalSet leftEvent, CanonicalSet rightEvent,
                              const CanonicalLeafAnnotation<Reasons> annotation) {
@@ -74,6 +84,14 @@ bool Literal::validate() const {
       const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent != nullptr &&
                            leftEvent->isEvent() && rightEvent->isEvent() &&
                            identifier.has_value() && (!negated || annotation->hasValue());
+      assert(isValid);
+      return isValid;
+    }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge: {
+      const auto isValid = set == nullptr && leftEvent != nullptr && rightEvent == nullptr &&
+                           leftEvent->isEvent() && identifier.has_value() &&
+                           (!negated || annotation->hasValue());
       assert(isValid);
       return isValid;
     }
@@ -118,6 +136,12 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
       cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
       return cmp;
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge: {
+      auto cmp = leftEvent <=> other.leftEvent;
+      cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
+      return cmp;
+    }
     case PredicateOperation::set: {
       auto cmp = leftEvent <=> other.leftEvent;
       cmp = (cmp != 0) ? cmp : lexCompare(*identifier, *other.identifier);
@@ -158,6 +182,8 @@ bool Literal::isNormal() const {
       return negated && rightEvent != leftEvent || !negated;
     case PredicateOperation::set:
     case PredicateOperation::edge:
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
       return true;
     default:
       throw std::logic_error("unreachable");
@@ -202,6 +228,13 @@ EventSet Literal::normalEvents() const {
       events.insert(rightEvents.begin(), rightEvents.end());
       return events;
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge: {
+      if (!isNormal()) {
+        return {};
+      }
+      return leftEvent->getEvents();
+    }
     case PredicateOperation::set: {
       return leftEvent->getEvents();
     }
@@ -224,6 +257,8 @@ EventSet Literal::events() const {
       events.insert(rightEvents.begin(), rightEvents.end());
       return events;
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     case PredicateOperation::set: {
       return leftEvent->getEvents();
     }
@@ -242,6 +277,8 @@ SetOfSets Literal::baseSets() const {
       return set->getBaseSets();
     }
     case PredicateOperation::edge:
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
       return {};
     default:
       throw std::logic_error("unreachable");
@@ -263,10 +300,16 @@ SetOfSets Literal::eventBasePairs() const {
       const CanonicalSet e1 = leftEvent;
       const CanonicalSet e2 = rightEvent;
       const CanonicalRelation b = Relation::newBaseRelation(*identifier);
-
       const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
       const CanonicalSet be2 = Set::newSet(SetOperation::domain, e2, b);
       return {e1b, be2};
+    }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge: {
+      const CanonicalSet e1 = leftEvent;
+      const CanonicalRelation b = Relation::newBaseRelation(*identifier);
+      const CanonicalSet e1b = Set::newSet(SetOperation::image, e1, b);
+      return {e1b};
     }
     default:
       throw std::logic_error("unreachable");
@@ -312,6 +355,8 @@ SetOfSets Literal::saturatedEventBasePairs() const {
     case PredicateOperation::setNonEmptiness: {
       return getSaturatedEventBasePairs(annotatedSet());
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     case PredicateOperation::edge: {
       if (annotation->hasValue() && !annotation->getValue().empty()) {
         // could be saturated
@@ -363,6 +408,8 @@ std::optional<Literal> Literal::substituteAll(const CanonicalSet search,
       }
       return std::nullopt;
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     default:
       throw std::logic_error("unreachable");
   }
@@ -384,6 +431,8 @@ std::optional<Literal> Literal::substituteAll(const CanonicalRelation search,
     case PredicateOperation::equality:
     case PredicateOperation::set:
       return std::nullopt;
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     case PredicateOperation::edge:
       throw std::logic_error("not implemented");
     default:
@@ -394,9 +443,6 @@ std::optional<Literal> Literal::substituteAll(const CanonicalRelation search,
 bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, int n) {
   switch (operation) {
     case PredicateOperation::constant:
-    case PredicateOperation::edge:
-    case PredicateOperation::equality:
-    case PredicateOperation::set:
       return false;
     case PredicateOperation::setNonEmptiness: {
       const auto [subSet, subAnnotation] = ::substitute(annotatedSet(), search, replace, &n);
@@ -407,6 +453,11 @@ bool Literal::substitute(const CanonicalSet search, const CanonicalSet replace, 
       }
       return false;
     }
+    case PredicateOperation::edge:
+    case PredicateOperation::equality:
+    case PredicateOperation::set:
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     default:
       throw std::logic_error("unreachable");
   }
@@ -456,6 +507,8 @@ void Literal::rename(const Renaming &renaming) {
       rightEvent = rightEvent->rename(renaming);
       return;
     }
+    case PredicateOperation::incomingEdge:
+    case PredicateOperation::outgoingEdge:
     case PredicateOperation::set: {
       leftEvent = leftEvent->rename(renaming);
       return;
@@ -477,6 +530,12 @@ std::string Literal::toString() const {
     case PredicateOperation::edge:
       output +=
           identifier->get() + "(" + leftEvent->toString() + "," + rightEvent->toString() + ")";
+      break;
+    case PredicateOperation::incomingEdge:
+      output += identifier->get() + "(*" + "," + leftEvent->toString() + ")";
+      break;
+    case PredicateOperation::outgoingEdge:
+      output += identifier->get() + "(" + leftEvent->toString() + ",*)";
       break;
     case PredicateOperation::set:
       output += identifier->get() + "(" + leftEvent->toString() + ")";
