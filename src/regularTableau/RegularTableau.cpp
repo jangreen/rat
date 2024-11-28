@@ -36,7 +36,8 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   auto dnf = tableau.computeDnf();
 
   // 2) filter literal relevant for parent
-  const auto parentActiveEvents = gatherActiveEvents(parent->getCube());
+  // TODO: use active or positive?
+  const auto parentActiveEvents = gatherPositiveEvents(parent->getCube());
   for (auto &cube : dnf) {
     std::erase_if(cube, [&](const Literal &literal) {
       return !isLiteralActive(literal, parentActiveEvents);
@@ -316,7 +317,6 @@ void RegularTableau::fixLazy() {
 void RegularTableau::expandNodeInternal(RegularNode *node, Tableau *tableau) {
   assert(node != nullptr && (node == rootNode.get() || node->validate()));
   assert(tableau->validate());
-  assert(validate());
 
   // calculate dnf
   const auto dnf = tableau->computeDnf();
@@ -407,19 +407,24 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
 }
 
 bool RegularTableau::expandNode() {
-  // 1. weaken positive edge predicates and positive setMembership
-  Cube currentCube = currentNode->cube;
-  if (cubeHasPositiveAtomic(currentCube)) {
-    std::erase_if(currentCube, std::mem_fn(&Literal::isPositiveAtomic));
-    removeUselessLiterals(currentCube);
-  }
+  // this function guarantees progress by introducing a new event
+  // it drops literals that contain inactive events (called inactive literal)
+  // an active event is an event that occurs positive in a setNonEmptiness predicate
+  auto cube = currentNode->cube;
+  const auto activeEvents = gatherActiveEvents(cube);
+
+  // 1. drop inactive negated literals
+  std::erase_if(cube,
+                [&](const Literal &literal) { return !isLiteralActive(literal, activeEvents); });
+  // TODO: does this line remove additional literals?
+  removeUselessLiterals(cube);
 
   // 2. apply modal rule & normalize
-  Tableau tableau{currentCube};
+  Tableau tableau{cube};
   // IMPORTANT: currently we rely on this property to be correct.
   // intuition: using always an event that occurrs prefers events that occcur once to events that
   // occurr multiple times. This ensures that we keep the number of events used in a cube minimal
-  auto minimalOccurringActiveEvent = gatherMinimalOccurringActiveEvent(currentCube);
+  auto minimalOccurringActiveEvent = gatherMinimalOccurringActiveEvent(cube);
   if (minimalOccurringActiveEvent &&
       tableau.tryApplyModalRuleOnce(minimalOccurringActiveEvent.value())) {
     expandNodeInternal(currentNode, &tableau);
