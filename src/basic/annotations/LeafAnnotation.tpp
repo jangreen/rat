@@ -109,6 +109,19 @@ CanonicalLeafAnnotation<AnnotationType> LeafAnnotation<AnnotationType>::getRight
 }
 
 template <typename AnnotationType>
+CanonicalLeafAnnotation<AnnotationType> LeafAnnotation<AnnotationType>::transform(
+    std::function<AnnotationType(AnnotationType)> transformer) const {
+  if (isLeaf()) {
+    return value.has_value() ? newLeaf(transformer(value.value())) : none();
+  }
+
+  assert(left != nullptr && right != nullptr);
+  const auto leftTransformed = left->transform(transformer);
+  const auto rightTransformed = right->transform(transformer);
+  return joinAnnotation(leftTransformed, rightTransformed);
+}
+
+template <typename AnnotationType>
 bool LeafAnnotation<AnnotationType>::isLeaf() const {
   return left == nullptr && right == nullptr;
 }

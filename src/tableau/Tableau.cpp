@@ -325,11 +325,11 @@ Node *Tableau::renameBranchesInternalUp(Node *lastSharedNode, const int from, co
 }
 
 void Tableau::renameBranchesInternalDown(
-    Node *nodeWithEquality, Node *node, const Renaming &renaming,
+    Node *equalityNode, Node *node, const Renaming &renaming,
     std::unordered_set<Literal> &allRenamedLiterals,
     const std::unordered_map<const Node *, Node *> &originalToCopy,
     std::unordered_set<const Node *> &unrollingParents) {
-  if (nodeWithEquality != node) {  // do not rename the original equality
+  if (equalityNode != node) {  // do not rename the original equality
     node->rename(renaming);
   }
   // gather all unrollingParents in the subtree to prevent deleting them
@@ -353,7 +353,7 @@ void Tableau::renameBranchesInternalDown(
       } else {
         allRenamedLiteralsCopy = allRenamedLiterals;
       }
-      renameBranchesInternalDown(nodeWithEquality, *childIt, renaming, allRenamedLiteralsCopy,
+      renameBranchesInternalDown(equalityNode, *childIt, renaming, allRenamedLiteralsCopy,
                                  originalToCopy,
                                  unrollingParents);  // copy for each branching
     }
@@ -378,14 +378,14 @@ void Tableau::removeUselessLiterals() const {
  *
  *  NOTE: If different literals are renamed to identical literals, only a single copy is kept.
  */
-void Tableau::renameBranches(Node *node) {
+void Tableau::renameBranches(Node *equalityNode) {
   assert(validate());
-  assert(node->getLiteral().operation == PredicateOperation::equality);
+  assert(equalityNode->getLiteral().operation == PredicateOperation::equality);
 
   // Compute renaming according to equality predicate (from larger label to lower label).
   // e1 = e2
-  const int e1 = node->getLiteral().leftEvent->label.value();
-  const int e2 = node->getLiteral().rightEvent->label.value();
+  const int e1 = equalityNode->getLiteral().leftEvent->label.value();
+  const int e2 = equalityNode->getLiteral().rightEvent->label.value();
   const int from = (e1 < e2) ? e2 : e1;
   const int to = (e1 < e2) ? e1 : e2;
   assert(from != to);
@@ -393,7 +393,7 @@ void Tableau::renameBranches(Node *node) {
   // TODO: node->renaming = node->renaming.totalCompose(renaming);
 
   // Determine first node that belongs to the renamed branches only
-  Node *firstUnsharedNode = node;
+  Node *firstUnsharedNode = equalityNode;
   while (firstUnsharedNode->getParentNode() != rootNode.get() &&
          firstUnsharedNode->getParentNode()->getChildren().size() <= 1) {
     firstUnsharedNode = firstUnsharedNode->getParentNode();
@@ -406,10 +406,16 @@ void Tableau::renameBranches(Node *node) {
 
   const auto renamedLastSharedNode =
       renameBranchesInternalUp(lastSharedNode, from, to, renamedLiterals, originalToCopy);
-  // do not rename node, begin with children
-  renameBranchesInternalDown(node, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
-                             unrollingParents);
+
+  // Important: We first attach the not-yet-renamed <firstUnsharedNode> to the renamed shared node,
+  // and then(!) do the downwards renaming. The reason is that the renaming may delete
+  // <firstUnsharedNode> if its renamed version happens to already exist.
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
+
+  // do not rename <equalityNode>
+  renameBranchesInternalDown(equalityNode, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
+                             unrollingParents);
+
 }
 
 // ===========================================================================================

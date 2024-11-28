@@ -1,0 +1,18 @@
+// ========= Common definitions =========
+let rf = [W];rf;[R]
+let rfi = rf & (po | po^-1)
+// NOTE: po^-1 is actually not possible due to "rfi <= po", unless "po & po^-1 != 0"
+
+// ========= Common assumptions =========
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+//assume po & po^-1 <= 0        // Adding this gives correct result!
+
+let oota = (po | rf)+ & id
+// let oota = po;rf;po;rf & id   // Smallest counterexample
+
+assert oota <= 0
+
