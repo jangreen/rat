@@ -367,7 +367,8 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
 
   if (const auto fixedDNF = getFixedDnf(parent, renamedChild)) {
     // create new fixed Node
-    newEpsilonChildren(parent, fixedDNF.value());
+    // FIXME: complete but fast (complete would use newEpsilonChildren)
+    newChildren(parent, fixedDNF.value());
     Stats::counter("isInconsistent")++;
     return true;
   }
