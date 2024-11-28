@@ -100,6 +100,8 @@ class LeafAnnotation {
   [[nodiscard]] std::optional<AnnotationType> getOptionalValue() const;
   [[nodiscard]] CanonicalLeafAnnotation<AnnotationType> getLeft() const;
   [[nodiscard]] CanonicalLeafAnnotation<AnnotationType> getRight() const;
+  [[nodiscard]] CanonicalLeafAnnotation<AnnotationType> transform(
+      std::function<AnnotationType(AnnotationType)> transformer) const;
   [[nodiscard]] bool isLeaf() const;
   [[nodiscard]] bool operator==(const LeafAnnotation &other) const;
   [[nodiscard]] std::string toString() const;

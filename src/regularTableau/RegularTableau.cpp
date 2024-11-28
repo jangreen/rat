@@ -624,7 +624,23 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // - Here we just have to modify the proof accordingly.
       const auto &annotatedLiteral = resultSaturated.value();
       removeChildren(node);  // remove old children
-      cubeLiteral.annotation = Annotated::join(cubeLiteral.annotation, annotatedLiteral.annotation);
+      const auto invertedRenaming = nodeRenaming.inverted();
+      auto inverseRenamedAnnotation =
+          annotatedLiteral.annotation->transform([&](const Reasons &reasons) {
+            Reasons renamedReasons;
+            renamedReasons.reserve(reasons.size());
+            for (const auto &reason : reasons) {
+              if (std::holds_alternative<CanonicalSet>(reason)) {
+                const auto setReason = std::get<CanonicalSet>(reason);
+                const auto renamedReason = setReason->rename(invertedRenaming);
+                renamedReasons.insert(renamedReason);
+              } else {
+                renamedReasons.insert(reason);
+              }
+            }
+            return renamedReasons;
+          });
+      cubeLiteral.annotation = Annotated::join(cubeLiteral.annotation, inverseRenamedAnnotation);
       // IMPORTANT: invariant in validation of tableau is temporally violated
       // after removing all children we may have an open leaf that is not on unreduced nodes
       // IMPORTANT: we cannot just push it to unreducedNodes.push(node);
