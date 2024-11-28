@@ -1,0 +1,48 @@
+// ========= Common definitions =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+// ========= Common assumptions =========
+assume Marked & Plain <= 0
+assume W & R <= 0
+assume addr <= po
+assume data <= po
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ================== LKMM =================
+let carry-dep = (data ; rfi)*
+let addr = carry-dep ; addr
+let ctrl = carry-dep ; ctrl
+let data = carry-dep ; data
+
+(* Preserved Program Order *)
+let dep = addr | data
+let rwdep = (dep | ctrl) ; [W]
+let overwrite = co | fr
+let to-w = rwdep | (overwrite & int) | (addr ; [Plain] ; wmb)
+let to-r = addr | (dep ; [Marked] ; rfi)
+let ppo = to-r | to-w | (fence & int) | (po-unlock-lock-po & int)
+
+(* Propagation: Ordering from release operations and strong fences. *)
+let cumul-fence = [Marked] ; ((rfe ; [Marked])? ; (strong-fence | po-rel) | wmb | po-unlock-lock-po) ; [Marked]
+let prop = [Marked] ; (overwrite & ext)? ; cumul-fence* ; [Marked] ; rfe? ; [Marked]
+
+let hbUnmarked = (ppo | rfe | ((prop & noid) & int))    // hb without marked
+let hb = [Marked];hbUnmarked;[Marked]                   // True hb definition
+
+
+// ================== Goal =================
+// ISSUE: The following gives "True", but the commented assumption below is stronger and gives "False"
+// EXPECTED: "False" for current version (probably also "False" for commented version).
+assume hb+ & id <= 0                                    // acyclic hb in LKMM
+// assume hbUnmarked+ & id <= 0
+
+let oota = (dep | rf)+ & id
+assert oota <= 0
+
