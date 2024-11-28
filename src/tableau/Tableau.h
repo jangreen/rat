@@ -16,11 +16,11 @@ class Tableau {
 
   // branch manipulation
   void deleteNode(Node *node);
-  void renameBranches(Node *node);
+  void renameBranches(Node *equalityNode);
   Node *renameBranchesInternalUp(Node *lastSharedNode, int from, int to,
                                  std::unordered_set<Literal> &allRenamedLiterals,
                                  std::unordered_map<const Node *, Node *> &originalToCopy);
-  void renameBranchesInternalDown(Node *nodeWithEquality, Node *node, const Renaming &renaming,
+  void renameBranchesInternalDown(Node *equalityNode, Node *node, const Renaming &renaming,
                                   std::unordered_set<Literal> &allRenamedLiterals,
                                   const std::unordered_map<const Node *, Node *> &originalToCopy,
                                   std::unordered_set<const Node *> &unrollingParents);
