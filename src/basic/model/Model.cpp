@@ -470,7 +470,11 @@ bool saturateIdAssumptions(Model &model) {
 
   for (const auto &idAssumption : Assumption::idAssumptions) {
     // evaluate lhs of assumption
-    const auto exprValue = model.evaluate(idAssumption.relation);
+    const auto assumptionRelation =
+        (idAssumption.relation->operation != RelationOperation::transitiveClosure)
+            ? Relation::newRelation(RelationOperation::transitiveClosure, idAssumption.relation)
+            : idAssumption.relation;
+    const auto exprValue = model.evaluate(assumptionRelation);
     for (const auto &edge : exprValue->getRelValue()) {
       assert_void([&] { model.validate(); });
       modelChanged |= model.addIdentity(edge);
