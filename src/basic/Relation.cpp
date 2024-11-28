@@ -200,6 +200,9 @@ std::string Relation::toString() const {
 }
 
 bool Relation::isSmallerReason(const CanonicalRelation other) const {
+  if (other == nullptr) {
+    return true;
+  }
   auto lWidth = intersectionWidth();
   auto rWidth = other->intersectionWidth();
   auto lLength = compositionLength();

@@ -1,5 +1,9 @@
 #include "InterpretationTree.h"
 
+#include <iostream>
+
+#include "../annotations/ReasonAnnotation.h"
+
 template <typename ExprType>  // Event or Edge
 bool insertOrUpdateReason(SetContainerType<ExprType> &set, const ExprType &element) {
   auto existingElementIt = set.find(element);
@@ -71,46 +75,101 @@ InterpretationPtr Interpretation::composition(InterpretationPtr left, Interpreta
                                           std::move(projectedEvent));
 }
 
+CanonicalRelation computeTransitiveReason(const RelationsSet &underlyingReasons) {
+  // compute transitive reason
+  // overwrite reasons for all new edges
+  // we could be more precise (use different reasons for different edges)
+  CanonicalRelation unionReason = nullptr;
+  for (const auto &reason : underlyingReasons) {
+    if (unionReason == nullptr) {
+      unionReason = reason;
+      continue;
+    }
+    unionReason = Relation::newRelation(RelationOperation::relationUnion, unionReason, reason);
+  }
+  return Relation::newRelation(RelationOperation::transitiveClosure, unionReason);
+}
+
+bool insertOrUpdateReason(std::unordered_map<Edge, RelationsSet> &edgeToUnderlyingReasons,
+                          const Edge &edge, const RelationsSet &newReason) {
+  if (!edgeToUnderlyingReasons.contains(edge)) {
+    edgeToUnderlyingReasons[edge] = newReason;
+    return true;
+  }
+
+  auto newReasonExpr = computeTransitiveReason(newReason);
+  auto oldReasonExpr = computeTransitiveReason(edgeToUnderlyingReasons.at(edge));
+  if (newReasonExpr->isSmallerReason(oldReasonExpr)) {
+    edgeToUnderlyingReasons[edge] = newReason;
+    return true;
+  }
+  return false;
+}
+
 InterpretationPtr Interpretation::transitiveClosure(InterpretationPtr left,
                                                     const EventSet &events) {
   assert(left != nullptr);
   const auto underlying = left->getRelValue();
 
-  RelationValue refltransClosure = underlying;
+  RelationValue refltransClosure;
   std::unordered_map<EventOrEdge, Event> projectedEvent;
+  if (!underlying.empty()) {
+    // - a reason is conceptually an expression (r1 | r2 | ...)^* where ri's are reasons of an
+    // underlying edge needed to justify the edge
+    // - to be able to calculate minimal reasons we keep the ri's as a set
+    // - then reason composition becomes set union
+    // - to compare the size of reasons we use computeTransitiveReason (which computes the reason
+    // from a set of ri's) and compare the resulting expressions
+    std::unordered_map<Edge, RelationsSet> edgeToUnderlyingReasons;
+    for (const auto &edge : underlying) {
+      edgeToUnderlyingReasons[edge] = {edge.reason()};
+    }
 
-  // iterate underlying
-  RelationValue newPairs;
-  std::unordered_map<EventOrEdge, Event> newProjectedEvent;
-  while (true) {
-    for (const auto &closureEdge : refltransClosure) {
-      for (const auto &rEdge : underlying) {
-        const auto composedEdge = closureEdge.compose(rEdge);
-        if (composedEdge && insertOrUpdateReason(newPairs, composedEdge.value())) {
-          newProjectedEvent.insert({composedEdge.value(), Event(closureEdge.to())});
+    // iterate underlying
+    std::unordered_map<Edge, RelationsSet> newPairs;
+    std::unordered_map<EventOrEdge, Event> newProjectedEvent;
+
+    while (true) {
+      for (const auto &[closureEdge, closureEdgeReason] : edgeToUnderlyingReasons) {
+        for (const auto &rEdge : underlying) {
+          const auto composedEdge = closureEdge.compose(rEdge);
+          auto unionReason = closureEdgeReason;
+          unionReason.insert(rEdge.reason());
+          // if (composedEdge->from() == 0 & composedEdge->to() == 1) {
+          //   std::cout << computeTransitiveReason(unionReason)->toString() << std::endl;
+          // }
+          if (composedEdge && insertOrUpdateReason(newPairs, composedEdge.value(), unionReason)) {
+            newProjectedEvent.insert({composedEdge.value(), Event(closureEdge.to())});
+          }
         }
       }
-    }
-    if (newPairs.empty()) {
-      break;
-    }
-    auto fixpointReached = true;
-    for (const auto &newEdge : newPairs) {
-      if (insertOrUpdateReason(refltransClosure, newEdge)) {
-        projectedEvent.insert({newEdge, newProjectedEvent.at(newEdge)});
-        fixpointReached = false;
+      if (newPairs.empty()) {
+        break;
       }
+      auto fixpointReached = true;
+      for (auto &[newEdge, newEdgeReason] : newPairs) {
+        if (insertOrUpdateReason(edgeToUnderlyingReasons, newEdge, newEdgeReason)) {
+          projectedEvent.insert({newEdge, newProjectedEvent.at(newEdge)});
+          fixpointReached = false;
+        }
+      }
+      if (fixpointReached) {
+        break;
+      }
+      // clear
+      newPairs.clear();
+      newProjectedEvent.clear();
     }
-    if (fixpointReached) {
-      break;
+    for (auto &[edge, reason] : edgeToUnderlyingReasons) {
+      auto edgeCopy = edge;
+      edgeCopy.resetReason();
+      edgeCopy.updateReason(computeTransitiveReason(reason));
+      refltransClosure.insert(edgeCopy);
     }
-    // clear
-    newPairs.clear();
-    newProjectedEvent.clear();
   }
   // insert id
   for (const auto event : events) {
-    refltransClosure.emplace(event, event, Relation::idRelation());
+    insertOrUpdateReason(refltransClosure, {event, event, Relation::idRelation()});
   }
   return std::make_unique<Interpretation>(refltransClosure, std::move(left), nullptr,
                                           std::move(projectedEvent));

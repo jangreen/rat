@@ -347,6 +347,9 @@ int Set::compositionLength() const {
   }
 }
 bool Set::isSmallerReason(const CanonicalSet other) const {
+  if (other == nullptr) {
+    return true;
+  }
   auto lWidth = intersectionWidth();
   auto rWidth = other->intersectionWidth();
   auto lLength = compositionLength();
