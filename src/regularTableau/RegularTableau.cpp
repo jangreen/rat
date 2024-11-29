@@ -46,10 +46,7 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   // 3) If no new literals, nothing to do
   if (std::ranges::any_of(dnf,
                           [&](const auto &cube) { return isSubset(cube, parent->getCube()); })) {
-    if (dnf.size() > 1) {
-      throw std::logic_error("This is no error but unexpected to happen.");
-    }
-    return std::nullopt;
+    return std::nullopt;  // there is no inconsistency
   }
 
   return dnf;
@@ -95,6 +92,7 @@ bool RegularTableau::validate() const {
     if (!leafValid) {
       std::cout << " Leaked node: " << openLeaf << std::endl;
       print(openLeaf->cube);
+      exportDebug("debug-regularTableau");
     }
     assert(leafValid);
     return leafValid;
@@ -255,6 +253,7 @@ bool RegularTableau::solve() {
       spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
       getModel(currentNode).exportModel("counterexample");
       exportCounterexamplePath(currentNode);
+      exportProof("counterexample-proof");
       return false;
     }
 
@@ -414,7 +413,7 @@ bool RegularTableau::expandNode(RegularNode* node) {
     removeUselessLiterals(currentCube);
   }
 
-  // 2. apply modlal rule & normalize
+  // 2. apply modal rule & normalize
   Tableau tableau{currentCube};
   // IMPORTANT: currently we rely on this property to be correct.
   // intuition: using always an event that occurrs prefers events that occcur once to events that
@@ -554,8 +553,17 @@ std::optional<Literal> evaluateAndAnnotate(const Model &model, const Literal &ne
       const auto e1 = negatedLiteral.leftEvent->label.value();
       const auto e2 = negatedLiteral.rightEvent->label.value();
       if (model.containsIdentity(e1, e2)) {
-        throw std::logic_error("does this happen?");
-        return negatedLiteral;
+        auto litCopy = negatedLiteral;
+        const auto e1e2Reason = model.getReason(e1, e2).value();
+        assert(e1e2Reason != nullptr);
+        const auto e1Reason = negatedLiteral.leftEvent->imageWith(e1e2Reason);
+        const auto e2Reason = negatedLiteral.rightEvent->domainWith(e1e2Reason);
+        const auto leftAnnotation = LeafAnnotation<Reasons>::newLeaf({e1Reason});
+        const auto rightAnnotation = LeafAnnotation<Reasons>::newLeaf({e2Reason});
+        const auto equalityAnnotation =
+            LeafAnnotation<Reasons>::joinAnnotation(leftAnnotation, rightAnnotation);
+        litCopy.annotation = equalityAnnotation;
+        return litCopy;
       }
       return std::nullopt;
     }
@@ -736,9 +744,13 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
 
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
   auto model = getModel(openLeaf);
-  saturateModel(model);
 #if DEBUG
   model.exportModel("debug-isSpurious.model");
+#endif
+  saturateModel(model);
+#if DEBUG
+  model.exportInternalModel("debug-isSpurious.model-saturated-internal");
+  model.exportModel("debug-isSpurious.model-saturated");
 #endif
 
   // spurious if any negated literal of initial cube evaluates to false
