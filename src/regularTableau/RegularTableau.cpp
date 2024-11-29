@@ -406,7 +406,7 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
   }
 }
 
-bool RegularTableau::expandNode(RegularNode* node) {
+bool RegularTableau::expandNode(RegularNode *node) {
   // this function guarantees progress by introducing a new event
   // it drops literals that contain inactive events (called inactive literal)
   // an active event is an event that occurs positive in a setNonEmptiness predicate
@@ -638,20 +638,27 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // becomes inconsistent with parent
 
       if (node == rootNode.get()) {
-        removeChildren(node);
         Tableau t{node->cube};
         expandNodeInternal(node, &t);
       } else {
-        // TODO: update all parents? (not just reachabilityTreeParent)
-        auto nodeParent = node->reachabilityTreeParent;
-        // IMPORTANT: expandNodeInternal expects that nodeParent and t use the same event naming
-        auto renamedCube = node->cube;
-        auto renamingFromNodeToParent = nodeParent->getLabelForChild(node).inverted();
-        renameCube(renamingFromNodeToParent, renamedCube);
-        Tableau t{renamedCube};
-        removeEdge(nodeParent, node);
-        expandNodeInternal(nodeParent, &t);
+        // update all parents? (not just reachabilityTreeParent)
+        const auto parentsSnapshot = node->getParents();
+        for (const auto &[nodeParent, renamingFromParentToNode] : parentsSnapshot) {
+          // IMPORTANT: expandNodeInternal expects that nodeParent and t use the same event naming
+          // TODO: possible optimization: calculate tableau once, rename afterwards
+          auto renamedCube = node->cube;
+          auto renamingFromNodeToParent = renamingFromParentToNode.inverted();
+          renameCube(renamingFromNodeToParent, renamedCube);
+          Tableau t{renamedCube};
+          removeEdge(nodeParent, node);
+          expandNodeInternal(nodeParent, &t);
+        }
       }
+      // children are outdated: expansion of node had no annotation
+      // -> remove children after updating annotation
+      // IMPORTANT: must be excuted after if-block to ensure that we dont get a temporary invalid
+      // leaf (not in unreduced nodes)
+      removeChildren(node);
       exportDebug("debug-regularTableau");
       // IMPORTANT: invariant in validation of tableau is valid again
       return true;
