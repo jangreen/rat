@@ -252,7 +252,7 @@ bool RegularTableau::solve() {
     if (!isSpurious(currentNode)) {
       spdlog::info("[Solver] Answer: False");
       spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
-      getModel(currentNode).exportModel("counterexample");
+      getModelFromRoot(currentNode).exportModel("counterexample");
       exportCounterexamplePath(currentNode);
       exportProof("counterexample-proof");
       return false;
@@ -305,7 +305,7 @@ void RegularTableau::fixLazy() {
 
     // only reachable if no fixes apply
     exportProof("error-proof");
-    auto model = getModel(currentNode);
+    auto model = getModelFromRoot(currentNode);
     saturateModel(model);
     model.exportModel("error-model");
     throw std::logic_error("unreachable: no fix applicable for spurious model");
@@ -583,20 +583,19 @@ bool RegularTableau::saturationLazy(RegularNode *const openLeaf) {
   assert(openLeaf != nullptr);
   assert(openLeaf->isOpenLeaf());
 
-  // get model & saturated model (wrt to root namespace)
-  const auto model = getModel(openLeaf);
-  auto saturatedModel = model;
-  saturateModel(saturatedModel);
-#if DEBUG
-  model.exportModel("debug-saturationLazy.model");
-  saturatedModel.exportInternalModel("debug-saturationLazy.saturatedInternalModel");
-  saturatedModel.exportModel("debug-saturationLazy.saturatedModel");
-#endif
-
-  // TODO: maybe check every node, not just leafs
   // follow some path to root
   auto curNode = openLeaf;
   while (curNode != nullptr) {
+    // get model & saturated model (wrt to root namespace)
+    const auto model = getModel(curNode, openLeaf);
+    auto saturatedModel = model;
+    saturateModel(saturatedModel);
+#if DEBUG
+    model.exportModel("debug-saturationLazy.model");
+    saturatedModel.exportInternalModel("debug-saturationLazy.saturatedInternalModel");
+    saturatedModel.exportModel("debug-saturationLazy.saturatedModel");
+#endif
+
     assert(validateReachabilityTree());
     if (saturateNodeLazy(curNode, model, saturatedModel)) {
       Stats::counter("#saturations (lazy)")++;
@@ -613,22 +612,11 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
                                       const Model &saturatedModel) {
   // Evaluate every negated literal in nodes's cube on model/saturatedModel
   // Needs saturation iff some literal has different evaluations for both models
-  const auto &nodeRenaming = getRootRenaming(node);
   for (const auto &cubeLiteral : node->cube | std::views::filter(&Literal::negated)) {
-    // IMPORTANT: use event naming from root for model/saturatedModel
-    auto renamedLiteral = cubeLiteral;
-    renamedLiteral.rename(nodeRenaming);
-    const auto result = evaluateAndAnnotate(model, renamedLiteral);
-    const auto resultSaturated = evaluateAndAnnotate(saturatedModel, renamedLiteral);
+    const auto result = evaluateAndAnnotate(model, cubeLiteral);
+    const auto resultSaturated = evaluateAndAnnotate(saturatedModel, cubeLiteral);
 
-    // TODO: remove
-    // std::cout << "cube: " << cubeLiteral.toString() << "\n"
-    //           << (result.has_value() ? result->annotation->toString() : "?") << "#\n"
-    //           << (resultSaturated.has_value() ? resultSaturated->annotation->toString() : "?")
-    //           << std::endl;
     if (!result && resultSaturated) {  // node needs saturation
-      // std::cout << "violated literal: " << cubeLiteral.toString()
-      //          << "\n\treason:" << resultSaturated->annotation->toString() << std::endl;
       // Analyze the counterexample and determine which assumptions we need. Then, we apply
       // the same sequence of assumptions in the proof to exclude the spurious counterexample. We do
       // this by decorating the base relations and base sets in the respective expression in the
@@ -638,23 +626,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // - Here we just have to modify the proof accordingly.
       const auto &annotatedLiteral = resultSaturated.value();
       removeChildren(node);  // remove old children
-      const auto invertedRenaming = nodeRenaming.inverted();
-      auto inverseRenamedAnnotation =
-          annotatedLiteral.annotation->transform([&](const Reasons &reasons) {
-            Reasons renamedReasons;
-            renamedReasons.reserve(reasons.size());
-            for (const auto &reason : reasons) {
-              if (std::holds_alternative<CanonicalSet>(reason)) {
-                const auto setReason = std::get<CanonicalSet>(reason);
-                const auto renamedReason = setReason->rename(invertedRenaming);
-                renamedReasons.insert(renamedReason);
-              } else {
-                renamedReasons.insert(reason);
-              }
-            }
-            return renamedReasons;
-          });
-      cubeLiteral.annotation = Annotated::join(cubeLiteral.annotation, inverseRenamedAnnotation);
+      cubeLiteral.annotation = Annotated::join(cubeLiteral.annotation, annotatedLiteral.annotation);
       // IMPORTANT: invariant in validation of tableau is temporally violated
       // after removing all children we may have an open leaf that is not on unreduced nodes
       // IMPORTANT: we cannot just push it to unreducedNodes.push(node);
@@ -677,13 +649,26 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
   return false;
 }
 
-Model RegularTableau::getModel(const RegularNode *openLeaf) const {
-  const RegularNode *cur = openLeaf;
+Model RegularTableau::getModelFromRoot(const RegularNode *to) const {
+  return getModel(rootNode.get(), to);
+}
+
+Model RegularTableau::getModel(const RegularNode *from, const RegularNode *to) const {
+  const RegularNode *cur = to;
   Cube model;
-  while (cur != nullptr) {
+  while (true) {
+    if (cur == nullptr) {
+      throw std::logic_error("'to' is not reachable from 'from'");
+    }
     std::ranges::copy_if(cur->cube, std::back_inserter(model), &Literal::isPositiveAtomic);
     removeDuplicates(model);
 
+    // done if 'from' has been seen
+    if (cur == from) {
+      break;
+    }
+
+    // rename to naming from node 'cur->reachabilityTreeParent'
     if (cur->reachabilityTreeParent != nullptr) {
       auto renaming = cur->reachabilityTreeParent->getLabelForChild(cur).inverted();
       renameCube(renaming, model);
@@ -738,7 +723,7 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
 }
 
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
-  auto model = getModel(openLeaf);
+  auto model = getModelFromRoot(openLeaf);
 #if DEBUG
   model.exportModel("debug-isSpurious.model");
 #endif

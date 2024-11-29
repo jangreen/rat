@@ -448,7 +448,6 @@ void Literal::rename(const Renaming &renaming) {
       return;
     case PredicateOperation::setNonEmptiness: {
       set = set->rename(renaming);
-      // TODO: merge with saturateNodeLazy
       annotation = annotation->transform([&](const Reasons &reasons) {
         Reasons renamedReasons;
         renamedReasons.reserve(reasons.size());

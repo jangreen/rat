@@ -42,7 +42,8 @@ class RegularTableau {
   bool isInconsistentLazy(RegularNode *openLeaf);
   bool saturationLazy(RegularNode *openLeaf);
   bool saturateNodeLazy(RegularNode *node, const Model &model, const Model &saturatedModel);
-  Model getModel(const RegularNode *openLeaf) const;
+  Model getModelFromRoot(const RegularNode *to) const;
+  Model getModel(const RegularNode *from, const RegularNode *to) const;
   Renaming getRootRenaming(const RegularNode *node) const;
   bool isSpurious(const RegularNode *openLeaf) const;
   void fixLazy();
