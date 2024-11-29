@@ -336,12 +336,17 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
 inline void removeUselessLiterals(Cube &cube) {
   const auto &activePairs = gatherActivePairs(cube);
   filterNegatedLiterals(cube, activePairs);
+  // IMPORTANT: activePairs does not subsume active events
+  // example: ~0=1 with 0 inactive
+  const auto activeEvents = gatherActiveEvents(cube);
+  filterNegatedLiterals(cube, activeEvents);
 
+  // FIXME unsound:
   // Optimization: if normalized we can drop atomic negated literals
   // (they lead either to a contradiction or cannot be used in the future)
-  std::erase_if(cube, [&](const Literal &literal) {
-    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
-  });
+  // std::erase_if(cube, [&](const Literal &literal) {
+  //   return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+  // });
   assert(std::ranges::all_of(
       cube, [&](const auto &literal) { return isLiteralActive(literal, activePairs); }));
   assert(std::ranges::all_of(cube, [&](const Literal &literal) {

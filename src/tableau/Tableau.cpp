@@ -61,6 +61,7 @@ const Node *Tableau::getRoot() const { return rootNode.get(); }
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
+  exportDebug("debug-tableau");
 
   // simplify tableau
   removeUselessLiterals();
@@ -413,9 +414,8 @@ void Tableau::renameBranches(Node *equalityNode) {
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
 
   // do not rename <equalityNode>
-  renameBranchesInternalDown(equalityNode, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
-                             unrollingParents);
-
+  renameBranchesInternalDown(equalityNode, firstUnsharedNode, renaming, renamedLiterals,
+                             originalToCopy, unrollingParents);
 }
 
 // ===========================================================================================
