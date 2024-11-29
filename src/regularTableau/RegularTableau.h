@@ -36,7 +36,7 @@ class RegularTableau {
   void removeEdgeUpdateReachabilityTree(const RegularNode *parent, const RegularNode *child) const;
 
   // ================== Solving ==================
-  bool expandNode();
+  bool expandNode(RegularNode *node);
   void expandNodeInternal(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   bool isInconsistentLazy(RegularNode *openLeaf);
