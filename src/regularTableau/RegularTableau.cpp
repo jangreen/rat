@@ -46,10 +46,7 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   // 3) If no new literals, nothing to do
   if (std::ranges::any_of(dnf,
                           [&](const auto &cube) { return isSubset(cube, parent->getCube()); })) {
-    if (dnf.size() > 1) {
-      throw std::logic_error("This is no error but unexpected to happen.");
-    }
-    return std::nullopt;
+    return std::nullopt;  // there is no inconsistency
   }
 
   return dnf;
