@@ -61,6 +61,7 @@ const Node *Tableau::getRoot() const { return rootNode.get(); }
 DNF Tableau::computeDnf() {
   assert(validate());
   normalize();
+  exportDebug("debug-tableau");
 
   // simplify tableau
   removeUselessLiterals();
@@ -77,7 +78,7 @@ DNF Tableau::computeDnf() {
   assert(validateDNF(dnf));
   // no cube contains usless literals
   assert(std::ranges::all_of(dnf, [](const auto &cube) {
-    const auto activeEvents = gatherActiveEvents(cube);
+    const auto activeEvents = gatherPositiveEvents(cube);
     return std::ranges::all_of(
         cube, [&](const auto &literal) { return isLiteralActive(literal, activeEvents); });
   }));
@@ -413,9 +414,8 @@ void Tableau::renameBranches(Node *equalityNode) {
   renamedLastSharedNode->attachChild(firstUnsharedNode->detachFromParent());
 
   // do not rename <equalityNode>
-  renameBranchesInternalDown(equalityNode, firstUnsharedNode, renaming, renamedLiterals, originalToCopy,
-                             unrollingParents);
-
+  renameBranchesInternalDown(equalityNode, firstUnsharedNode, renaming, renamedLiterals,
+                             originalToCopy, unrollingParents);
 }
 
 // ===========================================================================================

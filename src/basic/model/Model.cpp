@@ -16,7 +16,7 @@ EventSet Model::getEquivalenceClass(const EventType &event) const {
 
 Model::Model(const Cube &cube) {
   // add events
-  events = gatherActiveEvents(cube);
+  events = gatherPositiveEvents(cube);
 
   // add identities
   for (const auto &equality : cube | std::views::filter(&Literal::isPositiveEqualityPredicate)) {

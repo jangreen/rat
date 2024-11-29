@@ -448,6 +448,20 @@ void Literal::rename(const Renaming &renaming) {
       return;
     case PredicateOperation::setNonEmptiness: {
       set = set->rename(renaming);
+      annotation = annotation->transform([&](const Reasons &reasons) {
+        Reasons renamedReasons;
+        renamedReasons.reserve(reasons.size());
+        for (const auto &reason : reasons) {
+          if (std::holds_alternative<CanonicalSet>(reason)) {
+            const auto setReason = std::get<CanonicalSet>(reason);
+            const auto renamedReason = setReason->rename(renaming);
+            renamedReasons.insert(renamedReason);
+          } else {
+            renamedReasons.insert(reason);
+          }
+        }
+        return renamedReasons;
+      });
       return;
     }
     case PredicateOperation::edge:
