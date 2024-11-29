@@ -92,6 +92,7 @@ bool RegularTableau::validate() const {
     if (!leafValid) {
       std::cout << " Leaked node: " << openLeaf << std::endl;
       print(openLeaf->cube);
+      exportDebug("debug-regularTableau");
     }
     assert(leafValid);
     return leafValid;
@@ -252,6 +253,7 @@ bool RegularTableau::solve() {
       spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
       getModel(currentNode).exportModel("counterexample");
       exportCounterexamplePath(currentNode);
+      exportProof("counterexample-proof");
       return false;
     }
 
@@ -412,7 +414,7 @@ bool RegularTableau::expandNode() {
     removeUselessLiterals(currentCube);
   }
 
-  // 2. apply modlal rule & normalize
+  // 2. apply modal rule & normalize
   Tableau tableau{currentCube};
   // IMPORTANT: currently we rely on this property to be correct.
   // intuition: using always an event that occurrs prefers events that occcur once to events that
@@ -732,9 +734,13 @@ Renaming RegularTableau::getRootRenaming(const RegularNode *node) const {
 
 bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
   auto model = getModel(openLeaf);
-  saturateModel(model);
 #if DEBUG
   model.exportModel("debug-isSpurious.model");
+#endif
+  saturateModel(model);
+#if DEBUG
+  model.exportInternalModel("debug-isSpurious.model-saturated-internal");
+  model.exportModel("debug-isSpurious.model-saturated");
 #endif
 
   // spurious if any negated literal of initial cube evaluates to false
