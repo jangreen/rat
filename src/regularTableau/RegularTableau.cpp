@@ -623,7 +623,6 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // - Decorating the expressions is already done insde checkAndMarkSaturation.
       // - Here we just have to modify the proof accordingly.
       const auto &annotatedLiteral = resultSaturated.value();
-      removeChildren(node);  // remove old children
       const auto invertedRenaming = nodeRenaming.inverted();
       auto inverseRenamedAnnotation =
           annotatedLiteral.annotation->transform([&](const Reasons &reasons) {
@@ -651,8 +650,22 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // expand saturated node
       // TODO: is this sufficient? saturation must ensure that it either derives new literals or
       // becomes inconsistent with parent
-      Tableau t{node->cube};
-      expandNodeInternal(node, &t);
+
+      if (node == rootNode.get()) {
+        removeChildren(node);
+        Tableau t{node->cube};
+        expandNodeInternal(node, &t);
+      } else {
+        // TODO: update all parents? (not just reachabilityTreeParent)
+        auto nodeParent = node->reachabilityTreeParent;
+        // IMPORTANT: expandNodeInternal expects that nodeParent and t use the same event naming
+        auto renamedCube = node->cube;
+        auto renamingFromNodeToParent = nodeParent->getLabelForChild(node).inverted();
+        renameCube(renamingFromNodeToParent, renamedCube);
+        Tableau t{renamedCube};
+        removeEdge(nodeParent, node);
+        expandNodeInternal(nodeParent, &t);
+      }
       exportDebug("debug-regularTableau");
       // IMPORTANT: invariant in validation of tableau is valid again
       return true;
