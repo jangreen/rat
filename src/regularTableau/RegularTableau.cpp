@@ -555,8 +555,17 @@ std::optional<Literal> evaluateAndAnnotate(const Model &model, const Literal &ne
       const auto e1 = negatedLiteral.leftEvent->label.value();
       const auto e2 = negatedLiteral.rightEvent->label.value();
       if (model.containsIdentity(e1, e2)) {
-        throw std::logic_error("does this happen?");
-        return negatedLiteral;
+        auto litCopy = negatedLiteral;
+        const auto e1e2Reason = model.getReason(e1, e2).value();
+        assert(e1e2Reason != nullptr);
+        const auto e1Reason = negatedLiteral.leftEvent->imageWith(e1e2Reason);
+        const auto e2Reason = negatedLiteral.rightEvent->domainWith(e1e2Reason);
+        const auto leftAnnotation = LeafAnnotation<Reasons>::newLeaf({e1Reason});
+        const auto rightAnnotation = LeafAnnotation<Reasons>::newLeaf({e2Reason});
+        const auto equalityAnnotation =
+            LeafAnnotation<Reasons>::joinAnnotation(leftAnnotation, rightAnnotation);
+        litCopy.annotation = equalityAnnotation;
+        return litCopy;
       }
       return std::nullopt;
     }
