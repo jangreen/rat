@@ -64,4 +64,8 @@ class RegularTableau {
 
   bool solve();
   void exportProof(const std::string &filename) const;
+
+  static bool dropNegatedAtomicPredicatesOptimizationON;
 };
+
+inline bool RegularTableau::dropNegatedAtomicPredicatesOptimizationON = true;
