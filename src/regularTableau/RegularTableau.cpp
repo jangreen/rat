@@ -246,7 +246,7 @@ bool RegularTableau::solve() {
     assert(isReachableFromRoots(currentNode));
 
     // current node = open leaf
-    if (expandNode()) {
+    if (expandNode(currentNode)) {
       continue;
     }
 
@@ -408,11 +408,11 @@ void RegularTableau::removeEdgeUpdateReachabilityTree(const RegularNode *parent,
   }
 }
 
-bool RegularTableau::expandNode() {
+bool RegularTableau::expandNode(RegularNode *node) {
   // this function guarantees progress by introducing a new event
   // it drops literals that contain inactive events (called inactive literal)
   // an active event is an event that occurs positive in a setNonEmptiness predicate
-  auto cube = currentNode->cube;
+  auto cube = node->cube;
   const auto activeEvents = gatherActiveEvents(cube);
 
   // 1. drop inactive negated literals
@@ -429,7 +429,7 @@ bool RegularTableau::expandNode() {
   auto minimalOccurringActiveEvent = gatherMinimalOccurringActiveEvent(cube);
   if (minimalOccurringActiveEvent &&
       tableau.tryApplyModalRuleOnce(minimalOccurringActiveEvent.value())) {
-    expandNodeInternal(currentNode, &tableau);
+    expandNodeInternal(node, &tableau);
     assert(validate());
     return true;
   }
@@ -627,7 +627,6 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // - Decorating the expressions is already done insde checkAndMarkSaturation.
       // - Here we just have to modify the proof accordingly.
       const auto &annotatedLiteral = resultSaturated.value();
-      removeChildren(node);  // remove old children
       cubeLiteral.annotation = Annotated::join(cubeLiteral.annotation, annotatedLiteral.annotation);
       // IMPORTANT: invariant in validation of tableau is temporally violated
       // after removing all children we may have an open leaf that is not on unreduced nodes
@@ -636,14 +635,33 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // example: A<=B |- ~A&B, A(0). B gets saturation annotation, but then ~B(0) would be active
       // TODO: assert(Annotated::validate(cubeLiteral.annotatedSet()));
 
-      // normalize/dnf
-      Tableau tableau(node->getCube());
-      const auto &dnf = tableau.computeDnf();
-      if (dnf.empty()) {
-        node->closed = true;
+      // expand saturated node
+      // TODO: is this sufficient? saturation must ensure that it either derives new literals or
+      // becomes inconsistent with parent
+
+      if (node == rootNode.get()) {
+        Tableau t{node->cube};
+        expandNodeInternal(node, &t);
       } else {
-        newChildren(node, dnf);
+        // update all parents? (not just reachabilityTreeParent)
+        const auto parentsSnapshot = node->getParents();
+        for (const auto &[nodeParent, renamingFromParentToNode] : parentsSnapshot) {
+          // IMPORTANT: expandNodeInternal expects that nodeParent and t use the same event naming
+          // TODO: possible optimization: calculate tableau once, rename afterwards
+          auto renamedCube = node->cube;
+          auto renamingFromNodeToParent = renamingFromParentToNode.inverted();
+          renameCube(renamingFromNodeToParent, renamedCube);
+          Tableau t{renamedCube};
+          removeEdge(nodeParent, node);
+          expandNodeInternal(nodeParent, &t);
+        }
       }
+      // children are outdated: expansion of node had no annotation
+      // -> remove children after updating annotation
+      // IMPORTANT: must be excuted after if-block to ensure that we dont get a temporary invalid
+      // leaf (not in unreduced nodes)
+      removeChildren(node);
+      exportDebug("debug-regularTableau");
       // IMPORTANT: invariant in validation of tableau is valid again
       return true;
     }
