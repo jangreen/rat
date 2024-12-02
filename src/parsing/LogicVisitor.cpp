@@ -1,10 +1,8 @@
 #include "LogicVisitor.h"
 
 #include <any>
-#include <iostream>
 
 #include "../Assumption.h"
-#include "../basic/annotations/LeafAnnotated.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -239,14 +237,14 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     LogicParser::RelationFencerelContext *context) {
   const auto expr = std::any_cast<CanonicalExpression>(context->e->accept(this));
   if (!std::holds_alternative<CanonicalSet>(expr)) {
-    throw parsingError(context, "fencerel() of unknown relation" );
+    throw parsingError(context, "fencerel() of unknown relation");
   }
   const auto setExpr = std::get<CanonicalSet>(expr);
   const CanonicalRelation setId = Relation::setIdentity(setExpr);
   const CanonicalRelation po = Relation::newBaseRelation("po");
   const CanonicalRelation po_set = Relation::newRelation(RelationOperation::composition, po, setId);
   const CanonicalRelation po_set_po =
-    Relation::newRelation(RelationOperation::composition, po_set, po);
+      Relation::newRelation(RelationOperation::composition, po_set, po);
   CanonicalExpression result = po_set_po;
   return result;
 }

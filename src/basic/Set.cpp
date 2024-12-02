@@ -393,10 +393,10 @@ std::string Set::toString() const {
       output += std::to_string(*label);
       break;
     case SetOperation::image:
-      output += "(" + leftOperand->toString() + ";" + relation->toString() + ")";
+      output += "(" + leftOperand->toString() + "." + relation->toString() + ")";
       break;
     case SetOperation::domain:
-      output += "(" + relation->toString() + ";" + leftOperand->toString() + ")";
+      output += "(" + relation->toString() + "." + leftOperand->toString() + ")";
       break;
     case SetOperation::baseSet:
       output += *identifier;
