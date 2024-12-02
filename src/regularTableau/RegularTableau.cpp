@@ -33,7 +33,9 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
   assert(validateNormalizedCube(mergedCube));
 
   Tableau tableau(mergedCube);
+  RegularTableau::dropNegatedAtomicPredicatesOptimizationON = false;
   auto dnf = tableau.computeDnf();
+  RegularTableau::dropNegatedAtomicPredicatesOptimizationON = true;
 
   // 2) filter literal relevant for parent
   // TODO: use active or positive?
