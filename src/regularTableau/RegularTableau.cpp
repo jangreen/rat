@@ -640,6 +640,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
       // becomes inconsistent with parent
 
       if (node == rootNode.get()) {
+        removeChildren(node);
         Tableau t{node->cube};
         expandNodeInternal(node, &t);
       } else {
@@ -655,12 +656,12 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
           removeEdge(nodeParent, node);
           expandNodeInternal(nodeParent, &t);
         }
+        // children are outdated: expansion of node had no annotation
+        // -> remove children after updating annotation
+        // IMPORTANT: must be excuted after if-block to ensure that we dont get a temporary invalid
+        // leaf (not in unreduced nodes)
+        removeChildren(node);
       }
-      // children are outdated: expansion of node had no annotation
-      // -> remove children after updating annotation
-      // IMPORTANT: must be excuted after if-block to ensure that we dont get a temporary invalid
-      // leaf (not in unreduced nodes)
-      removeChildren(node);
       exportDebug("debug-regularTableau");
       // IMPORTANT: invariant in validation of tableau is valid again
       return true;
