@@ -251,18 +251,20 @@ bool RegularTableau::solve() {
     }
 
     // current node = complete open leaf
-    if (!isSpurious(currentNode)) {
-      spdlog::info("[Solver] Answer: False");
-      spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
-      getModelFromRoot(currentNode).exportModel("counterexample");
-      exportCounterexamplePath(currentNode);
-      exportProof("counterexample-proof");
-      return false;
-    }
+    while (isReachableFromRoots(currentNode) && currentNode->isOpenLeaf()) {
+      if (!isSpurious(currentNode)) {
+        spdlog::info("[Solver] Answer: False");
+        spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
+        getModelFromRoot(currentNode).exportModel("counterexample");
+        exportCounterexamplePath(currentNode);
+        exportProof("counterexample-proof");
+        return false;
+      }
 
-    // spurious model
-    // fix inconsistencies or apply assumptions lazy
-    fixLazy();
+      // spurious model
+      // fix inconsistencies or apply assumptions lazy
+      fixLazy();
+    }
   }
   spdlog::info("[Solver] Answer: True");
   exportProof("proof");
@@ -270,48 +272,47 @@ bool RegularTableau::solve() {
 }
 
 void RegularTableau::fixLazy() {
-  while (isReachableFromRoots(currentNode) && currentNode->isOpenLeaf()) {
-    // IMPORTANT: each loop iteration corresponds to a different path to the root
-    // which gives a different model
+  // IMPORTANT: each loop iteration corresponds to a different path to the root
+  // which gives a different model
 
-    // 3) Check inconsistencies lazy
-    // TODO: test in isolation
-    // TODO: fix it: bug: an inconsistency fix currently generates a new inconsistent/fixed child
-    // if inconsistency is checked again this gets removed and closed
-    // -> need again epsilon edges
-    if (isInconsistentLazy(currentNode)) {
-      assert(validate());
-      exportDebug("debug-regularTableau");
-      continue;
-    }
-
-    // 4) Check saturation lazy
-    /*
-     *
-     * Goal: compute needed saturations per occurrence such that counterexample gets removed
-     * Issue: one edge may belong to multiple occurrences (example po & po)
-     *        one occurrence may have multiple edges (example Kleene Star)
-     * Approach: compute per occurrence the max saturation of all edges that belong to the
-     * counterexample
-     *
-     *  1. Compute reason (edges that witness spuriousness of counterexample) -> doable
-     *      - we know the saturations needed for a reason
-     *      - we don't know to which occurrences do the edges belong
-     */
-    if (saturationLazy(currentNode)) {
-      assert(validate());
-      // guarantee: currentNode is either not reachableFromRoot anymore or has a larger saturation
-      // annotation and has been pushed to unreduced nodes
-      continue;
-    }
-
-    // only reachable if no fixes apply
-    exportProof("error-proof");
-    auto model = getModelFromRoot(currentNode);
-    saturateModel(model);
-    model.exportModel("error-model");
-    throw std::logic_error("unreachable: no fix applicable for spurious model");
+  // 3) Check inconsistencies lazy
+  // TODO: test in isolation
+  // TODO: fix it: bug: an inconsistency fix currently generates a new inconsistent/fixed child
+  // if inconsistency is checked again this gets removed and closed
+  // -> need again epsilon edges
+  if (isInconsistentLazy(currentNode)) {
+    assert(validate());
+    exportDebug("debug-regularTableau");
+    return;
   }
+
+  // 4) Check saturation lazy
+  /*
+   *
+   * Goal: compute needed saturations per occurrence such that counterexample gets removed
+   * Issue: one edge may belong to multiple occurrences (example po & po)
+   *        one occurrence may have multiple edges (example Kleene Star)
+   * Approach: compute per occurrence the max saturation of all edges that belong to the
+   * counterexample
+   *
+   *  1. Compute reason (edges that witness spuriousness of counterexample) -> doable
+   *      - we know the saturations needed for a reason
+   *      - we don't know to which occurrences do the edges belong
+   */
+  if (saturationLazy(currentNode)) {
+    assert(validate());
+    // guarantee: currentNode is either not reachableFromRoot anymore or has a larger saturation
+    // annotation and has been pushed to unreduced nodes
+    return;
+  }
+
+  // only reachable if no fixes apply
+  exportProof("error-proof");
+  auto model = getModelFromRoot(currentNode);
+  model.exportModel("error-model");
+  saturateModel(model);
+  model.exportModel("error-model-saturated");
+  throw std::logic_error("unreachable: no fix applicable for spurious model");
 }
 
 // assumptions:
