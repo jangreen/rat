@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ranges>
 
+#include "../regularTableau/RegularTableau.h"
 #include "../utility.h"
 #include "Rules.h"
 #include "Tableau.h"
@@ -459,20 +460,23 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   }
 
   // postprocessing
-  // FIXME not sound?
-  // Stats::counter("appendBranch - postprocessing (conj)").reset();
-  // for (const auto node : newNodes) {
-  //   const bool needsSaturation =
-  //       node->literal.annotation->hasValue() && !node->literal.annotation->getValue().empty();
-  //   if (node->literal.isNegatedAtomic() && !needsSaturation &&
-  //       node->literal.operation != PredicateOperation::equality) {
-  //     // CAUTION:
-  //     // currently exclude ~ 0 & 0 -> ~ 0 = 0 (dropped) -> False
-  //     // similar: ~ 0 & 1 (dropped)-> ~0=1 st. it could be saturated
-  //     tableau->deleteNode(node);
-  //     Stats::counter("appendBranch - postprocessing (conj)")++;
-  //   }
-  // }
+  // IMPORTANT: Unsound if used for inconsistency computation:
+  if (RegularTableau::dropNegatedAtomicPredicatesOptimizationON) {
+    Stats::counter("appendBranch - postprocessing (conj)").reset();
+    for (const auto node : newNodes) {
+      const bool needsSaturation =
+          node->literal.annotation->hasValue() && !node->literal.annotation->getValue().empty();
+      // TODO: optimization for sets is safe in inconsistency reasononing
+      // -> use node->literal.negated && node->literal.operation == PredicateOperation::set
+      if (node->literal.isNegatedAtomic() && !needsSaturation) {
+        // CAUTION:
+        // currently exclude ~ 0 & 0 -> ~ 0 = 0 (dropped) -> False
+        // similar: ~ 0 & 1 (dropped)-> ~0=1 st. it could be saturated
+        tableau->deleteNode(node);
+        Stats::counter("appendBranch - postprocessing (conj)")++;
+      }
+    }
+  }
 }
 void Node::appendBranchInternal(DNF &dnf) {
   // postprocessing of dnf (here we have seen the full branch)
