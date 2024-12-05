@@ -35,7 +35,7 @@
 // }
 
 void test(const bool testResult) {
-  auto allPassed = true;
+  std::vector<std::string> failedAssertions;
 
   const auto filePath = testResult ? "benchmarks/tests/true" : "benchmarks/tests/false";
   for (const auto &entry : std::filesystem::recursive_directory_iterator(filePath)) {
@@ -47,9 +47,12 @@ void test(const bool testResult) {
     const auto answers = rat(entry.path(), 3, true);
 
     for (int i = 1; const auto &answer : answers) {
+      const auto assertion = std::format("{}[assertion {}]", entry.path(), i);
       const auto passed = answer == testResult;
-      allPassed = allPassed && passed;
-      std::cout << entry.path() << "[assertion " << i << "]: ";
+      if (!passed) {
+        failedAssertions.push_back(assertion);
+      }
+      std::cout << assertion << ": ";
       if (answer) {
         std::cout << (passed ? "Passed\n" : "Failed\n");
       } else {
@@ -59,7 +62,10 @@ void test(const bool testResult) {
     }
   }
 
-  ASSERT_TRUE(allPassed);
+  for (const auto &failedAssertion : failedAssertions) {
+    std::cout << failedAssertion << std::endl;
+  }
+  ASSERT_TRUE(failedAssertions.empty());
 }
 
 // void test(const bool testResult) {
