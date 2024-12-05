@@ -56,8 +56,8 @@ TEST(Tests, Unit) {
 
 TEST(Tests, Kater) {
   ASSERT_TRUE(rat("benchmarks/kater/kater_3_1-eco", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
+  ASSERT_TRUE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
+  ASSERT_TRUE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
 }
 
 TEST(Tests, MemoryModels) {
