@@ -1,0 +1,2 @@
+// long counterexample
+assert (a;a;a)*;(a;a) <= (a;a;a;a)*;(a;a | a | id)

@@ -1,8 +1,8 @@
 #include <boost/unordered/unordered_node_set.hpp>
 #include <cassert>
 
-#include "../Assumption.h"
-#include "../utility.h"
+#include "../helper/utility.h"
+#include "../parsing/Assumption.h"
 #include "Literal.h"
 
 namespace {

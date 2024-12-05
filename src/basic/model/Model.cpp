@@ -1,7 +1,7 @@
 #include "Model.h"
 
-#include "../../Assumption.h"
-#include "../../utility.h"
+#include "../../helper/utility.h"
+#include "../../parsing/Assumption.h"
 
 EventSet Model::getEquivalenceClass(const EventType &event) const {
   // TODO: use better datastructure / transformer
