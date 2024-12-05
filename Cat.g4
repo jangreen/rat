@@ -43,8 +43,8 @@ expression:
 	| e1 = expression AMP e2 = expression			# intersection // set intersection, relational intersection
 	| e1 = expression BSLASH e2 = expression		# relationMinus
 	| e1 = expression BAR e2 = expression			# union // set union, relational union
-	| LBRAC DOMAIN_ LPAR e = expression RPAR RBRAC	# relationDomainIdentity
-	| LBRAC RANGE LPAR e = expression RPAR RBRAC	# relationRangeIdentity
+	| DOMAIN_ LPAR e = expression RPAR	# relationDomain
+	| RANGE LPAR e = expression RPAR	# relationRange
 	| (
 		TOID LPAR e = expression RPAR
 		| LBRAC e = expression RBRAC
