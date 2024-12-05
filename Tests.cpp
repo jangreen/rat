@@ -1,40 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
-#include <future>
 
 #include "src/Rat.h"
 
-// std::mutex mutex;
-// std::condition_variable cv;
-// std::atomic ready = false;  // avoid spurious wakeup
-//
-// template <typename ReturnType>
-// std::optional<ReturnType> callWithTimeout(const int duration,
-//                                           const std::function<ReturnType()> &f) {
-//   ReturnType returnValue;
-//   ready = false;
-//
-//   std::thread thread([&]() {
-//     returnValue = f();
-//
-//     std::lock_guard lock(mutex);
-//     ready = true;
-//     cv.notify_one();
-//   });
-//   thread.detach();
-//
-//   std::unique_lock lock(mutex);
-//   while (!ready) {
-//     if (cv.wait_for(lock, std::chrono::seconds(duration)) == std::cv_status::timeout) {
-//       return std::nullopt;
-//     }
-//   }
-//
-//   return returnValue;
-// }
-
-void test(const bool testResult) {
+void unitTest(const bool testResult) {
   std::vector<std::string> failedAssertions;
 
   const auto filePath = testResult ? "benchmarks/tests/true" : "benchmarks/tests/false";
@@ -74,45 +44,26 @@ void test(const bool testResult) {
   }
 }
 
-// void test(const bool testResult) {
-//   auto allPassed = true;
-//
-//   std::vector<std::future<std::vector<bool>>> futures;
-//
-//   const auto filePath = testResult ? "benchmarks/tests/true" : "benchmarks/tests/false";
-//   for (const auto &entry : std::filesystem::recursive_directory_iterator(filePath)) {
-//     if (entry.is_directory()) {
-//       continue;
-//     }
-//
-//     futures.emplace_back(std::async(std::launch::async, rat, entry.path(), true));
-//     auto &future = futures.back();
-//     std::cout << entry.path() << ": " << std::endl;
-//
-//     const auto futureStatus = future.wait_for(std::chrono::seconds(3));
-//     std::cout << "asdsadadsad" << std::endl;
-//
-//     if (futureStatus == std::future_status::ready) {
-//       const auto answers = future.get();
-//       if (answers.empty()) {
-//         std::cout << "empy" << std::endl;
-//       }
-//       const auto passed = std::ranges::all_of(answers, [&](bool b) { return b == testResult; });
-//       allPassed = allPassed && passed;
-//       std::cout << (passed ? "Passed\n" : "Failed\n");
-//     } else {
-//       std::cout << "Timeout\n";
-//     }
-//   }
-//
-//   ASSERT_TRUE(allPassed);
-// }
-
-TEST(Test, all) {
-  test(true);
-  test(false);
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
 
-TEST(Test, True) { test(true); }
+TEST(Tests, Unit) {
+  unitTest(true);
+  unitTest(false);
+}
 
-TEST(Test, False) { test(false); }
+TEST(Tests, Kater) {
+  ASSERT_TRUE(rat("benchmarks/kater/kater_3_1-eco", 3, true).at(0).value());
+  ASSERT_FALSE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
+  ASSERT_FALSE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
+}
+
+TEST(Tests, MemoryModels) {
+  ASSERT_TRUE(rat("benchmarks/memorymodels/uniproc+rfi_po", 3, true).at(0).value());
+  ASSERT_FALSE(rat("benchmarks/memorymodels/uniproc+rfi_po#f1", 3, true).at(0).value());
+  ASSERT_FALSE(rat("benchmarks/memorymodels/uniproc+rfi_po#f2", 3, true).at(0).value());
+
+  ASSERT_FALSE(rat("benchmarks/memorymodels/lkmm-counterexample", 3, true).at(0).value());
+}

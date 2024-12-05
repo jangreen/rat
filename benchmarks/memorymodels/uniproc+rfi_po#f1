@@ -1,0 +1,14 @@
+let int = po | po^-1 | id
+let rfe = rf-base & ext & loc
+let rfi = rf-base & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let fr = rf^-1;co
+
+let com = (co | fr | rf)
+let uniproc = (po-loc | com)^+ & id
+
+//assume loc^-1 <= loc
+assume uniproc <= 0
+
+assert rfi <= po

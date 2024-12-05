@@ -3,6 +3,8 @@
 // then normalizing yields the same node again
 // thus a self loop with no progress is added
 
+// Expected result is TRUE
+
 let rfi = rf & (po | po^-1)
 let oota = po;po;po;rf & id
 
