@@ -70,6 +70,9 @@ class Logic : LogicBaseVisitor {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
+    if (!stream.good()) {
+      throw std::runtime_error("Could not open file.");
+    }
     antlr4::ANTLRInputStream input(stream);
 
     LogicLexer lexer(&input);

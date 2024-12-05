@@ -19,6 +19,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   DNF assertionCubes;
 
   for (const auto statementContext : context->statement()) {
+    std::cout << statementContext->getText() << std::endl;
     if (statementContext->letDefinition()) {
       visitLetDefinition(statementContext->letDefinition());
     } else if (statementContext->inclusion()) {
@@ -51,7 +52,43 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
+  if (!ctx->AS()) {
+    std::ignore = parse(ctx->FILEPATH()->getText());
+    return 0;
+  }
+
+  // 1. snapshot old mapping
+  // 2. calculate new mapping using parse
+  // 3. mapping after include: old mapping updated by new mapping
+  auto oldDerivedRelations = derivedRelations;
+  auto oldDerivedSets = derivedSets;
+  auto oldDefinedSingletons = definedSingletons;
   std::ignore = parse(ctx->FILEPATH()->getText());
+
+  const auto namespaceString = ctx->RELNAME()->getText() + ".";
+  std::unordered_map<std::string, CanonicalRelation> renamedDerivedRelations;
+  for (const auto &[key, relation] : derivedRelations) {
+    renamedDerivedRelations.insert({namespaceString + key, relation});
+    std::cout << namespaceString + key << std::endl;
+  }
+  derivedRelations = renamedDerivedRelations;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDerivedSets;
+  for (const auto &[key, set] : derivedSets) {
+    renamedDerivedSets.insert({namespaceString + key, set});
+  }
+  derivedSets = renamedDerivedSets;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDefinedSingletons;
+  for (const auto &[key, singleton] : definedSingletons) {
+    renamedDefinedSingletons.insert({namespaceString + key, singleton});
+  }
+  definedSingletons = renamedDefinedSingletons;
+
+  derivedRelations.merge(oldDerivedRelations);
+  derivedSets.merge(oldDerivedSets);
+  definedSingletons.merge(oldDefinedSingletons);
+
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {

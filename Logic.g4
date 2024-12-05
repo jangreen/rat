@@ -5,7 +5,7 @@ proof: statement* EOF;
 
 statement: letDefinition | inclusion | hypothesis | assertion;
 
-inclusion: FILEINCLUDE FILEPATH;
+inclusion: FILEINCLUDE FILEPATH (AS RELNAME)?;
 
 assertion: ASSERT e1 = expression INEQUAL e2 = expression;
 
@@ -15,4 +15,4 @@ FILEINCLUDE: 'include';
 ASSUME: 'assume';
 ASSERT: 'assert';
 INEQUAL: '<=';
-FILEPATH: '.'? '/' ~'/' (.)+? ('.cat' | '.kat');
+FILEPATH: '.'? '/' ~'/' (.)*? ('.cat' | '.kat');
