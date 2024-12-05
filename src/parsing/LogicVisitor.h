@@ -67,13 +67,14 @@ class Logic : LogicBaseVisitor {
   static std::unordered_map<std::string, CanonicalRelation> derivedRelations;
   static std::unordered_map<std::string, CanonicalSet> derivedSets;
   static std::unordered_map<std::string, CanonicalSet> definedSingletons;
-  static DNF parse(const std::string &filePath) {
+  static void resetParser() {
     // reset assumptions
     Assumption::reset();
     derivedRelations.clear();
     derivedSets.clear();
     definedSingletons.clear();
-
+  }
+  static DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
