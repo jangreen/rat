@@ -1,0 +1,10 @@
+assert A | B <= B | A
+assert A & B <= B & A
+assert (A | B) | C <= A | (B | C)
+assert (A & B) & C <= A & (B & C)
+assert A & (B | C) <= (A & B) | (A & C)
+assert A | (B & C) <= (A | B) & (A | C)
+assert A | A <= A
+assert A & A <= A
+assert A | (A & B) <= A
+assert A & (A | B) <= A

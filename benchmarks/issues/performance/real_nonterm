@@ -1,0 +1,8 @@
+let int = po | po^-1
+let rfi = rf & int
+
+let a = ([R];po;[R] | [W];po;[W] | rfi^-1)^+ & id
+let b = ([R];po;[R] | rfi)^*;(rf & po)
+
+assume a <= 0
+assert b <= 0
