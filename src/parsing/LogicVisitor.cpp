@@ -2,7 +2,7 @@
 
 #include <any>
 
-#include "../Assumption.h"
+#include "../parsing/Assumption.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {

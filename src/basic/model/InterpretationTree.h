@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/container/flat_set.hpp>
 
-#include "../../assert_catch.h"
+#include "../../helper/assert_catch.h"
 #include "../Set.h"
 #include "Event.h"
 

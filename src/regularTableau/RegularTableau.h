@@ -1,7 +1,6 @@
 #pragma once
 #include <fstream>
 #include <queue>
-#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -62,7 +61,7 @@ class RegularTableau {
  public:
   explicit RegularTableau(const Cube &initialLiterals);
 
-  bool solve();
+  std::optional<bool> solve(int timeout);
   void exportProof(const std::string &filename) const;
 
   static bool dropNegatedAtomicPredicatesOptimizationON;

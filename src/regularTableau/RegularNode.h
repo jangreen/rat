@@ -10,7 +10,6 @@ typedef Renaming EdgeLabel;
 typedef std::set<RegularNode *> NodeSet;
 
 class RegularNode {
- private:
   friend class RegularTableau;
   explicit RegularNode(Cube cube);
 

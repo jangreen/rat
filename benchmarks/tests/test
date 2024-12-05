@@ -1,1 +1,24 @@
-assert co <= [R]^-1
+// ========= Common definitions =========
+let int = po | po^-1
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+
+let rmw = [Marked];rmw;[W & Marked & RMW] & po
+
+// ========= Common assumptions =========
+assume W & R <= 0
+assume po+ <= po
+
+// ========= LKMM =========
+
+let ppo = po; [UL]; rf
+let cumul-fence =  (x | ppo) ; [Marked]
+
+// ========= Actual Goals =========
+
+let f1 = cumul-fence ; cumul-fence
+let f2 = cumul-fence ; (rf; rmw)* ; cumul-fence
+
+assert f2 <= f1

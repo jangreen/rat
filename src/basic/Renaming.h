@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-#include "../range_of.h"
+#include "../helper/range_of.h"
 
 /*
  * A Renaming is a partial permutation int -> int.

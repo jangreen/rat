@@ -4,9 +4,9 @@
 
 #include <iostream>
 
-#include "../Assumption.h"
+#include "../helper/utility.h"
+#include "../parsing/Assumption.h"
 #include "../tableau/Rules.h"
-#include "../utility.h"
 #include "annotations/LeafAnnotation.h"
 
 Literal::Literal(const bool negated, const PredicateOperation operation, const CanonicalSet set,

@@ -1,0 +1,10 @@
+let a = x;po;[A]
+let b = po;[B];po
+
+assume po+ <= po
+
+// TRUE (FALSE without assumption)
+assert (a | b) <= (a | b) & po
+
+// FALSE
+// assert a <= (a | b) & po
