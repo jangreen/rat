@@ -10,6 +10,7 @@
 
 #include "../basic/Literal.h"
 #include "../cat/Constraint.h"
+#include "Assumption.h"
 #include "LogicVisitor.h"
 
 class Logic : LogicBaseVisitor {
@@ -67,6 +68,12 @@ class Logic : LogicBaseVisitor {
   static std::unordered_map<std::string, CanonicalSet> derivedSets;
   static std::unordered_map<std::string, CanonicalSet> definedSingletons;
   static DNF parse(const std::string &filePath) {
+    // reset assumptions
+    Assumption::reset();
+    derivedRelations.clear();
+    derivedSets.clear();
+    definedSingletons.clear();
+
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);

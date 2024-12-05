@@ -7,8 +7,8 @@
 #include <map>
 #include <unordered_set>
 
-#include "../tableau/Rules.h"
-#include "../utility.h"
+#include "../Rat.h"
+#include "../helper/utility.h"
 
 namespace {
 
@@ -229,29 +229,37 @@ void RegularTableau::newEpsilonEdge(RegularNode *parent, RegularNode *child,
   assert(validate());
 }
 
-bool RegularTableau::solve() {
+std::optional<bool> RegularTableau::solve(int timeout) {
   while (!unreducedNodes.empty()) {
+    // Return if timeout
+    if (0 < timeout && timeout < since(start)) {
+      return std::nullopt;
+    }
+
     Stats::counter("#iterations")++;
     currentNode = unreducedNodes.top();
     exportDebug("debug-regularTableau");
     unreducedNodes.pop();
     assert(validate());
 
-    // skip closed nodes (aka not open leaf)
-    // skip non reachable nodes
+    // Skip closed nodes (aka not open leaf)
+    // Skip non reachable nodes
     if (!currentNode->isOpenLeaf() || !isReachableFromRoots(currentNode)) {
       continue;
     }
     assert(currentNode->isOpenLeaf());
     assert(isReachableFromRoots(currentNode));
 
-    // current node = open leaf
+    // Current node is open leaf -> expand
     if (expandNode(currentNode)) {
       continue;
     }
 
-    // current node = complete open leaf
+    // Current node is complete open leaf -> Check if model spurious
     while (isReachableFromRoots(currentNode) && currentNode->isOpenLeaf()) {
+      // IMPORTANT: each loop iteration corresponds to a different path to the root
+      // which gives a different model
+
       if (!isSpurious(currentNode)) {
         spdlog::info("[Solver] Answer: False");
         spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
@@ -261,8 +269,7 @@ bool RegularTableau::solve() {
         return false;
       }
 
-      // spurious model
-      // fix inconsistencies or apply assumptions lazy
+      // Spurious model -> fix lazy
       fixLazy();
     }
   }
@@ -272,22 +279,7 @@ bool RegularTableau::solve() {
 }
 
 void RegularTableau::fixLazy() {
-  // IMPORTANT: each loop iteration corresponds to a different path to the root
-  // which gives a different model
-
-  // 3) Check inconsistencies lazy
-  // TODO: test in isolation
-  // TODO: fix it: bug: an inconsistency fix currently generates a new inconsistent/fixed child
-  // if inconsistency is checked again this gets removed and closed
-  // -> need again epsilon edges
-  if (isInconsistentLazy(currentNode)) {
-    assert(validate());
-    exportDebug("debug-regularTableau");
-    return;
-  }
-
-  // 4) Check saturation lazy
-  /*
+  /* Check saturation lazy
    *
    * Goal: compute needed saturations per occurrence such that counterexample gets removed
    * Issue: one edge may belong to multiple occurrences (example po & po)
@@ -301,12 +293,18 @@ void RegularTableau::fixLazy() {
    */
   if (saturationLazy(currentNode)) {
     assert(validate());
-    // guarantee: currentNode is either not reachableFromRoot anymore or has a larger saturation
-    // annotation and has been pushed to unreduced nodes
+    // guarantee: path to open leaf that witnesses spurious counterexample does not exist anymore
     return;
   }
 
-  // only reachable if no fixes apply
+  /* Check inconsistencies lazy */
+  if (isInconsistentLazy(currentNode)) {
+    assert(validate());
+    exportDebug("debug-regularTableau");
+    return;
+  }
+
+  // Only reachable if no fix applies
   exportProof("error-proof");
   auto model = getModelFromRoot(currentNode);
   model.exportModel("error-model");
