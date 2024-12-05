@@ -1,0 +1,39 @@
+// ========= Common definitions =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+// ========= Common assumptions =========
+assume Marked & Plain <= 0
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= Some restrictions to get nicer counterexamples (optional) =========
+assume Sync-rcu | Sync-srcu <= 0
+assume LKR | LKW | UL | LF | RL | RU <= 0
+
+
+// ========= Actual comparison =========
+let rmw = [R & Marked & RMW & (Acquire | Mb)];rmw;[W & Marked & RMW & (Release | Mb)] & po
+
+assume Mb & M <= 0
+assume UP & M <= 0
+
+let ReleaseOrig = Release
+let MbOrig = Mb
+
+let Release = ReleaseOrig | UP
+let Mb = MbOrig
+include ./benchmarks/demo/lkmm/lkmm-v00.cat as old
+
+let Release = ReleaseOrig
+let Mb = MbOrig | UP
+include ./benchmarks/demo/lkmm/lkmm-v00.cat as new
+
+assert [M];new.hb+;[M] <= [M];old.hb+;[M] // UNKNOWN
+// assert new.hb <= old.hb   // FALSE

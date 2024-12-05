@@ -1,0 +1,63 @@
+(* --------- Updates ---------
+ * ~IW -> NON-IW + assume IW & NON-IW <= 0
+ * Made "Plain" base relation + assume (Plain & Marked) <= 0
+ * Removed axioms
+ * Removed everything related to data races
+ * Renamed WRF-ppo to wrf-ppo: the tool assumes capitalized names are sets rather than relations.
+ *)
+
+
+let ext = ext & ((NON-IW) * M)
+let int = int | (IW * M)
+let fr = rf^-1;co
+let rfe = rf & ext
+let coe = co & ext
+let fre = fr & ext
+let rfi = rf & int
+let coi = co & int
+let fri = fr & int
+
+(** Atomicity **)
+// empty rmw & (fre;coe)
+
+(** SC per location **)
+// acyclic co | rf | fr | po-loc
+
+let Marked = RLX | ACQ | REL | SC
+//let Plain = ~Marked
+let Acq = (ACQ | SC) & (R | F)
+let Rel = (REL | SC) & (W | F)
+
+let carry-dep = data;rfi | addr | ctrl
+let ctrl = carry-dep* ; ctrl
+let addr = carry-dep* ; addr
+let data = carry-dep* ; data
+let dep = ctrl | addr | data
+
+let bob = [Acq];po | po;[Rel] | [SC];po;[SC] | po;[SC & F];po | [R];po;[Acq & F];po | po;[Rel & F];po;[W & Marked]
+let ppo = bob | [Marked];(dep | coi | fri);[W & Marked]
+let wrf-ppo = po;[Rel & F];po;[W & Plain] | [Marked];(ctrl | addr);[W & Plain]
+
+let hb = ppo | wrf-ppo | rfe | fre | coe
+// acyclic hb
+
+
+
+
+
+
+(** Data Races **)
+
+// let w-race-fix = ([Marked] | ppo);hb+;([Marked] | ppo)
+
+// let w-race = coe \ w-race-fix
+// let w-racy = [domain(w-race)] | [range(w-race)]
+// flag ~empty w-racy as w-data-race
+
+// let r-race-fix = ([Marked] | ppo);hb+; wrf-ppo
+
+// let r-race = ((fre \ r-race-fix) | rfe) \ w-race-fix
+// let r-racy = [domain(r-race)] | [range(r-race)]
+
+// let obs-dep = ctrl | addr | data;rfe
+// flag ~empty [domain(obs-dep)] & r-racy as r-data-race
