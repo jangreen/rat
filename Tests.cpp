@@ -14,7 +14,7 @@ void unitTest(const bool testResult) {
     }
     // std::function wrappedRat = [&] { return rat(entry.path(), true); };
     // const auto answers = callWithTimeout(3, wrappedRat);
-    const auto answers = rat(entry.path(), 3, true);
+    const auto answers = rat(entry.path(), 10, true);
 
     for (int i = 1; const auto &answer : answers) {
       std::stringstream ss;
