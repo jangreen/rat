@@ -19,7 +19,6 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   DNF assertionCubes;
 
   for (const auto statementContext : context->statement()) {
-    std::cout << statementContext->getText() << std::endl;
     if (statementContext->letDefinition()) {
       visitLetDefinition(statementContext->letDefinition());
     } else if (statementContext->inclusion()) {
