@@ -47,7 +47,9 @@ void test(const bool testResult) {
     const auto answers = rat(entry.path(), 3, true);
 
     for (int i = 1; const auto &answer : answers) {
-      const auto assertion = std::format("{}[assertion {}]", entry.path(), i);
+      std::stringstream ss;
+      ss << entry.path() << "[assertion " << i << "]";
+      const auto assertion = ss.str();
       const auto passed = answer == testResult;
       if (!passed) {
         failedAssertions.push_back(assertion);
@@ -62,10 +64,14 @@ void test(const bool testResult) {
     }
   }
 
-  for (const auto &failedAssertion : failedAssertions) {
-    std::cout << failedAssertion << std::endl;
+  if (!failedAssertions.empty()) {
+    std::cout << "\nFAILED TESTS:\n";
+    for (const auto &failedAssertion : failedAssertions) {
+      std::cout << failedAssertion << "\n";
+    }
+    std::cout << std::endl;
+    ASSERT_TRUE(false);
   }
-  ASSERT_TRUE(failedAssertions.empty());
 }
 
 // void test(const bool testResult) {
