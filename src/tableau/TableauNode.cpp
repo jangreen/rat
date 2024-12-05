@@ -4,8 +4,8 @@
 #include <iostream>
 #include <ranges>
 
+#include "../helper/utility.h"
 #include "../regularTableau/RegularTableau.h"
-#include "../utility.h"
 #include "Rules.h"
 #include "Tableau.h"
 

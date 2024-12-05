@@ -3,8 +3,8 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "../Assumption.h"
-#include "../utility.h"
+#include "../helper/utility.h"
+#include "../parsing/Assumption.h"
 #include "Rules.h"
 
 namespace {

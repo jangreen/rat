@@ -1,8 +1,8 @@
 #pragma once
 #include <unordered_set>
 
-#include "../Stats.h"
 #include "../basic/Literal.h"
+#include "../statistics/Stats.h"
 #include "TableauNode.h"
 #include "Worklist.h"
 
