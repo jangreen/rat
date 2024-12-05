@@ -19,6 +19,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   DNF assertionCubes;
 
   for (const auto statementContext : context->statement()) {
+    std::cout << statementContext->getText() << std::endl;
     if (statementContext->letDefinition()) {
       visitLetDefinition(statementContext->letDefinition());
     } else if (statementContext->inclusion()) {
@@ -51,7 +52,43 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
+  if (!ctx->AS()) {
+    std::ignore = parse(ctx->FILEPATH()->getText());
+    return 0;
+  }
+
+  // 1. snapshot old mapping
+  // 2. calculate new mapping using parse
+  // 3. mapping after include: old mapping updated by new mapping
+  auto oldDerivedRelations = derivedRelations;
+  auto oldDerivedSets = derivedSets;
+  auto oldDefinedSingletons = definedSingletons;
   std::ignore = parse(ctx->FILEPATH()->getText());
+
+  const auto namespaceString = ctx->RELNAME()->getText() + ".";
+  std::unordered_map<std::string, CanonicalRelation> renamedDerivedRelations;
+  for (const auto &[key, relation] : derivedRelations) {
+    renamedDerivedRelations.insert({namespaceString + key, relation});
+    std::cout << namespaceString + key << std::endl;
+  }
+  derivedRelations = renamedDerivedRelations;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDerivedSets;
+  for (const auto &[key, set] : derivedSets) {
+    renamedDerivedSets.insert({namespaceString + key, set});
+  }
+  derivedSets = renamedDerivedSets;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDefinedSingletons;
+  for (const auto &[key, singleton] : definedSingletons) {
+    renamedDefinedSingletons.insert({namespaceString + key, singleton});
+  }
+  definedSingletons = renamedDefinedSingletons;
+
+  derivedRelations.merge(oldDerivedRelations);
+  derivedSets.merge(oldDerivedSets);
+  definedSingletons.merge(oldDefinedSingletons);
+
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
@@ -278,14 +315,31 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     LogicParser::RelationMinusContext *context) {
   throw parsingError(context, "Setminus operation is not supported.");
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationDomainIdentity(
-    LogicParser::RelationDomainIdentityContext *context) {
-  throw parsingError(context, "Domain identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationDomain(
+    LogicParser::RelationDomainContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet rT = Set::newSet(SetOperation::domain, Set::fullSet(), r);
+  CanonicalExpression result = rT;
+  return result;
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationRangeIdentity(
-    LogicParser::RelationRangeIdentityContext *context) {
-  throw parsingError(context, "Range identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationRange(
+    LogicParser::RelationRangeContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet Tr = Set::newSet(SetOperation::image, Set::fullSet(), r);
+  CanonicalExpression result = Tr;
+  return result;
 }
+
 /*CanonicalExpression*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
   const auto e1 = std::any_cast<CanonicalExpression>(context->e1->accept(this));
   const auto e2 = std::any_cast<CanonicalExpression>(context->e2->accept(this));
