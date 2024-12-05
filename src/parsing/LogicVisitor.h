@@ -39,10 +39,10 @@ class Logic : LogicBaseVisitor {
       LogicParser::RelationBasicContext *context) override;
   /*CanonicalExpression*/ std::any visitRelationMinus(
       LogicParser::RelationMinusContext *context) override;
-  /*CanonicalExpression*/ std::any visitRelationDomainIdentity(
-      LogicParser::RelationDomainIdentityContext *context) override;
-  /*CanonicalExpression*/ std::any visitRelationRangeIdentity(
-      LogicParser::RelationRangeIdentityContext *context) override;
+  /*CanonicalExpression*/ std::any visitRelationDomain(
+      LogicParser::RelationDomainContext *context) override;
+  /*CanonicalExpression*/ std::any visitRelationRange(
+      LogicParser::RelationRangeContext *context) override;
   /*CanonicalExpression*/ std::any visitUnion(LogicParser::UnionContext *context) override;
   /*CanonicalExpression*/ std::any visitEmptyset(LogicParser::EmptysetContext *ctx) override;
   /*CanonicalExpression*/ std::any visitRelationInverse(

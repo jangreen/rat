@@ -315,14 +315,31 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     LogicParser::RelationMinusContext *context) {
   throw parsingError(context, "Setminus operation is not supported.");
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationDomainIdentity(
-    LogicParser::RelationDomainIdentityContext *context) {
-  throw parsingError(context, "Domain identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationDomain(
+    LogicParser::RelationDomainContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet rT = Set::newSet(SetOperation::domain, Set::fullSet(), r);
+  CanonicalExpression result = rT;
+  return result;
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationRangeIdentity(
-    LogicParser::RelationRangeIdentityContext *context) {
-  throw parsingError(context, "Range identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationRange(
+    LogicParser::RelationRangeContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet Tr = Set::newSet(SetOperation::image, Set::fullSet(), r);
+  CanonicalExpression result = Tr;
+  return result;
 }
+
 /*CanonicalExpression*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
   const auto e1 = std::any_cast<CanonicalExpression>(context->e1->accept(this));
   const auto e2 = std::any_cast<CanonicalExpression>(context->e2->accept(this));
