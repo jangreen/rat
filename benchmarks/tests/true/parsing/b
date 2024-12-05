@@ -1,0 +1,28 @@
+let a = f // a
+
+include ./benchmarks/tests/true/parsing/a.cat as aa
+
+let a1 = a // f
+let a2 = aa.a // d
+
+include ./benchmarks/tests/true/parsing/a.cat
+
+let a3 = a // d
+
+assert a <= d
+assert d <= a
+
+assert a3 <= d
+assert d <= a3
+
+assert a2 <= d
+assert d <= a2
+
+assert a1 <= f
+assert f <= a1
+
+assert aa.a <= d
+assert d <= aa.a
+
+assert aa.c <= f
+assert f <= aa.c

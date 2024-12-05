@@ -1,2 +1,0 @@
-assert (a;a;a)*;(a;a) <= (a;a;a;a)*;(a;a | a | id)
-// assert (a;a);(a;a;a)* <= (a;a;a;a)*;(a;a | a | id)

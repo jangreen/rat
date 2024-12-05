@@ -2,7 +2,7 @@
 
 #include <any>
 
-#include "../Assumption.h"
+#include "../parsing/Assumption.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -68,7 +68,6 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   std::unordered_map<std::string, CanonicalRelation> renamedDerivedRelations;
   for (const auto &[key, relation] : derivedRelations) {
     renamedDerivedRelations.insert({namespaceString + key, relation});
-    std::cout << namespaceString + key << std::endl;
   }
   derivedRelations = renamedDerivedRelations;
 

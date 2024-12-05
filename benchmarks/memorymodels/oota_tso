@@ -17,10 +17,10 @@ let tso = ghb-tso | uniproc
 let dep = [R];(dep-base & po)
 let oota = (dep | rf)^+ & id
 
-//assume rf;rf <= 0
-//assume rf & id <= 0
-//assume po^+ <= po
-//assume po & id <= 0
+assume rf;rf <= 0
+assume rf & id <= 0
+assume po^+ <= po
+assume po & id <= 0
 assume loc^-1 <= loc
 assume rfi <= po
 

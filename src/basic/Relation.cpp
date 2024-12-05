@@ -3,7 +3,7 @@
 #include <cassert>
 #include <unordered_set>
 
-#include "../Stats.h"
+#include "../statistics/Stats.h"
 #include "Set.h"
 
 Relation::Relation(const RelationOperation operation, const CanonicalRelation left,

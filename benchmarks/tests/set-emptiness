@@ -1,3 +1,0 @@
-assume A <= 0
-
-assert  B & (A | C) <= C

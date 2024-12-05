@@ -4,8 +4,8 @@
 
 #include <boost/property_map/property_map.hpp>
 
-#include "../Assumption.h"
-#include "../utility.h"
+#include "../helper/utility.h"
+#include "../parsing/Assumption.h"
 
 std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
                                                      const LeafAnnotatedSet<Reasons>& annotatedSet

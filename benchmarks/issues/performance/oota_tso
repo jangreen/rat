@@ -1,5 +1,0 @@
-let a = ([R];po | rf & po)
-let b = (a| [W];po)
-
-assume b^+ & id <= 0
-assert a^+ & id <= 0

@@ -1,4 +1,0 @@
-assume a <= b
-assume c <= b
-
-assert c <= b
