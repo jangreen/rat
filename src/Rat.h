@@ -15,6 +15,7 @@ inline std::vector<std::optional<bool>> rat(const std::string &path, int timeout
     spdlog::set_level(spdlog::level::off);
   }
 
+  Logic::resetParser();  // TODO: remove globale veriables
   auto goals = Logic::parse(path);
   assert(validateDNF(goals));
   spdlog::info(fmt::format(

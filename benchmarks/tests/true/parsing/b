@@ -1,11 +1,11 @@
 let a = f // a
 
-include ./benchmarks/tests/parsing/a.cat as aa
+include ./benchmarks/tests/true/parsing/a.cat as aa
 
 let a1 = a // f
 let a2 = aa.a // d
 
-include ./benchmarks/tests/parsing/a.cat
+include ./benchmarks/tests/true/parsing/a.cat
 
 let a3 = a // d
 
