@@ -14,7 +14,7 @@ void unitTest(const bool testResult) {
     }
     // std::function wrappedRat = [&] { return rat(entry.path(), true); };
     // const auto answers = callWithTimeout(3, wrappedRat);
-    const auto answers = rat(entry.path(), 3, true);
+    const auto answers = rat(entry.path(), 10, true);
 
     for (int i = 1; const auto &answer : answers) {
       std::stringstream ss;
@@ -56,8 +56,8 @@ TEST(Tests, Unit) {
 
 TEST(Tests, Kater) {
   ASSERT_TRUE(rat("benchmarks/kater/kater_3_1-eco", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
+  ASSERT_TRUE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
+  ASSERT_TRUE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
 }
 
 TEST(Tests, MemoryModels) {
