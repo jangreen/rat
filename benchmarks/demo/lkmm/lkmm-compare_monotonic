@@ -35,5 +35,5 @@ let Release = ReleaseOrig
 let Mb = MbOrig | UP
 include ./benchmarks/demo/lkmm/lkmm-v00.cat as new
 
-assert [M];new.hb+;[M] <= [M];old.hb+;[M] // UNKNOWN
-// assert new.hb <= old.hb   // FALSE
+assert [M];old.hb;[M] <= [M];new.hb;[M] // UNKNOWN
+// assert new.hb <= old.hb   // FALSE (4s)

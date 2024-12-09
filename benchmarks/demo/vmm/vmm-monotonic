@@ -10,7 +10,6 @@ let ctrl = [R];ctrl & po
 let M = R | W
 
 // ========= Common assumptions =========
-assume Marked & Plain <= 0
 assume W & R <= 0
 assume po & id <= 0
 assume po+ <= po
@@ -39,6 +38,6 @@ let SC = SC_orig | DREL | DACQ
 include ./benchmarks/demo/vmm/vmm.cat as str
 
 // ========= Check Monotonicity =========
-assert orig.hb <= str.hb           // TRUE
+//assert orig.hb <= str.hb           // TRUE
 assert str.hb <= orig.hb           // FALSE
 

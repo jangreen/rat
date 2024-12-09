@@ -21,7 +21,6 @@ assume NON-IW & IW <= 0
 assume M & F <= 0
 
 // ========= Import VMM =========
-
 let DMarked = SetEmpty
 let DPlain = D
 include ./benchmarks/demo/vmm/vmm-alt.cat as orig
@@ -33,6 +32,9 @@ include ./benchmarks/demo/vmm/vmm-alt.cat as str
 assume SetEmpty <= 0
 
 // ========= Check Monotonicity =========
-assert orig.hb <= str.hb           // TRUE
-assert str.hb <= orig.hb           // FALSE
+//assert orig.hb <= str.hb           // TRUE
+//assert str.hb <= orig.hb           // FALSE
 
+
+assume orig.hb+ & id <= 0
+assert str.hb+ & id <= 0

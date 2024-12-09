@@ -25,7 +25,7 @@ assume rfi      <= po
 assume fr & int <= po
 assume co & int <= po
 
-assert old.ppo <= po    // FALSE
-assert new.ppo <= po    // TRUE
-assert old.hb <= new.hb // FALSE
-assert new.hb <= old.hb // TRUE
+//assert old.ppo <= po    // FALSE
+//assert new.ppo <= po    // TRUE
+assert old.hb <= new.hb+ // FALSE
+//assert new.hb <= old.hb+ // TRUE

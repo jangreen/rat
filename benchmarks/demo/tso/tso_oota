@@ -6,7 +6,7 @@ let rf = rfi | rfe
 let po-loc = po & loc
 let fr = rf^-1;co
 
-assume W & R <= 0
+assume W & R <= 0                               // not needed (typing of rfe implies that dep is in po-tso), but faster
 assume po^+ <= po
 assume po & id <= 0
 assume loc^-1 <= loc
@@ -20,7 +20,6 @@ let ghb-tso = (po-tso | com-tso)^+ & id         // acyclic (po-tso | com-tso) <=
 let tso = ghb-tso | uniproc
 
 // ============ OOTA ============
-// let dep = data | addr | ctrl
 let dep = dep & po                              // or "assume dep <= po"
 let oota = (dep | rf)^+ & id                    // acyclic (dep | rf) <=> empty (dep | rf)+ & id
 

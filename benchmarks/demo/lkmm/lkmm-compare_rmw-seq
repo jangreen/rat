@@ -29,4 +29,4 @@ assume LKR | LKW | UL | LF | RL | RU <= 0
 
 // ========= Goals =========
 //assert old.hb <= new.hb   // UNKNOWN
-assert new.hb <= old.hb   // FALSE
+assert new.hb <= old.hb     // FALSE (15.6s)

@@ -1,13 +1,10 @@
 // ========= Common definitions =========
+let M = R | W
 let int = po | po^-1 | id
 let rf = [W];rf;[R]
 let rfi = rf & int
 let rfe = rf & ext
 let rf = rfi | rfe
-let addr = [R];addr;[M] & po
-let data = [R];data;[W] & po
-let ctrl = [R];ctrl & po
-let M = R | W
 
 // ========= Common assumptions =========
 assume W & R <= 0
@@ -15,25 +12,24 @@ assume po & id <= 0
 assume po+ <= po
 assume rfi <= po
 
+// let ctrl = ctrl;po*
 // ========= Import VMM =========
 let ACQ = ACQ & (R | F)
 let REL = REL & (W | F)
-include ./benchmarks/demo/vmm/vmm.cat
-//assume Marked & Plain <= 0
-assume NON-IW & IW <= 0
+let addr = [R];addr;[M] & po
+let data = [R];data;[W] & po
+let ctrl = [R];ctrl & po
+include ./benchmarks/demo/vmm/vmm.cat as vmm
 
-assume hb+ & id <= 0
+assume vmm.hb+ & id <= 0
 
 // ========= Check OOTA =========
 // (1) OOTA plain
-let oota-plain = (dep | rf)+ & id   // FALSE: but racy
-// assert oota-plain <= 0
+let dep = addr | data | ctrl                                // ctrl dependency not needed!
+let oota-plain = (dep | rf)+ & id                           // FALSE: but racy
+//assert oota-plain <= 0
 
 // (2) OOTA marked
+let Marked = RLX //| SC | REL | ACQ                           // hard with full union, terminates with 'RLX'
 let oota-marked = ([Marked];(dep | rf);[Marked])+ & id
-//assert oota-marked <= 0        // FALSE: (ctrl | rf)-cycle on RLX accesses
-
-// (3) OOTA marked unrolled 4 times
-let oota-marked-simple = [Marked];(ctrl);[Marked];(rf);[Marked];(ctrl);[Marked];(rf);[Marked] & id
-assert oota-marked-simple <= 0          // FALSE
-
+assert oota-marked <= 0                                     // FALSE: (3s)

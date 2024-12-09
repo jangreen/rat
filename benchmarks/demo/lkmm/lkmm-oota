@@ -1,4 +1,5 @@
 // ========= Common definitions =========
+let M = R | W
 let int = po | po^-1 | id
 let rf = [W];rf;[R]
 let rfi = rf & int
@@ -6,28 +7,24 @@ let rfe = rf & ext
 let rf = rfi | rfe
 let addr = [R];addr;[M] & po
 let data = [R];data;[W] & po
-let M = R | W
+let ctrl = [R];ctrl & po
 
 assume W & R <= 0
 assume po & id <= 0
 assume po+ <= po
 assume rfi <= po
 
+// let Marked = Once                                // uncomment to get counterexample using only Once accesses
 // ========= Import LKMM =========
-include ./benchmarks/demo/lkmm/lkmm-v00.cat
-assume hb+ & id <= 0                            // acyclic hb in LKMM
+include ./benchmarks/demo/lkmm/lkmm-v00.cat as lkmm
+assume lkmm.hb+ & id <= 0                            // acyclic hb in LKMM
 
 // ========= Check OOTA =========
 // (1) OOTA plain
+let dep = addr | data | ctrl
 let oota-plain = (dep | rf)+ & id
-//assert oota-plain <= 0          // FALSE: but is racy (likely TRUE if races are disallowed)
+//assert oota-plain <= 0                          // FALSE: but is racy (likely TRUE if races are disallowed)
 
 // (2) OOTA marked
 let oota-marked = ([Marked];(dep | rf);[Marked])+ & id
-// assert oota-plain <= 0          // UNKNOWN (should be TRUE)
-
-// (3) OOTA marked unrolled 4 times
-let oota-marked-simple = [Marked];(dep | rf);[Marked];(dep | rf);[Marked];(dep | rf);[Marked];(dep | rf);[Marked] & id
-assert oota-marked-simple <= 0          // UNKNOWN (should be TRUE)
-
-
+assert oota-marked <= 0                         // FALSE
