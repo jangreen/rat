@@ -31,10 +31,13 @@
 
 (* Redefine dependencies to include dependencies carried
 * through unmarked accesses *)
+// let data = data | rfi
+// let carry-dep = (data)*      // TRUE for oota
+
 let carry-dep = (data ; rfi)*
-let cd-addr = carry-dep ; addr
-let cd-ctrl = carry-dep ; ctrl
-let cd-data = carry-dep ; data
+let addr = carry-dep ; addr
+let ctrl = carry-dep ; ctrl
+let data = carry-dep ; data
 
 (*******************)
 (* Basic relations *)

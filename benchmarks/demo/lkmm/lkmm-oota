@@ -23,7 +23,7 @@ assume lkmm.hb+ & id <= 0                            // acyclic hb in LKMM
 // (1) OOTA plain
 let dep = addr | data | ctrl
 let oota-plain = (dep | rf)+ & id
-//assert oota-plain <= 0                          // FALSE: but is racy (likely TRUE if races are disallowed)
+//assert oota-plain <= 0                          // FALSE: but is racy
 
 // (2) OOTA marked
 let oota-marked = ([Marked];(dep | rf);[Marked])+ & id

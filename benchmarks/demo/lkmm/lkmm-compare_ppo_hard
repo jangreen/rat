@@ -16,7 +16,7 @@ include ./benchmarks/demo/lkmm/lkmm-v00.cat     as old
 include ./benchmarks/demo/lkmm/lkmm-v00_ppo.cat as new
 
 //assume old.hb+ & id <= 0
-//assert new.hb+ & id <= 0        // Expected TRUE
+//assert new.hb+ & id <= 0        // TRUE
 
 assume new.hb+ & id <= 0
 assert old.hb+ & id <= 0      // Expected TRUE
