@@ -25,7 +25,8 @@ inline std::vector<std::optional<bool>> rat(const std::string &path, int timeout
       Assumption::setEmptinessAssumptions.size() + Assumption::baseSetAssumptions.size()));
   std::vector<std::optional<bool>> answers;
   for (auto &goal : goals) {
-    // TODO: fix: preprocessing(goal);
+    // TODO: fix:
+    Preprocessing::preprocessing(goal);
     spdlog::info("[Status] Goal: ");
     print(goal);
 

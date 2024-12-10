@@ -43,6 +43,9 @@ LeafAnnotatedSet<Reasons> substitute(const LeafAnnotatedSet<Reasons> &annotatedS
 LeafAnnotatedSet<Reasons> substituteAll(const LeafAnnotatedSet<Reasons> &annotatedSet,
                                         CanonicalSet search, CanonicalSet replace);
 LeafAnnotatedRelation<Reasons> substituteAll(
+    const LeafAnnotatedRelation<Reasons> &annotatedRelation, CanonicalSet search,
+    CanonicalSet replace);
+LeafAnnotatedRelation<Reasons> substituteAll(
     const LeafAnnotatedRelation<Reasons> &annotatedRelation, CanonicalRelation search,
     CanonicalRelation replace);
 LeafAnnotatedSet<Reasons> substituteAll(const LeafAnnotatedSet<Reasons> &annotatedSet,

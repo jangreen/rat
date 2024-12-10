@@ -791,6 +791,9 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
       return context.negated ? PartialDNF{{Literal::BOTTOM()}} : PartialDNF{{Literal::TOP()}};
     case SetOperation::emptySet:
       // Rule (\bot_1):
+      if (context.negated) {
+        return std::nullopt;
+      }
       return PartialDNF{{Literal::BOTTOM()}};
     case SetOperation::fullSet: {
       if (context.negated) {

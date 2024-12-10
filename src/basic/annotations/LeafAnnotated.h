@@ -50,6 +50,8 @@ LeafAnnotatedSet<AnnotationType> newBaseSet(const std::string &identifier);
 
 // wrapped newRelation
 template <typename AnnotationType>
+LeafAnnotatedRelation<AnnotationType> newSetIdentity(const LeafAnnotatedSet<AnnotationType> &left);
+template <typename AnnotationType>
 LeafAnnotatedRelation<AnnotationType> newRelation(
     RelationOperation operation, const LeafAnnotatedRelation<AnnotationType> &left);
 template <typename AnnotationType>

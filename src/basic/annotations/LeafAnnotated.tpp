@@ -129,6 +129,12 @@ LeafAnnotatedSet<AnnotationType> Annotated::newBaseSet(const std::string& identi
 }
 
 template <typename AnnotationType>
+LeafAnnotatedRelation<AnnotationType> Annotated::newSetIdentity(
+    const LeafAnnotatedSet<AnnotationType>& left) {
+  return {Relation::setIdentity(left.first), left.second};
+}
+
+template <typename AnnotationType>
 LeafAnnotatedRelation<AnnotationType> Annotated::newRelation(
     const RelationOperation operation, const LeafAnnotatedRelation<AnnotationType>& left) {
   return {Relation::newRelation(operation, left.first), left.second};

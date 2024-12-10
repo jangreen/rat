@@ -274,6 +274,41 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
         throw std::logic_error("unreachable");
     }
   }
+  // optimizations
+  switch (operation) {
+    case SetOperation::domain:
+    case SetOperation::image:
+      if (left->operation == SetOperation::emptySet ||
+          relation->operation == RelationOperation::emptyRelation) {
+        return emptySet();
+      }
+      if (relation->operation == RelationOperation::idRelation) {
+        return left;
+      }
+      break;
+    case SetOperation::baseSet:
+    case SetOperation::event:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      break;
+    case SetOperation::setUnion:
+      if (left->operation == SetOperation::emptySet && right->operation == SetOperation::emptySet) {
+        return emptySet();
+      }
+      if (left->operation == SetOperation::emptySet) {
+        return right;
+      }
+      if (right->operation == SetOperation::emptySet) {
+        return left;
+      }
+      break;
+    case SetOperation::setIntersection:
+      if (left->operation == SetOperation::emptySet || right->operation == SetOperation::emptySet) {
+        return emptySet();
+      }
+      break;
+  }
+
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
   auto [iter, created] =
       canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
