@@ -15,6 +15,7 @@ struct RegularNodeHeuristic {
 };
 
 class RegularTableau {
+  const Assumptions &assumptions;
   typedef std::vector<RegularNode *> Path;
   const Cube initialCube;
   const std::unique_ptr<RegularNode> rootNode;
@@ -59,7 +60,7 @@ class RegularTableau {
   bool validateReachabilityTree() const;
 
  public:
-  explicit RegularTableau(const Cube &initialLiterals);
+  explicit RegularTableau(const Cube &initialLiterals, const Assumptions &assumptions);
 
   std::optional<bool> solve(int timeout);
   void exportProof(const std::string &filename) const;

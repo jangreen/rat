@@ -10,18 +10,21 @@
 
 #include "../basic/Literal.h"
 #include "../cat/Constraint.h"
-#include "Assumption.h"
+#include "Assumptions.h"
 #include "LogicVisitor.h"
 
 class Logic : LogicBaseVisitor {
- public:
+  std::unordered_map<std::string, CanonicalRelation> derivedRelations;
+  std::unordered_map<std::string, CanonicalSet> derivedSets;
+  std::unordered_map<std::string, CanonicalSet> definedSingletons;
+
+  Assumptions assumptions;
+
   /*DNF*/ std::any visitProof(LogicParser::ProofContext *context) override;
-  // /*void*/ std::any visitStatement(LogicParser::StatementContext *ctx) override;
   /*void*/ std::any visitInclusion(LogicParser::InclusionContext *ctx) override;
   /*Cube*/ std::any visitAssertion(LogicParser::AssertionContext *context) override;
   /*void*/ std::any visitHypothesis(LogicParser::HypothesisContext *ctx) override;
   /*std::vector<Constraint>*/ std::any visitMcm(LogicParser::McmContext *context) override;
-  // /*void*/ std::any visitDefinition(LogicParser::DefinitionContext *context) override;
   /*Constraint*/ std::any visitAxiomDefinition(
       LogicParser::AxiomDefinitionContext *context) override;
   /*void*/ std::any visitLetDefinition(LogicParser::LetDefinitionContext *context) override;
@@ -61,20 +64,11 @@ class Logic : LogicBaseVisitor {
       LogicParser::CompositionContext *context) override;
   /*CanonicalExpression*/ std::any visitIntersection(
       LogicParser::IntersectionContext *context) override;
-  // /*CanonicalExpression*/ std::any visitRelationComplement(
-  //    LogicParser::RelationComplementContext *context) override;
+  /*CanonicalExpression*/ std::any visitRelationComplement(
+      LogicParser::RelationComplementContext *context) override;
 
-  static std::unordered_map<std::string, CanonicalRelation> derivedRelations;
-  static std::unordered_map<std::string, CanonicalSet> derivedSets;
-  static std::unordered_map<std::string, CanonicalSet> definedSingletons;
-  static void resetParser() {
-    // reset assumptions
-    Assumption::reset();
-    derivedRelations.clear();
-    derivedSets.clear();
-    definedSingletons.clear();
-  }
-  static DNF parse(const std::string &filePath) {
+ public:
+  DNF parse(const std::string &filePath) {
     spdlog::info(fmt::format("[Parser] File: {}", filePath));
     std::ifstream stream;
     stream.open(filePath);
@@ -88,45 +82,18 @@ class Logic : LogicBaseVisitor {
     LogicParser parser(&tokens);
 
     LogicParser::ProofContext *ctx = parser.proof();
-    Logic visitor;
-    return std::any_cast<DNF>(visitor.visitProof(ctx));
-  }
-  static std::vector<Constraint> parseMemoryModel(const std::string &filePath) {
-    spdlog::info(fmt::format("[Parser] File: {}", filePath));
-    std::ifstream stream;
-    stream.open(filePath);
-    antlr4::ANTLRInputStream input(stream);
-
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::McmContext *context = parser.mcm();
-    Logic visitor;
-    return std::any_cast<std::vector<Constraint>>(visitor.visitMcm(context));
+    return std::any_cast<DNF>(visitProof(ctx));
   }
 
-  static CanonicalRelation parseRelation(const std::string &relationString) {
-    antlr4::ANTLRInputStream input(relationString);
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
+    [[nodiscard]] const Assumptions& getAssumptions() const;
 
-    LogicParser::ExpressionContext *context = parser.expression();  // expect expression
-    Logic visitor;
-    auto parsedRelation = std::any_cast<CanonicalExpression>(visitor.visit(context));
-    return std::get<CanonicalRelation>(parsedRelation);
-    // FIXME: clang-tidy claims address of <parsedRelation> can escape... why?
-  }
-
-  static CanonicalExpression parseExpression(const std::string &exprString) {
-    antlr4::ANTLRInputStream input(exprString);
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::ExpressionContext *context = parser.expression();  // expect expression
-    Logic visitor;
-    return std::any_cast<CanonicalExpression>(visitor.visit(context));
-  }
+  // CanonicalExpression parseExpression(const std::string &exprString) {
+  //   antlr4::ANTLRInputStream input(exprString);
+  //   LogicLexer lexer(&input);
+  //   antlr4::CommonTokenStream tokens(&lexer);
+  //   LogicParser parser(&tokens);
+  //
+  //   LogicParser::ExpressionContext *context = parser.expression();  // expect expression
+  //   return std::any_cast<CanonicalExpression>(visit(context));
+  // }
 };

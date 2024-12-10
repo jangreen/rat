@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "../parsing/Assumptions.h"
 #include "CanonicalString.h"
 #include "Relation.h"
 #include "Renaming.h"
@@ -86,7 +87,7 @@ class Literal {
   [[nodiscard]] bool substitute(CanonicalSet search, CanonicalSet replace,
                                 int n);  // substitute n-th occurrence
   [[nodiscard]] Literal substituteSet(const LeafAnnotatedSet<Reasons> &set) const;
-  [[nodiscard]] Cube saturate() const;
+  [[nodiscard]] Cube saturate(const Assumptions &assumptions) const;
   void rename(const Renaming &renaming);
   [[nodiscard]] LeafAnnotatedSet<Reasons> annotatedSet() const { return {set, annotation}; }
 

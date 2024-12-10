@@ -1,7 +1,6 @@
 #include "Model.h"
 
 #include "../../helper/utility.h"
-#include "../../parsing/Assumption.h"
 
 EventSet Model::getEquivalenceClass(const EventType &event) const {
   // TODO: use better datastructure / transformer
@@ -14,7 +13,7 @@ EventSet Model::getEquivalenceClass(const EventType &event) const {
   return equivClass;
 }
 
-Model::Model(const Cube &cube) {
+Model::Model(const Cube &cube, const Assumptions &assumptions) : assumptions(assumptions) {
   // add events
   events = gatherPositiveEvents(cube);
 
@@ -144,6 +143,7 @@ InterpretationPtr Model::evaluate(const CanonicalRelation relation) const {
       throw std::logic_error("unreachable");
   }
 }
+const Assumptions &Model::getAssumptions() const { return assumptions; }
 
 InterpretationPtr Model::evaluate(const CanonicalSet set) const {
   switch (set->operation) {
@@ -468,12 +468,12 @@ bool saturateIdAssumptions(Model &model) {
   assert_void([&] { model.validate(); });
   bool modelChanged = false;
 
-  for (const auto &idAssumption : Assumption::idAssumptions) {
+  for (const auto &idRelation : model.getAssumptions().idAssumptions) {
     // evaluate lhs of assumption
     const auto assumptionRelation =
-        (idAssumption.relation->operation != RelationOperation::transitiveClosure)
-            ? Relation::newRelation(RelationOperation::transitiveClosure, idAssumption.relation)
-            : idAssumption.relation;
+        (idRelation->operation != RelationOperation::transitiveClosure)
+            ? Relation::newRelation(RelationOperation::transitiveClosure, idRelation)
+            : idRelation;
     const auto exprValue = model.evaluate(assumptionRelation);
     for (const auto &edge : exprValue->getRelValue()) {
       assert_void([&] { model.validate(); });
@@ -487,8 +487,8 @@ bool saturateIdAssumptions(Model &model) {
 bool saturateBaseRelationAssumptions(Model &model) {
   bool modelChanged = false;
 
-  for (const auto &[baseRelation, baseAssumption] : Assumption::baseAssumptions) {
-    const auto exprValue = model.evaluate(baseAssumption.relation);
+  for (const auto &[baseRelation, relation] : model.getAssumptions().baseAssumptions) {
+    const auto exprValue = model.evaluate(relation);
     for (const auto &edge : exprValue->getRelValue()) {
       modelChanged |= model.addBaseRelation(baseRelation, edge);
     }
@@ -500,8 +500,8 @@ bool saturateBaseRelationAssumptions(Model &model) {
 bool saturateBaseSetAssumptions(Model &model) {
   bool modelChanged = false;
 
-  for (const auto &[baseSet, baseAssumption] : Assumption::baseSetAssumptions) {
-    const auto exprValue = model.evaluate(baseAssumption.set);
+  for (const auto &[baseSet, set] : model.getAssumptions().baseSetAssumptions) {
+    const auto exprValue = model.evaluate(set);
     for (const auto &event : exprValue->getSetValue()) {
       modelChanged |= model.addBaseSet(baseSet, event);
     }

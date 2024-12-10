@@ -12,9 +12,9 @@ void unitTest(const bool testResult) {
     if (entry.is_directory()) {
       continue;
     }
-    // std::function wrappedRat = [&] { return rat(entry.path(), true); };
-    // const auto answers = callWithTimeout(3, wrappedRat);
-    const auto answers = rat(entry.path(), 10, true);
+
+    RatSolver solver;
+    const auto answers = solver.rat(entry.path(), 10, true);
 
     for (int i = 1; const auto &answer : answers) {
       std::stringstream ss;
@@ -55,23 +55,26 @@ TEST(Tests, Unit) {
 }
 
 TEST(Tests, Kater) {
-  ASSERT_TRUE(rat("benchmarks/kater/kater_3_1-eco", 3, true).at(0).value());
-  ASSERT_TRUE(rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
-  ASSERT_TRUE(rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
+  ASSERT_TRUE(RatSolver().rat("benchmarks/kater/kater_3_1-eco", 3, true).at(0).value());
+  ASSERT_TRUE(RatSolver().rat("benchmarks/kater/kater_3_2-ra", 3, true).at(0).value());
+  ASSERT_TRUE(RatSolver().rat("benchmarks/kater/kater_3_3-ra", 3, true).at(0).value());
 }
 
 TEST(Tests, MemoryModels) {
-  ASSERT_TRUE(rat("benchmarks/memorymodels/uniproc+rfi_po", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/memorymodels/uniproc+rfi_po#f1", 3, true).at(0).value());
-  ASSERT_FALSE(rat("benchmarks/memorymodels/uniproc+rfi_po#f2", 3, true).at(0).value());
+  ASSERT_TRUE(RatSolver().rat("benchmarks/memorymodels/uniproc+rfi_po", 3, true).at(0).value());
+  ASSERT_FALSE(RatSolver().rat("benchmarks/memorymodels/uniproc+rfi_po#f1", 3, true).at(0).value());
+  ASSERT_FALSE(RatSolver().rat("benchmarks/memorymodels/uniproc+rfi_po#f2", 3, true).at(0).value());
 
-  ASSERT_FALSE(rat("benchmarks/memorymodels/lkmm-counterexample", 3, true).at(0).value());
+  ASSERT_FALSE(
+      RatSolver().rat("benchmarks/memorymodels/lkmm-counterexample", 3, true).at(0).value());
 }
 
-TEST(Demo, lkmm1) { ASSERT_FALSE(rat("benchmarks/demo/lkmm/lkmm-oota", 30, true).at(0).value()); }
+TEST(Demo, lkmm1) {
+  ASSERT_FALSE(RatSolver().rat("benchmarks/demo/lkmm/lkmm-oota", 30, true).at(0).value());
+}
 
 TEST(Demo, lkmm2) {
-  const auto lkmm_ppo = rat("benchmarks/demo/lkmm/lkmm-compare_ppo", 30, true);
+  const auto lkmm_ppo = RatSolver().rat("benchmarks/demo/lkmm/lkmm-compare_ppo", 30, true);
   ASSERT_FALSE(lkmm_ppo.at(0).value());
   ASSERT_TRUE(lkmm_ppo.at(1).value());
   ASSERT_FALSE(lkmm_ppo.at(2).value());
@@ -79,19 +82,24 @@ TEST(Demo, lkmm2) {
 }
 
 TEST(Demo, lkmm3) {
-  ASSERT_FALSE(rat("benchmarks/demo/lkmm/lkmm-compare_rmw-seq", 30, true).at(0).value());
+  ASSERT_FALSE(
+      RatSolver().rat("benchmarks/demo/lkmm/lkmm-compare_rmw-seq", 30, true).at(0).value());
 }
 
-TEST(Demo, arm) { ASSERT_TRUE(rat("benchmarks/demo/arm8/arm_oota", 30, true).at(0).value()); }
+TEST(Demo, arm) {
+  ASSERT_TRUE(RatSolver().rat("benchmarks/demo/arm8/arm_oota", 30, true).at(0).value());
+}
 
-TEST(Demo, tso) { ASSERT_TRUE(rat("benchmarks/demo/tso/tso_oota", 30, true).at(0).value()); }
+TEST(Demo, tso) {
+  ASSERT_TRUE(RatSolver().rat("benchmarks/demo/tso/tso_oota", 30, true).at(0).value());
+}
 
 TEST(Demo, vmm) {
-  ASSERT_FALSE(rat("benchmarks/demo/vmm/vmm-oota", 30, true).at(0).value());
-  const auto vmm_monotonic = rat("benchmarks/demo/vmm/vmm-monotonic", 30, true);
+  ASSERT_FALSE(RatSolver().rat("benchmarks/demo/vmm/vmm-oota", 30, true).at(0).value());
+  const auto vmm_monotonic = RatSolver().rat("benchmarks/demo/vmm/vmm-monotonic", 30, true);
   ASSERT_TRUE(vmm_monotonic.at(0).value());
   ASSERT_FALSE(vmm_monotonic.at(1).value());
-  const auto vmm_monotonic2 = rat("benchmarks/demo/vmm/vmm-monotonic-2", 30, true);
+  const auto vmm_monotonic2 = RatSolver().rat("benchmarks/demo/vmm/vmm-monotonic-2", 30, true);
   ASSERT_TRUE(vmm_monotonic2.at(0).value());
   ASSERT_FALSE(vmm_monotonic2.at(1).value());
 }

@@ -38,7 +38,7 @@ expression:
 	| e = expression (POW)? PLUS			# transitiveClosure
 	| e = expression (POW)? INV				# relationInverse
 	| e = expression OPT					# relationOptional
-	//| NOT e = expression							# relationComplement
+	| NOT e = expression							# relationComplement
 	| e1 = expression SEMI e2 = expression			# composition // domain, image, relational composition
 	| e1 = expression AMP e2 = expression			# intersection // set intersection, relational intersection
 	| e1 = expression BSLASH e2 = expression		# relationMinus

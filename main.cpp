@@ -26,5 +26,6 @@ int main(int argc, const char *argv[]) {
   }
 
   std::string path = programArguments[0];
-  rat(path);
+  RatSolver solver;
+  solver.rat(path);
 }

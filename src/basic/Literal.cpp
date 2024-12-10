@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "../helper/utility.h"
-#include "../parsing/Assumption.h"
+#include "../parsing/Assumptions.h"
 #include "../tableau/Rules.h"
 #include "annotations/LeafAnnotation.h"
 
@@ -420,9 +420,9 @@ Literal Literal::substituteSet(const LeafAnnotatedSet<Reasons> &set) const {
 // saturation should return
 // - original expression with saturation bund := 0
 // - satruated expression with saturation bound -= 1
-Cube Literal::saturate() const {
-  if (Assumption::baseAssumptions.empty() && Assumption::baseSetAssumptions.empty() &&
-      Assumption::idAssumptions.empty()) {
+Cube Literal::saturate(const Assumptions &assumptions) const {
+  if (assumptions.baseAssumptions.empty() && assumptions.baseSetAssumptions.empty() &&
+      assumptions.idAssumptions.empty()) {
     return {};
   }
 

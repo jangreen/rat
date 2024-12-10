@@ -7,6 +7,7 @@
 #include "Worklist.h"
 
 class Tableau {
+  const Assumptions &assumptions;
   friend class Node;
   Worklist unreducedNodes;
   std::unique_ptr<Node> rootNode;
@@ -29,9 +30,10 @@ class Tableau {
   void removeUselessLiterals() const;
 
  public:
-  explicit Tableau(const Cube &cube);
+  explicit Tableau(const Cube &cube, const Assumptions &assumptions);
   ~Tableau();
   [[nodiscard]] const Node *getRoot() const;
+  [[nodiscard]] const Assumptions &getAssumptions() const;
 
   // ================== Core algorithm ==================
   [[nodiscard]] DNF computeDnf();

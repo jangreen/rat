@@ -4,7 +4,6 @@
 #include <unordered_set>
 
 #include "../helper/utility.h"
-#include "../parsing/Assumption.h"
 #include "Rules.h"
 
 namespace {
@@ -40,7 +39,7 @@ void dnfBuilder(const Node *node, DNF &dnf) {
 // ====================================== Construction =======================================
 // ===========================================================================================
 
-Tableau::Tableau(const Cube &cube) {
+Tableau::Tableau(const Cube &cube, const Assumptions &assumptions) : assumptions(assumptions) {
   assert(validateCube(cube));
   // ensures that there is a root node that does not get processed/removed
   const auto dummyNode = new Node(this, Literal::TOP());
@@ -56,6 +55,8 @@ Tableau::Tableau(const Cube &cube) {
 }
 
 const Node *Tableau::getRoot() const { return rootNode.get(); }
+
+const Assumptions &Tableau::getAssumptions() const { return assumptions; }
 
 // TODO: do we need simplification on both levels?
 DNF Tableau::computeDnf() {
@@ -244,7 +245,7 @@ void Tableau::normalize() {
     // we do this at node level because child nodes should inherit this property
     if (currentNode->getLiteral().annotation->hasValue() &&
         !currentNode->getLiteral().annotation->getValue().empty()) {
-      auto saturatedLiterals = currentNode->getLiteral().saturate();
+      auto saturatedLiterals = currentNode->getLiteral().saturate(assumptions);
       currentNode->appendBranch(saturatedLiterals);
       // do not delete node but remove annotation
       // deleteNode(currentNode);

@@ -22,7 +22,8 @@ void findReachableNodes(RegularNode *node, std::unordered_set<RegularNode *> &re
 }
 
 // returns fixed node as set, otherwise nullopt if consistent
-std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiterals) {
+std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiterals,
+                               const Assumptions &assumptions) {
   if (parent == nullptr) {
     return std::nullopt;
   }
@@ -32,7 +33,7 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
                        [&](const auto &literal) { return !contains(mergedCube, literal); });
   assert(validateNormalizedCube(mergedCube));
 
-  Tableau tableau(mergedCube);
+  Tableau tableau(mergedCube, assumptions);
   RegularTableau::dropNegatedAtomicPredicatesOptimizationON = false;
   auto dnf = tableau.computeDnf();
   RegularTableau::dropNegatedAtomicPredicatesOptimizationON = true;
@@ -61,9 +62,11 @@ bool RegularTableau::isReachableFromRoots(const RegularNode *node) const {
   return node->reachabilityTreeParent != nullptr || rootNode.get() == node;
 }
 
-RegularTableau::RegularTableau(const Cube &initialLiterals)
-    : initialCube(initialLiterals), rootNode(new RegularNode(initialLiterals)) {
-  Tableau t(initialLiterals);
+RegularTableau::RegularTableau(const Cube &initialLiterals, const Assumptions &assumptions)
+    : assumptions(assumptions),
+      initialCube(initialLiterals),
+      rootNode(new RegularNode(initialLiterals)) {
+  Tableau t(initialLiterals, assumptions);
   expandNodeInternal(rootNode.get(), &t);
 }
 
@@ -366,7 +369,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   renameCube(inverted, renamedChild);
   assert(validateNormalizedCube(renamedChild));
 
-  if (const auto fixedDNF = getFixedDnf(parent, renamedChild)) {
+  if (const auto fixedDNF = getFixedDnf(parent, renamedChild, assumptions)) {
     // create new fixed Node
     // FIXME: complete but fast (complete would use newEpsilonChildren)
     newChildren(parent, fixedDNF.value());
@@ -421,7 +424,7 @@ bool RegularTableau::expandNode(RegularNode *node) {
   removeUselessLiterals(cube);
 
   // 2. apply modal rule & normalize
-  Tableau tableau{cube};
+  Tableau tableau{cube, assumptions};
   // IMPORTANT: currently we rely on this property to be correct.
   // intuition: using always an event that occurrs prefers events that occcur once to events that
   // occurr multiple times. This ensures that we keep the number of events used in a cube minimal
@@ -640,7 +643,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
 
       if (node == rootNode.get()) {
         removeChildren(node);
-        Tableau t{node->cube};
+        Tableau t{node->cube, assumptions};
         expandNodeInternal(node, &t);
       } else {
         // update all parents? (not just reachabilityTreeParent)
@@ -651,7 +654,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
           auto renamedCube = node->cube;
           auto renamingFromNodeToParent = renamingFromParentToNode.inverted();
           renameCube(renamingFromNodeToParent, renamedCube);
-          Tableau t{renamedCube};
+          Tableau t{renamedCube, assumptions};
           removeEdge(nodeParent, node);
           expandNodeInternal(nodeParent, &t);
         }
@@ -697,7 +700,7 @@ Model RegularTableau::getModel(const RegularNode *from, const RegularNode *to) c
     cur = cur->reachabilityTreeParent;
   }
   assert(validateCube(model));
-  return Model(model);
+  return Model(model, assumptions);
 }
 
 // TODO: this function does not respect renmaing due to appendBranches

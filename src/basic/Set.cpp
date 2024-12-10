@@ -2,7 +2,6 @@
 #include <cassert>
 
 #include "../helper/utility.h"
-#include "../parsing/Assumption.h"
 #include "Literal.h"
 
 namespace {

@@ -2,8 +2,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include "Assumption.h"
-
 void Preprocessing::updateParentMap(const CanonicalRelation relation, CanonicalParents& parentMap) {
   switch (relation->operation) {
     case RelationOperation::relationIntersection:
@@ -72,17 +70,18 @@ void Preprocessing::updateParentMap(const CanonicalSet set, CanonicalParents& pa
       throw std::logic_error("unreachable");
   }
 }
-bool Preprocessing::isPure(CanonicalRelation relation) {
+bool Preprocessing::isPure(CanonicalRelation relation, const Assumptions& assumptions) {
   switch (relation->operation) {
     case RelationOperation::relationUnion:
     case RelationOperation::composition:
     case RelationOperation::relationIntersection:
-      return isPure(relation->leftOperand) && isPure(relation->rightOperand);
+      return isPure(relation->leftOperand, assumptions) &&
+             isPure(relation->rightOperand, assumptions);
     case RelationOperation::converse:
     case RelationOperation::transitiveClosure:
-      return isPure(relation->leftOperand);
+      return isPure(relation->leftOperand, assumptions);
     case RelationOperation::baseRelation:
-      return !Assumption::baseAssumptions.contains(relation->identifier.value());
+      return !assumptions.baseAssumptions.contains(relation->identifier.value());
     case RelationOperation::idRelation:
     case RelationOperation::emptyRelation:
     case RelationOperation::fullRelation:
@@ -94,7 +93,8 @@ bool Preprocessing::isPure(CanonicalRelation relation) {
       throw std::logic_error("unreachable");
   }
 }
-ReplaceMap Preprocessing::greatestCommonConjunctiveContext(const Cube& goal) {
+ReplaceMap Preprocessing::greatestCommonConjunctiveContext(const Cube& goal,
+                                                           const Assumptions& assumptions) {
   auto positiveGoal =
       goal | std::views::filter([](const Literal& literal) { return !literal.negated; });
 
@@ -122,7 +122,7 @@ ReplaceMap Preprocessing::greatestCommonConjunctiveContext(const Cube& goal) {
     if (relation->operation == RelationOperation::baseRelation) {
       auto curRelation = relation;
       while (parentMap.contains(curRelation) && parentMap.at(curRelation).size() == 1 &&
-             isPure(curRelation)) {
+             isPure(curRelation, assumptions)) {
         curRelation = *parentMap.at(curRelation).begin();
         commonContexts[relation->identifier.value()].push_back(curRelation);
       }
@@ -155,8 +155,9 @@ void Preprocessing::eleminateRedundantConjunctiveContexts(Literal& literal,
     }
   }
 }
-void Preprocessing::eleminateRedundantConjunctiveContexts(Cube& goal) {
-  const auto commonContexts = greatestCommonConjunctiveContext(goal);
+void Preprocessing::eleminateRedundantConjunctiveContexts(Cube& goal,
+                                                          const Assumptions& assumptions) {
+  const auto commonContexts = greatestCommonConjunctiveContext(goal, assumptions);
 
   auto negatedGoal = goal | std::views::filter(&Literal::negated);
   for (auto& literal : negatedGoal) {
@@ -274,14 +275,15 @@ void Preprocessing::replaceEmptyExpressionsInNegatedLiterals(
     }
   }
 }
-void Preprocessing::replaceEmptyExpressionsInNegatedLiterals(Cube& goal) {
+void Preprocessing::replaceEmptyExpressionsInNegatedLiterals(Cube& goal,
+                                                             const Assumptions& assumptions) {
   auto nonEmpty = nonEmptyExpressions(goal);
 
   // insert all base relations that are on right hand side
-  for (const auto& [baseIdentifier, _] : Assumption::baseAssumptions) {
+  for (const auto& [baseIdentifier, _] : assumptions.baseAssumptions) {
     nonEmpty.insert(Relation::newBaseRelation(baseIdentifier));
   }
-  for (const auto& [baseIdentifier, _] : Assumption::baseSetAssumptions) {
+  for (const auto& [baseIdentifier, _] : assumptions.baseSetAssumptions) {
     nonEmpty.insert(Set::newBaseSet(baseIdentifier));
   }
 
@@ -302,10 +304,4 @@ void Preprocessing::replaceEmptyExpressionsInNegatedLiterals(Cube& goal) {
       replaceEmptyExpressionsInNegatedLiterals(literal, nonEmpty);
     }
   }
-}
-void Preprocessing::preprocessing(Cube& goal) {
-  eleminateRedundantConjunctiveContexts(goal);
-
-  replaceEmptyExpressionsInNegatedLiterals(goal);
-  spdlog::info("[Status] Preprocesing done.");
 }

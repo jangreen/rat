@@ -2,7 +2,6 @@
 
 #include <any>
 
-#include "../parsing/Assumption.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -35,16 +34,16 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   // process emptiness assumptions
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
   for (auto &cube : assertionCubes) {
-    for (const auto &assumption : Assumption::emptinessAssumptions) {
+    for (const auto &relation : assumptions.emptinessAssumptions) {
       const CanonicalSet fullSet = Set::fullSet();
-      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, assumption.relation);
+      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, relation);
       cube.emplace_back(Literal::newSetNonEmptiness(true, Tr));
     }
   }
   // s = 0 |- r1 <= r2 |- r1 <= r2 or s != 0
   for (auto &cube : assertionCubes) {
-    for (const auto &assumption : Assumption::setEmptinessAssumptions) {
-      cube.emplace_back(Literal::newSetNonEmptiness(true, assumption.set));
+    for (const auto &set : assumptions.setEmptinessAssumptions) {
+      cube.emplace_back(Literal::newSetNonEmptiness(true, set));
     }
   }
 
@@ -94,8 +93,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     throw parsingError(context, "Unsupported assertion format.");
   }
 
-  const auto lhs = parseExpression(context->e1->getText());
-  const auto rhs = parseExpression(context->e2->getText());
+  const auto lhs = std::any_cast<CanonicalExpression>(context->e1->accept(this));
+  const auto rhs = std::any_cast<CanonicalExpression>(context->e2->accept(this));
   const bool sameType =
       std::holds_alternative<CanonicalSet>(lhs) == std::holds_alternative<CanonicalSet>(rhs);
   if (!sameType) {
@@ -125,8 +124,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 }
 
 /*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
-  const auto lhs = parseExpression(ctx->lhs->getText());
-  const auto rhs = parseExpression(ctx->rhs->getText());
+  const auto lhs = std::any_cast<CanonicalExpression>(ctx->lhs->accept(this));
+  const auto rhs = std::any_cast<CanonicalExpression>(ctx->rhs->accept(this));
 
   if (std::holds_alternative<CanonicalSet>(lhs)) {
     // hack: emptyset is parsed as relation
@@ -138,12 +137,11 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 
     switch (rhsSet->operation) {
       case SetOperation::baseSet: {
-        Assumption assumption(lhSet, rhsSet->identifier.value());
-        Assumption::baseSetAssumptions.emplace(assumption.baseIdentifier.value(), assumption);
+        assumptions.baseSetAssumptions.emplace(rhsSet->identifier.value(), lhSet);
         return 0;
       }
       case SetOperation::emptySet: {
-        Assumption::setEmptinessAssumptions.emplace_back(lhSet);
+        assumptions.setEmptinessAssumptions.emplace(lhSet);
         return 0;
       }
       default:
@@ -157,24 +155,24 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   switch (rhRelation->operation) {
     case RelationOperation::baseRelation: {
       const auto identifier = rhRelation->identifier.value();
-      if (Assumption::baseAssumptions.contains(identifier)) {
-        auto curAssumption = Assumption::baseAssumptions.at(identifier);
-        auto newRelation = Relation::newRelation(RelationOperation::relationUnion,
-                                                 curAssumption.relation, lhRelation);
-        auto newAssumption = Assumption(newRelation, identifier);
-        Assumption::baseAssumptions.erase(identifier);
-        Assumption::baseAssumptions.emplace(identifier, newAssumption);
+      if (assumptions.baseAssumptions.contains(identifier)) {
+        auto curAssumption = assumptions.baseAssumptions.at(identifier);
+        // TODO: PERFORMNCE CHECK separate assumptions?
+        auto newRelation =
+            Relation::newRelation(RelationOperation::relationUnion, curAssumption, lhRelation);
+        assumptions.baseAssumptions.erase(identifier);
+        assumptions.baseAssumptions.emplace(identifier, newRelation);
       } else {
-        Assumption::baseAssumptions.emplace(identifier, Assumption(lhRelation, identifier));
+        assumptions.baseAssumptions.emplace(identifier, lhRelation);
       }
       return 0;
     }
     case RelationOperation::emptyRelation: {
-      Assumption::emptinessAssumptions.emplace_back(lhRelation);
+      assumptions.emptinessAssumptions.emplace(lhRelation);
       return 0;
     }
     case RelationOperation::idRelation: {
-      Assumption::idAssumptions.emplace_back(lhRelation);
+      assumptions.idAssumptions.emplace(lhRelation);
       return 0;
     }
     default:
@@ -490,13 +488,10 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   }
   throw parsingError(context, "Type mismatch of two operands of the intersection operator.");
 }
-// /*CanonicalExpression*/ std::any
-// Logic::visitCanonicalRelationComplement(
-//     LogicParser::CanonicalRelationComplementContext *context) {
-//   std::cout << "[Parser] Complement operation is not supported." << std::endl;
-//   exit(0);
-// }
+/*CanonicalExpression*/ std::any Logic::visitRelationComplement(
+    LogicParser::RelationComplementContext *context) {
+  std::cout << "[Parser] Complement operation is not supported." << std::endl;
+  exit(0);
+}
 
-std::unordered_map<std::string, CanonicalRelation> Logic::derivedRelations;
-std::unordered_map<std::string, CanonicalSet> Logic::derivedSets;
-std::unordered_map<std::string, CanonicalSet> Logic::definedSingletons;
+const Assumptions &Logic::getAssumptions() const { return assumptions; }
