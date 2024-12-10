@@ -67,3 +67,31 @@ TEST(Tests, MemoryModels) {
 
   ASSERT_FALSE(rat("benchmarks/memorymodels/lkmm-counterexample", 3, true).at(0).value());
 }
+
+TEST(Demo, lkmm1) { ASSERT_FALSE(rat("benchmarks/demo/lkmm/lkmm-oota", 30, true).at(0).value()); }
+
+TEST(Demo, lkmm2) {
+  const auto lkmm_ppo = rat("benchmarks/demo/lkmm/lkmm-compare_ppo", 30, true);
+  ASSERT_FALSE(lkmm_ppo.at(0).value());
+  ASSERT_TRUE(lkmm_ppo.at(1).value());
+  ASSERT_FALSE(lkmm_ppo.at(2).value());
+  ASSERT_TRUE(lkmm_ppo.at(3).value());
+}
+
+TEST(Demo, lkmm3) {
+  ASSERT_FALSE(rat("benchmarks/demo/lkmm/lkmm-compare_rmw-seq", 30, true).at(0).value());
+}
+
+TEST(Demo, arm) { ASSERT_TRUE(rat("benchmarks/demo/arm8/arm_oota", 30, true).at(0).value()); }
+
+TEST(Demo, tso) { ASSERT_TRUE(rat("benchmarks/demo/tso/tso_oota", 30, true).at(0).value()); }
+
+TEST(Demo, vmm) {
+  ASSERT_FALSE(rat("benchmarks/demo/vmm/vmm-oota", 30, true).at(0).value());
+  const auto vmm_monotonic = rat("benchmarks/demo/vmm/vmm-monotonic", 30, true);
+  ASSERT_TRUE(vmm_monotonic.at(0).value());
+  ASSERT_FALSE(vmm_monotonic.at(1).value());
+  const auto vmm_monotonic2 = rat("benchmarks/demo/vmm/vmm-monotonic-2", 30, true);
+  ASSERT_TRUE(vmm_monotonic2.at(0).value());
+  ASSERT_FALSE(vmm_monotonic2.at(1).value());
+}

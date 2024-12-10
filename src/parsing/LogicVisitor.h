@@ -79,7 +79,7 @@ class Logic : LogicBaseVisitor {
     std::ifstream stream;
     stream.open(filePath);
     if (!stream.good()) {
-      throw std::runtime_error("Could not open file.");
+      throw std::runtime_error(fmt::format("[Parser] Could not open file {}", filePath));
     }
     antlr4::ANTLRInputStream input(stream);
 

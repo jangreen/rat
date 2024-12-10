@@ -38,6 +38,6 @@ let SC = SC_orig | DREL | DACQ
 include ./benchmarks/demo/vmm/vmm.cat as str
 
 // ========= Check Monotonicity =========
-//assert orig.hb <= str.hb           // TRUE
+assert orig.hb <= str.hb           // TRUE
 assert str.hb <= orig.hb           // FALSE
 
