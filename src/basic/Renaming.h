@@ -11,7 +11,6 @@
  * A Renaming is a partial permutation int -> int.
  */
 class Renaming {
- private:
   typedef std::vector<std::pair<int, int>> Mapping;
   explicit Renaming(Mapping &&map);
 

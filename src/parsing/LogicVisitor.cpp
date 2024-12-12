@@ -1,7 +1,10 @@
 #include "LogicVisitor.h"
 
+#include <LogicLexer.h>
+
 #include <any>
 
+#include "../basic/Constraint.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -145,7 +148,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
         return 0;
       }
       default:
-        throw parsingError(ctx, "Unsupported hypothesis.");
+        throw parsingError(ctx, "Unsupported assumption.");
     }
   }
 
@@ -156,7 +159,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     case RelationOperation::baseRelation: {
       const auto identifier = rhRelation->identifier.value();
       if (assumptions.baseAssumptions.contains(identifier)) {
-        auto curAssumption = assumptions.baseAssumptions.at(identifier);
+        const auto curAssumption = assumptions.baseAssumptions.at(identifier);
         // TODO: PERFORMNCE CHECK separate assumptions?
         auto newRelation =
             Relation::newRelation(RelationOperation::relationUnion, curAssumption, lhRelation);
@@ -176,7 +179,7 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
       return 0;
     }
     default:
-      throw parsingError(ctx, "Unsupported hypothesis.");
+      throw parsingError(ctx, "Unsupported assumption.");
   }
 }
 
@@ -490,8 +493,24 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 }
 /*CanonicalExpression*/ std::any Logic::visitRelationComplement(
     LogicParser::RelationComplementContext *context) {
-  std::cout << "[Parser] Complement operation is not supported." << std::endl;
-  exit(0);
+  throw parsingError(context, "Complement operation is not supported.");
+}
+
+DNF Logic::parse(const std::string &filePath) {
+  spdlog::info(fmt::format("[Parser] File: {}", filePath));
+  std::ifstream stream;
+  stream.open(filePath);
+  if (!stream.good()) {
+    throw std::runtime_error(fmt::format("[Parser] Could not open file {}", filePath));
+  }
+  antlr4::ANTLRInputStream input(stream);
+
+  LogicLexer lexer(&input);
+  antlr4::CommonTokenStream tokens(&lexer);
+  LogicParser parser(&tokens);
+
+  LogicParser::ProofContext *ctx = parser.proof();
+  return std::any_cast<DNF>(visitProof(ctx));
 }
 
 const Assumptions &Logic::getAssumptions() const { return assumptions; }

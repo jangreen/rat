@@ -30,24 +30,20 @@ class RegularNode {
   [[nodiscard]] bool validate() const;
 
  public:
-  [[nodiscard]] const Cube &getCube() const { return cube; }
-  [[nodiscard]] const NodeSet &getChildren() const { return children; }
-  [[nodiscard]] const NodeSet &getEpsilonChildren() const { return epsilonChildren; }
-  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getParents() const { return parents; }
-  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const {
-    return epsilonParents;
-  }
-  const EdgeLabel &getLabelForChild(const RegularNode *child) const {
-    return child->parents.at(const_cast<RegularNode *>(this));
-  }
-  [[nodiscard]] bool isLeaf() const { return children.empty() && epsilonChildren.empty(); }
-  [[nodiscard]] bool isOpenLeaf() const { return isLeaf() && !closed; }
+  [[nodiscard]] const Cube &getCube() const;
+  [[nodiscard]] const NodeSet &getChildren() const;
+  [[nodiscard]] const NodeSet &getEpsilonChildren() const;
+  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getParents() const;
+  [[nodiscard]] const std::map<RegularNode *, EdgeLabel> &getEpsilonParents() const;
+  [[nodiscard]] const EdgeLabel &getLabelForChild(const RegularNode *child) const;
+  [[nodiscard]] bool isLeaf() const;
+  [[nodiscard]] bool isOpenLeaf() const;
 
   void toDotFormat(std::ofstream &output) const;
 
   // FIXME calculate cached lazy property
   // hashing and comparison is insensitive to label renaming
-  bool operator==(const RegularNode &otherNode) const { return cube == otherNode.cube; }
+  bool operator==(const RegularNode &otherNode) const;
 
   struct Hash {
     size_t operator()(const std::unique_ptr<RegularNode> &node) const;
@@ -56,9 +52,7 @@ class RegularNode {
   // special equal function that is different from ==
   struct Equal {
     bool operator()(const std::unique_ptr<RegularNode> &node1,
-                    const std::unique_ptr<RegularNode> &node2) const {
-      return *node1 == *node2;
-    }
+                    const std::unique_ptr<RegularNode> &node2) const;
   };
 };
 

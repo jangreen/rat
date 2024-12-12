@@ -1,12 +1,11 @@
 #pragma once
 
-#include "../../Rat.h"
+#include "../../parsing/Assumptions.h"
 #include "../Literal.h"
 #include "Edge.h"
 #include "Event.h"
 
 class Model {
-  const Assumptions &assumptions;  // reference needed for assumptions
   EventSet events;
   std::unordered_map<std::string, SetValue> baseSets;
   std::unordered_map<std::string, RelationValue> baseRelations;
@@ -15,13 +14,11 @@ class Model {
   [[nodiscard]] EventSet getEquivalenceClass(const EventType &event) const;
 
  public:
-  explicit Model(const Cube &cube, const Assumptions &assumptions);
+  explicit Model(const Cube &cube);
 
   [[nodiscard]] bool evaluate(const Literal &literal) const;
   [[nodiscard]] InterpretationPtr evaluate(CanonicalSet set) const;
   [[nodiscard]] InterpretationPtr evaluate(CanonicalRelation relation) const;
-
-  [[nodiscard]] const Assumptions &getAssumptions() const;
 
   bool addBaseSet(const std::string &baseSet, const Event &event);
   bool addBaseRelation(const std::string &baseRelation, const Edge &edge);
@@ -53,4 +50,4 @@ class Model {
 // wrt. these equalities. Otherwise a naive evaluation of an expression in such a model may me
 // wrong. We ensure consistency by the fact that all vertices in the same equivalence class (wrt
 // equalities) have the same edges
-void saturateModel(Model &model);
+void saturateModel(Model &model, const Assumptions &assumptions);

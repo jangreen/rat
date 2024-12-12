@@ -43,13 +43,6 @@ void print(const range_of<Literal> auto &cube) {
   std::cout << std::endl;
 }
 
-void printAnnotation(const range_of<Literal> auto &cube) {
-  for (auto &literal : cube) {
-    std::cout << literal.annotation->toString() << "\n";
-  }
-  std::cout << std::endl;
-}
-
 inline std::string toString(const EventSet &events) {
   std::string output;
   for (auto &event : events) {

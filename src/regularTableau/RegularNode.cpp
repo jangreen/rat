@@ -107,9 +107,34 @@ bool RegularNode::validate() const {
   return literalsAreNormal;
 }
 
+const Cube &RegularNode::getCube() const { return cube; }
+
 size_t RegularNode::Hash::operator()(const std::unique_ptr<RegularNode> &node) const {
   return std::hash<RegularNode>()(*node);
 }
+
+bool RegularNode::Equal::operator()(const std::unique_ptr<RegularNode> &node1,
+                                    const std::unique_ptr<RegularNode> &node2) const {
+  return *node1 == *node2;
+}
+
+const NodeSet &RegularNode::getChildren() const { return children; }
+
+const NodeSet &RegularNode::getEpsilonChildren() const { return epsilonChildren; }
+
+const std::map<RegularNode *, EdgeLabel> &RegularNode::getParents() const { return parents; }
+
+const std::map<RegularNode *, EdgeLabel> &RegularNode::getEpsilonParents() const {
+  return epsilonParents;
+}
+
+const EdgeLabel &RegularNode::getLabelForChild(const RegularNode *child) const {
+  return child->parents.at(const_cast<RegularNode *>(this));
+}
+
+bool RegularNode::isLeaf() const { return children.empty() && epsilonChildren.empty(); }
+
+bool RegularNode::isOpenLeaf() const { return isLeaf() && !closed; }
 
 void RegularNode::toDotFormat(std::ofstream &output) const {
   output << "N" << this << "[tooltip=\"";
@@ -134,3 +159,5 @@ void RegularNode::toDotFormat(std::ofstream &output) const {
   }
   output << "];\n";
 }
+
+bool RegularNode::operator==(const RegularNode &otherNode) const { return cube == otherNode.cube; }

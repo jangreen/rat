@@ -15,6 +15,70 @@ bool insertOrUpdateReason(SetContainerType<ExprType> &set, const ExprType &eleme
   return existingElement.updateReason(element.reason());
 }
 
+Interpretation::Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right,
+                               std::unordered_map<EventOrEdge, bool> isLeftWitness,
+                               std::unordered_map<EventOrEdge, Event> projectedEvent)
+    : value(std::move(value)),
+      left(std::move(left)),
+      right(std::move(right)),
+      isLeftWitness(std::move(isLeftWitness)),
+      projectedEvent(std::move(projectedEvent)) {
+  assert_void([&] {
+    if (std::holds_alternative<SetValue>(value)) {
+      const auto events = std::get<SetValue>(value);
+      for (const auto &event : events) {
+        assert(event.reason() != nullptr);
+      }
+    } else {
+      const auto edges = std::get<RelationValue>(value);
+      for (const auto &edge : edges) {
+        assert(edge.reason() != nullptr);
+      }
+    }
+  });
+}
+InterpretationPtr Interpretation::newLeaf(ExprValue value) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), nullptr, nullptr, {}, {}));
+}
+
+InterpretationPtr Interpretation::unary(RelationValue value, InterpretationPtr left) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), std::move(left), nullptr, {}, {}));
+}
+
+InterpretationPtr Interpretation::binary(ExprValue value, InterpretationPtr left,
+                                         InterpretationPtr right) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), std::move(left), std::move(right), {}, {}));
+}
+InterpretationPtr Interpretation::binaryUnion(ExprValue value, InterpretationPtr left,
+                                              InterpretationPtr right,
+                                              std::unordered_map<EventOrEdge, bool> isLeftWitness) {
+  return std::make_unique<Interpretation>(Interpretation(
+      std::move(value), std::move(left), std::move(right), std::move(isLeftWitness), {}));
+}
+InterpretationPtr Interpretation::binaryProjection(
+    ExprValue value, InterpretationPtr left, InterpretationPtr right,
+    std::unordered_map<EventOrEdge, Event> projectedEvent) {
+  return std::make_unique<Interpretation>(Interpretation(
+      std::move(value), std::move(left), std::move(right), {}, std::move(projectedEvent)));
+}
+
+const SetValue &Interpretation::getSetValue() const { return std::get<SetValue>(value); }
+
+const RelationValue &Interpretation::getRelValue() const { return std::get<RelationValue>(value); }
+
+const Event &Interpretation::getProjectedEvent(const EventOrEdge &e) const {
+  return projectedEvent.at(e);
+}
+
+bool Interpretation::traceLeft(const EventOrEdge &e) const { return isLeftWitness.at(e); }
+
+const std::unique_ptr<Interpretation> &Interpretation::getLeft() const { return left; }
+
+const std::unique_ptr<Interpretation> &Interpretation::getRight() const { return right; }
+
 std::string Interpretation::toString() const {
   std::string output;
   output += "{";
@@ -41,7 +105,7 @@ InterpretationPtr Interpretation::relationIntersection(InterpretationPtr left,
       insertOrUpdateReason(intersect, intersectEdge);
     }
   }
-  return std::make_unique<Interpretation>(intersect, std::move(left), std::move(right));
+  return Interpretation::binary(intersect, std::move(left), std::move(right));
 }
 
 InterpretationPtr Interpretation::relationUnion(InterpretationPtr left, InterpretationPtr right) {
@@ -55,8 +119,8 @@ InterpretationPtr Interpretation::relationUnion(InterpretationPtr left, Interpre
       isLeftWitness[edge] = false;
     }
   }
-  return std::make_unique<Interpretation>(relunion, std::move(left), std::move(right),
-                                          std::move(isLeftWitness));
+  return Interpretation::binaryUnion(relunion, std::move(left), std::move(right),
+                                     std::move(isLeftWitness));
 }
 
 InterpretationPtr Interpretation::composition(InterpretationPtr left, InterpretationPtr right) {
@@ -71,7 +135,7 @@ InterpretationPtr Interpretation::composition(InterpretationPtr left, Interpreta
       }
     }
   }
-  return std::make_unique<Interpretation>(composition, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(composition, std::move(left), std::move(right),
                                           std::move(projectedEvent));
 }
 
@@ -97,7 +161,7 @@ bool insertOrUpdateReason(std::unordered_map<Edge, RelationsSet> &edgeToUnderlyi
     return true;
   }
 
-  auto newReasonExpr = computeTransitiveReason(newReason);
+  const auto newReasonExpr = computeTransitiveReason(newReason);
   auto oldReasonExpr = computeTransitiveReason(edgeToUnderlyingReasons.at(edge));
   if (newReasonExpr->isSmallerReason(oldReasonExpr)) {
     edgeToUnderlyingReasons[edge] = newReason;
@@ -171,7 +235,7 @@ InterpretationPtr Interpretation::transitiveClosure(InterpretationPtr left,
   for (const auto event : events) {
     insertOrUpdateReason(refltransClosure, {event, event, Relation::idRelation()});
   }
-  return std::make_unique<Interpretation>(refltransClosure, std::move(left), nullptr,
+  return Interpretation::binaryProjection(refltransClosure, std::move(left), nullptr,
                                           std::move(projectedEvent));
 }
 
@@ -184,7 +248,7 @@ InterpretationPtr Interpretation::setIntersection(InterpretationPtr left, Interp
       insertOrUpdateReason(intersect, intersectEvent);
     }
   }
-  return std::make_unique<Interpretation>(intersect, std::move(left), std::move(right));
+  return Interpretation::binary(intersect, std::move(left), std::move(right));
 }
 
 InterpretationPtr Interpretation::setUnion(InterpretationPtr left, InterpretationPtr right) {
@@ -198,8 +262,8 @@ InterpretationPtr Interpretation::setUnion(InterpretationPtr left, Interpretatio
       isLeftWitness[event] = false;
     }
   }
-  return std::make_unique<Interpretation>(setunion, std::move(left), std::move(right),
-                                          std::move(isLeftWitness));
+  return Interpretation::binaryUnion(setunion, std::move(left), std::move(right),
+                                     std::move(isLeftWitness));
 }
 
 InterpretationPtr Interpretation::image(InterpretationPtr left, InterpretationPtr right) {
@@ -217,7 +281,7 @@ InterpretationPtr Interpretation::image(InterpretationPtr left, InterpretationPt
       }
     }
   }
-  return std::make_unique<Interpretation>(image, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(image, std::move(left), std::move(right),
                                           std::move(projectedEvent));
 }
 
@@ -236,6 +300,6 @@ InterpretationPtr Interpretation::domain(InterpretationPtr left, InterpretationP
       }
     }
   }
-  return std::make_unique<Interpretation>(domain, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(domain, std::move(left), std::move(right),
                                           std::move(projectedEvent));
 }

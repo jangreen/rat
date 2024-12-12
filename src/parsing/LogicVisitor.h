@@ -1,6 +1,5 @@
 #pragma once
 #include <LogicBaseVisitor.h>
-#include <LogicLexer.h>
 #include <LogicParser.h>
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
@@ -9,7 +8,6 @@
 #include <vector>
 
 #include "../basic/Literal.h"
-#include "../cat/Constraint.h"
 #include "Assumptions.h"
 #include "LogicVisitor.h"
 
@@ -68,32 +66,6 @@ class Logic : LogicBaseVisitor {
       LogicParser::RelationComplementContext *context) override;
 
  public:
-  DNF parse(const std::string &filePath) {
-    spdlog::info(fmt::format("[Parser] File: {}", filePath));
-    std::ifstream stream;
-    stream.open(filePath);
-    if (!stream.good()) {
-      throw std::runtime_error(fmt::format("[Parser] Could not open file {}", filePath));
-    }
-    antlr4::ANTLRInputStream input(stream);
-
-    LogicLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
-    LogicParser parser(&tokens);
-
-    LogicParser::ProofContext *ctx = parser.proof();
-    return std::any_cast<DNF>(visitProof(ctx));
-  }
-
-    [[nodiscard]] const Assumptions& getAssumptions() const;
-
-  // CanonicalExpression parseExpression(const std::string &exprString) {
-  //   antlr4::ANTLRInputStream input(exprString);
-  //   LogicLexer lexer(&input);
-  //   antlr4::CommonTokenStream tokens(&lexer);
-  //   LogicParser parser(&tokens);
-  //
-  //   LogicParser::ExpressionContext *context = parser.expression();  // expect expression
-  //   return std::any_cast<CanonicalExpression>(visit(context));
-  // }
+  DNF parse(const std::string &filePath);
+  [[nodiscard]] const Assumptions &getAssumptions() const;
 };

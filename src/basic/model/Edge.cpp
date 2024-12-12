@@ -1,7 +1,5 @@
 #include "Edge.h"
 
-#include <iostream>
-
 #include "../Set.h"
 
 Edge::Edge(const EventType from, const EventType to, const CanonicalRelation reason)

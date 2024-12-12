@@ -35,7 +35,7 @@ std::optional<PartialDNF> Rules::applyRelationalRule(const Literal& context,
       // Rule could be handled by cartesianProducts using [S] == SxS & id
       // We use more direct Rule: [e[S]] -> { e & S, [e] }
       //  ~[e[S]] -> { ~e & S } , { ~[e] }
-      CanonicalSet eAndS = Set::newSet(SetOperation::setIntersection, event, relation->set);
+      const auto eAndS = Set::newSet(SetOperation::setIntersection, event, relation->set);
 
       if (!context.negated) {
         return PartialDNF{{Literal::newSetNonEmptiness(false, eAndS),
@@ -544,7 +544,7 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
         // shortcut multiple rules
         assert(e->isEvent());
         assert(sp->isEvent());
-        auto b = CanonicalString(*r->identifier);
+        const auto b = CanonicalString(*r->identifier);
         auto first = e;
         auto second = sp;
         if (s->operation == SetOperation::image) {
@@ -662,15 +662,6 @@ Cube Rules::saturate(const Literal& literal) {
     }
     case PredicateOperation::edge: {
       assert(literal.annotation->isLeaf());
-
-      // TODO: remove: dont use assumption directly any more
-      // const auto it = Assumption::baseAssumptions.find(*literal.identifier);
-      // if (it == Assumption::baseAssumptions.end()) {
-      //   return std::nullopt;
-      // }
-      //      const auto assumption = std::get<Assumption>(*it);
-      // assumption R <= b
-
       // edge (e1, e2) \in b
       // annotation R
       // saturation: e1R & e2
@@ -687,7 +678,6 @@ Cube Rules::saturate(const Literal& literal) {
       return saturatedLiterals;
     }
     case PredicateOperation::setNonEmptiness: {
-      Cube saturatedLiterals;
       const auto saturatedSets = saturateBase(literal.annotatedSet());
       for (const auto& saturatedSet : saturatedSets) {
         saturatedLiterals.emplace_back(

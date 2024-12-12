@@ -1,4 +1,4 @@
-#include "Constraint.h"
+#include "../basic/Constraint.h"
 
 Constraint::Constraint(const ConstraintType type, const CanonicalRelation relation,
                        const std::optional<std::string>& name)

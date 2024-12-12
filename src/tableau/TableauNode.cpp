@@ -104,6 +104,10 @@ Node::~Node() {
   // remove this from unreducedNodes
   tableau->unreducedNodes.erase(this);
 }
+Tableau *Node::getTableau() const { return tableau; }
+Node *Node::getParentNode() const { return parentNode; }
+const Literal &Node::getLiteral() const { return literal; }
+std::vector<std::unique_ptr<Node>> const &Node::getChildren() const { return children; }
 
 // ===========================================================================================
 // ======================================= Validation ========================================
@@ -150,7 +154,7 @@ bool Node::validate() const {
 
     if (tableau->crossReferenceMap.contains(node)) {                      // has outgoing edges
       for (const auto &nextNode : tableau->crossReferenceMap.at(node)) {  // for each outgoing edge
-        const bool cycleFound = std::find(stack.begin(), stack.end(), nextNode) != stack.end();
+        const bool cycleFound = std::ranges::find(stack, nextNode) != stack.end();
         assert(!cycleFound);
 
         const auto &[_, inserted] = visited.insert(nextNode);
@@ -173,6 +177,8 @@ bool Node::validateRecursive() const {
 // ===========================================================================================
 // ==================================== Node manipulation ====================================
 // ===========================================================================================
+
+const Node *Node::getLastUnrollingParent() const { return lastUnrollingParent; }
 
 void Node::setLastUnrollingParent(const Node *newLastUnrollingParent) {
   if (newLastUnrollingParent == nullptr) {
@@ -199,6 +205,8 @@ void Node::setLastUnrollingParent(const Node *newLastUnrollingParent) {
   // set value
   lastUnrollingParent = newLastUnrollingParent;
 }
+bool Node::isClosed() const { return _isClosed; }
+bool Node::isLeaf() const { return children.empty(); }
 
 void Node::attachChild(std::unique_ptr<Node> child) {
   assert(child->parentNode == nullptr && "Trying to attach already attached child.");

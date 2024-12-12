@@ -33,7 +33,7 @@ std::optional<DNF> getFixedDnf(const RegularNode *parent, const Cube &newLiteral
                        [&](const auto &literal) { return !contains(mergedCube, literal); });
   assert(validateNormalizedCube(mergedCube));
 
-  Tableau tableau(mergedCube, assumptions);
+  Tableau tableau(mergedCube);
   RegularTableau::dropNegatedAtomicPredicatesOptimizationON = false;
   auto dnf = tableau.computeDnf();
   RegularTableau::dropNegatedAtomicPredicatesOptimizationON = true;
@@ -66,7 +66,7 @@ RegularTableau::RegularTableau(const Cube &initialLiterals, const Assumptions &a
     : assumptions(assumptions),
       initialCube(initialLiterals),
       rootNode(new RegularNode(initialLiterals)) {
-  Tableau t(initialLiterals, assumptions);
+  Tableau t(initialLiterals);
   expandNodeInternal(rootNode.get(), &t);
 }
 
@@ -311,7 +311,7 @@ void RegularTableau::fixLazy() {
   exportProof("error-proof");
   auto model = getModelFromRoot(currentNode);
   model.exportModel("error-model");
-  saturateModel(model);
+  saturateModel(model, assumptions);
   model.exportModel("error-model-saturated");
   throw std::logic_error("unreachable: no fix applicable for spurious model");
 }
@@ -424,7 +424,7 @@ bool RegularTableau::expandNode(RegularNode *node) {
   removeUselessLiterals(cube);
 
   // 2. apply modal rule & normalize
-  Tableau tableau{cube, assumptions};
+  Tableau tableau{cube};
   // IMPORTANT: currently we rely on this property to be correct.
   // intuition: using always an event that occurrs prefers events that occcur once to events that
   // occurr multiple times. This ensures that we keep the number of events used in a cube minimal
@@ -487,7 +487,7 @@ bool RegularTableau::isInconsistentLazy(RegularNode *openLeaf) {
   bool pathInconsistent = false;
 
   for (size_t i = curPath.size() - 1; i > 0; i--) {
-    auto parent = curPath.at(i);
+    const auto parent = curPath.at(i);
     const auto child = curPath.at(i - 1);
 
     const auto &renaming = parent->getLabelForChild(child);
@@ -593,7 +593,7 @@ bool RegularTableau::saturationLazy(RegularNode *const openLeaf) {
     // get model & saturated model (wrt to root namespace)
     const auto model = getModel(curNode, openLeaf);
     auto saturatedModel = model;
-    saturateModel(saturatedModel);
+    saturateModel(saturatedModel, assumptions);
 #if DEBUG
     model.exportModel("debug-saturationLazy.model");
     saturatedModel.exportInternalModel("debug-saturationLazy.saturatedInternalModel");
@@ -643,7 +643,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
 
       if (node == rootNode.get()) {
         removeChildren(node);
-        Tableau t{node->cube, assumptions};
+        Tableau t{node->cube};
         expandNodeInternal(node, &t);
       } else {
         // update all parents? (not just reachabilityTreeParent)
@@ -654,7 +654,7 @@ bool RegularTableau::saturateNodeLazy(RegularNode *node, const Model &model,
           auto renamedCube = node->cube;
           auto renamingFromNodeToParent = renamingFromParentToNode.inverted();
           renameCube(renamingFromNodeToParent, renamedCube);
-          Tableau t{renamedCube, assumptions};
+          Tableau t{renamedCube};
           removeEdge(nodeParent, node);
           expandNodeInternal(nodeParent, &t);
         }
@@ -700,7 +700,7 @@ Model RegularTableau::getModel(const RegularNode *from, const RegularNode *to) c
     cur = cur->reachabilityTreeParent;
   }
   assert(validateCube(model));
-  return Model(model, assumptions);
+  return Model(model);
 }
 
 // TODO: this function does not respect renmaing due to appendBranches
@@ -750,7 +750,7 @@ bool RegularTableau::isSpurious(const RegularNode *openLeaf) const {
 #if DEBUG
   model.exportModel("debug-isSpurious.model");
 #endif
-  saturateModel(model);
+  saturateModel(model, assumptions);
 #if DEBUG
   model.exportInternalModel("debug-isSpurious.model-saturated-internal");
   model.exportModel("debug-isSpurious.model-saturated");

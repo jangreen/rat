@@ -4,6 +4,7 @@
 
 #include "../basic/Literal.h"
 #include "../helper/utility.h"
+#include "../parsing/Assumptions.h"
 #include "Preprocessing.h"
 
 typedef std::map<CanonicalRelation, std::unordered_set<CanonicalRelation>> CanonicalParents;

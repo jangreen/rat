@@ -39,7 +39,7 @@ void dnfBuilder(const Node *node, DNF &dnf) {
 // ====================================== Construction =======================================
 // ===========================================================================================
 
-Tableau::Tableau(const Cube &cube, const Assumptions &assumptions) : assumptions(assumptions) {
+Tableau::Tableau(const Cube &cube) {
   assert(validateCube(cube));
   // ensures that there is a root node that does not get processed/removed
   const auto dummyNode = new Node(this, Literal::TOP());
@@ -55,8 +55,6 @@ Tableau::Tableau(const Cube &cube, const Assumptions &assumptions) : assumptions
 }
 
 const Node *Tableau::getRoot() const { return rootNode.get(); }
-
-const Assumptions &Tableau::getAssumptions() const { return assumptions; }
 
 // TODO: do we need simplification on both levels?
 DNF Tableau::computeDnf() {
@@ -245,7 +243,10 @@ void Tableau::normalize() {
     // we do this at node level because child nodes should inherit this property
     if (currentNode->getLiteral().annotation->hasValue() &&
         !currentNode->getLiteral().annotation->getValue().empty()) {
-      auto saturatedLiterals = currentNode->getLiteral().saturate(assumptions);
+      auto saturatedLiterals = Rules::saturate(currentNode->getLiteral());
+      // remove duplicates (Rules::saturate does not check for duplicates)
+      removeDuplicates(saturatedLiterals);
+
       currentNode->appendBranch(saturatedLiterals);
       // do not delete node but remove annotation
       // deleteNode(currentNode);

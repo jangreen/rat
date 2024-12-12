@@ -225,6 +225,21 @@ bool Set::operator==(const Set &other) const {
          rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
          identifier == other.identifier;
 }
+bool Set::isEvent() const { return operation == SetOperation::event; }
+
+const bool &Set::isNormal() const { return _isNormal; }
+
+bool Set::hasFullSet() const { return _hasFullSet; }
+
+bool Set::hasBaseSet() const { return _hasBaseSet; }
+
+const EventSet &Set::getEvents() const { return events; }
+
+const SetOfSets &Set::getEventBasePairs() const { return eventBasePairs; }
+
+const SetOfSets &Set::getBaseSets() const { return baseSets; }
+
+const EventSet &Set::getNormalEvents() const { return normalEvents; }
 
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
          const CanonicalRelation relation, const std::optional<int> label,
@@ -309,8 +324,7 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
   }
 
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
-  auto [iter, created] =
-      canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
+  auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
   Stats::boolean("#sets").count(created);
   if (created) {
     iter->completeInitialization();
@@ -455,4 +469,19 @@ std::string Set::toString() const {
   }
   cachedStringRepr.emplace(std::move(output));
   return *cachedStringRepr;
+}
+
+std::size_t std::hash<SetOperation>::operator()(const SetOperation &operation) const noexcept {
+  return static_cast<std::size_t>(operation);
+}
+
+std::size_t std::hash<Set>::operator()(const Set &set) const noexcept {
+  size_t seed = 31;
+  boost::hash_combine(seed, set.operation);
+  boost::hash_combine(seed, set.leftOperand);
+  boost::hash_combine(seed, set.rightOperand);
+  boost::hash_combine(seed, set.relation);
+  boost::hash_combine(seed, set.identifier);
+  boost::hash_combine(seed, set.label);
+  return seed;
 }

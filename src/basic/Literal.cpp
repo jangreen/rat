@@ -6,7 +6,6 @@
 
 #include "../helper/utility.h"
 #include "../parsing/Assumptions.h"
-#include "../tableau/Rules.h"
 #include "annotations/LeafAnnotation.h"
 
 Literal::Literal(const bool negated, const PredicateOperation operation, const CanonicalSet set,
@@ -138,6 +137,8 @@ std::strong_ordering Literal::operator<=>(const Literal &other) const {
       return std::strong_ordering::equal;
   }
 }
+
+bool Literal::operator==(const Literal &other) const { return *this <=> other == 0; }
 
 bool Literal::isNegatedOf(const Literal &other) const {
   // TODO: Compare annotation?
@@ -417,31 +418,6 @@ Literal Literal::substituteSet(const LeafAnnotatedSet<Reasons> &set) const {
   return newSetNonEmptiness(negated, set.first, set.second);
 }
 
-// saturation should return
-// - original expression with saturation bund := 0
-// - satruated expression with saturation bound -= 1
-Cube Literal::saturate(const Assumptions &assumptions) const {
-  if (assumptions.baseAssumptions.empty() && assumptions.baseSetAssumptions.empty() &&
-      assumptions.idAssumptions.empty()) {
-    return {};
-  }
-
-  // TODO: we dont add this here but remove the annotation after saturation
-  // add same literal without any annotation
-  // add literal with one saturated occurrence
-  // auto litWithNoAnnotation = *this;
-  // litWithNoAnnotation.annotation = LeafAnnotation<Reasons>::newLeaf({});
-
-  Cube saturatedLiterals;  // = {std::move(litWithNoAnnotation)};
-  auto cube = Rules::saturate(*this);
-  moveAppend(saturatedLiterals, std::move(cube));
-
-  // remove duplicates (saturation methods do not need to check for duplicates)
-  removeDuplicates(
-      saturatedLiterals);  // TODO: is this still necessasry? (i moved litWithNoAnnotation)
-  return saturatedLiterals;
-}
-
 void Literal::rename(const Renaming &renaming) {
   switch (operation) {
     case PredicateOperation::constant:
@@ -479,6 +455,8 @@ void Literal::rename(const Renaming &renaming) {
   }
 }
 
+LeafAnnotatedSet<Reasons> Literal::annotatedSet() const { return {set, annotation}; }
+
 std::string Literal::toString() const {
   std::string output;
   if (negated && PredicateOperation::constant != operation) {
@@ -505,4 +483,15 @@ std::string Literal::toString() const {
       throw std::logic_error("unreachable");
   }
   return output;
+}
+
+std::size_t std::hash<Literal>::operator()(const Literal &literal) const noexcept {
+  const size_t opHash = hash<PredicateOperation>()(literal.operation);
+  const size_t setHash = hash<CanonicalSet>()(literal.set);  // Hashes the pointer
+  const size_t signHash = hash<bool>()(literal.negated);
+  const size_t idHash = hash<std::optional<std::string>>()(literal.identifier);
+  const size_t leftLabelHash = hash<CanonicalSet>()(literal.leftEvent);
+  const size_t rightLabelHash = hash<CanonicalSet>()(literal.leftEvent);
+  return ((opHash ^ (setHash << 1)) >> 1) ^
+         (signHash << 1) + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
 }

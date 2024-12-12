@@ -48,9 +48,7 @@ std::vector<std::optional<bool>> RatSolver::rat(const std::string &path, int tim
   return answers;
 }
 
-const Logic &RatSolver::getParser() { return parser; }
-
-void RatSolver::preprocessing(Cube &goal) {
+void RatSolver::preprocessing(Cube &goal) const {
   Preprocessing::eleminateRedundantConjunctiveContexts(goal, parser.getAssumptions());
   Preprocessing::replaceEmptyExpressionsInNegatedLiterals(goal, parser.getAssumptions());
   spdlog::info("[Status] Preprocesing done.");

@@ -63,14 +63,14 @@ class Node {
   Cube equalities;  // used to track renameBranches
 
   // ================== Accessors ==================
-  [[nodiscard]] Tableau *getTableau() const { return tableau; }
-  [[nodiscard]] Node *getParentNode() const { return parentNode; }
-  [[nodiscard]] const Literal &getLiteral() const { return literal; }
-  [[nodiscard]] std::vector<std::unique_ptr<Node>> const &getChildren() const { return children; }
-  [[nodiscard]] const Node *getLastUnrollingParent() const { return lastUnrollingParent; }
+  [[nodiscard]] Tableau *getTableau() const;
+  [[nodiscard]] Node *getParentNode() const;
+  [[nodiscard]] const Literal &getLiteral() const;
+  [[nodiscard]] std::vector<std::unique_ptr<Node>> const &getChildren() const;
+  [[nodiscard]] const Node *getLastUnrollingParent() const;
   void setLastUnrollingParent(const Node *newLastUnrollingParent);
-  [[nodiscard]] bool isClosed() const { return _isClosed; }
-  [[nodiscard]] bool isLeaf() const { return children.empty(); }
+  [[nodiscard]] bool isClosed() const;
+  [[nodiscard]] bool isLeaf() const;
   size_t size() const;
 
   // ================== Node manipulation ==================
