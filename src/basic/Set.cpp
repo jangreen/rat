@@ -1,8 +1,7 @@
 #include <boost/unordered/unordered_node_set.hpp>
 #include <cassert>
 
-#include "../Assumption.h"
-#include "../utility.h"
+#include "../helper/utility.h"
 #include "Literal.h"
 
 namespace {
@@ -226,6 +225,21 @@ bool Set::operator==(const Set &other) const {
          rightOperand == other.rightOperand && relation == other.relation && label == other.label &&
          identifier == other.identifier;
 }
+bool Set::isEvent() const { return operation == SetOperation::event; }
+
+const bool &Set::isNormal() const { return _isNormal; }
+
+bool Set::hasFullSet() const { return _hasFullSet; }
+
+bool Set::hasBaseSet() const { return _hasBaseSet; }
+
+const EventSet &Set::getEvents() const { return events; }
+
+const SetOfSets &Set::getEventBasePairs() const { return eventBasePairs; }
+
+const SetOfSets &Set::getBaseSets() const { return baseSets; }
+
+const EventSet &Set::getNormalEvents() const { return normalEvents; }
 
 Set::Set(const SetOperation operation, const CanonicalSet left, const CanonicalSet right,
          const CanonicalRelation relation, const std::optional<int> label,
@@ -274,9 +288,43 @@ CanonicalSet Set::newSet(const SetOperation operation, const CanonicalSet left,
         throw std::logic_error("unreachable");
     }
   }
+  // optimizations
+  switch (operation) {
+    case SetOperation::domain:
+    case SetOperation::image:
+      if (left->operation == SetOperation::emptySet ||
+          relation->operation == RelationOperation::emptyRelation) {
+        return emptySet();
+      }
+      if (relation->operation == RelationOperation::idRelation) {
+        return left;
+      }
+      break;
+    case SetOperation::baseSet:
+    case SetOperation::event:
+    case SetOperation::emptySet:
+    case SetOperation::fullSet:
+      break;
+    case SetOperation::setUnion:
+      if (left->operation == SetOperation::emptySet && right->operation == SetOperation::emptySet) {
+        return emptySet();
+      }
+      if (left->operation == SetOperation::emptySet) {
+        return right;
+      }
+      if (right->operation == SetOperation::emptySet) {
+        return left;
+      }
+      break;
+    case SetOperation::setIntersection:
+      if (left->operation == SetOperation::emptySet || right->operation == SetOperation::emptySet) {
+        return emptySet();
+      }
+      break;
+  }
+
   static boost::unordered::unordered_node_set<Set, std::hash<Set>> canonicalizer;
-  auto [iter, created] =
-      canonicalizer.insert(std::move(Set(operation, left, right, relation, label, identifier)));
+  auto [iter, created] = canonicalizer.emplace(operation, left, right, relation, label, identifier);
   Stats::boolean("#sets").count(created);
   if (created) {
     iter->completeInitialization();
@@ -347,6 +395,9 @@ int Set::compositionLength() const {
   }
 }
 bool Set::isSmallerReason(const CanonicalSet other) const {
+  if (other == nullptr) {
+    return true;
+  }
   auto lWidth = intersectionWidth();
   auto rWidth = other->intersectionWidth();
   auto lLength = compositionLength();
@@ -393,10 +444,10 @@ std::string Set::toString() const {
       output += std::to_string(*label);
       break;
     case SetOperation::image:
-      output += "(" + leftOperand->toString() + ";" + relation->toString() + ")";
+      output += "(" + leftOperand->toString() + "." + relation->toString() + ")";
       break;
     case SetOperation::domain:
-      output += "(" + relation->toString() + ";" + leftOperand->toString() + ")";
+      output += "(" + relation->toString() + "." + leftOperand->toString() + ")";
       break;
     case SetOperation::baseSet:
       output += *identifier;
@@ -418,4 +469,19 @@ std::string Set::toString() const {
   }
   cachedStringRepr.emplace(std::move(output));
   return *cachedStringRepr;
+}
+
+std::size_t std::hash<SetOperation>::operator()(const SetOperation &operation) const noexcept {
+  return static_cast<std::size_t>(operation);
+}
+
+std::size_t std::hash<Set>::operator()(const Set &set) const noexcept {
+  size_t seed = 31;
+  boost::hash_combine(seed, set.operation);
+  boost::hash_combine(seed, set.leftOperand);
+  boost::hash_combine(seed, set.rightOperand);
+  boost::hash_combine(seed, set.relation);
+  boost::hash_combine(seed, set.identifier);
+  boost::hash_combine(seed, set.label);
+  return seed;
 }

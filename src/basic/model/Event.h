@@ -1,7 +1,7 @@
 #pragma once
-#include "EventType.h"
 #include "../Set.h"
 #include "../model/Edge.h"
+#include "EventType.h"
 
 class Event {
   EventType _event;
@@ -13,6 +13,7 @@ class Event {
 
   [[nodiscard]] EventType event() const;
   [[nodiscard]] CanonicalSet reason() const;
+  void resetReason();
   [[nodiscard]] bool updateReason(CanonicalSet newReason);
   [[nodiscard]] bool operator==(const Event &other) const;
   [[nodiscard]] bool operator<(const Event &other) const;
@@ -25,4 +26,3 @@ template <>
 struct std::hash<Event> {
   std::size_t operator()(const Event &event) const noexcept;
 };
-

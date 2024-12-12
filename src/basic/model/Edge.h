@@ -17,10 +17,10 @@ class Edge {
   [[nodiscard]] EventType from() const;
   [[nodiscard]] EventType to() const;
   [[nodiscard]] CanonicalRelation reason() const;
-  [[nodiscard]] bool updateReason(CanonicalRelation newReason);
+  void resetReason();
+  bool updateReason(CanonicalRelation newReason);
   [[nodiscard]] bool operator==(const Edge &other) const;
   [[nodiscard]] bool operator<(const Edge &other) const;
-
   [[nodiscard]] Edge converse() const;
   [[nodiscard]] std::optional<Edge> compose(const Edge &other) const;
   [[nodiscard]] std::optional<Edge> intersect(const Edge &other) const;

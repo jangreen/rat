@@ -1,0 +1,32 @@
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= LKMM =========
+// NOTE: We assume "Marked" to be a base set (the included lkmm models have their definition of Marked removed)
+let rmw = [R & Marked & RMW & (Acquire | Mb)];rmw;[W & Marked & RMW & (Release | Mb)] & po
+assume Marked & Plain <= 0
+
+include ./benchmarks/demo/lkmm/lkmm-v00.cat as old
+include ./benchmarks/demo/lkmm/lkmm-v01.cat as new
+
+// ========= Some restrictions to get nicer counterexamples (optional) =========
+assume Sync-rcu | Sync-srcu <= 0
+assume LKR | LKW | UL | LF | RL | RU <= 0
+
+// With this, the tool fails to find a model suggesting that the new model strengthens Hb
+// mostly (only?) on Mb accesses.
+// assume Mb <= 0
+
+// ========= Goals =========
+//assert old.hb <= new.hb   // UNKNOWN
+assert new.hb <= old.hb     // FALSE (15.6s)

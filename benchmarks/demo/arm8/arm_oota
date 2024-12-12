@@ -1,0 +1,28 @@
+// ============ Standard ============
+let int = po | po^-1 | id
+let rfe = [W];rf;[R] & ext & loc
+let rfi = [W];rf;[R] & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let coi = co & int
+let fr = rf^-1;co
+
+assume W & R <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume loc^-1 <= loc
+
+let ctrl = ctrl;po*                             // po extends ctrl on hardware models
+// ============ ARM8 ============
+include ./benchmarks/demo/arm8/aarch64.cat as arm
+let internal = po-loc | arm.ca | rf
+
+// ============ OOTA ============
+let dep = [R];addr | [R];data;[W] | [R];ctrl;[W]
+let dep = dep & po                              // assume dep <= po
+let oota = (dep | rf)^+ & id
+
+// ============ Goal ============
+assume arm.ob+ & id <= 0                        // acyclic ob as external
+assume internal+ & id <= 0                      // acyclic po-loc | ca | rf as internal
+assert oota <= 0                                // TRUE

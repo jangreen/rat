@@ -1,7 +1,6 @@
 #pragma once
 #include <fstream>
 #include <queue>
-#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -16,6 +15,7 @@ struct RegularNodeHeuristic {
 };
 
 class RegularTableau {
+  const Assumptions &assumptions;
   typedef std::vector<RegularNode *> Path;
   const Cube initialCube;
   const std::unique_ptr<RegularNode> rootNode;
@@ -36,13 +36,14 @@ class RegularTableau {
   void removeEdgeUpdateReachabilityTree(const RegularNode *parent, const RegularNode *child) const;
 
   // ================== Solving ==================
-  bool expandNode();
+  bool expandNode(RegularNode *node);
   void expandNodeInternal(RegularNode *node, Tableau *tableau);
   bool isInconsistent(RegularNode *parent, const RegularNode *child, const EdgeLabel &label);
   bool isInconsistentLazy(RegularNode *openLeaf);
   bool saturationLazy(RegularNode *openLeaf);
   bool saturateNodeLazy(RegularNode *node, const Model &model, const Model &saturatedModel);
-  Model getModel(const RegularNode *openLeaf) const;
+  Model getModelFromRoot(const RegularNode *to) const;
+  Model getModel(const RegularNode *from, const RegularNode *to) const;
   Renaming getRootRenaming(const RegularNode *node) const;
   bool isSpurious(const RegularNode *openLeaf) const;
   void fixLazy();
@@ -59,8 +60,12 @@ class RegularTableau {
   bool validateReachabilityTree() const;
 
  public:
-  explicit RegularTableau(const Cube &initialLiterals);
+  explicit RegularTableau(const Cube &initialLiterals, const Assumptions &assumptions);
 
-  bool solve();
+  std::optional<bool> solve(int timeout);
   void exportProof(const std::string &filename) const;
+
+  static bool dropNegatedAtomicPredicatesOptimizationON;
 };
+
+inline bool RegularTableau::dropNegatedAtomicPredicatesOptimizationON = true;

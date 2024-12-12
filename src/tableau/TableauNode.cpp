@@ -4,7 +4,8 @@
 #include <iostream>
 #include <ranges>
 
-#include "../utility.h"
+#include "../helper/utility.h"
+#include "../regularTableau/RegularTableau.h"
 #include "Rules.h"
 #include "Tableau.h"
 
@@ -103,6 +104,10 @@ Node::~Node() {
   // remove this from unreducedNodes
   tableau->unreducedNodes.erase(this);
 }
+Tableau *Node::getTableau() const { return tableau; }
+Node *Node::getParentNode() const { return parentNode; }
+const Literal &Node::getLiteral() const { return literal; }
+std::vector<std::unique_ptr<Node>> const &Node::getChildren() const { return children; }
 
 // ===========================================================================================
 // ======================================= Validation ========================================
@@ -149,7 +154,7 @@ bool Node::validate() const {
 
     if (tableau->crossReferenceMap.contains(node)) {                      // has outgoing edges
       for (const auto &nextNode : tableau->crossReferenceMap.at(node)) {  // for each outgoing edge
-        const bool cycleFound = std::find(stack.begin(), stack.end(), nextNode) != stack.end();
+        const bool cycleFound = std::ranges::find(stack, nextNode) != stack.end();
         assert(!cycleFound);
 
         const auto &[_, inserted] = visited.insert(nextNode);
@@ -172,6 +177,8 @@ bool Node::validateRecursive() const {
 // ===========================================================================================
 // ==================================== Node manipulation ====================================
 // ===========================================================================================
+
+const Node *Node::getLastUnrollingParent() const { return lastUnrollingParent; }
 
 void Node::setLastUnrollingParent(const Node *newLastUnrollingParent) {
   if (newLastUnrollingParent == nullptr) {
@@ -198,6 +205,8 @@ void Node::setLastUnrollingParent(const Node *newLastUnrollingParent) {
   // set value
   lastUnrollingParent = newLastUnrollingParent;
 }
+bool Node::isClosed() const { return _isClosed; }
+bool Node::isLeaf() const { return children.empty(); }
 
 void Node::attachChild(std::unique_ptr<Node> child) {
   assert(child->parentNode == nullptr && "Trying to attach already attached child.");
@@ -459,20 +468,23 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   }
 
   // postprocessing
-  // FIXME not sound?
-  // Stats::counter("appendBranch - postprocessing (conj)").reset();
-  // for (const auto node : newNodes) {
-  //   const bool needsSaturation =
-  //       node->literal.annotation->hasValue() && !node->literal.annotation->getValue().empty();
-  //   if (node->literal.isNegatedAtomic() && !needsSaturation &&
-  //       node->literal.operation != PredicateOperation::equality) {
-  //     // CAUTION:
-  //     // currently exclude ~ 0 & 0 -> ~ 0 = 0 (dropped) -> False
-  //     // similar: ~ 0 & 1 (dropped)-> ~0=1 st. it could be saturated
-  //     tableau->deleteNode(node);
-  //     Stats::counter("appendBranch - postprocessing (conj)")++;
-  //   }
-  // }
+  // IMPORTANT: Unsound if used for inconsistency computation:
+  if (RegularTableau::dropNegatedAtomicPredicatesOptimizationON) {
+    Stats::counter("appendBranch - postprocessing (conj)").reset();
+    for (const auto node : newNodes) {
+      const bool needsSaturation =
+          node->literal.annotation->hasValue() && !node->literal.annotation->getValue().empty();
+      // TODO: optimization for sets is safe in inconsistency reasononing
+      // -> use node->literal.negated && node->literal.operation == PredicateOperation::set
+      if (node->literal.isNegatedAtomic() && !needsSaturation) {
+        // CAUTION:
+        // currently exclude ~ 0 & 0 -> ~ 0 = 0 (dropped) -> False
+        // similar: ~ 0 & 1 (dropped)-> ~0=1 st. it could be saturated
+        tableau->deleteNode(node);
+        Stats::counter("appendBranch - postprocessing (conj)")++;
+      }
+    }
+  }
 }
 void Node::appendBranchInternal(DNF &dnf) {
   // postprocessing of dnf (here we have seen the full branch)

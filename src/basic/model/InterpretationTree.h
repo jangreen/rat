@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/container/flat_set.hpp>
 
-#include "../../assert_catch.h"
+#include "../../helper/assert_catch.h"
 #include "../Set.h"
 #include "Event.h"
 
@@ -31,55 +31,25 @@ class Interpretation {
 
   Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right,
                  std::unordered_map<EventOrEdge, bool> isLeftWitness,
-                 std::unordered_map<EventOrEdge, Event> projectedEvent)
-      : value(std::move(value)),
-        left(std::move(left)),
-        right(std::move(right)),
-        isLeftWitness(std::move(isLeftWitness)),
-        projectedEvent(std::move(projectedEvent)) {
-    assert_void([&] {
-      if (std::holds_alternative<SetValue>(value)) {
-        const auto events = std::get<SetValue>(value);
-        for (const auto &event : events) {
-          assert(event.reason() != nullptr);
-        }
-      } else {
-        const auto edges = std::get<RelationValue>(value);
-        for (const auto &edge : edges) {
-          assert(edge.reason() != nullptr);
-        }
-      }
-    });
-  }
+                 std::unordered_map<EventOrEdge, Event> projectedEvent);
 
  public:
-  explicit Interpretation(ExprValue value)
-      : Interpretation(std::move(value), nullptr, nullptr, {}, {}) {}
+  static InterpretationPtr newLeaf(ExprValue value);
+  static InterpretationPtr unary(RelationValue value, InterpretationPtr left);
+  static InterpretationPtr binary(ExprValue value, InterpretationPtr left, InterpretationPtr right);
+  static InterpretationPtr binaryUnion(ExprValue value, InterpretationPtr left,
+                                       InterpretationPtr right,
+                                       std::unordered_map<EventOrEdge, bool> isLeftWitness);
+  static InterpretationPtr binaryProjection(ExprValue value, InterpretationPtr left,
+                                            InterpretationPtr right,
+                                            std::unordered_map<EventOrEdge, Event> projectedEvent);
 
-  Interpretation(RelationValue value, InterpretationPtr left)
-      : Interpretation(std::move(value), std::move(left), nullptr, {}, {}) {}
-
-  Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right)
-      : Interpretation(std::move(value), std::move(left), std::move(right), {}, {}) {}
-
-  Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right,
-                 std::unordered_map<EventOrEdge, bool> isLeftWitness)
-      : Interpretation(std::move(value), std::move(left), std::move(right),
-                       std::move(isLeftWitness), {}) {}
-
-  Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right,
-                 std::unordered_map<EventOrEdge, Event> projectedEvent)
-      : Interpretation(std::move(value), std::move(left), std::move(right), {},
-                       std::move(projectedEvent)) {}
-
-  [[nodiscard]] const SetValue &getSetValue() const { return std::get<SetValue>(value); }
-  [[nodiscard]] const RelationValue &getRelValue() const { return std::get<RelationValue>(value); }
-  [[nodiscard]] const Event &getProjectedEvent(const EventOrEdge &e) const {
-    return projectedEvent.at(e);
-  }
-  [[nodiscard]] bool traceLeft(const EventOrEdge &e) const { return isLeftWitness.at(e); }
-  [[nodiscard]] const std::unique_ptr<Interpretation> &getLeft() const { return left; }
-  [[nodiscard]] const std::unique_ptr<Interpretation> &getRight() const { return right; }
+  [[nodiscard]] const SetValue &getSetValue() const;
+  [[nodiscard]] const RelationValue &getRelValue() const;
+  [[nodiscard]] const Event &getProjectedEvent(const EventOrEdge &e) const;
+  [[nodiscard]] bool traceLeft(const EventOrEdge &e) const;
+  [[nodiscard]] const std::unique_ptr<Interpretation> &getLeft() const;
+  [[nodiscard]] const std::unique_ptr<Interpretation> &getRight() const;
   [[nodiscard]] std::string toString() const;
 
   static InterpretationPtr relationIntersection(InterpretationPtr left, InterpretationPtr right);

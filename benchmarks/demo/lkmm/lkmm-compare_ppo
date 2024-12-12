@@ -1,0 +1,31 @@
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let fr = rf^-1;co
+let addr = addr & po
+let data = data & po
+let ctrl = ctrl & po
+
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+
+
+// ========= Actual comparison =========
+include ./benchmarks/demo/lkmm/lkmm-v00.cat     as old
+include ./benchmarks/demo/lkmm/lkmm-v00_ppo.cat as new
+
+// Follow from uniproc.
+assume rfi      <= po
+assume fr & int <= po
+assume co & int <= po
+
+assert old.ppo <= po    // FALSE
+assert new.ppo <= po    // TRUE
+assert old.hb <= new.hb // FALSE
+assert new.hb <= old.hb // TRUE

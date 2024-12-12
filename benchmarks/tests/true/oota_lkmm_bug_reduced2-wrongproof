@@ -1,0 +1,15 @@
+// this file is a witness for the 'saturation without progress' bug
+// in this bug a node gets saturated such that the saturation is immediatley inactive
+// then normalizing yields the same node again
+// thus a self loop with no progress is added
+
+// Expected result is TRUE
+
+let rfi = rf & (po | po^-1)
+let oota = po;po;po;rf & id
+
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+assert oota <= 0

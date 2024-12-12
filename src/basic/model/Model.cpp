@@ -1,7 +1,6 @@
 #include "Model.h"
 
-#include "../../Assumption.h"
-#include "../../utility.h"
+#include "../../helper/utility.h"
 
 EventSet Model::getEquivalenceClass(const EventType &event) const {
   // TODO: use better datastructure / transformer
@@ -98,7 +97,7 @@ InterpretationPtr Model::evaluate(const CanonicalRelation relation) const {
       for (const auto &edge : left->getRelValue()) {
         converse.insert(edge.converse());
       }
-      return std::make_unique<Interpretation>(converse, std::move(left));
+      return Interpretation::unary(converse, std::move(left));
     }
     case RelationOperation::transitiveClosure: {
       auto left = evaluate(relation->leftOperand);
@@ -107,18 +106,18 @@ InterpretationPtr Model::evaluate(const CanonicalRelation relation) const {
     case RelationOperation::baseRelation: {
       const auto baseRelation = relation->identifier.value();
       return baseRelations.contains(baseRelation)
-                 ? std::make_unique<Interpretation>(baseRelations.at(baseRelation))
-                 : std::make_unique<Interpretation>(RelationValue{});
+                 ? Interpretation::newLeaf(baseRelations.at(baseRelation))
+                 : Interpretation::newLeaf(RelationValue{});
     }
     case RelationOperation::idRelation: {
       RelationValue value;
       for (const auto event : events) {
         value.emplace(event, event, Relation::idRelation());
       }
-      return std::make_unique<Interpretation>(value);
+      return Interpretation::newLeaf(value);
     }
     case RelationOperation::emptyRelation:
-      return std::make_unique<Interpretation>(RelationValue{});
+      return Interpretation::newLeaf(RelationValue{});
     case RelationOperation::fullRelation: {
       RelationValue value;
       for (const auto e1 : events) {
@@ -126,7 +125,7 @@ InterpretationPtr Model::evaluate(const CanonicalRelation relation) const {
           value.emplace(e1, e2, Relation::fullRelation());
         }
       }
-      return std::make_unique<Interpretation>(value);
+      return Interpretation::newLeaf(value);
     }
     case RelationOperation::setIdentity: {
       auto left = evaluate(relation->set);
@@ -136,7 +135,7 @@ InterpretationPtr Model::evaluate(const CanonicalRelation relation) const {
         const auto reason = Relation::setIdentity(event.reason());
         value.emplace(e, e, reason);
       }
-      return std::make_unique<Interpretation>(value, std::move(left));
+      return Interpretation::unary(value, std::move(left));
     }
     case RelationOperation::cartesianProduct:
       throw std::logic_error("not implemented");
@@ -158,7 +157,7 @@ InterpretationPtr Model::evaluate(const CanonicalSet set) const {
           value.emplace(equivalentEvent.value());
         }
       }
-      return std::make_unique<Interpretation>(value);
+      return Interpretation::newLeaf(value);
     }
     case SetOperation::image: {
       auto left = evaluate(set->leftOperand);
@@ -173,19 +172,19 @@ InterpretationPtr Model::evaluate(const CanonicalSet set) const {
     case SetOperation::baseSet: {
       const auto baseSet = set->identifier.value();
       if (!baseSets.contains(baseSet)) {
-        return std::make_unique<Interpretation>(SetValue{});
+        return Interpretation::newLeaf(SetValue{});
       }
       const auto value = baseSets.at(baseSet);
-      return std::make_unique<Interpretation>(value);
+      return Interpretation::newLeaf(value);
     }
     case SetOperation::emptySet:
-      return std::make_unique<Interpretation>(SetValue{});
+      return Interpretation::newLeaf(SetValue{});
     case SetOperation::fullSet: {
       SetValue value;
       for (const auto event : events) {
         value.emplace(event, Set::fullSet());
       }
-      return std::make_unique<Interpretation>(value);
+      return Interpretation::newLeaf(value);
     }
     case SetOperation::setIntersection: {
       auto left = evaluate(set->leftOperand);
@@ -464,13 +463,17 @@ void Model::validate() const {
 }
 
 // returns true iff model changed
-bool saturateIdAssumptions(Model &model) {
+bool saturateIdAssumptions(Model &model, const Assumptions &assumptions) {
   assert_void([&] { model.validate(); });
   bool modelChanged = false;
 
-  for (const auto &idAssumption : Assumption::idAssumptions) {
+  for (const auto &idRelation : assumptions.idAssumptions) {
     // evaluate lhs of assumption
-    const auto exprValue = model.evaluate(idAssumption.relation);
+    const auto assumptionRelation =
+        (idRelation->operation != RelationOperation::transitiveClosure)
+            ? Relation::newRelation(RelationOperation::transitiveClosure, idRelation)
+            : idRelation;
+    const auto exprValue = model.evaluate(assumptionRelation);
     for (const auto &edge : exprValue->getRelValue()) {
       assert_void([&] { model.validate(); });
       modelChanged |= model.addIdentity(edge);
@@ -480,11 +483,11 @@ bool saturateIdAssumptions(Model &model) {
 }
 
 // returns true iff model changed
-bool saturateBaseRelationAssumptions(Model &model) {
+bool saturateBaseRelationAssumptions(Model &model, const Assumptions &assumptions) {
   bool modelChanged = false;
 
-  for (const auto &[baseRelation, baseAssumption] : Assumption::baseAssumptions) {
-    const auto exprValue = model.evaluate(baseAssumption.relation);
+  for (const auto &[baseRelation, relation] : assumptions.baseAssumptions) {
+    const auto exprValue = model.evaluate(relation);
     for (const auto &edge : exprValue->getRelValue()) {
       modelChanged |= model.addBaseRelation(baseRelation, edge);
     }
@@ -493,11 +496,11 @@ bool saturateBaseRelationAssumptions(Model &model) {
 }
 
 // returns true iff model changed
-bool saturateBaseSetAssumptions(Model &model) {
+bool saturateBaseSetAssumptions(Model &model, const Assumptions &assumptions) {
   bool modelChanged = false;
 
-  for (const auto &[baseSet, baseAssumption] : Assumption::baseSetAssumptions) {
-    const auto exprValue = model.evaluate(baseAssumption.set);
+  for (const auto &[baseSet, set] : assumptions.baseSetAssumptions) {
+    const auto exprValue = model.evaluate(set);
     for (const auto &event : exprValue->getSetValue()) {
       modelChanged |= model.addBaseSet(baseSet, event);
     }
@@ -505,11 +508,12 @@ bool saturateBaseSetAssumptions(Model &model) {
   return modelChanged;
 }
 
-void saturateModel(Model &model) {
+void saturateModel(Model &model, const Assumptions &assumptions) {
   bool modelChanged = true;
   while (modelChanged) {
     assert_void([&] { model.validate(); });
-    modelChanged = saturateIdAssumptions(model) | saturateBaseRelationAssumptions(model) |
-                   saturateBaseSetAssumptions(model);
+    modelChanged = saturateIdAssumptions(model, assumptions) |
+                   saturateBaseRelationAssumptions(model, assumptions) |
+                   saturateBaseSetAssumptions(model, assumptions);
   }
 }

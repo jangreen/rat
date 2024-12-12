@@ -1,10 +1,10 @@
 #include "LogicVisitor.h"
 
-#include <any>
-#include <iostream>
+#include <LogicLexer.h>
 
-#include "../Assumption.h"
-#include "../basic/annotations/LeafAnnotated.h"
+#include <any>
+
+#include "../basic/Constraint.h"
 #include "../regularTableau/RegularTableau.h"
 
 namespace {
@@ -37,23 +37,58 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   // process emptiness assumptions
   // emptiness r = 0 |- r1 <= r2 iff |- r1 <= r2 + T.r.T
   for (auto &cube : assertionCubes) {
-    for (const auto &assumption : Assumption::emptinessAssumptions) {
+    for (const auto &relation : assumptions.emptinessAssumptions) {
       const CanonicalSet fullSet = Set::fullSet();
-      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, assumption.relation);
+      const CanonicalSet Tr = Set::newSet(SetOperation::image, fullSet, relation);
       cube.emplace_back(Literal::newSetNonEmptiness(true, Tr));
     }
   }
   // s = 0 |- r1 <= r2 |- r1 <= r2 or s != 0
   for (auto &cube : assertionCubes) {
-    for (const auto &assumption : Assumption::setEmptinessAssumptions) {
-      cube.emplace_back(Literal::newSetNonEmptiness(true, assumption.set));
+    for (const auto &set : assumptions.setEmptinessAssumptions) {
+      cube.emplace_back(Literal::newSetNonEmptiness(true, set));
     }
   }
 
   return assertionCubes;
 }
 /*void*/ std::any Logic::visitInclusion(LogicParser::InclusionContext *ctx) {
+  if (!ctx->AS()) {
+    std::ignore = parse(ctx->FILEPATH()->getText());
+    return 0;
+  }
+
+  // 1. snapshot old mapping
+  // 2. calculate new mapping using parse
+  // 3. mapping after include: old mapping updated by new mapping
+  auto oldDerivedRelations = derivedRelations;
+  auto oldDerivedSets = derivedSets;
+  auto oldDefinedSingletons = definedSingletons;
   std::ignore = parse(ctx->FILEPATH()->getText());
+
+  const auto namespaceString = ctx->RELNAME()->getText() + ".";
+  std::unordered_map<std::string, CanonicalRelation> renamedDerivedRelations;
+  for (const auto &[key, relation] : derivedRelations) {
+    renamedDerivedRelations.insert({namespaceString + key, relation});
+  }
+  derivedRelations = renamedDerivedRelations;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDerivedSets;
+  for (const auto &[key, set] : derivedSets) {
+    renamedDerivedSets.insert({namespaceString + key, set});
+  }
+  derivedSets = renamedDerivedSets;
+
+  std::unordered_map<std::string, CanonicalSet> renamedDefinedSingletons;
+  for (const auto &[key, singleton] : definedSingletons) {
+    renamedDefinedSingletons.insert({namespaceString + key, singleton});
+  }
+  definedSingletons = renamedDefinedSingletons;
+
+  derivedRelations.merge(oldDerivedRelations);
+  derivedSets.merge(oldDerivedSets);
+  definedSingletons.merge(oldDefinedSingletons);
+
   return 0;
 }
 /*Cube*/ std::any Logic::visitAssertion(LogicParser::AssertionContext *context) {
@@ -61,8 +96,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     throw parsingError(context, "Unsupported assertion format.");
   }
 
-  const auto lhs = parseExpression(context->e1->getText());
-  const auto rhs = parseExpression(context->e2->getText());
+  const auto lhs = std::any_cast<CanonicalExpression>(context->e1->accept(this));
+  const auto rhs = std::any_cast<CanonicalExpression>(context->e2->accept(this));
   const bool sameType =
       std::holds_alternative<CanonicalSet>(lhs) == std::holds_alternative<CanonicalSet>(rhs);
   if (!sameType) {
@@ -92,8 +127,8 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 }
 
 /*void*/ std::any Logic::visitHypothesis(LogicParser::HypothesisContext *ctx) {
-  const auto lhs = parseExpression(ctx->lhs->getText());
-  const auto rhs = parseExpression(ctx->rhs->getText());
+  const auto lhs = std::any_cast<CanonicalExpression>(ctx->lhs->accept(this));
+  const auto rhs = std::any_cast<CanonicalExpression>(ctx->rhs->accept(this));
 
   if (std::holds_alternative<CanonicalSet>(lhs)) {
     // hack: emptyset is parsed as relation
@@ -105,16 +140,15 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
 
     switch (rhsSet->operation) {
       case SetOperation::baseSet: {
-        Assumption assumption(lhSet, rhsSet->identifier.value());
-        Assumption::baseSetAssumptions.emplace(assumption.baseIdentifier.value(), assumption);
+        assumptions.baseSetAssumptions.emplace(rhsSet->identifier.value(), lhSet);
         return 0;
       }
       case SetOperation::emptySet: {
-        Assumption::setEmptinessAssumptions.emplace_back(lhSet);
+        assumptions.setEmptinessAssumptions.emplace(lhSet);
         return 0;
       }
       default:
-        throw parsingError(ctx, "Unsupported hypothesis.");
+        throw parsingError(ctx, "Unsupported assumption.");
     }
   }
 
@@ -124,28 +158,28 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   switch (rhRelation->operation) {
     case RelationOperation::baseRelation: {
       const auto identifier = rhRelation->identifier.value();
-      if (Assumption::baseAssumptions.contains(identifier)) {
-        auto curAssumption = Assumption::baseAssumptions.at(identifier);
-        auto newRelation = Relation::newRelation(RelationOperation::relationUnion,
-                                                 curAssumption.relation, lhRelation);
-        auto newAssumption = Assumption(newRelation, identifier);
-        Assumption::baseAssumptions.erase(identifier);
-        Assumption::baseAssumptions.emplace(identifier, newAssumption);
+      if (assumptions.baseAssumptions.contains(identifier)) {
+        const auto curAssumption = assumptions.baseAssumptions.at(identifier);
+        // TODO: PERFORMNCE CHECK separate assumptions?
+        auto newRelation =
+            Relation::newRelation(RelationOperation::relationUnion, curAssumption, lhRelation);
+        assumptions.baseAssumptions.erase(identifier);
+        assumptions.baseAssumptions.emplace(identifier, newRelation);
       } else {
-        Assumption::baseAssumptions.emplace(identifier, Assumption(lhRelation, identifier));
+        assumptions.baseAssumptions.emplace(identifier, lhRelation);
       }
       return 0;
     }
     case RelationOperation::emptyRelation: {
-      Assumption::emptinessAssumptions.emplace_back(lhRelation);
+      assumptions.emptinessAssumptions.emplace(lhRelation);
       return 0;
     }
     case RelationOperation::idRelation: {
-      Assumption::idAssumptions.emplace_back(lhRelation);
+      assumptions.idAssumptions.emplace(lhRelation);
       return 0;
     }
     default:
-      throw parsingError(ctx, "Unsupported hypothesis.");
+      throw parsingError(ctx, "Unsupported assumption.");
   }
 }
 
@@ -239,14 +273,14 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     LogicParser::RelationFencerelContext *context) {
   const auto expr = std::any_cast<CanonicalExpression>(context->e->accept(this));
   if (!std::holds_alternative<CanonicalSet>(expr)) {
-    throw parsingError(context, "fencerel() of unknown relation" );
+    throw parsingError(context, "fencerel() of unknown relation");
   }
   const auto setExpr = std::get<CanonicalSet>(expr);
   const CanonicalRelation setId = Relation::setIdentity(setExpr);
   const CanonicalRelation po = Relation::newBaseRelation("po");
   const CanonicalRelation po_set = Relation::newRelation(RelationOperation::composition, po, setId);
   const CanonicalRelation po_set_po =
-    Relation::newRelation(RelationOperation::composition, po_set, po);
+      Relation::newRelation(RelationOperation::composition, po_set, po);
   CanonicalExpression result = po_set_po;
   return result;
 }
@@ -280,14 +314,31 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
     LogicParser::RelationMinusContext *context) {
   throw parsingError(context, "Setminus operation is not supported.");
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationDomainIdentity(
-    LogicParser::RelationDomainIdentityContext *context) {
-  throw parsingError(context, "Domain identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationDomain(
+    LogicParser::RelationDomainContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet rT = Set::newSet(SetOperation::domain, Set::fullSet(), r);
+  CanonicalExpression result = rT;
+  return result;
 }
-/*CanonicalExpression*/ std::any Logic::visitRelationRangeIdentity(
-    LogicParser::RelationRangeIdentityContext *context) {
-  throw parsingError(context, "Range identity expressions are not supported.");
+
+/*CanonicalExpression*/ std::any Logic::visitRelationRange(
+    LogicParser::RelationRangeContext *context) {
+  const auto e = std::any_cast<CanonicalExpression>(context->e->accept(this));
+  if (!std::holds_alternative<CanonicalRelation>(e)) {
+    throw parsingError(context, "Type mismatch of two operands of the relation domain operator.");
+  }
+  const auto &r = std::get<CanonicalRelation>(e);
+  const CanonicalSet Tr = Set::newSet(SetOperation::image, Set::fullSet(), r);
+  CanonicalExpression result = Tr;
+  return result;
 }
+
 /*CanonicalExpression*/ std::any Logic::visitUnion(LogicParser::UnionContext *context) {
   const auto e1 = std::any_cast<CanonicalExpression>(context->e1->accept(this));
   const auto e2 = std::any_cast<CanonicalExpression>(context->e2->accept(this));
@@ -440,13 +491,26 @@ antlr4::ParseCancellationException parsingError(antlr4::ParserRuleContext *conte
   }
   throw parsingError(context, "Type mismatch of two operands of the intersection operator.");
 }
-// /*CanonicalExpression*/ std::any
-// Logic::visitCanonicalRelationComplement(
-//     LogicParser::CanonicalRelationComplementContext *context) {
-//   std::cout << "[Parser] Complement operation is not supported." << std::endl;
-//   exit(0);
-// }
+/*CanonicalExpression*/ std::any Logic::visitRelationComplement(
+    LogicParser::RelationComplementContext *context) {
+  throw parsingError(context, "Complement operation is not supported.");
+}
 
-std::unordered_map<std::string, CanonicalRelation> Logic::derivedRelations;
-std::unordered_map<std::string, CanonicalSet> Logic::derivedSets;
-std::unordered_map<std::string, CanonicalSet> Logic::definedSingletons;
+DNF Logic::parse(const std::string &filePath) {
+  spdlog::info(fmt::format("[Parser] File: {}", filePath));
+  std::ifstream stream;
+  stream.open(filePath);
+  if (!stream.good()) {
+    throw std::runtime_error(fmt::format("[Parser] Could not open file {}", filePath));
+  }
+  antlr4::ANTLRInputStream input(stream);
+
+  LogicLexer lexer(&input);
+  antlr4::CommonTokenStream tokens(&lexer);
+  LogicParser parser(&tokens);
+
+  LogicParser::ProofContext *ctx = parser.proof();
+  return std::any_cast<DNF>(visitProof(ctx));
+}
+
+const Assumptions &Logic::getAssumptions() const { return assumptions; }

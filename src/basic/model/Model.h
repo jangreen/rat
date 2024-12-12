@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../parsing/Assumptions.h"
 #include "../Literal.h"
 #include "Edge.h"
 #include "Event.h"
@@ -49,4 +50,4 @@ class Model {
 // wrt. these equalities. Otherwise a naive evaluation of an expression in such a model may me
 // wrong. We ensure consistency by the fact that all vertices in the same equivalence class (wrt
 // equalities) have the same edges
-void saturateModel(Model &model);
+void saturateModel(Model &model, const Assumptions &assumptions);

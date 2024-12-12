@@ -1,6 +1,7 @@
 #pragma once
 #include <boost/container/flat_set.hpp>
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered/unordered_node_set.hpp>
 #include <optional>
 
 #include "Relation.h"
@@ -23,8 +24,6 @@ enum class SetOperation {
 };
 
 class Set {
-  Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
-      std::optional<int> label, std::optional<std::string> identifier);
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalSet right,
                              CanonicalRelation relation, std::optional<int> label,
                              const std::optional<std::string> &identifier);
@@ -47,10 +46,13 @@ class Set {
   static int maxEvent;  // to create globally unique events
 
  public:
-  // WARNING: Never call these constructors: they are only public for technical reasons
+  // WARNING: Never call this constructor: it is only public for technicaly reasons
+  // (canonicalizer.emplace uses an allocator that needs access to this constructor)
+  Set(SetOperation operation, CanonicalSet left, CanonicalSet right, CanonicalRelation relation,
+      std::optional<int> label, std::optional<std::string> identifier);
   // Due to canonicalization, moving or copying is not allowed
-  Set(const Set &other) = default;
-  // Set(const Set &&other) = default;
+  Set(const Set &other) = delete;
+  Set(const Set &&other) = delete;
 
   static CanonicalSet emptySet();
   static CanonicalSet fullSet();
@@ -60,23 +62,6 @@ class Set {
   static CanonicalSet newSet(SetOperation operation, CanonicalSet left, CanonicalRelation relation);
   static CanonicalSet freshEvent();
 
-  [[nodiscard]] bool operator==(const Set &other) const;
-
-  bool isEvent() const { return operation == SetOperation::event; }
-  const bool &isNormal() const { return _isNormal; }
-  bool hasFullSet() const { return _hasFullSet; }
-  bool hasBaseSet() const { return _hasBaseSet; }
-  const EventSet &getEvents() const { return events; }
-  const SetOfSets &getEventBasePairs() const { return eventBasePairs; }
-  const SetOfSets &getBaseSets() const { return baseSets; }
-  const EventSet &getNormalEvents() const { return normalEvents; }
-  [[nodiscard]] CanonicalSet intersectWith(CanonicalSet other) const;
-  [[nodiscard]] CanonicalSet imageWith(CanonicalRelation other) const;
-  [[nodiscard]] CanonicalSet domainWith(CanonicalRelation other) const;
-  [[nodiscard]] int intersectionWidth() const;
-  [[nodiscard]] int compositionLength() const;
-  [[nodiscard]] bool isSmallerReason(CanonicalSet other) const;
-
   const SetOperation operation;
   const std::optional<std::string> identifier;  // is set iff operation base
   const std::optional<int> label;               // is set iff operation event
@@ -84,29 +69,31 @@ class Set {
   const CanonicalSet rightOperand;              // is set iff operation binary
   const CanonicalRelation relation;             // is set iff domain/image
 
+  [[nodiscard]] bool operator==(const Set &other) const;
+  [[nodiscard]] bool isEvent() const;
+  [[nodiscard]] const bool &isNormal() const;
+  [[nodiscard]] bool hasFullSet() const;
+  [[nodiscard]] bool hasBaseSet() const;
+  [[nodiscard]] const EventSet &getEvents() const;
+  [[nodiscard]] const SetOfSets &getEventBasePairs() const;
+  [[nodiscard]] const SetOfSets &getBaseSets() const;
+  [[nodiscard]] const EventSet &getNormalEvents() const;
+  [[nodiscard]] CanonicalSet intersectWith(CanonicalSet other) const;
+  [[nodiscard]] CanonicalSet imageWith(CanonicalRelation other) const;
+  [[nodiscard]] CanonicalSet domainWith(CanonicalRelation other) const;
+  [[nodiscard]] int intersectionWidth() const;
+  [[nodiscard]] int compositionLength() const;
+  [[nodiscard]] bool isSmallerReason(CanonicalSet other) const;
   [[nodiscard]] CanonicalSet rename(const Renaming &renaming) const;
-
-  // printing
   [[nodiscard]] std::string toString() const;
 };
 
 template <>
 struct std::hash<SetOperation> {
-  std::size_t operator()(const SetOperation &operation) const noexcept {
-    return static_cast<std::size_t>(operation);
-  }
+  std::size_t operator()(const SetOperation &operation) const noexcept;
 };
 
 template <>
 struct std::hash<Set> {
-  std::size_t operator()(const Set &set) const noexcept {
-    size_t seed = 31;
-    boost::hash_combine(seed, set.operation);
-    boost::hash_combine(seed, set.leftOperand);
-    boost::hash_combine(seed, set.rightOperand);
-    boost::hash_combine(seed, set.relation);
-    boost::hash_combine(seed, set.identifier);
-    boost::hash_combine(seed, set.label);
-    return seed;
-  }
+  std::size_t operator()(const Set &set) const noexcept;
 };

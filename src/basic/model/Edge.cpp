@@ -1,7 +1,5 @@
 #include "Edge.h"
 
-#include <iostream>
-
 #include "../Set.h"
 
 Edge::Edge(const EventType from, const EventType to, const CanonicalRelation reason)
@@ -17,6 +15,8 @@ EventType Edge::from() const { return _from; }
 EventType Edge::to() const { return _to; }
 
 CanonicalRelation Edge::reason() const { return _reason; }
+
+void Edge::resetReason() { _reason = nullptr; }
 
 bool Edge::updateReason(const CanonicalRelation newReason) {
   assert(newReason != nullptr);

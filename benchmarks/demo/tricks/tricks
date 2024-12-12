@@ -1,0 +1,41 @@
+// typing
+let rf = [W];rf;[R]
+let dep = dep & po              // only applicable if dep is base
+                                // similar to assume dep <= po (only possible if po base)
+
+// disjointness
+assume W & (R | F) <= 0
+assume R & F <= 0
+
+// enforce transitivity
+assume co+ <= co                // assumption (only possible if co base), probably faster
+let co = co+                    // redefinition
+
+// splitting
+let int = po | po^-1 | id
+let rf = rfi | rfe
+
+// compare indirect vs direct
+assume new.hb+ & id <= 0
+assert old.hb+ & id <= 0        // compares two acyclicity constraints
+
+assert old.hb <= new.hb+        // compares relations under acyclicity constraint
+                                // excludes "shortcuts"
+
+assert old.hb <= new.hb         // compares relations under acyclicity constraint
+                                // stronger statement but faster
+
+// abstract derived relations
+let dep = ctrl | data | addr
+-> drop definition if possible
+
+// redefinitions
+let co = co | IW*W              // only applicable to base relations
+                                // similar to assume IW*W <= co (only possible if co base)
+
+// negation
+let Plain = ~Marked             // not expressible
+        |
+        V
+let Plain = notMarked
+assume notMarked & Marked <= 0

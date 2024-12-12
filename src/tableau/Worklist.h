@@ -47,7 +47,7 @@ class Worklist {
   Node *pop();
   [[nodiscard]] Node *top() const;
   void erase(const Node *node);
-  bool contains(const Node *node) const;
+  [[nodiscard]] bool contains(const Node *node) const;
 
   [[nodiscard]] bool isEmpty() const;
   [[nodiscard]] bool validate() const;

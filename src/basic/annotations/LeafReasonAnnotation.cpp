@@ -261,7 +261,8 @@ LeafAnnotatedSet<Reasons> substituteAll(const LeafAnnotatedSet<Reasons> &annotat
     case SetOperation::image:
     case SetOperation::domain: {
       const auto &left = substituteAll(Annotated::getLeft(annotatedSet), search, replace);
-      const auto relation = Annotated::getRightRelation<Reasons>(annotatedSet);
+      const auto relation =
+          substituteAll(Annotated::getRightRelation<Reasons>(annotatedSet), search, replace);
       return Annotated::newSet(set->operation, left, relation);
     }
     case SetOperation::setIntersection:
@@ -271,6 +272,43 @@ LeafAnnotatedSet<Reasons> substituteAll(const LeafAnnotatedSet<Reasons> &annotat
           substituteAll(Annotated::getRightSet<Reasons>(annotatedSet), search, replace);
       return Annotated::newSet(set->operation, left, right);
     }
+    default:
+      throw std::logic_error("unreachable");
+  }
+}
+
+LeafAnnotatedRelation<Reasons> substituteAll(
+    const LeafAnnotatedRelation<Reasons> &annotatedRelation, CanonicalSet search,
+    CanonicalSet replace) {
+  const auto &[relation, annotation] = annotatedRelation;
+
+  switch (relation->operation) {
+    case RelationOperation::relationIntersection:
+    case RelationOperation::composition:
+    case RelationOperation::relationUnion: {
+      const auto &left =
+          substituteAll(Annotated::getLeftRelation<Reasons>(annotatedRelation), search, replace);
+      const auto &right = substituteAll(Annotated::getRight(annotatedRelation), search, replace);
+      return Annotated::newRelation(relation->operation, left, right);
+    }
+    case RelationOperation::converse:
+    case RelationOperation::transitiveClosure: {
+      const auto &left =
+          substituteAll(Annotated::getLeftRelation<Reasons>(annotatedRelation), search, replace);
+      return Annotated::newRelation(relation->operation, left);
+    }
+    case RelationOperation::baseRelation:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
+      return annotatedRelation;
+    case RelationOperation::setIdentity: {
+      const auto &left =
+          substituteAll(Annotated::getLeftSet<Reasons>(annotatedRelation), search, replace);
+      return Annotated::newSetIdentity(left);
+    }
+    case RelationOperation::cartesianProduct:
+      throw std::logic_error("not implemented");
     default:
       throw std::logic_error("unreachable");
   }

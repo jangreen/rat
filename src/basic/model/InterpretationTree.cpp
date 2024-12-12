@@ -1,5 +1,9 @@
 #include "InterpretationTree.h"
 
+#include <iostream>
+
+#include "../annotations/ReasonAnnotation.h"
+
 template <typename ExprType>  // Event or Edge
 bool insertOrUpdateReason(SetContainerType<ExprType> &set, const ExprType &element) {
   auto existingElementIt = set.find(element);
@@ -10,6 +14,70 @@ bool insertOrUpdateReason(SetContainerType<ExprType> &set, const ExprType &eleme
   ExprType &existingElement = *existingElementIt;
   return existingElement.updateReason(element.reason());
 }
+
+Interpretation::Interpretation(ExprValue value, InterpretationPtr left, InterpretationPtr right,
+                               std::unordered_map<EventOrEdge, bool> isLeftWitness,
+                               std::unordered_map<EventOrEdge, Event> projectedEvent)
+    : value(std::move(value)),
+      left(std::move(left)),
+      right(std::move(right)),
+      isLeftWitness(std::move(isLeftWitness)),
+      projectedEvent(std::move(projectedEvent)) {
+  assert_void([&] {
+    if (std::holds_alternative<SetValue>(value)) {
+      const auto events = std::get<SetValue>(value);
+      for (const auto &event : events) {
+        assert(event.reason() != nullptr);
+      }
+    } else {
+      const auto edges = std::get<RelationValue>(value);
+      for (const auto &edge : edges) {
+        assert(edge.reason() != nullptr);
+      }
+    }
+  });
+}
+InterpretationPtr Interpretation::newLeaf(ExprValue value) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), nullptr, nullptr, {}, {}));
+}
+
+InterpretationPtr Interpretation::unary(RelationValue value, InterpretationPtr left) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), std::move(left), nullptr, {}, {}));
+}
+
+InterpretationPtr Interpretation::binary(ExprValue value, InterpretationPtr left,
+                                         InterpretationPtr right) {
+  return std::make_unique<Interpretation>(
+      Interpretation(std::move(value), std::move(left), std::move(right), {}, {}));
+}
+InterpretationPtr Interpretation::binaryUnion(ExprValue value, InterpretationPtr left,
+                                              InterpretationPtr right,
+                                              std::unordered_map<EventOrEdge, bool> isLeftWitness) {
+  return std::make_unique<Interpretation>(Interpretation(
+      std::move(value), std::move(left), std::move(right), std::move(isLeftWitness), {}));
+}
+InterpretationPtr Interpretation::binaryProjection(
+    ExprValue value, InterpretationPtr left, InterpretationPtr right,
+    std::unordered_map<EventOrEdge, Event> projectedEvent) {
+  return std::make_unique<Interpretation>(Interpretation(
+      std::move(value), std::move(left), std::move(right), {}, std::move(projectedEvent)));
+}
+
+const SetValue &Interpretation::getSetValue() const { return std::get<SetValue>(value); }
+
+const RelationValue &Interpretation::getRelValue() const { return std::get<RelationValue>(value); }
+
+const Event &Interpretation::getProjectedEvent(const EventOrEdge &e) const {
+  return projectedEvent.at(e);
+}
+
+bool Interpretation::traceLeft(const EventOrEdge &e) const { return isLeftWitness.at(e); }
+
+const std::unique_ptr<Interpretation> &Interpretation::getLeft() const { return left; }
+
+const std::unique_ptr<Interpretation> &Interpretation::getRight() const { return right; }
 
 std::string Interpretation::toString() const {
   std::string output;
@@ -37,7 +105,7 @@ InterpretationPtr Interpretation::relationIntersection(InterpretationPtr left,
       insertOrUpdateReason(intersect, intersectEdge);
     }
   }
-  return std::make_unique<Interpretation>(intersect, std::move(left), std::move(right));
+  return Interpretation::binary(intersect, std::move(left), std::move(right));
 }
 
 InterpretationPtr Interpretation::relationUnion(InterpretationPtr left, InterpretationPtr right) {
@@ -51,8 +119,8 @@ InterpretationPtr Interpretation::relationUnion(InterpretationPtr left, Interpre
       isLeftWitness[edge] = false;
     }
   }
-  return std::make_unique<Interpretation>(relunion, std::move(left), std::move(right),
-                                          std::move(isLeftWitness));
+  return Interpretation::binaryUnion(relunion, std::move(left), std::move(right),
+                                     std::move(isLeftWitness));
 }
 
 InterpretationPtr Interpretation::composition(InterpretationPtr left, InterpretationPtr right) {
@@ -67,8 +135,39 @@ InterpretationPtr Interpretation::composition(InterpretationPtr left, Interpreta
       }
     }
   }
-  return std::make_unique<Interpretation>(composition, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(composition, std::move(left), std::move(right),
                                           std::move(projectedEvent));
+}
+
+CanonicalRelation computeTransitiveReason(const RelationsSet &underlyingReasons) {
+  // compute transitive reason
+  // overwrite reasons for all new edges
+  // we could be more precise (use different reasons for different edges)
+  CanonicalRelation unionReason = nullptr;
+  for (const auto &reason : underlyingReasons) {
+    if (unionReason == nullptr) {
+      unionReason = reason;
+      continue;
+    }
+    unionReason = Relation::newRelation(RelationOperation::relationUnion, unionReason, reason);
+  }
+  return Relation::newRelation(RelationOperation::transitiveClosure, unionReason);
+}
+
+bool insertOrUpdateReason(std::unordered_map<Edge, RelationsSet> &edgeToUnderlyingReasons,
+                          const Edge &edge, const RelationsSet &newReason) {
+  if (!edgeToUnderlyingReasons.contains(edge)) {
+    edgeToUnderlyingReasons[edge] = newReason;
+    return true;
+  }
+
+  const auto newReasonExpr = computeTransitiveReason(newReason);
+  auto oldReasonExpr = computeTransitiveReason(edgeToUnderlyingReasons.at(edge));
+  if (newReasonExpr->isSmallerReason(oldReasonExpr)) {
+    edgeToUnderlyingReasons[edge] = newReason;
+    return true;
+  }
+  return false;
 }
 
 InterpretationPtr Interpretation::transitiveClosure(InterpretationPtr left,
@@ -76,43 +175,67 @@ InterpretationPtr Interpretation::transitiveClosure(InterpretationPtr left,
   assert(left != nullptr);
   const auto underlying = left->getRelValue();
 
-  RelationValue refltransClosure = underlying;
+  RelationValue refltransClosure;
   std::unordered_map<EventOrEdge, Event> projectedEvent;
+  if (!underlying.empty()) {
+    // - a reason is conceptually an expression (r1 | r2 | ...)^* where ri's are reasons of an
+    // underlying edge needed to justify the edge
+    // - to be able to calculate minimal reasons we keep the ri's as a set
+    // - then reason composition becomes set union
+    // - to compare the size of reasons we use computeTransitiveReason (which computes the reason
+    // from a set of ri's) and compare the resulting expressions
+    std::unordered_map<Edge, RelationsSet> edgeToUnderlyingReasons;
+    for (const auto &edge : underlying) {
+      edgeToUnderlyingReasons[edge] = {edge.reason()};
+    }
 
-  // iterate underlying
-  RelationValue newPairs;
-  std::unordered_map<EventOrEdge, Event> newProjectedEvent;
-  while (true) {
-    for (const auto &closureEdge : refltransClosure) {
-      for (const auto &rEdge : underlying) {
-        const auto composedEdge = closureEdge.compose(rEdge);
-        if (composedEdge && insertOrUpdateReason(newPairs, composedEdge.value())) {
-          newProjectedEvent.insert({composedEdge.value(), Event(closureEdge.to())});
+    // iterate underlying
+    std::unordered_map<Edge, RelationsSet> newPairs;
+    std::unordered_map<EventOrEdge, Event> newProjectedEvent;
+
+    while (true) {
+      for (const auto &[closureEdge, closureEdgeReason] : edgeToUnderlyingReasons) {
+        for (const auto &rEdge : underlying) {
+          const auto composedEdge = closureEdge.compose(rEdge);
+          auto unionReason = closureEdgeReason;
+          unionReason.insert(rEdge.reason());
+          // if (composedEdge->from() == 0 & composedEdge->to() == 1) {
+          //   std::cout << computeTransitiveReason(unionReason)->toString() << std::endl;
+          // }
+          if (composedEdge && insertOrUpdateReason(newPairs, composedEdge.value(), unionReason)) {
+            newProjectedEvent.insert({composedEdge.value(), Event(closureEdge.to())});
+          }
         }
       }
-    }
-    if (newPairs.empty()) {
-      break;
-    }
-    auto fixpointReached = true;
-    for (const auto &newEdge : newPairs) {
-      if (insertOrUpdateReason(refltransClosure, newEdge)) {
-        projectedEvent.insert({newEdge, newProjectedEvent.at(newEdge)});
-        fixpointReached = false;
+      if (newPairs.empty()) {
+        break;
       }
+      auto fixpointReached = true;
+      for (auto &[newEdge, newEdgeReason] : newPairs) {
+        if (insertOrUpdateReason(edgeToUnderlyingReasons, newEdge, newEdgeReason)) {
+          projectedEvent.insert({newEdge, newProjectedEvent.at(newEdge)});
+          fixpointReached = false;
+        }
+      }
+      if (fixpointReached) {
+        break;
+      }
+      // clear
+      newPairs.clear();
+      newProjectedEvent.clear();
     }
-    if (fixpointReached) {
-      break;
+    for (auto &[edge, reason] : edgeToUnderlyingReasons) {
+      auto edgeCopy = edge;
+      edgeCopy.resetReason();
+      edgeCopy.updateReason(computeTransitiveReason(reason));
+      refltransClosure.insert(edgeCopy);
     }
-    // clear
-    newPairs.clear();
-    newProjectedEvent.clear();
   }
   // insert id
   for (const auto event : events) {
-    refltransClosure.emplace(event, event, Relation::idRelation());
+    insertOrUpdateReason(refltransClosure, {event, event, Relation::idRelation()});
   }
-  return std::make_unique<Interpretation>(refltransClosure, std::move(left), nullptr,
+  return Interpretation::binaryProjection(refltransClosure, std::move(left), nullptr,
                                           std::move(projectedEvent));
 }
 
@@ -125,7 +248,7 @@ InterpretationPtr Interpretation::setIntersection(InterpretationPtr left, Interp
       insertOrUpdateReason(intersect, intersectEvent);
     }
   }
-  return std::make_unique<Interpretation>(intersect, std::move(left), std::move(right));
+  return Interpretation::binary(intersect, std::move(left), std::move(right));
 }
 
 InterpretationPtr Interpretation::setUnion(InterpretationPtr left, InterpretationPtr right) {
@@ -139,8 +262,8 @@ InterpretationPtr Interpretation::setUnion(InterpretationPtr left, Interpretatio
       isLeftWitness[event] = false;
     }
   }
-  return std::make_unique<Interpretation>(setunion, std::move(left), std::move(right),
-                                          std::move(isLeftWitness));
+  return Interpretation::binaryUnion(setunion, std::move(left), std::move(right),
+                                     std::move(isLeftWitness));
 }
 
 InterpretationPtr Interpretation::image(InterpretationPtr left, InterpretationPtr right) {
@@ -158,7 +281,7 @@ InterpretationPtr Interpretation::image(InterpretationPtr left, InterpretationPt
       }
     }
   }
-  return std::make_unique<Interpretation>(image, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(image, std::move(left), std::move(right),
                                           std::move(projectedEvent));
 }
 
@@ -177,6 +300,6 @@ InterpretationPtr Interpretation::domain(InterpretationPtr left, InterpretationP
       }
     }
   }
-  return std::make_unique<Interpretation>(domain, std::move(left), std::move(right),
+  return Interpretation::binaryProjection(domain, std::move(left), std::move(right),
                                           std::move(projectedEvent));
 }

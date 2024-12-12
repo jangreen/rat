@@ -3,7 +3,7 @@
 #include <cassert>
 #include <unordered_set>
 
-#include "../Stats.h"
+#include "../statistics/Stats.h"
 #include "Set.h"
 
 Relation::Relation(const RelationOperation operation, const CanonicalRelation left,
@@ -93,7 +93,48 @@ CanonicalRelation Relation::newRelation(const RelationOperation operation,
       throw std::logic_error("unreachable");
   }
 #endif
-
+  // optimizations
+  switch (operation) {
+    case RelationOperation::composition:
+    case RelationOperation::relationIntersection:
+      if (left->operation == RelationOperation::emptyRelation ||
+          right->operation == RelationOperation::emptyRelation) {
+        return emptyRelation();
+      }
+    case RelationOperation::baseRelation:
+    case RelationOperation::idRelation:
+    case RelationOperation::emptyRelation:
+    case RelationOperation::fullRelation:
+      break;
+    case RelationOperation::relationUnion:
+      if (left->operation == RelationOperation::emptyRelation &&
+          right->operation == RelationOperation::emptyRelation) {
+        return emptyRelation();
+      }
+      if (left->operation == RelationOperation::emptyRelation) {
+        return right;
+      }
+      if (right->operation == RelationOperation::emptyRelation) {
+        return left;
+      }
+      break;
+    case RelationOperation::converse:
+      if (left->operation == RelationOperation::emptyRelation) {
+        return emptyRelation();
+      }
+      break;
+    case RelationOperation::transitiveClosure:
+      if (left->operation == RelationOperation::emptyRelation) {
+        return idRelation();
+      }
+      break;
+    case RelationOperation::setIdentity:
+      if (set->operation == SetOperation::emptySet) {
+        return emptyRelation();
+      }
+    case RelationOperation::cartesianProduct:
+      break;
+  }
   static std::unordered_set<Relation> canonicalizer;
   auto [iter, created] = canonicalizer.emplace(operation, left, right, identifier, set, rightSet);
   Stats::boolean("#relations").count(created);
@@ -200,6 +241,9 @@ std::string Relation::toString() const {
 }
 
 bool Relation::isSmallerReason(const CanonicalRelation other) const {
+  if (other == nullptr) {
+    return true;
+  }
   auto lWidth = intersectionWidth();
   auto rWidth = other->intersectionWidth();
   auto lLength = compositionLength();

@@ -1,0 +1,22 @@
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= Actual comparison =========
+include ./benchmarks/demo/lkmm/lkmm-v00.cat     as old
+include ./benchmarks/demo/lkmm/lkmm-v00_ppo.cat as new
+
+//assume old.hb+ & id <= 0
+//assert new.hb+ & id <= 0        // TRUE
+
+assume new.hb+ & id <= 0
+assert old.hb+ & id <= 0      // Expected TRUE

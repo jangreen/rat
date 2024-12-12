@@ -62,7 +62,7 @@ class Literal {
   [[nodiscard]] bool validate() const;
 
   [[nodiscard]] std::strong_ordering operator<=>(const Literal &other) const;
-  [[nodiscard]] bool operator==(const Literal &other) const { return *this <=> other == 0; }
+  [[nodiscard]] bool operator==(const Literal &other) const;
   [[nodiscard]] bool isNegatedOf(const Literal &other) const;
 
   bool negated;
@@ -94,27 +94,14 @@ class Literal {
   [[nodiscard]] bool substitute(CanonicalSet search, CanonicalSet replace,
                                 int n);  // substitute n-th occurrence
   [[nodiscard]] Literal substituteSet(const LeafAnnotatedSet<Reasons> &set) const;
-  [[nodiscard]] Cube saturate() const;
   void rename(const Renaming &renaming);
-  [[nodiscard]] LeafAnnotatedSet<Reasons> annotatedSet() const { return {set, annotation}; }
+  [[nodiscard]] LeafAnnotatedSet<Reasons> annotatedSet() const;
 
   // printing
   [[nodiscard]] std::string toString() const;
 };
 
-/// hashing
-#include <boost/functional/hash.hpp>
-
 template <>
 struct std::hash<Literal> {
-  std::size_t operator()(const Literal &literal) const noexcept {
-    const size_t opHash = hash<PredicateOperation>()(literal.operation);
-    const size_t setHash = hash<CanonicalSet>()(literal.set);  // Hashes the pointer
-    const size_t signHash = hash<bool>()(literal.negated);
-    const size_t idHash = hash<std::optional<std::string>>()(literal.identifier);
-    const size_t leftLabelHash = hash<CanonicalSet>()(literal.leftEvent);
-    const size_t rightLabelHash = hash<CanonicalSet>()(literal.leftEvent);
-    return ((opHash ^ (setHash << 1)) >> 1) ^
-           (signHash << 1) + 31 * idHash + 7 * leftLabelHash + rightLabelHash;
-  }
+  std::size_t operator()(const Literal &literal) const noexcept;
 };

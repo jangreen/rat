@@ -3,8 +3,7 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "../Assumption.h"
-#include "../utility.h"
+#include "../helper/utility.h"
 #include "Rules.h"
 
 namespace {
@@ -249,7 +248,10 @@ void Tableau::normalize() {
     // we do this at node level because child nodes should inherit this property
     if (currentNode->getLiteral().annotation->hasValue() &&
         !currentNode->getLiteral().annotation->getValue().empty()) {
-      auto saturatedLiterals = currentNode->getLiteral().saturate();
+      auto saturatedLiterals = Rules::saturate(currentNode->getLiteral());
+      // remove duplicates (Rules::saturate does not check for duplicates)
+      removeDuplicates(saturatedLiterals);
+
       currentNode->appendBranch(saturatedLiterals);
       // do not delete node but remove annotation
       // deleteNode(currentNode);

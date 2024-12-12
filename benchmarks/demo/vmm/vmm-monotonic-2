@@ -1,0 +1,36 @@
+// ========= Common definitions =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let addr = [R];addr;[M] & po
+let data = [R];data;[W] & po
+let ctrl = [R];ctrl & po
+let M = R | W
+
+// ========= Common assumptions =========
+//assume Marked & Plain <= 0
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+assume co & id <= 0
+assume co+ <= co
+assume NON-IW & IW <= 0
+assume M & F <= 0
+
+// ========= Import VMM =========
+let DMarked = SetEmpty
+let DPlain = D
+include ./benchmarks/demo/vmm/vmm-alt.cat as orig
+
+let DMarked = D
+let DPlain = SetEmpty
+include ./benchmarks/demo/vmm/vmm-alt.cat as str
+
+assume SetEmpty <= 0
+
+// ========= Check Monotonicity =========
+assert orig.hb <= str.hb           // TRUE
+assert str.hb <= orig.hb           // FALSE
