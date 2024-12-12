@@ -11,7 +11,7 @@ std::vector<std::optional<bool>> RatSolver::rat(const std::string &path, int tim
   }
 
   auto goals = parser.parse(path);
-  assert(validateDNF(; goals));
+  assert(validateDNF(goals));
   spdlog::info(fmt::format(
       "[Parser] Done: {} goal(s), {} relation assumption(s), {} set assumption(s)", goals.size(),
       parser.getAssumptions().baseAssumptions.size() +
