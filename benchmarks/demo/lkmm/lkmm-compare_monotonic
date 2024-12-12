@@ -1,3 +1,6 @@
+// Monotonicity (release to mb) in LKMM:
+//      https://lkml.org/lkml/2022/11/16/1555
+
 // ========= Common definitions =========
 let int = po | po^-1 | id
 let rf = [W];rf;[R]

@@ -6,19 +6,19 @@ let rfi = rf & int
 let rfe = rf & ext
 let rf = rfi | rfe
 
+let addr = [R];addr;[M] & po
+let data = [R];data;[W] & po
+let ctrl = [R];ctrl & po
+
 // ========= Common assumptions =========
 assume W & R <= 0
 assume po & id <= 0
 assume po+ <= po
 assume rfi <= po
 
-// let ctrl = ctrl;po*
 // ========= Import VMM =========
 let ACQ = ACQ & (R | F)
 let REL = REL & (W | F)
-let addr = [R];addr;[M] & po
-let data = [R];data;[W] & po
-let ctrl = [R];ctrl & po
 include ./benchmarks/demo/vmm/vmm.cat as vmm
 
 assume vmm.hb+ & id <= 0
@@ -30,6 +30,6 @@ let oota-plain = (dep | rf)+ & id                           // FALSE: but racy
 //assert oota-plain <= 0
 
 // (2) OOTA marked
-let Marked = RLX //| SC | REL | ACQ                           // hard with full union, terminates with 'RLX'
+let Marked = RLX // | SC | REL | ACQ                           // hard with full union, terminates with 'RLX'
 let oota-marked = ([Marked];(dep | rf);[Marked])+ & id
 assert oota-marked <= 0                                     // FALSE: (3s)

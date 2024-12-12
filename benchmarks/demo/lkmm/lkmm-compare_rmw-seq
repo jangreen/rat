@@ -1,3 +1,7 @@
+// Release-Acquire chains in LKMM:
+//      https://github.com/paulmckrcu/litmus/issues/11
+//      https://lkml.org/lkml/2022/11/16/1555
+
 // ========= Common =========
 let int = po | po^-1 | id
 let rf = [W];rf;[R]

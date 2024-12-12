@@ -7,13 +7,13 @@
  *)
 
 
-let ext = ext & ((NON-IW) * M)
-let int = int | (IW * M)
+// let ext = ext & ((NON-IW) * M)
+// let int = int | (IW * M)
 let fr = rf^-1;co
-let rfe = rf & ext
+// let rfe = rf & ext
 let coe = co & ext
 let fre = fr & ext
-let rfi = rf & int
+// let rfi = rf & int
 let coi = co & int
 let fri = fr & int
 

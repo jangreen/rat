@@ -12,14 +12,15 @@ assume po^+ <= po
 assume po & id <= 0
 assume loc^-1 <= loc
 
-let ctrl = ctrl;po*                             // po extends ctrl on hardware models
+let data = [R];data;[W] & po
+let addr = [R];addr & po
+let ctrl = [R];(ctrl & po);po*                             // po extends ctrl on hardware models
 // ============ ARM8 ============
 include ./benchmarks/demo/arm8/aarch64.cat as arm
 let internal = po-loc | arm.ca | rf
 
 // ============ OOTA ============
-let dep = [R];addr | [R];data;[W] | [R];ctrl;[W]
-let dep = dep & po                              // assume dep <= po
+let dep = data | addr | ctrl
 let oota = (dep | rf)^+ & id
 
 // ============ Goal ============

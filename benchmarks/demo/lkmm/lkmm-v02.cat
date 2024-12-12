@@ -31,10 +31,12 @@
 
 (* Redefine dependencies to include dependencies carried
 * through unmarked accesses *)
-// let data = data | rfi
-// let carry-dep = (data)*      // TRUE for oota
 
-let carry-dep = (data ; rfi)*
+// This one prevents OOTA. "ctrl" is necessary to prevent OOTA over load-load ctrl-deps.
+// OOTA with only load-store ctrl-deps is prevented by (data | rfi)* alone.
+// let carry-dep = (data | rfi | ctrl)*
+
+let carry-dep = (data;rfi)*
 let addr = carry-dep ; addr
 let ctrl = carry-dep ; ctrl
 let data = carry-dep ; data

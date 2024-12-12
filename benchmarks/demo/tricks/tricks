@@ -1,9 +1,9 @@
-// typing
-let rf = [W];rf;[R]
+// typing:
+let rf = [W];rf;[R] & loc
 let dep = dep & po              // only applicable if dep is base
                                 // similar to assume dep <= po (only possible if po base)
 
-// disjointness
+// disjointness (of W, R, and F):
 assume W & (R | F) <= 0
 assume R & F <= 0
 
