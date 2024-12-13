@@ -17,20 +17,20 @@ assume rfi <= po
 
 // ========= LKMM =========
 // NOTE: We assume "Marked" to be a base set (the included lkmm models have their definition of Marked removed)
-let rmw = [R & Marked & RMW & (Acquire | Mb)];rmw;[W & Marked & RMW & (Release | Mb)] & po
+// let rmw = [R & Marked & RMW & Acquire];rmw;[W & Marked & RMW & Release] & po // TRUE (~500s)
+// let rmw = [R & Marked & Acquire];rmw;[W & Marked & Release] & po // TRUE (~1300s)
+let rmw = [R & Marked];rmw;[W & Marked] & po
+let RMW = domain(rmw) | range(rmw)
 assume Marked & Plain <= 0
 
 include ./benchmarks/demo/lkmm/lkmm-v00.cat as old
 include ./benchmarks/demo/lkmm/lkmm-v01.cat as new
 
-// ========= Some restrictions to get nicer counterexamples (optional) =========
+// ========= Some restrictions to get nicer counterexamples (optional, but also faster) =========
 assume Sync-rcu | Sync-srcu <= 0
-assume LKR | LKW | UL | LF | RL | RU <= 0
-
-// With this, the tool fails to find a model suggesting that the new model strengthens Hb
-// mostly (only?) on Mb accesses.
-// assume Mb <= 0
+assume LKR | LKW | UL | LF | RL | RU | After-atomic | Before-atomic  <= 0
+assume Mb <= 0
 
 // ========= Goals =========
 //assert old.hb <= new.hb   // UNKNOWN
-assert new.hb <= old.hb     // FALSE (15.6s)
+assert new.hb <= old.hb     // FALSE (20s)
