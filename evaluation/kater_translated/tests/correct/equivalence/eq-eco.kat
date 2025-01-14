@@ -1,0 +1,12 @@
+let rf = [W];rf;[R]
+let mo = [W];mo-base+;[W]
+let fr = rf^-1;mo
+
+assume W & R <= 0
+assume rf;rf^-1 <= id
+
+let eco1 = (rf | mo | fr)+
+let eco2 = (rf | mo;rf? | fr;rf?)
+
+assert eco1 <= eco2
+assert eco2 <= eco1

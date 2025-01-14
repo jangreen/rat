@@ -1,0 +1,27 @@
+// Extended coherence order
+let eco = (rf | mo | fr)+
+
+// ---------------------------------------------------------------------
+// RC11 Happens-before
+// ---------------------------------------------------------------------
+
+let sw = [REL] ; ([F] ; po)? ; (rf ; rmw)* ; rf ; (po ; [F])? ; [ACQ]
+
+let hb = (po | sw)+
+
+// ---------------------------------------------------------------------
+// IMM Consistency axioms
+// ---------------------------------------------------------------------
+
+let wrel = [W]; [REL]
+let racq = [R]; [ACQ]
+let bob = po ; wrel | racq ; po | po ; [F] | [F] ; po | wrel ; po-loc ; [W]
+
+let deps = data | ctrl | addr ; po? | rmw
+let ppo = [R] ; (deps | rfi)+ ; [W] | bob
+
+// global ordering constraint
+let fsc = [F]; [SC]
+let psc = fsc ; hb ; eco ; hb ; fsc
+         | fsc ; po ; fsc
+let ar = rfe | ppo | detour | psc

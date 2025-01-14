@@ -1,0 +1,56 @@
+// predicate Fisb
+// predicate Fdmb_st
+
+// disjoint R # W # Fisb # Fdmb_st
+assume R & (W | Fisb | Fdmb_st) <= 0
+assume W & (Fisb | Fdmb_st) <= 0
+assume Fisb & Fdmb_st <= 0
+
+// disjoint Fisb # Fdmb_st # NA # SC # ACQ # REL
+assume (Fisb | Fdmb_st) & (NA | SC | ACQ | REL) <= 0
+assume NA & ( SC | ACQ | REL ) <= 0
+assume SC & ( ACQ | REL ) <= 0
+assume ACQ & REL <= 0
+
+let DMB_SY = F & REL
+let DMB_LD = F & ACQ
+let DMB_ST = Fdmb_st
+let ISB    = Fisb   // hack
+let A      = R & ACQ
+let Q      = R & ACQ
+let L      = W & REL
+let R_ret  = R      // hack
+
+// Atomic RMW relation
+let amo = rmw
+let arm_rmw = amo // | lxsx
+
+// Local read successor
+let lrs = [W]; po-loc ; ([R] ; po-loc)* ; [R]
+
+// Dependency ordering
+let dob = addr | data
+	| ctrl; [W]
+	| (ctrl | (addr; po)); [ISB] | [ISB]; po //; [R]
+	| addr; po; [W]
+	| (addr | data); lrs
+
+// Atomic ordering
+let aob = arm_rmw
+	| [UW]; lrs; [A | Q]
+
+// Barrier ordering
+let bob = po; [DMB_SY]
+        | [DMB_SY]; po
+        | po; ([A];amo;[L]); po
+	| [L]; po; [A]
+	| [R_ret]; po; [DMB_LD]; po
+	| [A | Q]; po
+	| [W]; po; [DMB_ST]; po; [W]
+	| po; [L]
+
+let ppo = (dob | aob | bob)+
+
+let ob = (rfe | mo | fr | ppo)
+
+// acyclic ob
