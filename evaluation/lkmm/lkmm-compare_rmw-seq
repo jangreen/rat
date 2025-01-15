@@ -1,0 +1,37 @@
+// Release-Acquire chains in LKMM:
+//      https://github.com/paulmckrcu/litmus/issues/11
+//      https://lkml.org/lkml/2022/11/16/1555
+
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= LKMM =========
+// NOTE: We assume "Marked" to be a base set (the included lkmm models have their definition of Marked removed)
+// let rmw = [R & Marked & RMW & Acquire];rmw;[W & Marked & RMW & Release] & po // TRUE (~500s)
+// let rmw = [R & Marked & Acquire];rmw;[W & Marked & Release] & po // TRUE (~1300s)
+let rmw = ([R & Marked];rmw;[W & Marked]) & po
+let RMW = domain(rmw) | range(rmw)
+assume Marked & Plain <= 0
+
+include ./evaluation/lkmm/lkmm-v00.cat as old
+include ./evaluation/lkmm/lkmm-v01.cat as new
+
+// ========= Some restrictions to get nicer counterexamples (optional, but also faster) =========
+assume Sync-rcu | Sync-srcu <= 0
+assume LKR | LKW | UL | LF | RL | RU | After-atomic | Before-atomic  <= 0
+assume Mb <= 0
+
+// ========= Goals =========
+assert new.hb <= old.hb       // FALSE (20s), counterexample has resemblance to reported counterexample on lkml.org
+                              // (see link at the top)
+assert old.hb <= new.hb       // TRUE (should be true trivially, but tool takes 3200 seconds).

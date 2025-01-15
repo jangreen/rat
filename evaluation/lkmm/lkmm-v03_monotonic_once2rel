@@ -1,0 +1,37 @@
+
+// ========= Common definitions =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+// ========= Common assumptions =========
+assume Marked & Plain <= 0
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= Actual comparison =========
+let UP = UP & W     // Only upgrade writes from Once to Release
+
+let OnceOrig = Once
+let ReleaseOrig = Release
+
+let Once = OnceOrig | UP
+let Release = ReleaseOrig
+include ./evaluation/lkmm/lkmm-v03.cat as old
+
+let Once = OnceOrig
+let Release = ReleaseOrig | UP
+include ./evaluation/lkmm/lkmm-v03.cat as new
+
+// assert old.hb <= new.hb                    // TIMEOUT
+// Thus we instead check that ppo and cumul-fence only get larger (the only relations affected that hb depends on)
+// which in turn implies the inclusion on hb.
+assert old.ppo         <= new.ppo          // TRUE
+assert old.cumul-fence <= new.cumul-fence  // TRUE
+
+assert new.hb          <= old.hb           // FALSE

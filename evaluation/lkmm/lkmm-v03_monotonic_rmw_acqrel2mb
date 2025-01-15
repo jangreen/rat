@@ -1,0 +1,52 @@
+
+// ========= Common definitions =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+let rmw = [R];rmw;[W] & po
+let RMW = domain(rmw) | range(rmw)
+
+// ========= Common assumptions =========
+assume Marked & Plain <= 0
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+assume rmw^-1;rmw <= id
+assume rmw;rmw^-1 <= id
+
+// ========= Actual comparison =========
+
+// Ensure that R and W parts of rmw are adjacent in po
+let po = po | po;[R];rmw | po;[W];rmw^-1
+
+let AcquireOrig = Acquire
+let ReleaseOrig = Release
+
+let Acquire = AcquireOrig | domain(rmw)
+let Release = ReleaseOrig | range(rmw)
+include ./evaluation/lkmm/lkmm-v03.cat as old
+
+let Acquire = AcquireOrig
+let Release = ReleaseOrig
+let Mb = Mb | domain(rmw) | range(rmw)
+include ./evaluation/lkmm/lkmm-v03.cat as new
+
+// assert old.hb <= new.hb                    // TIMEOUT
+// Thus we instead check that ppo and cumul-fence only get larger (the only relations affected that hb depends on)
+// which in turn implies the inclusion on hb.
+assert old.ppo          <= new.ppo           // TRUE
+assert old.cumul-fence  <= new.cumul-fence   // TRUE
+
+// We also check that pb (propagation axiom) is not weakened
+// assert old.pb <= new.pb                   // TIMEOUT
+// The (below) check on strong-fence + the above checks for hb are sufficient to obtain the inclusion
+assert old.strong-fence <= new.strong-fence  // TRUE
+
+// assert new.hb <= old.hb                    // TIMEOUT
+assert new.ppo         <= old.ppo          // FALSE
+assert new.cumul-fence <= old.cumul-fence  // FALSE

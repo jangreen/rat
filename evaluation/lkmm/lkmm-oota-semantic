@@ -1,0 +1,47 @@
+//  Plain accesses carry dependencies (deps over rfi):
+//      https://lore.kernel.org/lkml/20221202125100.30146-1-jonas.oberhauser@huaweicloud.com/
+
+// This version changes the OOTA definition from acyclic(dep | rf) to acyclic(dep;rfe),
+// with the idea that dep shall reflect semantic dependencies instead of syntactic one's.
+// More precisely, the assumption is that any chain of local dependencies/computations (involving addr, data, ctrl, and rfi)
+// is summarized into a single dependency edge if the chain represents a semantic dependency.
+// Such a transformation is not possible inside the .cat model because semantic dependencies do not compose
+// like syntactic one's do:
+//    x --sem_dep--> y --sem_dep--> z  does in general not imply that z semantically depends on x.
+// E.g., assume x is a 2-byte word and the two computation steps involved each clear one byte,
+// then the combined computation clears all bytes, always producing z=0 independently of the value of x.
+
+
+// ========= Common definitions =========
+let M = R | W
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let addr = [R];addr;[M] & po
+let data = [R];data;[W] & po
+let ctrl = [R];ctrl & po                    // Language-level ctrl-dep
+// let ctrl = ([R];ctrl & po);po*            // Hardware-level ctrl-dep (sufficient to avoid OOTA over syntactic deps)
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// let Marked = Once                                // uncomment to get counterexample using only Once accesses
+// ========= Import LKMM =========
+include ./evaluation/lkmm/lkmm-v00.cat as lkmm
+// include ./evaluation/lkmm/lkmm-v02.cat as lkmm    // Updated version which carries deps (gives same results)
+assume lkmm.hb+ & id <= 0                            // assume acyclic hb
+
+// ========= Check OOTA =========
+let dep = addr | data | ctrl
+
+// (1) OOTA plain
+let oota-plain = (dep;rfe)+ & id
+assert oota-plain <= 0                            // FALSE: but is racy
+
+// (2) OOTA marked (i.e., guaranteed non-racy)
+let oota-marked = ([Marked];dep;[Marked];rfe)+ & id
+assert oota-marked <= 0                           // TRUE

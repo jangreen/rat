@@ -1,0 +1,40 @@
+//  Plain accesses carry dependencies (deps over rfi):
+//      https://lore.kernel.org/lkml/20221202125100.30146-1-jonas.oberhauser@huaweicloud.com/
+
+// ========= Common definitions =========
+let M = R | W
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let addr = [R];addr;[M] & po
+let data = [R];data;[W] & po
+let ctrl = [R];ctrl & po                    // Language-level ctrl-dep
+// let ctrl = ([R];ctrl & po);po*            // Hardware-level ctrl-dep (sufficient to avoid OOTA)
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// let Marked = Once                                // uncomment to get counterexample using only Once accesses
+// ========= Import LKMM =========
+include ./evaluation/lkmm/lkmm-v00.cat as lkmm
+// include ./evaluation/lkmm/lkmm-v02.cat as lkmm    // Updated version which carries deps
+assume lkmm.hb+ & id <= 0                            // acyclic hb in LKMM
+
+// ========= Check OOTA =========
+// (1) OOTA plain
+let dep = addr | data | ctrl
+let oota-plain = (dep | rf)+ & id
+// assert oota-plain <= 0                          // FALSE: but is racy and thus oota is fine
+
+// (2) OOTA marked (i.e., guaranteed non-racy)
+let oota-marked = ([Marked];(dep | rf);[Marked])+ & id
+assert oota-marked <= 0                           // FALSE (succeeds with hardware-level ctrl-dep!)
+
+// The generated counterexample can be transformed into a litmus test and validated using Dartagnan or Herd7.
+// The fundamental issue is a tension between the ideas of semantic dependencies
+// (which are respected by compiler optimizations) and syntactic dependencies (which are considered by verifiers).
+// See "lkmm-oota-semantic" for more details.

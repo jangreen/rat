@@ -21,6 +21,8 @@
 *  "Marked" to base relation (only for performance reasons!)
 *  Removed RCU, mixed-access, and race definitions
 *  Commented out all axioms
+*
+*  DIFF to lkmm-v00: Definition of ppo is updated to use "fence & int"
 *)
 
 
@@ -62,10 +64,10 @@ let fence = nonrw-fence | wmb | rmb
 
 (* Sequential Consistency Per Variable *)
 let com = rf | co | fr
-// acyclic po-loc | com as coherence
+//acyclic po-loc | com as coherence
 
 (* Atomic Read-Modify-Write *)
-// empty rmw & (fre ; coe) as atomic
+//empty rmw & (fre ; coe) as atomic
 
 (**********************************)
 (* Instruction execution ordering *)
@@ -77,7 +79,7 @@ let rwdep = (dep | ctrl) ; [W]
 let overwrite = co | fr
 let to-w = rwdep | (overwrite & int) | (addr ; [Plain] ; wmb)
 let to-r = addr | (dep ; [Marked] ; rfi)
-let ppo = to-r | to-w | fence | (po-unlock-lock-po & int)
+let ppo = to-r | to-w | (fence & int) | (po-unlock-lock-po & int)
 
 (* Propagation: Ordering from release operations and strong fences. *)
 let cumul-fence = [Marked] ; ((rfe ; [Marked])? ; (strong-fence | po-rel) | wmb | po-unlock-lock-po) ; [Marked]

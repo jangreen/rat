@@ -1,0 +1,28 @@
+// PPO (no) subset of PO:
+//      https://github.com/torvalds/linux/commit/762e9357e713a2025db05bc36a36a7afc248f9d3
+
+// This version compares the memory models (acyclic(hb.old) <=> acyclic(hb.new))
+// rather than comparing ppo/hb directly.
+
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+assume rfi <= po
+
+// ========= Actual comparison =========
+include ./evaluation/lkmm/lkmm-v00.cat     as old
+include ./evaluation/lkmm/lkmm-v00_ppo.cat as new
+
+//assume old.hb+ & id <= 0
+//assert new.hb+ & id <= 0    // TRUE
+
+assume new.hb+ & id <= 0
+assert old.hb+ & id <= 0      // UNKNOWN (supposedly true?), but tool does not finish
