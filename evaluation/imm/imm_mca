@@ -40,5 +40,5 @@ let mca = mca1 | mca2
 
 // ============ Goal ============
 assume imm <= 0
-assert mca <= 0
+assert mca <= 0         // FALSE
 
