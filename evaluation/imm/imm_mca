@@ -1,0 +1,44 @@
+// ============ Standard ============
+let rfe = [W];rf;[R] & ext
+let rfi = [W];rf;[R] & int
+let rf = rfi | rfe
+let po-loc = po & loc
+let co = ([W];co;[W])
+let coi = co & int
+let coe = co & ext
+let fr = rf^-1;co
+let fri = fr & int
+let fre = fr & ext
+
+let data = [R];data;[W] & po
+let addr = [R];addr & po
+let ctrl = [R];(ctrl & po);po*    // po extends ctrl on hardware models
+
+assume W & R <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume loc^-1 <= loc
+assume loc* <= loc
+assume F & (W | R) <= 0
+assume ext+ <= ext
+assume ext^-1 <= ext
+assume ext;int <= ext
+
+// ============ IMM ============
+include ./evaluation/imm/imm.cat as imm
+let hbAcyc = ((imm.hb & loc) | rf | co | fr)+ & id      // acyclic ((hb & loc) | rf | co | fr)
+let arAcyclic = imm.ar+ & id                            // acyclic ar
+let imm = hbAcyc | arAcyc
+
+
+// ============ MCA ============
+let ppo = imm.bob | imm.ppo                               // Imm's ppo
+       // | imm.detour | imm.psc | [W & STRONG];po;[W]
+let mca1 = ((po & loc) | co)+ & id                        // acyclic((po & loc) | co)
+let mca2 = ((rfe;ppo;rfe^-1);(coi | coe))+ & id           // acyclic(((rfe;ppo;rfe^-1));co)
+let mca = mca1 | mca2
+
+// ============ Goal ============
+assume imm <= 0
+assert mca <= 0
+

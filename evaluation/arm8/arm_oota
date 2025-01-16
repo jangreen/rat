@@ -1,0 +1,30 @@
+// ============ Standard ============
+let int = po | po^-1 | id
+let rfe = [W];rf;[R] & ext & loc
+let rfi = [W];rf;[R] & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let coi = co & int
+let fr = rf^-1;co
+
+assume W & R <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume loc^-1 <= loc
+
+let data = [R];data;[W] & po
+let addr = [R];addr & po
+let ctrl = [R];(ctrl & po);po*                   // po extends ctrl on hardware models
+// let ctrl = [R];(ctrl & po)                     // Language-level ctrl-dep would be insufficient for ARM8
+// ============ ARM8 ============
+include ./evaluation/arm8/aarch64.cat as arm
+let internal = po-loc | arm.ca | rf              // Same as uniproc/SC-per-loc
+
+// ============ OOTA ============
+let dep = data | addr | ctrl
+let oota = (dep | rf)^+ & id
+
+// ============ Goal ============
+assume arm.ob+ & id <= 0                        // assume acyclic ob as external
+assume internal+ & id <= 0                      // assume acyclic po-loc | ca | rf as internal
+assert oota <= 0                                // TRUE (FALSE with language-level ctrl-deps!)

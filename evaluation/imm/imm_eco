@@ -1,0 +1,36 @@
+// ============ Standard ============
+let int = po | po^-1 | id
+let rfe = [W];rf;[R] & ext & loc
+let rfi = [W];rf;[R] & int & loc
+let rf = rfi | rfe
+let po-loc = po & loc
+let co = [W];co+;[W] & loc
+let coi = co & int
+let fr = rf^-1;co
+
+assume W & R <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume loc^-1 <= loc
+assume loc* <= loc
+assume co & id <= 0
+
+let data = [R];data;[W] & po
+let addr = [R];addr & po
+let ctrl = [R];(ctrl & po);po*                   // po extends ctrl on hardware models
+// ============ IMM ============
+include ./evaluation/imm/imm.cat as imm
+
+
+// ============ Goal ============
+
+let hb_ax1 = imm.hb;(imm.eco*) & id
+let hb_ax2 = ((imm.hb & loc) | rf | co | fr)+ & id
+
+assume imm.ar+ & id <= 0        // assume acyclic ar
+assume hb_ax2 <= 0              // assume irreflexive (hb;(eco?))
+assert hb_ax1 <= 0              // TIMEOUT (TRUE?)
+
+// assume hb_ax1 <= 0
+// assert hb_ax2 <= 0           // TRUE (no timeout)
+
