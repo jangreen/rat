@@ -20,8 +20,8 @@ assume po+ <= po
 
 
 // ========= Actual comparison =========
-include ./evaluation/lkmm/lkmm-v00.cat     as old
-include ./evaluation/lkmm/lkmm-v00_ppo.cat as new
+include ./evaluation/lkmm/lkmm-v02.cat as old
+include ./evaluation/lkmm/lkmm-v03.cat as new
 
 // Follow from uniproc + basic properties.
 assume rfi      <= po

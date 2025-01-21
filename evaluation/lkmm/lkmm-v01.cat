@@ -22,7 +22,8 @@
 *  Removed RCU, mixed-access, and race definitions
 *  Commented out all axioms
 *
-*  DIFF to lkmm-v00: Added "let rmw-sequence = (rf ; rmw)*" and extended "cumul-fence"
+*  DIFF to lkmm-v00: Added "let rmw-sequence = (rf ; rmw)*" and extended "cumul-fence" via patch
+*       https://github.com/torvalds/linux/commit/ebd50e2947de9d2675b800a6a29748d0ed7d7fd4
 *)
 
 

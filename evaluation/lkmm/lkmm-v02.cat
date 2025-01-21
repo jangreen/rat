@@ -22,7 +22,8 @@
 *  Removed RCU, mixed-access, and race definitions
 *  Commented out all axioms
 *
-*  DIFF to lkmm-v01: Added "carry-dep" and updated the three dependency relations: "addr", "ctrl", and "data"
+*  DIFF to lkmm-v01: Added "carry-dep" and updated the three dependency relations: "addr", "ctrl", and "data" via patch
+*      https://github.com/torvalds/linux/commit/9ba7d3b3b826ef47c1b7b8dbc2d57da868168128
 *)
 
 

@@ -18,8 +18,8 @@ assume po+ <= po
 assume rfi <= po
 
 // ========= Actual comparison =========
-include ./evaluation/lkmm/lkmm-v00.cat     as old
-include ./evaluation/lkmm/lkmm-v00_ppo.cat as new
+include ./evaluation/lkmm/lkmm-v02.cat as old
+include ./evaluation/lkmm/lkmm-v03.cat as new
 
 //assume old.hb+ & id <= 0
 //assert new.hb+ & id <= 0    // TRUE

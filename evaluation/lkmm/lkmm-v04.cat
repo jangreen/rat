@@ -22,15 +22,24 @@
 *  Removed RCU, mixed-access, and race definitions
 *  Commented out all axioms
 *
-*  DIFF to lkmm-v00: Definition of ppo is updated to use "fence & int"
+*  DIFF to lkmm-v02: Definition of mb is updated to accommodate for changes in the modelling of
+*  RMW's with Mb tags
+*
+*  NOTE: This version is not yet merged in the official tree as it depends on a new release of herd7.
+*  -- Changes to herd7: https://github.com/herd/herdtools7/pull/865
+*  -- Discussion about LKMM changes: https://lore.kernel.org/lkmm/20240930105710.383284-1-jonas.oberhauser@huaweicloud.com/
 *)
 
-
 (* Compute marked and plain memory accesses *)
-// UPDATED: (~M) -> F
 // let Marked = F | IW | Once | Release | Acquire | (RMW & R) | (RMW & W) |
-//        LKR | LKW | UL | LF | RL | RU
+//		LKR | LKW | UL | LF | RL | RU | Srcu-lock | Srcu-unlock
 // let Plain = M \ Marked
+
+(* Redefine dependencies to include those carried through plain accesses *)
+let carry-dep = (data;rfi)*
+let addr = carry-dep ; addr
+let ctrl = carry-dep ; ctrl
+let data = carry-dep ; data
 
 (*******************)
 (* Basic relations *)
@@ -42,21 +51,35 @@ let po-rel = [M] ; po ; [Release]
 let po-unlock-lock-po = po ; [UL] ; (po|rf) ; [LKR] ; po
 
 (* Fences *)
-// UPDATED
 let R4rmb = R & Return	(* Reads for which rmb works *)
 let rmb = [R4rmb] ; fencerel(Rmb) ; [R4rmb]
 let wmb = [W] ; fencerel(Wmb) ; [W]
+
 let mb = ([M] ; fencerel(Mb) ; [M]) |
+	(* everything across a full barrier RMW is ordered. This includes up to one event inside the RMW. *)
+	([M] ; po ; [RMW & Mb] ; po ; [M]) |
+	(* full barrier RMW writes are ordered with everything behind the RMW *)
+	([W & RMW & Mb] ; po ; [M]) |
+	(* full barrier RMW reads are ordered with everything before the RMW *)
+	([M] ; po ; [R & RMW & Mb]) |
 	([M] ; fencerel(Before-atomic) ; [RMW] ; po? ; [M]) |
 	([M] ; po? ; [RMW] ; fencerel(After-atomic) ; [M]) |
 	([M] ; po? ; [LKW] ; fencerel(After-spinlock) ; [M]) |
-	([M] ; po ; [UL] ; (co | po) ; [LKW] ;
-		fencerel(After-unlock-lock) ; [M])
+	([M] ; po-unlock-lock-po ;
+		[After-unlock-lock] ; po ; [M]) |
+	([M] ; po? ; [Srcu-unlock] ; fencerel(After-srcu-read-unlock) ; [M])
 let gp = po ; [Sync-rcu | Sync-srcu] ; po?
 let strong-fence = mb | gp
 
 let nonrw-fence = strong-fence | po-rel | acq-po
 let fence = nonrw-fence | wmb | rmb
+
+(* UNUSED due to removal of mixed-accesses
+let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |
+		Before-atomic | After-atomic | Acquire | Release |
+		Rcu-lock | Rcu-unlock | Srcu-lock | Srcu-unlock) |
+	(po ; [Release]) | ([Acquire] ; po)
+*)
 
 (**********************************)
 (* Fundamental coherence ordering *)
@@ -64,10 +87,10 @@ let fence = nonrw-fence | wmb | rmb
 
 (* Sequential Consistency Per Variable *)
 let com = rf | co | fr
-//acyclic po-loc | com as coherence
+// acyclic po-loc | com as coherence
 
 (* Atomic Read-Modify-Write *)
-//empty rmw & (fre ; coe) as atomic
+// empty rmw & (fre ; coe) as atomic
 
 (**********************************)
 (* Instruction execution ordering *)
@@ -78,14 +101,19 @@ let dep = addr | data
 let rwdep = (dep | ctrl) ; [W]
 let overwrite = co | fr
 let to-w = rwdep | (overwrite & int) | (addr ; [Plain] ; wmb)
-let to-r = addr | (dep ; [Marked] ; rfi)
+let to-r = (addr ; [R]) | (dep ; [Marked] ; rfi)
 let ppo = to-r | to-w | (fence & int) | (po-unlock-lock-po & int)
 
 (* Propagation: Ordering from release operations and strong fences. *)
-let cumul-fence = [Marked] ; ((rfe ; [Marked])? ; (strong-fence | po-rel) | wmb | po-unlock-lock-po) ; [Marked]
+let rmw-sequence = (rf ; rmw)*
+let cumul-fence = [Marked] ; ((rfe ; [Marked])? ; (strong-fence | po-rel) | wmb |
+	po-unlock-lock-po) ; [Marked] ; rmw-sequence
 let prop = [Marked] ; (overwrite & ext)? ; cumul-fence* ; [Marked] ; rfe? ; [Marked]
 
-// UPDATED
+(*
+ * Happens Before: Ordering from the passage of time.
+ * No fences needed here for prop because relation confined to one process.
+ *)
 let hb = [Marked] ; (ppo | rfe | ((prop & noid) & int)) ; [Marked]
 // acyclic hb as happens-before
 
@@ -97,24 +125,11 @@ let hb = [Marked] ; (ppo | rfe | ((prop & noid) & int)) ; [Marked]
 let pb = prop ; strong-fence ; hb* ; [Marked]
 // acyclic pb as propagation
 
-(*******)
-(* RCU *)
-(*******)
-
 (* Removed RCU *)
 
 (*********************************)
 (* Plain accesses and data races *)
 (*********************************)
-
-(* UNUSED due to removal of mixed-accesses
-let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |
-		Before-atomic | After-atomic | Acquire | Release |
-		Rcu-lock | Rcu-unlock | Srcu-lock | Srcu-unlock) |
-	(po ; [Release]) | ([Acquire] ; po)
-*)
-
-(* Removed mixed-accesses *)
 
 (* Executes-before and visibility *)
 let xbstar = (hb | pb | rb)*
@@ -123,10 +138,9 @@ let vis = cumul-fence* ; rfe? ; [Marked] ;
 
 (* Boundaries for lifetimes of plain accesses *)
 let w-pre-bounded = [Marked] ; (addr | fence)?
-// UPDATED
 let r-pre-bounded = [Marked] ; (addr | nonrw-fence |
 	([R4rmb] ; fencerel(Rmb) ; [Return]))?
-let w-post-bounded = fence? ; [Marked]
+let w-post-bounded = fence? ; [Marked] ; rmw-sequence
 let r-post-bounded = (nonrw-fence | ([Return] ; fencerel(Rmb) ; [R4rmb]))? ;
 	[Marked]
 

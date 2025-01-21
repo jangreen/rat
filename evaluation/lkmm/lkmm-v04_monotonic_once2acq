@@ -22,11 +22,11 @@ let AcquireOrig = Acquire
 
 let Once = OnceOrig | UP
 let Acquire = AcquireOrig
-include ./evaluation/lkmm/lkmm-v03.cat as old
+include ./evaluation/lkmm/lkmm-v04.cat as old
 
 let Once = OnceOrig
 let Acquire = AcquireOrig | UP
-include ./evaluation/lkmm/lkmm-v03.cat as new
+include ./evaluation/lkmm/lkmm-v04.cat as new
 
 assert old.hb <= new.hb   // TRUE
 assert new.hb <= old.hb   // FALSE

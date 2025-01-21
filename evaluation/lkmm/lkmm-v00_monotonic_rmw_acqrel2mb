@@ -37,7 +37,7 @@ let Mb = Mb | domain(rmw) | range(rmw)
 include ./evaluation/lkmm/lkmm-v00.cat as new
 
 // assert old.hb <= new.hb                    // TIMEOUT
-// The following fails. See lkmm-v03 version of this test where it succeeds.
+// The following fails. See lkmm-v04 version of this test where it succeeds.
 assert old.ppo          <= new.ppo             // FALSE
 assert old.cumul-fence  <= new.cumul-fence     // FALSE
 

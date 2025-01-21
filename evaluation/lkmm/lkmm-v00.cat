@@ -21,6 +21,9 @@
 *  "Marked" to base relation (only for performance reasons!)
 *  Removed RCU, mixed-access, and race definitions
 *  Commented out all axioms
+*
+*  Original version from:
+*    https://github.com/torvalds/linux/blob/ddfe12944e84830fe7dc490992e55b4fa773555e/tools/memory-model/linux-kernel.cat
 *)
 
 

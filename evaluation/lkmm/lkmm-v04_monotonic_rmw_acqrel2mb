@@ -29,12 +29,12 @@ let ReleaseOrig = Release
 
 let Acquire = AcquireOrig | domain(rmw)
 let Release = ReleaseOrig | range(rmw)
-include ./evaluation/lkmm/lkmm-v03.cat as old
+include ./evaluation/lkmm/lkmm-v04.cat as old
 
 let Acquire = AcquireOrig
 let Release = ReleaseOrig
 let Mb = Mb | domain(rmw) | range(rmw)
-include ./evaluation/lkmm/lkmm-v03.cat as new
+include ./evaluation/lkmm/lkmm-v04.cat as new
 
 // assert old.hb <= new.hb                    // TIMEOUT
 // Thus we instead check that ppo and cumul-fence only get larger (the only relations affected that hb depends on)

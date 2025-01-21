@@ -22,11 +22,11 @@ let ReleaseOrig = Release
 
 let Once = OnceOrig | UP
 let Release = ReleaseOrig
-include ./evaluation/lkmm/lkmm-v03.cat as old
+include ./evaluation/lkmm/lkmm-v04.cat as old
 
 let Once = OnceOrig
 let Release = ReleaseOrig | UP
-include ./evaluation/lkmm/lkmm-v03.cat as new
+include ./evaluation/lkmm/lkmm-v04.cat as new
 
 // assert old.hb <= new.hb                    // TIMEOUT
 // Thus we instead check that ppo and cumul-fence only get larger (the only relations affected that hb depends on)
