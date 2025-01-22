@@ -1,0 +1,2 @@
+assume a;b+ & id <= 0
+assert b+;a & id <= 0

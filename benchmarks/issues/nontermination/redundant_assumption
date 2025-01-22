@@ -1,0 +1,7 @@
+// This might be a performance issue
+
+assume po+ <= po
+assume po & id <= 0
+
+assume ([R];po) & id  <= 0   // Redundant (covered by "po & id <= 0" already), however it causes non-termination!
+assert ([R];po | po)+ & id <= 0

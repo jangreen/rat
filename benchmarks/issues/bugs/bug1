@@ -1,0 +1,2 @@
+assume (a+;b+ | a+ | b+) & id <= 0
+assert (a | b)+ & id <= 0
