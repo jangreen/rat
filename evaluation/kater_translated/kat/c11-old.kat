@@ -1,0 +1,30 @@
+// ---------------------------------------------------------------------
+// Definition of standard relations
+// ---------------------------------------------------------------------
+
+// Extended coherence order
+let eco = (rf | mo | fr)+
+
+// ---------------------------------------------------------------------
+// RC11 Happens-before
+// ---------------------------------------------------------------------
+
+let sw = [SC|REL] ; ([F] ; po)? ; rf ; (po ; [F])? ; [ACQ|SC]
+
+let hb = (po | sw)+
+
+// ---------------------------------------------------------------------
+// RC11 Consistency axioms
+// ---------------------------------------------------------------------
+
+// No load buffering
+// acyclic (po | rf)
+
+// Sequential consistency order
+// let SC' = ([R] | [W]) ; SC
+// let SC' = SC
+let SC' = (R | W) & SC
+
+let scb = hb | mo | fr
+let psc = [SC'] ; scb ; [SC']
+// acyclic psc
