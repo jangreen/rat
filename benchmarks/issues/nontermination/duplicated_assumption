@@ -1,0 +1,7 @@
+
+assume A <= B
+// Removing one of the following 2 assumptions makes it terminating
+// Also terminates if we add another "& A" or "& B" to one of the assumptions
+assume A & B <= 0
+assume B & A <= 0
+assert [A] <= 0
