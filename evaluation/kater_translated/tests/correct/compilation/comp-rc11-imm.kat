@@ -1,0 +1,10 @@
+include ./evaluation/kater_translated/kat/kater-base-theory.kat
+
+include ./evaluation/kater_translated/kat/rc11.kat as rc11
+include ./evaluation/kater_translated/kat/imm.kat  as imm
+
+assume R & SC <= 0
+assume W & SC <= 0
+assume rf;rmw <= mo-base
+
+assert rc11.psc <= imm.psc  // TRUE

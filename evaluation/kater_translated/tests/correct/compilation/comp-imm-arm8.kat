@@ -1,7 +1,9 @@
+// include ./evaluation/kater_translated/kat/kater-base-theory.kat
+
 include ./evaluation/kater_translated/kat/arm8.kat as arm8
 include ./evaluation/kater_translated/kat/imm.kat as imm
 
-assume rf;rmw <= mo
+assume rf;rmw <= mo     // Unnecessary???
 assume SC <= ACQ        // Hardcoded in Kater
 
-assert imm.psc <= arm8.ob*
+assert imm.psc <= arm8.ob*      // TRUE

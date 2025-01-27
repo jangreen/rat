@@ -1,0 +1,9 @@
+// include ./evaluation/kater_translated/kat/kater-base-theory.kat
+
+include ./evaluation/kater_translated/kat/rc11.kat as rc11
+include ./evaluation/kater_translated/kat/arm8.kat as arm8
+
+assume rfi;rmw <= mo-base   // Unnecessary???
+assume SC <= ACQ
+
+assert rc11.psc <= arm8.ob*     // TRUE

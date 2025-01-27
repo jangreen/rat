@@ -1,18 +1,8 @@
-let rf = [W];(rfi | rfe);[R]
-let co = [W];co;[W]
-let mo = co
-let fr = rf^-1;co
+// NOTE: Does not terminate
 
-assume rfi <= po
-assume rf;(rf^-1) <= id
-
-assume W & R <= 0
-assume F & (R | W) <= 0
-assume po+ <= po
-assume SC <= ACQ
-assume SC <= REL
+include ./evaluation/kater_translated/kat/kater-base-theory.kat
 
 include ./evaluation/kater_translated/kat/imm.kat as imm
 include ./evaluation/kater_translated/kat/tso.kat as tso
 
-assert imm.psc <= tso.tso*  // FAIL???
+assert imm.psc <= tso.tso*  // TIMEOUT

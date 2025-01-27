@@ -1,0 +1,11 @@
+// NOTE: Does not terminate
+// include ./evaluation/kater_translated/kat/kater-base-theory.kat
+
+include ./evaluation/kater_translated/kat/power-fm.kat          as power-fm
+include ./evaluation/kater_translated/kat/power-fm-simpl.kat    as power-fm-simpl
+
+// NOTE: Either requires this assumption or po on the RHS
+// Unclear where in Kater this assumption is made
+assume po & id <= 0
+
+assert power-fm.ar & id <= power-fm-simpl.ar // | po    // TIMEOUT
