@@ -1,0 +1,28 @@
+// A version of kater-base-theory using a proper definition of fr
+
+let UW = W & EXCL
+let UR = R & EXCL
+let M = R | W
+
+let rmw = [UR];rmw;[UW]
+let ctrl = [R];ctrl
+let data = [R];data
+let addr = [R];addr
+let rfe = [W];rfe;[R]
+let rfi = [W];rfi;[R]
+let rf = rfe | rfi
+let mo = [W];mo-base;[W]
+let fr = rf^-1;mo
+
+assume rmw <= po
+assume po-loc <= po
+assume rfi <= po
+assume po+ <= po
+assume mo+ <= mo-base
+assume R & W <= 0
+assume F & (R | W) <= 0
+assume RLX & (ACQ | REL) <= 0
+
+// Special assumptions made by Kater
+assume SC <= ACQ
+assume SC <= REL

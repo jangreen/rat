@@ -9,6 +9,7 @@ assume Fisb & Fdmb_st <= 0
 // disjoint Fisb # Fdmb_st # NA # SC # ACQ # REL
 assume (Fisb | Fdmb_st) & (NA | SC | ACQ | REL) <= 0
 assume NA & ( SC | ACQ | REL ) <= 0
+// The following are odd: Kater assumes SC <= ACQ & REL, so these assumptions are equivalent to SC <= 0
 assume SC & ( ACQ | REL ) <= 0
 assume ACQ & REL <= 0
 
