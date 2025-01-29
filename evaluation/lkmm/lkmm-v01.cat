@@ -141,7 +141,9 @@ let wr-vis = fence | (strong-fence ; xbstar ; r-pre-bounded) |
 let rw-xbstar = fence | (r-post-bounded ; xbstar ; w-pre-bounded)
 
 (* Potential races *)
-let pre-race = ext & ((Plain * M) | ((M \ IW) * Plain))
+// UPDATED
+// let pre-race = ext & ((Plain * M) | ((M \ IW) * Plain))
+let pre-race = [Plain];ext;[M] | [M];ext;[Plain]
 
 (* Coherence requirements for plain accesses *)
 let wr-incoh = pre-race & rf & rw-xbstar^-1

@@ -7,8 +7,8 @@ let rfe = rf & ext
 let rf = rfi | rfe
 let addr = [R];addr;[M] & po
 let data = [R];data;[W] & po
-let ctrl = [R];ctrl & po                    // Language-level ctrl-dep
-// let ctrl = ([R];ctrl & po);po*            // Hardware-level ctrl-dep (sufficient to avoid OOTA)
+//let ctrl = [R];ctrl & po                    // Language-level ctrl-dep
+let ctrl = ([R];ctrl & po);po*            // Hardware-level ctrl-dep (sufficient to avoid OOTA)
 
 assume W & R <= 0
 assume po & id <= 0
@@ -20,12 +20,13 @@ assume rfi <= po
 include ./evaluation/lkmm/lkmm-v00.cat as lkmm
 // include ./evaluation/lkmm/lkmm-v02.cat as lkmm    // Updated version which carries deps (same results)
 assume lkmm.hb+ & id <= 0                            // acyclic hb in LKMM
+assume (lkmm.wr-incoh | lkmm.rw-incoh  | lkmm.ww-incoh) <= 0
 
 // ========= Check OOTA =========
 // (1) OOTA plain
 let dep = addr | data | ctrl
 let oota-plain = (dep | rf)+ & id
-// assert oota-plain <= 0                          // FALSE: but is racy and thus oota is fine
+// assert oota-plain <= 0                            // FALSE: but is racy and thus oota is fine
 
 // (2) OOTA marked (i.e., guaranteed non-racy)
 let oota-marked = ([Marked];(dep | rf);[Marked])+ & id

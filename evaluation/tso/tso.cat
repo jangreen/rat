@@ -1,0 +1,23 @@
+(* All communication relations *)
+let com = (co | fr | rf)
+
+(* Uniproc *)
+// acyclic (po-loc | com) as uniproc
+
+(* Atomic *)
+empty rmw & (fre;coe)
+let implied = [W];po;[R & A] | [W & A];po;[R]
+// let implied = po & W*R & ((M * A) | (A * M))
+
+(* Communication relations for TSO *)
+let com-tso = (co | fr | rfe)
+
+(* Program order for TSO *)
+let mfence = po;[MFence];po
+let po-tso = [R];po;[M] | [W];po;[W] | mfence
+// let po-tso = ((po & ((R*M) | (W*W))) | mfence)
+
+(* TSO global-happens-before *)
+let ghb-tso = po-tso | com-tso
+
+// acyclic ghb-tso as tso

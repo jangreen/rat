@@ -38,7 +38,7 @@ let dep = addr | data | ctrl
 
 // (1) OOTA plain
 let oota-plain = (dep;rfe)+ & id
-assert oota-plain <= 0                            // FALSE: but is racy
+// assert oota-plain <= 0                            // FALSE: but is racy
 
 // (2) OOTA marked (i.e., guaranteed non-racy)
 let oota-marked = ([Marked];dep;[Marked];rfe)+ & id

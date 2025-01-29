@@ -1,28 +1,34 @@
 // PPO (no) subset of PO:
 //      https://github.com/torvalds/linux/commit/762e9357e713a2025db05bc36a36a7afc248f9d3
 
-// This version compares the memory models (acyclic(hb.old) <=> acyclic(hb.new))
-// rather than comparing ppo/hb directly.
-
 // ========= Common =========
 let int = po | po^-1 | id
 let rf = [W];rf;[R]
 let rfi = rf & int
 let rfe = rf & ext
 let rf = rfi | rfe
+let fr = rf^-1;co
+let addr = addr & po
+let data = data & po
+let ctrl = ctrl & po
+
 let M = R | W
 
 assume W & R <= 0
 assume po & id <= 0
 assume po+ <= po
-assume rfi <= po
+
 
 // ========= Actual comparison =========
 include ./evaluation/lkmm/lkmm-v02.cat as old
 include ./evaluation/lkmm/lkmm-v03.cat as new
 
-//assume old.hb+ & id <= 0
-//assert new.hb+ & id <= 0    // TRUE
+// Follow from uniproc + basic properties.
+assume rfi      <= po
+assume fr & int <= po
+assume co & int <= po
 
-assume new.hb+ & id <= 0
-assert old.hb+ & id <= 0      // UNKNOWN (supposedly true?), but tool does not finish
+
+// ppo is no subset of po in previous version, but it is in the new version
+assert old.ppo <= po    // FALSE
+assert new.ppo <= po    // TRUE

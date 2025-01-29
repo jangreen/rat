@@ -28,13 +28,5 @@ assume rfi      <= po
 assume fr & int <= po
 assume co & int <= po
 
-// ppo is no subset of po in previous version, but it new version
-assert old.ppo <= po    // FALSE
-assert new.ppo <= po    // TRUE
-
-// hb is affected by changed to ppo
-assert old.hb <= new.hb // FALSE
 assert new.hb <= old.hb // TRUE
 
-// NOTE: acyclic(old.hb) <=> acyclic(new.hb) is expected to hold (see lkmm-compare_ppo_hard)
-// but the tool does not terminate

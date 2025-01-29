@@ -5,19 +5,19 @@ let rfi = [W];rf-base;[R] & int & loc
 let rf = rfi | rfe
 let po-loc = po & loc
 let fr = rf^-1;co
+let M = R | W
 
-assume W & R <= 0                               // not needed but faster (typing of rfe implies that dep is in po-tso)
+assume W & R <= 0
 assume po^+ <= po
 assume po & id <= 0
 assume loc^-1 <= loc
 
 // ============ TSO ============
-let com = (co | fr | rf)
-let uniproc = (po-loc | com)^+ & id             // acyclic (po-loc | com) <=> empty (po-loc | com)+ & id
-let com-tso = (co | fr | rfe)
-let po-tso = ([R];po | [W];po;[W] | mfence)
-let ghb-tso = (po-tso | com-tso)^+ & id         // acyclic (po-tso | com-tso) <=> empty (po-tso | com-tso)+ & id
-let tso = ghb-tso | uniproc
+
+include ./evaluation/tso/tso.cat as tso
+let uniproc = (po-loc | tso.com)^+ & id
+let ghb-tso = (tso.po-tso | tso.com-tso)^+ & id
+let tso = uniproc | ghb-tso
 
 // ============ OOTA ============
 let dep = dep & po                              // or "assume dep <= po"

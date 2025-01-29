@@ -1,0 +1,38 @@
+// PPO (no) subset of PO:
+//      https://github.com/torvalds/linux/commit/762e9357e713a2025db05bc36a36a7afc248f9d3
+
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let fr = rf^-1;co
+let addr = addr & po
+let data = data & po
+let ctrl = ctrl & po
+
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+
+
+// ========= Actual comparison =========
+include ./evaluation/lkmm/lkmm-v02.cat as old
+include ./evaluation/lkmm/lkmm-v03.cat as new
+
+// Follow from uniproc + basic properties.
+assume rfi      <= po
+assume fr & int <= po
+assume co & int <= po
+
+// Hb was weakened with the change to ppo, but this is insufficient to show that the models are different.
+assert old.hb <= new.hb     // FALSE
+
+// We would like to check acyclic(old.hb) <=> acyclic(new.hb) via
+//      assume new.hb+ & id <= 0
+//      assert old.hb+ & id <= 0
+// but the tool does not terminate
+

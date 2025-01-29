@@ -1,0 +1,39 @@
+// ============ Standard ============
+let rfe = [W];rf;[R] & ext
+let rfi = [W];rf;[R] & int
+let rf = rfi | rfe
+let po-loc = po & loc
+let co = ([W];co;[W])
+let coi = co & int
+let coe = co & ext
+let fr = rf^-1;co
+let fri = fr & int
+let fre = fr & ext
+
+assume W & R <= 0
+assume po^+ <= po
+assume po & id <= 0
+assume loc^-1 <= loc
+assume loc* <= loc
+assume L & R <= 0
+assume ext+ <= ext
+assume ext^-1 <= ext
+assume ext;int <= ext
+
+// ============ ARM8 ============
+include ./evaluation/tso/tso.cat as tso
+let uniproc = (po-loc | tso.com)^+ & id
+let ghb-tso = (tso.po-tso | tso.com-tso)^+ & id
+let tso = uniproc | ghb-tso
+
+
+// ============ MCA ============
+let ppo = tso.po-tso                                      // TSO's ppo
+let mca1 = ((po & loc) | co)+ & id                        // acyclic((po & loc) | co)
+let mca2 = ((rfe;ppo;rfe^-1);(coi | coe))+ & id           // acyclic(((rfe;ppo;rfe^-1));co)
+let mca = mca1 | mca2
+
+// ============ Goal ============
+assume tso <= 0
+assert mca <= 0         // TRUE
+

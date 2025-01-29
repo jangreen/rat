@@ -1,21 +1,20 @@
-let int = po | po^-1 | id
-let rfe = rf-base & ext & loc
-let rfi = rf-base & int & loc
-let coi = co-base & int & loc
-let coe = co-base & ext & loc
-let rf = rfi | rfe
-let co = coi | coe
-let po-loc = po & loc
+let rf = rf & loc
+let co = co & loc
 let fr = rf^-1;co
+let po-loc = po & loc
 
 let com = (co | fr | rf)
 let uniproc = (po-loc | com)^+ & id
 
 assume loc^-1 <= loc
-assume loc* <= loc      // Necessary to show fri <= po
+assume loc*   <= loc      // Necessary to show   fr & int   <= po
+assume po+    <= po       // Necessary to show   com+ & int <= po
 
 assume uniproc <= 0
 
-assert rf & int <= po
-assert co & int <= po
-assert fr & int <= po
+let int = po | po^-1 | id
+
+// assert rf & int <= po
+// assert co & int <= po
+// assert fr & int <= po
+assert com+ & int <= po

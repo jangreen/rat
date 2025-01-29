@@ -1,0 +1,30 @@
+// Plain accesses carry dependencies (deps over rfi): https://lkml.org/lkml/2022/12/1/465
+
+// ========= Common =========
+let int = po | po^-1 | id
+let rf = [W];rf;[R]
+let rfi = rf & int
+let rfe = rf & ext
+let rf = rfi | rfe
+let fr = rf^-1;co
+let addr = addr & po
+let data = data & po
+let ctrl = ctrl & po
+
+let M = R | W
+
+assume W & R <= 0
+assume po & id <= 0
+assume po+ <= po
+
+
+// ========= Actual comparison =========
+include ./evaluation/lkmm/lkmm-v01.cat as old
+include ./evaluation/lkmm/lkmm-v02.cat as new
+
+// Follow from uniproc + basic properties.
+assume rfi      <= po
+assume fr & int <= po
+assume co & int <= po
+
+assert old.hb <= new.hb     // TRUE
