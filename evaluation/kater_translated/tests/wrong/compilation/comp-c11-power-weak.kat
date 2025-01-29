@@ -1,0 +1,21 @@
+let rfi = [W];rfi;[R]
+let rfe = [W];rfe;[R]
+let rf = rfi | rfe
+let mo = [W];mo-base;[W]
+let fr = rf^-1;mo
+// let rmw = [R];rmw;[W] & po
+
+assume rfi <= po
+assume rf;(rf^-1) <= id
+assume W & R <= 0
+assume F & (R | W) <= 0
+assume po+ <= po
+assume po & id <= 0
+assume rmw <= po
+
+include ./evaluation/kater_translated/kat/c11-old.kat    as c11-old
+include ./evaluation/kater_translated/kat/power-weak.kat as power-weak
+
+assume rf;rmw <= mo-base
+
+assert ([R|W];(c11-old.psc+);[R|W]) & id  <= power-weak.ar  // FALSE

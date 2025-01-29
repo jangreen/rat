@@ -1,0 +1,30 @@
+let rfi = [W];rfi;[R]
+let rfe = [W];rfe;[R]
+let rf = rfi | rfe
+let mo = [W];mo-base;[W]
+let fr = rf^-1;mo
+// let rmw = [R];rmw;[W] & po
+
+assume rfi <= po
+assume rf;(rf^-1) <= id
+assume W & R <= 0
+assume F & (R | W) <= 0
+assume po+ <= po
+assume po & id <= 0
+assume rmw <= po
+
+include ./evaluation/kater_translated/kat/c11-old.kat           as c11-old
+include ./evaluation/kater_translated/kat/power-fm-simpl.kat    as power-fm-simpl
+
+assume rf;rmw <= mo-base
+
+// The commented-out clauses on the RHS discard "uninteresting" counterexamples
+assert ([R|W];(c11-old.psc+);[R|W]) & id <= power-fm-simpl.ar       // TIMEOUT???
+				   // | fr; [SC & W]; po; [SC & W]; mo; [SC & W]; po; [REL & W]; rfe  |
+				   // any; (fr;mo) ;any |
+				   // po-imm; [REL;W] ;rfe; [ACQ;R]; fr-imm; [REL;W]; rfe; [ACQ;R] ;po-imm; [SC;R]; fr-imm  |
+				   // po-imm; [REL;W]; rfe; [ACQ;R]; fr-imm; [SC;W]; mo-imm; [SC;W]; po-imm; [SC;R]; fr-imm |
+				   // po-imm; [REL;W]; rfe; [ACQ;R]; fr-imm; [W] ;mo-imm; [SC;W]; po-imm; [SC;R]; fr-imm |
+				   // po-imm; [REL;W]; rfe; [ACQ;R]; fr-imm; [W]; mo-imm*; [W]; mo-imm; [SC;W]; po-imm; [SC;R]; fr-imm |
+				   // [SC;R]; po-imm*; [REL;W]; rfe; [ACQ;SC;R]; fr-imm; [REL;SC;W] ;rfe; [ACQ;SC;R]; po-imm; [SC;R]; fr-imm |
+				   // [SC;R]; po-imm; [REL;F]; po-imm; [W]; rfe; [ACQ;SC;R]; fr-imm; [W]; mo-imm*; [SC;W]; po-imm; [SC;R]; fr-imm

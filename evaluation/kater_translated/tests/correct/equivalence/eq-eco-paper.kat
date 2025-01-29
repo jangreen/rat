@@ -9,4 +9,5 @@ assume nrf;nrf <= 0
 assume nrf;nco <= 0
 assume nrf;nrf-1 <= id
 
-assert eco1 <= eco2
+assert eco1 <= eco2     // TRUE
+assert eco2 <= eco1     // TRUE

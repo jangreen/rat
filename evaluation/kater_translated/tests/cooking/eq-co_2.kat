@@ -16,4 +16,4 @@ assume rf;npo-loc+;fr <= mo-base
 
 // co2 <= co1
 
-assert [W|R];co2;[W|R] & id <= co1 & id
+assert [W|R];co2;[W|R] & id <= co1 & id     // TRUE

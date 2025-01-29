@@ -16,5 +16,5 @@ assume W & R <= 0
 assume nco-base+   <= nco-base  // nco is transitive.
 assume nrf ; nrf^-1 <= id   // nrf is functional.
 
-assert eco2 <= eco1
-assert eco1 <= eco2
+assert eco2 <= eco1     // TRUE
+assert eco1 <= eco2     // TRUE

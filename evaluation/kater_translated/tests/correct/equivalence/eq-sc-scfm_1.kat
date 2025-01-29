@@ -17,9 +17,5 @@ include ./evaluation/kater_translated/kat/sc-fm.kat as sc-fm
 
 // sc-fm => sc
 
-assert [R|W|F];(sc-fm.sc+ | sc-fm.hb;fr?);[R|W|F] & id <= [R|W|F];sc.sc+;[R|W|F] & id
-
-// sc => sc-fm
-
-// assume [R|W|F];(sc-fm.sc+ | sc-fm.hb;fr?);[R|W|F] & id <= 0
-// assert ([R|W|F];sc.sc+;[R|W|F]) & id <= 0
+// assert [R|W|F];(rot (sc-fm::sc+ | sc-fm::hb;fr?));[R|W|F] & id <= [R|W|F];sc::sc+;[R|W|F]
+assert [R|W|F];(sc-fm.sc+ | sc-fm.hb;fr?);[R|W|F] & id <= [R|W|F];sc.sc+;[R|W|F] & id       // TRUE

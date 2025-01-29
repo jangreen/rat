@@ -1,7 +1,7 @@
 let rfi = [W];rfi;[R]
 let rfe = [W];rfe;[R]
 let rf = rfi | rfe
-let mo = [W];mo-base;[W]   // ERROR if mo-base is replaced by mo-base+
+let mo = ([W];mo-base;[W])   // ERROR if mo-base is replaced by mo-base+
 let fr = rf^-1;mo
 
 assume F & (R | W) <= 0
@@ -13,7 +13,7 @@ assume rfi <= po
 assume mo-base+ <= mo-base
 assume mo-base & id <= 0
 
-include ./evaluation/kater_translated/kat/tso.kat as tso
+include ./evaluation/kater_translated/kat/tso.kat    as tso
 include ./evaluation/kater_translated/kat/tso-fm.kat as tso-fm
 
 // WTP: tso == fm-tso
@@ -22,8 +22,8 @@ include ./evaluation/kater_translated/kat/tso-fm.kat as tso-fm
 
 let eco = (mo | rf | fr)+
 
-assume (tso-fm.tso+ | tso-fm.hb;fr?) & id <= 0
-assert [R|W|F];(tso.tso+ | po;eco);[R|W|F] & id <= 0
-
 //assert (tso-fm.tso+ | tso-fm::hb;fr?) & id <= rot (tso.tso+ | po;eco)
 // assert [R|W|F];(tso.tso+ | po;eco);[R|W|F] <=&id rot (tso-fm.tso+ | tso-fm.hb;fr?)
+
+assume (tso-fm.tso+ | tso-fm.hb;fr?) & id <= 0
+assert (tso.tso+ | po;eco) & id <= 0        // TIMEOUT

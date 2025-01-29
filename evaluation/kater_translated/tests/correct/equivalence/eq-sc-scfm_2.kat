@@ -1,0 +1,22 @@
+let rfi = [W];rfi;[R]
+let rfe = [W];rfe;[R]
+let rf = rfi | rfe
+let mo = ([W];mo-base;[W])+
+let fr = rf^-1;mo
+
+assume W & R <= 0
+assume rf;rf^-1 <= id
+assume po+ <= po
+assume rfi <= po
+assume mo & id <= 0
+assume po+ <= po
+assume po & id <= 0
+
+include ./evaluation/kater_translated/kat/sc.kat as sc
+include ./evaluation/kater_translated/kat/sc-fm.kat as sc-fm
+
+// sc => sc-fm
+
+// assert [R|W|F];sc::sc+;[R|W|F] & id <= rot (sc-fm::sc+ | sc-fm::hb;fr?)
+assume [R|W|F];(sc-fm.sc+ | sc-fm.hb;fr?);[R|W|F] & id <= 0
+assert ([R|W|F];sc.sc+;[R|W|F]) & id <= 0       // TRUE

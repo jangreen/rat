@@ -19,5 +19,5 @@ assume rf;npo-loc+;fr <= mo-base
 // assert [W|R];co1;[W|R] <=&id rot co2 | npo-loc+ | mo+ | eco
 
 assume (co2 | npo-loc+ | mo+ | eco) & id <= 0
-assert [W|R];co1;[W|R] & id <= 0
+assert [W|R];co1;[W|R] & id <= 0        // TRUE
 
