@@ -266,7 +266,11 @@ std::optional<bool> RegularTableau::solve(int timeout) {
       if (!isSpurious(currentNode)) {
         spdlog::info("[Solver] Answer: False");
         spdlog::info("[Solver] Counterexample:");  // TODO: make clickable link to counterexample
-        getModelFromRoot(currentNode).exportModel("counterexample");
+        Model model = getModelFromRoot(currentNode);
+        model.exportModel("counterexample");
+        saturateModel(model, assumptions);
+        model.exportModel("counterexample-saturated");
+        // getModelFromRoot(currentNode).exportModel("counterexample");
         exportCounterexamplePath(currentNode);
         exportProof("counterexample-proof");
         return false;
