@@ -26,12 +26,13 @@ assume ext+ <= ext
 assume ext^-1 <= ext
 assume ext;int <= ext
 
-// ============ IMM ============
+// ============ LKMM ============
 include ./evaluation/lkmm/lkmm-v00.cat as lkmm
-let uniproc = (po-loc | rf | co | fr)+ & id              // uniproc
-let hbAcyc = lkmm.hb+ & id                               // acyclic hb
-let pbAcyclic = lkmm.pb+ & id                            // acyclic pb
-let lkmm = hbAcyc | pbAcyc | uniproc
+let uniproc = (po-loc | rf | co | fr)+ & id
+let hbAcyc = lkmm.hb+ & id
+let pbAcyc = lkmm.pb+ & id
+let plain-coherence = lkmm.wr-incoh | lkmm.rw-incoh | lkmm.ww-incoh
+let lkmm = hbAcyc | pbAcyc | uniproc | plain-coherence
 
 
 // ============ MCA ============
@@ -40,6 +41,11 @@ let mca1 = ((po & loc) | co)+ & id                        // acyclic((po & loc) 
 // We restrict to Marked accesses to avoid racy examples.
 let mca2 = (([Marked];rfe;[Marked];ppo;[Marked];rfe^-1;[Marked]);(coi | coe))+ & id    // acyclic(((rfe;ppo;rfe^-1));co)
 let mca = mca1 | mca2
+
+// ========= To speed up the counterexample generation (optional) ========
+assume Sync-rcu | Sync-srcu <= 0
+assume LKR | LKW | UL | LF | RL | RU | After-atomic | Before-atomic  <= 0
+assume Mb <= 0
 
 // ============ Goal ============
 assume lkmm <= 0

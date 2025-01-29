@@ -31,7 +31,9 @@ assume rfi <= po
 // ========= Import LKMM =========
 include ./evaluation/lkmm/lkmm-v00.cat as lkmm
 // include ./evaluation/lkmm/lkmm-v02.cat as lkmm    // Updated version which carries deps (gives same results)
-assume lkmm.hb+ & id <= 0                            // assume acyclic hb
+assume lkmm.hb+ & id <= 0                            // acyclic hb
+assume lkmm.pb+ & id <= 0                            // acyclic pb
+assume (lkmm.wr-incoh | lkmm.rw-incoh | lkmm.ww-incoh) <= 0 // plain-coherence axiom
 
 // ========= Check OOTA =========
 let dep = addr | data | ctrl
