@@ -1,0 +1,52 @@
+predicate Fisb
+predicate Fdmb_st
+
+disjoint R # W # Fisb # Fdmb_st
+disjoint Fisb # Fdmb_st # NA # SC # ACQ # REL
+
+let DMB_SY = [F ; REL]
+let DMB_LD = [F ; ACQ]
+let DMB_ST = [Fdmb_st]
+let ISB    = [Fisb]   // hack
+let A      = [R ; ACQ]
+let Q      = [R ; ACQ]
+let L      = [W ; REL]
+let R_ret  = [R]      // hack
+
+let dmb.full = DMB_SY
+let dmb.ld = DMB_LD
+let dmb.st = DMB_ST
+
+// Atomic RMW relation
+let amo = rmw
+let arm_rmw = amo // | lxsx
+
+// Local read successor
+let lrs = [W]; po-loc ; ([R] ; po-loc)* ; [R]
+
+// Dependency ordering
+let dob = addr | data
+	| ctrl; [W]
+	| (ctrl | (addr; po)); [ISB] | [ISB]; po //; [R]
+	| addr; po; [W]
+	| (addr | data); lrs
+
+// Atomic ordering
+let aob = arm_rmw
+	| [UW]; lrs; [A | Q]
+
+// Barrier ordering
+let bob = po; [dmb.full]
+        | [dmb.full]; po
+        | po; ([A];amo;[L]); po
+	| [L]; po; [A]
+	| [R_ret]; po; [dmb.ld]; po
+	| [A | Q]; po
+	| [W]; po; [dmb.st]; po; [W]
+	| po; [L]
+
+let ppo = (dob | aob | bob)+
+
+let ob = (rfe | mo | fr | ppo)
+
+// acyclic ob
