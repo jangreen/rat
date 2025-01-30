@@ -6,6 +6,8 @@ RAT="${RAT:-$DIR/../cmake-build-release/rat}"
 KATER="/Users/thomashaas/ExternalTools/kater/Release/kater"
 TIMEOUT=3600
 
+
+
 ### Functions to execute a set of tests (given as argument)
 function exec_rat() {
     echo "---------- Running RAT ----------"
@@ -35,6 +37,10 @@ function exec_rat() {
 }
 
 function exec_kater() {
+    if [ ! -f ${KATER} ]; then
+        echo "Couldn't find Kater executable: skipping Kater"
+        return
+    fi
     echo "---------- Running KATER ----------"
     local tests=("$@")
     for test in "${tests[@]}"
