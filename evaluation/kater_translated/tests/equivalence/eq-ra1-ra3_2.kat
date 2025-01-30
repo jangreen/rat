@@ -1,0 +1,8 @@
+
+let hb = (po | rf)+
+let ra1 = (hb;fr | hb;mo | hb)
+
+let ra3 = (mo | fr)?;hb
+
+assume ra1 & id <= 0
+assert ra3 & id <= 0        // TRUE

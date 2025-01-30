@@ -1,0 +1,9 @@
+// BUGGY (Tool returns error)
+
+let hb = (po | rf)+
+let ra1 = (hb;fr | hb;mo | hb)
+
+let ra3 = (mo | fr)?;hb
+
+assume ra3 & id <= 0
+assert [R|W];ra1;[R|W] & id <= 0        // ERROR
