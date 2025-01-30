@@ -15,12 +15,11 @@ assume po^+ <= po
 assume po & id <= 0
 assume loc^-1 <= loc
 assume loc* <= loc
-assume L & R <= 0
 assume ext+ <= ext
 assume ext^-1 <= ext
 assume ext;int <= ext
 
-// ============ ARM8 ============
+// ============ TSO ============
 include ./evaluation/tso/tso.cat as tso
 let uniproc = (po-loc | tso.com)^+ & id
 let ghb-tso = (tso.po-tso | tso.com-tso)^+ & id

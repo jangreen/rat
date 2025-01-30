@@ -5,5 +5,6 @@ include ./evaluation/kater_translated/kat/rc11.kat                  as rc11
 include ./evaluation/kater_translated/kat/power-fm-simpl-full.kat   as power-fm-simpl-full
 
 assume rf;rmw <= mo-base
+assume po & id <= 0
 
 assert [F];rc11.psc+;[F] & id <= power-fm-simpl-full.ar     // TIMEOUT

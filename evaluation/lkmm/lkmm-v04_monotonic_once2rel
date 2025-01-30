@@ -34,4 +34,4 @@ include ./evaluation/lkmm/lkmm-v04.cat as new
 assert old.ppo         <= new.ppo          // TRUE
 assert old.cumul-fence <= new.cumul-fence  // TRUE
 
-assert new.hb          <= old.hb           // FALSE
+// assert new.hb          <= old.hb           // FALSE

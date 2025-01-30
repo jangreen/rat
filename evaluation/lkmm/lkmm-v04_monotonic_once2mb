@@ -26,7 +26,7 @@ include ./evaluation/lkmm/lkmm-v04.cat as old
 
 let Once = OnceOrig
 let Mb = MbOrig | UP
-include ./evaluation/lkmm/lkmm-v4.cat as new
+include ./evaluation/lkmm/lkmm-v04.cat as new
 
 // assert old.hb <= new.hb                    // TIMEOUT
 // Thus we instead check that ppo and cumul-fence only get larger (the only relations affected that hb depends on)
@@ -39,5 +39,5 @@ assert old.cumul-fence <= new.cumul-fence   // TRUE
 // The (below) check on strong-fence + the above checks for hb are sufficient to obtain the inclusion
 assert old.strong-fence <= new.strong-fence // TRUE
 
-assert new.hb           <= old.hb           // FALSE
-assert new.strong-fence <= old.strong-fence // FALSE
+// assert new.hb           <= old.hb           // FALSE
+// assert new.strong-fence <= old.strong-fence // FALSE

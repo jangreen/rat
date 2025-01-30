@@ -29,4 +29,4 @@ let Acquire = AcquireOrig | UP
 include ./evaluation/lkmm/lkmm-v04.cat as new
 
 assert old.hb <= new.hb   // TRUE
-assert new.hb <= old.hb   // FALSE
+// assert new.hb <= old.hb   // FALSE

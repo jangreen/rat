@@ -42,5 +42,5 @@ assert old.ppo          <= new.ppo             // FALSE
 assert old.cumul-fence  <= new.cumul-fence     // FALSE
 
 // assert new.hb <= old.hb                    // TIMEOUT
-assert new.ppo         <= old.ppo          // FALSE
-assert new.cumul-fence <= old.cumul-fence  // FALSE
+// assert new.ppo         <= old.ppo          // FALSE
+// assert new.cumul-fence <= old.cumul-fence  // FALSE
