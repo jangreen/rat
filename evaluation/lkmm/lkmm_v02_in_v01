@@ -27,4 +27,6 @@ assume rfi      <= po
 assume fr & int <= po
 assume co & int <= po
 
-assert old.hb <= new.hb     // TRUE
+assert old.hb           <= new.hb           // TRUE
+assert old.cumul-fence  <= new.cumul-fence  // TRUE
+assert old.strong-fence <= new.strong-fence // TRUE

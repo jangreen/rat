@@ -105,8 +105,8 @@ comp_tests=(
     "comp-c11-power-simpl" "comp-c11-power-weak"
     )
 comp_tests=("${comp_tests[@]/%/.kat}")
+comp_tests_kater=("${comp_tests[@]/#/${DIR}/../evaluation/kater_original/tests/compilation/}")
 comp_tests_rat=("${comp_tests[@]/#/${DIR}/../evaluation/kater_translated/tests/compilation/}")
-comp_tests_kater=("${comp_tests[@]/#/${DIR}/../evaluation/kater_translated/tests/compilation/}")
 
 exec_kater "${comp_tests_kater[@]}"
 exec_rat "${comp_tests_rat[@]}"
@@ -125,6 +125,7 @@ exec_rat "${mm_tests[@]}"
 echo "================================================================="
 echo "====================== Running LKMM tests ======================="
 echo "================================================================="
-lkmm_tests=("${DIR}/../evaluation/lkmm/*")
+lkmm_dir=${DIR}/../evaluation/lkmm/*
+lkmm_tests=(${lkmm_dir})
 
 exec_rat "${lkmm_tests[@]}"

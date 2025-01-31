@@ -1,6 +1,6 @@
 The memory model files were taken from Kater and adapted to RAT's syntax.
 
-We made a non-trivial change to 3 of the 4 Power models where we replaced
+We made a non-trivial change to three of the four Power models:
 
     eco*;po?;eco* --> eco;po?;eco*
 

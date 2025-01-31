@@ -28,11 +28,9 @@ assume rfi      <= po
 assume fr & int <= po
 assume co & int <= po
 
-// Hb was weakened with the change to ppo, but this is insufficient to show that the models are different.
-assert old.hb <= new.hb     // FALSE
+// ppo was made smaller, so inclusions should trivially hold
+assert new.hb           <= old.hb           // TRUE
+assert new.cumul-fence  <= old.cumul-fence  // TRUE
+assert new.strong-fence <= old.strong-fence // TRUE
 
-// We would like to check acyclic(old.hb) <=> acyclic(new.hb) via
-//      assume new.hb+ & id <= 0
-//      assert old.hb+ & id <= 0
-// but the tool does not terminate
 

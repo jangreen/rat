@@ -29,4 +29,6 @@ include ./evaluation/lkmm/lkmm-v01.cat as new
 
 // ========= Goals =========
 
-assert old.hb <= new.hb       // TRUE (should be true trivially, but tool takes a long time  (3200 seconds?)).
+assert old.hb           <= new.hb           // TRUE (should be trivially true, but tool takes a long time).
+assert old.cumul-fence  <= new.cumul-fence  // TRUE
+assert old.strong-fence <= new.strong-fence // TRUE
