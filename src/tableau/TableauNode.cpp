@@ -80,9 +80,10 @@ Node::Node(Node *parent, Literal literal)
   assert(parent->tableau != nullptr);
   parent->children.emplace_back(this);
   _activeEventBasePairs = parent->_activeEventBasePairs;
-  assert(!_activeEventBasePairs.has_value() ||
-         std::ranges::any_of(_activeEventBasePairs.value(),
-                             [&](const auto &pairs) { return isLiteralActive(literal, pairs); }));
+  // assert(!_activeEventBasePairs.has_value() ||
+  //        std::ranges::any_of(_activeEventBasePairs.value(),
+  //                            [&](const auto &pairs) { return isLiteralActive(literal, pairs);
+  //                            }));
 }
 
 Node::Node(Tableau *tableau, Literal literal) : tableau(tableau), literal(std::move(literal)) {
@@ -301,20 +302,21 @@ void Node::reduceBranchInternalDown(NodeCube &nodeCube) {
 void Node::appendBranchInternalDownDisjunctive(DNF &dnf) {
   assert(validateDNF(dnf));
 
-  for (auto &cube : dnf) {
-    const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
-      if (!_activeEventBasePairs.has_value()) {
-        return false;
-      }
-      return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
-        return !isLiteralActive(literal, active);
-      });
-    });
-    cube.erase(begin, end);
-  }
-  if (std::ranges::any_of(dnf, &Cube::empty)) {
-    return;
-  }
+  // // Optimization: event/base pair remove literals with usless pair
+  // for (auto &cube : dnf) {
+  //   const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
+  //     if (!_activeEventBasePairs.has_value()) {
+  //       return false;
+  //     }
+  //     return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
+  //       return !isLiteralActive(literal, active);
+  //     });
+  //   });
+  //   cube.erase(begin, end);
+  // }
+  // if (std::ranges::any_of(dnf, &Cube::empty)) {
+  //   return;
+  // }
 
   if (isClosed()) {
     // Closed leaf: nothing to do
@@ -370,7 +372,7 @@ void Node::closeBranch() {
 }
 
 // IMPORTANT this method relies on the fact that we consider positive literals first
-void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePairCubes) {
+void Node::removeTrueLiterals(boost::container::flat_set<SetOfSets> &activePairCubes) {
   assert(activePairCubes.size() == 1);
   auto &activePairs = *activePairCubes.begin();
   const auto &literalPairs = literal.eventBasePairs();
@@ -385,7 +387,7 @@ void Node::removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePa
     activePairCubes.clear();
     for (auto childIt = beginSafe(); childIt != endSafe(); ++childIt) {
       auto activePairsCopyTemp = activePairCubesCopy;
-      childIt->removeUselessLiterals(activePairsCopyTemp);
+      childIt->removeTrueLiterals(activePairsCopyTemp);
       activePairCubes.insert(activePairsCopyTemp.begin(), activePairsCopyTemp.end());
     }
   }
@@ -431,19 +433,19 @@ void Node::computeActivePairs(SetOfSets &prefixActivePairs) const {
 void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   auto cube = dnf.at(0);
 
-  // remove inactive
-  const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
-    if (!_activeEventBasePairs.has_value()) {
-      return false;
-    }
-    return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
-      return !isLiteralActive(literal, active);
-    });
-  });
-  cube.erase(begin, end);
-  if (cube.empty()) {
-    return;
-  }
+  // // Optimization: event/base remove useless event/base pairs
+  // const auto [begin, end] = std::ranges::remove_if(cube, [&](const auto &literal) {
+  //   if (!_activeEventBasePairs.has_value()) {
+  //     return false;
+  //   }
+  //   return std::ranges::all_of(_activeEventBasePairs.value(), [&](const SetOfSets &active) {
+  //     return !isLiteralActive(literal, active);
+  //   });
+  // });
+  // cube.erase(begin, end);
+  // if (cube.empty()) {
+  //   return;
+  // }
 
   // 1. insert cube in-place
   auto thisChildren = detachAllChildren();
@@ -457,7 +459,7 @@ void Node::appendBranchInternalDownConjunctive(const DNF &dnf) {
   }
   newNode->attachChildren(std::move(thisChildren));
 
-  // 2. reduce branch
+  // preserve invariant: no contradictions in branch + remove duplicates
   // IMPORTANT: This loop mitigates against the fact that recursive calls can delete
   // children, potentially invalidating the iterator.
   // IMPORTANT: This loop may delete iterated children,
@@ -513,6 +515,7 @@ void Node::appendBranchInternal(DNF &dnf) {
   }
 }
 
+// preserves invariant: an open branch does not contain contradicting literals
 void Node::appendBranch(const DNF &dnf) {
   assert(validateDNF(dnf));
   assert(!dnf.empty());     // empty DNF makes no sense
@@ -526,7 +529,7 @@ void Node::appendBranch(const DNF &dnf) {
   reduceDNFAtAWorldCycle(dnfCopy, transitiveClosureNode);
   appendBranchInternalUp(dnfCopy);
 
-  // empty dnf
+  // empty dnf = contradiction on all branches
   const bool contradiction = dnfCopy.empty();
   if (contradiction) {
     closeBranch();

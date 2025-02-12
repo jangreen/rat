@@ -26,7 +26,7 @@ class Tableau {
                                   std::unordered_set<const Node *> &unrollingParents);
 
   // simpification
-  void removeUselessLiterals() const;
+  void removeTrueLiterals() const;
 
  public:
   explicit Tableau(const Cube &cube);

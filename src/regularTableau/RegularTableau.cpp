@@ -376,7 +376,7 @@ bool RegularTableau::isInconsistent(RegularNode *parent, const RegularNode *chil
   if (const auto fixedDNF = getFixedDnf(parent, renamedChild, assumptions)) {
     // create new fixed Node
     // FIXME: complete but fast (complete would use newEpsilonChildren)
-    newChildren(parent, fixedDNF.value());
+    newEpsilonChildren(parent, fixedDNF.value());
     Stats::counter("isInconsistent")++;
     return true;
   }
@@ -419,7 +419,7 @@ bool RegularTableau::expandNode(RegularNode *node) {
   // it drops literals that contain inactive events (called inactive literal)
   // an active event is an event that occurs positive in a setNonEmptiness predicate
   auto cube = node->cube;
-  const auto activeEvents = gatherActiveEvents(cube);
+  const auto activeEvents = getActiveEvents(cube);
 
   // 1. drop inactive negated literals
   std::erase_if(cube,

@@ -92,7 +92,7 @@ class Node {
   void inferModalTop();
   void inferModalBaseSet();
   void inferModalAtomic();
-  void removeUselessLiterals(boost::container::flat_set<SetOfSets> &activePairCubes);
+  void removeTrueLiterals(boost::container::flat_set<SetOfSets> &activePairCubes);
   void computeActivePairs(SetOfSets &prefixActivePairs) const;
 
   // ================== Printing ==================

@@ -215,21 +215,15 @@ inline bool isLiteralActive(const Literal &literal, const SetOfSets &activePairs
   return std::ranges::includes(activePairs, literal.saturatedEventBasePairs());
 }
 
-// event occurs in positive literal
-inline EventSet gatherActiveEvents(const Cube &cube) {
-  // preconditions:
-  assert(validateNormalizedCube(cube));  // cube is normal
-
+// event occurs in positive set non-emptiness predicate
+inline EventSet getActiveEvents(const Cube &cube) {
   EventSet activeEvents;
   for (const auto &literal : cube) {
-    if (literal.negated || literal.operation != PredicateOperation::setNonEmptiness) {
-      continue;
+    if (!literal.negated && literal.operation == PredicateOperation::setNonEmptiness) {
+      const auto &literalEvents = literal.events();
+      activeEvents.insert(literalEvents.begin(), literalEvents.end());
     }
-
-    const auto &literalEvents = literal.events();
-    activeEvents.insert(literalEvents.begin(), literalEvents.end());
   }
-
   return activeEvents;
 }
 
@@ -344,30 +338,41 @@ inline Cube filterNegatedLiterals(Cube &cube, const SetOfSets &activePairs) {
   return removedLiterals;
 }
 
-inline void removeUselessLiterals(Cube &cube) {
-  const auto &activePairs = gatherActivePairs(cube);
-  filterNegatedLiterals(cube, activePairs);
-  // IMPORTANT: activePairs does not subsume active events
-  // example: ~0=1 with 0 inactive
-  const auto activeEvents = gatherActiveEvents(cube);
-  filterNegatedLiterals(cube, activeEvents);
+inline void removeLiteralsWithInactiveEvents(Cube &cube) {
+  const auto activeEvents = getActiveEvents(cube);
+  std::erase_if(cube,
+                [&](const Literal &literal) { return !isLiteralActive(literal, activeEvents); });
+}
 
-  // IMPORTANT: Unsound if used for inconsistency computation:
-  // Optimization: if normalized we can drop atomic negated literals
-  // (they lead either to a contradiction or cannot be used in the future)
-  std::erase_if(cube, [&](const Literal &literal) {
-    return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+inline void removeUselessLiterals(Cube &cube) {
+  // remove useless literals
+  const auto activeEvents = getActiveEvents(cube);
+  std::erase_if(cube, [&](auto &literal) {
+    return literal.negated && !isLiteralActive(literal, activeEvents);
   });
-  assert(std::ranges::all_of(
-      cube, [&](const auto &literal) { return isLiteralActive(literal, activePairs); }));
-  assert(std::ranges::all_of(cube, [&](const Literal &literal) {
-    const auto activeEvents = gatherPositiveEvents(cube);
-    assert_catch(isLiteralActive(literal, activeEvents), [&] {
-      std::cout << "Non-active literal " << literal.toString() << " in cube:\n";
-      print(cube);
-    });
-    return true;
-  }));
+
+  // // Optimization: event/base optimization
+  // const auto &activePairs = gatherActivePairs(cube);
+  // filterNegatedLiterals(cube, activePairs);
+  // // IMPORTANT: activePairs does not subsume active events
+  // // example: ~0=1 with 0 inactive
+  //
+  // // IMPORTANT: Unsound if used for inconsistency computation:
+  // // Optimization: if normalized we can drop atomic negated literals
+  // // (they lead either to a contradiction or cannot be used in the future)
+  // std::erase_if(cube, [&](const Literal &literal) {
+  //   return literal.negated && literal.operation != PredicateOperation::setNonEmptiness;
+  // });
+  // assert(std::ranges::all_of(
+  //     cube, [&](const auto &literal) { return isLiteralActive(literal, activePairs); }));
+  // assert(std::ranges::all_of(cube, [&](const Literal &literal) {
+  //   const auto activeEvents = gatherPositiveEvents(cube);
+  //   assert_catch(isLiteralActive(literal, activeEvents), [&] {
+  //     std::cout << "Non-active literal " << literal.toString() << " in cube:\n";
+  //     print(cube);
+  //   });
+  //   return true;
+  // }));
 }
 
 void removeUselessLiterals(range_of<Cube> auto &dnf) {

@@ -459,11 +459,11 @@ std::optional<DNF> Rules::handleIntersectionWithEvent(const Literal& literal) {
     case SetOperation::emptySet:
       // LeftRule: e & 0 != 0  ->  false
       // RightRule: 0 & e != 0  ->  false
-      return literal.negated ? DNF{{Literal::TOP()}} : DNF{{Literal::BOTTOM()}};
+      return literal.negated ? DNF{{}} : DNF{{Literal::BOTTOM()}};
     case SetOperation::fullSet:
       // LeftRule: e & 1 != 0  ->  true
       // RightRule: 1 & e != 0  ->  true
-      return literal.negated ? DNF{{Literal::BOTTOM()}} : DNF{{Literal::TOP()}};
+      return literal.negated ? DNF{{Literal::BOTTOM()}} : DNF{{}};
     case SetOperation::setIntersection: {
       // LeftRule: e & (s1 & s2) -> e & s1 , e & s2
       // RightRule: (s1 & s2) & e -> s1 & e , s2 & e
@@ -777,13 +777,10 @@ std::optional<PartialDNF> Rules::applyRule(const Literal& context,
     // case SetOperation::topEvent:
     case SetOperation::event:
       // no rule applicable to single event constant
-      return context.negated ? PartialDNF{{Literal::BOTTOM()}} : PartialDNF{{Literal::TOP()}};
+      return context.negated ? PartialDNF{{Literal::BOTTOM()}} : PartialDNF{{}};
     case SetOperation::emptySet:
       // Rule (\bot_1):
-      if (context.negated) {
-        return std::nullopt;
-      }
-      return PartialDNF{{Literal::BOTTOM()}};
+      return context.negated ? PartialDNF{{}} : PartialDNF{{Literal::BOTTOM()}};
     case SetOperation::fullSet: {
       if (context.negated) {
         return std::nullopt;

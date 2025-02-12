@@ -62,8 +62,7 @@ DNF Tableau::computeDnf() {
   normalize();
   exportDebug("debug-tableau");
 
-  // simplify tableau
-  removeUselessLiterals();
+  // Optimization: removeTrueLiterals();
   Stats::value("normalize size").set(rootNode->size());
 
   // extract DNF
@@ -367,10 +366,10 @@ void Tableau::renameBranchesInternalDown(
   assert(unreducedNodes.validate());
 }
 
-void Tableau::removeUselessLiterals() const {
+void Tableau::removeTrueLiterals() const {
   boost::container::flat_set<SetOfSets> activePairCubes = {{}};
   Stats::counter("removeUselessLiterals tabl").reset();
-  rootNode->removeUselessLiterals(activePairCubes);
+  rootNode->removeTrueLiterals(activePairCubes);
 }
 
 /*
