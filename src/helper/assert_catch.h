@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <functional>
 
 // runs code after an assertion failed (for debugging)
 // does this inside the assertion to prevent that the code runs in release mode
