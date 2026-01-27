@@ -6,7 +6,7 @@ FROM genmc/kater
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Set working directory
-# WORKDIR home
+#WORKDIR root
 
 # Install dependencies
 RUN apt-get update && \
@@ -16,10 +16,12 @@ RUN apt-get update && \
     curl \
     wget \
     cmake \
-    clang \
     default-jre \
     libspdlog-dev \
     graphviz
+
+#ENV CC=clang
+#ENV CXX=clang++
 
 # Install boost ('apt-get install libboost-all-dev' does not install latest version)
 RUN cd /usr/local && \
@@ -34,7 +36,8 @@ RUN cd /usr/local/lib && \
     curl -O https://www.antlr.org/download/antlr-4.10.1-complete.jar
 
 # Install RAT tool
-RUN git clone --branch oopsla26 https://github.com/jangreen/rat.git && \
+RUN cd /root && \
+    git clone --branch oopsla26 https://github.com/jangreen/rat.git && \
     cd rat && \
     cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build && \
     cmake --build ./build --target rat -j 10

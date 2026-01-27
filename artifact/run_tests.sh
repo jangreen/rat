@@ -1,13 +1,11 @@
 #!/bin/bash
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 #RAT="${RAT:-$DIR/../cmake-build-release/rat}"
 RAT="/root/rat/build/rat"
 KATER="/root/kater/Release/kater"
 EVALDIR="/root/rat/evaluation"
 
 TIMEOUT=3600
-
 
 
 ### Functions to execute a set of tests (given as argument)
