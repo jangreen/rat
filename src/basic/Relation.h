@@ -3,6 +3,7 @@
 #include <boost/container/flat_set.hpp>
 #include <optional>
 #include <string>
+#include <variant>
 
 #include "RelationOperation.h"
 
