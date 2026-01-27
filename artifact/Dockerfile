@@ -6,7 +6,7 @@ FROM genmc/kater
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Set working directory
-WORKDIR home
+# WORKDIR home
 
 # Install dependencies
 RUN apt-get update && \

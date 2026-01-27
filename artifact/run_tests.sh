@@ -1,9 +1,11 @@
 #!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-RAT="${RAT:-$DIR/../cmake-build-release/rat}"
-### TODO: Put a relative path when creating an artifact
-KATER="/Users/thomashaas/ExternalTools/kater/Release/kater"
+#RAT="${RAT:-$DIR/../cmake-build-release/rat}"
+RAT="/root/rat/build/rat"
+KATER="/root/kater/Release/kater"
+EVALDIR="/root/rat/evaluation"
+
 TIMEOUT=3600
 
 
@@ -80,14 +82,14 @@ equiv_rat=(
     "eq-tso-tsofm"
     )
 equiv_rat=("${equiv_rat[@]/%/.kat}")
-equiv_rat=("${equiv_rat[@]/#/${DIR}/../evaluation/kater_translated/tests/equivalence/}")
+equiv_rat=("${equiv_rat[@]/#/${EVALDIR}/kater_translated/tests/equivalence/}")
 
 equiv_kater=(
     "eq-co" "eq-eco-paper" "eq-ra1-ra2" "eq-ra1-ra3" "eq-rc11-rc112" 
     "eq-sc-scfm" "eq-tso-tsofm"
 )
 equiv_kater=("${equiv_kater[@]/%/.kat}")
-equiv_kater=("${equiv_kater[@]/#/${DIR}/../evaluation/kater_original/tests/equivalence/}")
+equiv_kater=("${equiv_kater[@]/#/${EVALDIR}/kater_original/tests/equivalence/}")
 
 exec_kater "${equiv_kater[@]}"
 exec_rat "${equiv_rat[@]}"
@@ -105,8 +107,8 @@ comp_tests=(
     "comp-c11-power-simpl" "comp-c11-power-weak"
     )
 comp_tests=("${comp_tests[@]/%/.kat}")
-comp_tests_kater=("${comp_tests[@]/#/${DIR}/../evaluation/kater_original/tests/compilation/}")
-comp_tests_rat=("${comp_tests[@]/#/${DIR}/../evaluation/kater_translated/tests/compilation/}")
+comp_tests_kater=("${comp_tests[@]/#/${EVALDIR}/kater_original/tests/compilation/}")
+comp_tests_rat=("${comp_tests[@]/#/${EVALDIR}/kater_translated/tests/compilation/}")
 
 exec_kater "${comp_tests_kater[@]}"
 exec_rat "${comp_tests_rat[@]}"
@@ -118,14 +120,14 @@ mm_tests=(
     "generic/uniproc_properties" "arm8/arm_mca" "arm8/arm_oota" 
     "imm/imm_mca" "imm/imm_oota" "tso/tso_mca" "tso/tso_oota"
     )
-mm_tests=("${mm_tests[@]/#/${DIR}/../evaluation/}")
+mm_tests=("${mm_tests[@]/#/${EVALDIR}/}")
 
 exec_rat "${mm_tests[@]}"
 
 echo "================================================================="
 echo "====================== Running LKMM tests ======================="
 echo "================================================================="
-lkmm_dir=${DIR}/../evaluation/lkmm/*
+lkmm_dir=${EVALDIR}/lkmm/*
 lkmm_tests=(${lkmm_dir})
 
 exec_rat "${lkmm_tests[@]}"
