@@ -74,16 +74,16 @@ struct Difference {
 
 class Stats {
  public:
-  [[nodiscard]] static constexpr Counter &counter(const std::string &name);
-  [[nodiscard]] static constexpr Difference &diff(const std::string &name);
-  [[nodiscard]] static constexpr Value &value(const std::string &name);
-  [[nodiscard]] static constexpr Condition &boolean(const std::string &name);
+  [[nodiscard]] static Counter &counter(const std::string &name);
+  [[nodiscard]] static Difference &diff(const std::string &name);
+  [[nodiscard]] static Value &value(const std::string &name);
+  [[nodiscard]] static Condition &boolean(const std::string &name);
 
   static void reset();
   static void print();
 };
 
-constexpr Counter &Stats::counter(const std::string &name) { return Counter::counters[name]; }
-constexpr Difference &Stats::diff(const std::string &name) { return Difference::diffs[name]; }
-constexpr Value &Stats::value(const std::string &name) { return Value::values[name]; }
-constexpr Condition &Stats::boolean(const std::string &name) { return Condition::conditions[name]; }
+inline Counter &Stats::counter(const std::string &name) { return Counter::counters[name]; }
+inline Difference &Stats::diff(const std::string &name) { return Difference::diffs[name]; }
+inline Value &Stats::value(const std::string &name) { return Value::values[name]; }
+inline Condition &Stats::boolean(const std::string &name) { return Condition::conditions[name]; }
