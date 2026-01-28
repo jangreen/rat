@@ -161,12 +161,13 @@ void Tableau::deleteNode(Node *node) {
   assert(parentNode->validateRecursive());
 }
 
-Tableau::~Tableau() {
+// WARNING: Somehow this destructor causes memory corruption with other compilers?!
+//Tableau::~Tableau() {
   // call destructors of all nodes before other destructors
-  rootNode.~unique_ptr();
-  crossReferenceMap.~unordered_map();
-  unreducedNodes.~Worklist();
-}
+  //rootNode.~unique_ptr();
+  //crossReferenceMap.~unordered_map();
+  //unreducedNodes.~Worklist();
+//}
 
 void Tableau::normalize() {
   Stats::counter("#iterations - normalize").reset();

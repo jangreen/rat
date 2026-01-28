@@ -30,7 +30,7 @@ class Tableau {
 
  public:
   explicit Tableau(const Cube &cube);
-  ~Tableau();
+  ~Tableau() = default;
   [[nodiscard]] const Node *getRoot() const;
 
   // ================== Core algorithm ==================
