@@ -1,0 +1,13 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 63f471a..2c05b10 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -37,7 +37,7 @@ find_package(TBB)
+ add_executable(${PROJECT_NAME} ${SOURCES} ${BISON_PARSER_OUTPUTS} ${FLEX_LEXER_OUTPUTS})
+ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
+-target_link_libraries(${PROJECT_NAME} PRIVATE ${FLEX_LIBRARIES})
++target_link_libraries(${PROJECT_NAME} PRIVATE)
+ if(TBB_FOUND)
+   target_link_libraries(${PROJECT_NAME} PRIVATE TBB::tbb)
+ else()
