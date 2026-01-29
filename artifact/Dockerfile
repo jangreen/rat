@@ -1,12 +1,9 @@
 # Download base image
-#FROM ubuntu:24.04
-FROM genmc/kater
+# Newer versions of Kater reject files using po-imm, fr-imm, and similar relations
+FROM genmc/kater:v0.2
 
 # Prevent interactive scripts from getting stuck
 ARG DEBIAN_FRONTEND=noninteractive
-
-# Set working directory
-#WORKDIR root
 
 # Install dependencies
 RUN apt-get update && \
@@ -18,7 +15,8 @@ RUN apt-get update && \
     cmake \
     default-jre \
     libspdlog-dev \
-    graphviz
+    graphviz \
+    time
 
 #ENV CC=clang
 #ENV CXX=clang++

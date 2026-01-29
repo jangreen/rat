@@ -1,12 +1,10 @@
 #!/bin/bash
 
-#RAT="${RAT:-$DIR/../cmake-build-release/rat}"
 RAT="/root/rat/build/rat"
 KATER="/root/kater/Release/kater"
 EVALDIR="/root/rat/evaluation"
 
 TIMEOUT=3600
-
 
 ### Functions to execute a set of tests (given as argument)
 function exec_rat() {
@@ -21,7 +19,7 @@ function exec_rat() {
         fi
         output=$(timeout "${TIMEOUT}" /usr/bin/time "${RAT}" "${test}" 2>&1)
         exit_code=$?
-        time=$(echo "${output}" | awk '/user/ { print $3 }')
+        time=$(echo "${output}" | awk '/user/ { print substr($1, 1, length($1)-4) }')
 
         if [[ ${exit_code} -eq 0 ]]; then
             result=$(echo "${output}" | awk '/Answer: [TF]/ { printf "%s",$6" " }')
@@ -52,7 +50,7 @@ function exec_kater() {
         fi
         output=$(timeout "${TIMEOUT}" /usr/bin/time "${KATER}" "${test}" 2>&1)
         exit_code=$?
-        time=$(echo "${output}" | awk '/user/ { print $3 }')
+        time=$(echo "${output}" | awk '/user/ { print substr($1, 1, length($1)-4) }')
 
         if [[ ${exit_code} -eq 0 ]]; then
             result="True"
