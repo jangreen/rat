@@ -1,9 +1,9 @@
-# Download base image
-# Newer versions of Kater reject files using po-imm, fr-imm, and similar relations
-FROM genmc/kater:v0.2
+FROM ubuntu:24.04
 
 # Prevent interactive scripts from getting stuck
 ARG DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /root
 
 # Install dependencies
 RUN apt-get update && \
@@ -13,13 +13,14 @@ RUN apt-get update && \
     curl \
     wget \
     cmake \
+    clang \
     default-jre \
     libspdlog-dev \
     graphviz \
+    flex \
+    bison \
+    nano \
     time
-
-#ENV CC=clang
-#ENV CXX=clang++
 
 # Install boost ('apt-get install libboost-all-dev' does not install latest version)
 RUN cd /usr/local && \
@@ -40,4 +41,17 @@ RUN cd /root && \
     cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build && \
     cmake --build ./build --target rat -j 10
 
+# Install Kater tool (commit id 509fe24)
+# Apply patch to make Kater compilable with Clang
+RUN cd /root && \
+    git clone https://github.com/MPI-SWS/kater.git && \
+    cd kater && \
+    git checkout 509fe24 && \
+    git apply /root/rat/artifact/kater.patch && \
+    mkdir Release && \
+    cmake -DCMAKE_BUILD_TYPE=Release -B Release -S . && \
+    cmake --build Release
 
+# Setup convenience aliases for manual testing
+RUN echo 'alias rat="/root/rat/build/rat"' >> ~/.bashrc && \
+    echo 'alias kater="/root/kater/Release/kater"' >> ~/.bashrc
