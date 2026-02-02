@@ -27,6 +27,8 @@ function exec_rat() {
     fi
 }
 
+mkdir -p ${OUTPUTDIR}
+
 lkmm_dir="/root/rat/evaluation/lkmm/"
 exec_rat "${lkmm_dir}lkmm_v00_in_v01" "fig05"
 exec_rat "${lkmm_dir}lkmm_ppo_v02_vs_v03" "fig09"
